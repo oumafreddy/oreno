@@ -1,0 +1,23 @@
+# Virtual environment directories
+.venv/
+env/
+
+# SQLite database files
+db.sqlite3
+config/db.sqlite3
+
+# Compiled Python files and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and temporary files
+config/logs/
+*.log
+
+# Other unnecessary files
+media/
+staticfiles/
+
+oreno-backup.git/

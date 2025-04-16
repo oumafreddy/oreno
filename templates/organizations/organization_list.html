@@ -1,0 +1,69 @@
+<!-- templates/organizations/organization_list.html -->
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% trans "Organizations" %}</h1>
+        {% if request.user.is_org_admin %}
+        <a href="{% url 'organizations:create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> {% trans "New Organization" %}
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Name" %}</th>
+                            <th>{% trans "Code" %}</th>
+                            <th>{% trans "Industry" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Subscription" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for org in organizations %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'organizations:detail' pk=org.pk %}" class="text-decoration-none">
+                                    {{ org.customer_name }}
+                                </a>
+                            </td>
+                            <td>{{ org.customer_code }}</td>
+                            <td>{{ org.customer_industry|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-{% if org.is_active %}success{% else %}danger{% endif %}">
+                                    {{ org.is_active|yesno:"Active,Inactive" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% with sub=org.subscription %}
+                                <span class="badge bg-{{ sub.status|yesno:'success,secondary,danger' }}">
+                                    {{ sub.get_status_display }}
+                                </span>
+                                {% endwith %}
+                            </td>
+                            <td class="text-end">
+                                {% if request.user|can_edit:org %}
+                                <a href="{% url 'organizations:update' pk=org.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">{% trans "No organizations found" %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if page_obj.p
