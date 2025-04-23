@@ -1,76 +1,257 @@
+# config/settings/base.py
+
 import os
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-
 # ------------------------------------------------------------------------------
-# Base Directories and System Path Modification
+# Base Directory & Environment Loading
 # ------------------------------------------------------------------------------
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-load_dotenv(BASE_DIR / '.env')  # Explicitly load from the root
+load_dotenv(BASE_DIR / '.env')
 APPS_DIR = BASE_DIR / 'apps'
-# Ensure apps are discoverable without having to prefix them with 'apps.' in imports
-sys.path.append(str(APPS_DIR))
+sys.path.insert(0, str(APPS_DIR))  # Allow imports from apps/ without prefix
 
 # ------------------------------------------------------------------------------
-# Security Configuration
+# Security
 # ------------------------------------------------------------------------------
-
-# Secret Key: Raise an exception if not set to ensure secure operations in production.
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
-    raise Exception("DJANGO_SECRET_KEY environment variable not set. Set this variable for secure operation.")
+    raise Exception("DJANGO_SECRET_KEY not set in environment")
 
-# DEBUG: Handles boolean conversion robustly. In production, ensure this is False.
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ['true', '1', 'yes']
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# Allowed Hosts: Default to '*' for development, but production should override this.
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # ------------------------------------------------------------------------------
-# Application Definition
+# Installed Applications
 # ------------------------------------------------------------------------------
-
 INSTALLED_APPS = [
-    # Django defaults
+    # Django core
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',  # optional PostgreSQL extensions
 
-    # Optional Django PostgreSQL features for future use.
-    'django.contrib.postgres',
-
-    # Third-party apps (include as needed)
-    'debug_toolbar',         # Only during development
+    # Third-party
+    'debug_toolbar',
     'crispy_forms',
     'crispy_bootstrap5',
-    'django_extensions',     # Useful for debugging tools and graph models
-    'rest_framework',        # For API integrations
+    'django_extensions',
+    'rest_framework',
+    'django_scopes',
+    # Note: django-tenants is loaded in tenants.py
 
-    # Local Apps (order matters for dependencies)
-    'apps.organizations',    # Manages tenant organization details
-    'apps.users',            # Custom user model should be declared here
-    'apps.audit',
-    'apps.core',             # Base models, utilities, and middleware
-    'apps.admin_module',
-    'apps.compliance',
-    'apps.contracts',
-    'apps.document_management',
-    'apps.risk',
+    # Local apps
+    'organizations.apps.OrganizationsConfig',
+    'users.apps.UsersConfig',
+    'core.apps.CoreConfig',
+    'audit.apps.AuditConfig',
+    'admin_module.apps.AdminModuleConfig',
+    'compliance.apps.ComplianceConfig',
+    'contracts.apps.ContractsConfig',
+    'document_management.apps.DocumentManagementConfig',
+    'risk.apps.RiskConfig',
 ]
 
 # Custom user model
 AUTH_USER_MODEL = 'users.CustomUser'
 
 # ------------------------------------------------------------------------------
+# Middleware
+# ------------------------------------------------------------------------------
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'django_scopes.middleware.ScopeMiddleware',
+    'apps.core.middleware.OrganizationMiddleware',
+    'common.middleware.LoginRequiredMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# ------------------------------------------------------------------------------
+# URL & WSGI/ASGI
+# ------------------------------------------------------------------------------
+ROOT_URLCONF = 'config.urls'
+WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+# ------------------------------------------------------------------------------
+# Templates
+# ------------------------------------------------------------------------------
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# ------------------------------------------------------------------------------
+# Database (defaults to SQLite, override via environment for Postgres)
+# ------------------------------------------------------------------------------
+DATABASES = {
+    'default': {
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DB_NAME', BASE_DIR / 'db.sqlite3'),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASS', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', ''),
+        # For Postgres with django-tenants: set in tenants.py
+    }
+}
+
+# Database routers (tenants router added in tenants.py)
+DATABASE_ROUTERS = []
+
+# ------------------------------------------------------------------------------
+# Caches
+# ------------------------------------------------------------------------------
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# ------------------------------------------------------------------------------
+# Password validation
+# ------------------------------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# ------------------------------------------------------------------------------
+# Internationalization
+# ------------------------------------------------------------------------------
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = os.getenv('DJANGO_TIME_ZONE', 'UTC')
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
+# ------------------------------------------------------------------------------
+# Static & Media files
+# ------------------------------------------------------------------------------
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# ------------------------------------------------------------------------------
+# Security headers
+# ------------------------------------------------------------------------------
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 3600))
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true','1','yes')
+
+# ------------------------------------------------------------------------------
+# Debug toolbar
+# ------------------------------------------------------------------------------
+INTERNAL_IPS = ['127.0.0.1', 'localhost',]
+
+# ------------------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------------------
+LOG_DIR = BASE_DIR / 'config' / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'standard',
+            'filename': LOG_DIR / 'django.log',
+            'maxBytes': 5*1024*1024,
+            'backupCount': 5,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console','file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        **{app: {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        } for app in [
+            'organizations','users','core','audit','admin_module',
+            'compliance','contracts','document_management','risk'
+        ]},
+    }
+}
+
+# ------------------------------------------------------------------------------
+# Default primary key field
+# ------------------------------------------------------------------------------
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ------------------------------------------------------------------------------
+# Email (console by default)
+# ------------------------------------------------------------------------------
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# ------------------------------------------------------------------------------
+# Login redirection
+# ------------------------------------------------------------------------------
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGIN_REQUIRED_EXEMPT_URLS = [
+    r'^/accounts/login/',
+    r'^/accounts/signup/',
+    r'^/admin/',
+    r'^/static/',
+]
+
+
+#*****************************************New Era*********************************
+# ------------------------------------------------------------------------------
 # Third-party App Configurations
 # ------------------------------------------------------------------------------
+
 # Custom color palette for tables and other features
 customColorPalette = [
     {
@@ -167,185 +348,3 @@ CKEDITOR_5_CONFIGS = {
 # Crispy Forms configuration
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
-
-# ------------------------------------------------------------------------------
-# Middleware Configuration
-# ------------------------------------------------------------------------------
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',  # Should be enabled in dev only
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # Set tenant organization context early on.
-    'apps.core.middleware.OrganizationMiddleware',
-    # Enforces login for protected views.
-    'common.middleware.LoginRequiredMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
-# ------------------------------------------------------------------------------
-# URL and WSGI/ASGI Application Settings
-# ------------------------------------------------------------------------------
-
-ROOT_URLCONF = 'config.urls'
-WSGI_APPLICATION = 'config.wsgi.application'
-# If using ASGI, uncomment and configure:
-# ASGI_APPLICATION = 'config.asgi.application'
-
-# ------------------------------------------------------------------------------
-# Templates Configuration
-# ------------------------------------------------------------------------------
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,  # Auto-discovers template directories in installed apps.
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',  # Adds 'request' to the context.
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-# ------------------------------------------------------------------------------
-# Database Configuration
-# ------------------------------------------------------------------------------
-# Using SQLite for development; override this in production with a robust database.
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-# ------------------------------------------------------------------------------
-# Password Validators
-# ------------------------------------------------------------------------------
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-# ------------------------------------------------------------------------------
-# Internationalization
-# ------------------------------------------------------------------------------
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_L10N = True  # Note: Consider removing for Django 4.x and newer as it's deprecated.
-USE_TZ = True
-
-# ------------------------------------------------------------------------------
-# Static and Media Files
-# ------------------------------------------------------------------------------
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / "media"
-
-# ------------------------------------------------------------------------------
-# Security Headers (Enhanced for Production)
-# ------------------------------------------------------------------------------
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-
-# ------------------------------------------------------------------------------
-# Debug Toolbar Configuration
-# ------------------------------------------------------------------------------
-INTERNAL_IPS = ['127.0.0.1']
-
-# ------------------------------------------------------------------------------
-# Logging Configuration (Includes Console and Rotating File Handler)
-# ------------------------------------------------------------------------------
-# Create logs directory if it doesn't exist
-LOG_DIR = BASE_DIR / 'config' / 'logs'
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'django.log',
-            'maxBytes': 1024 * 1024 * 5,  # 5MB per file
-            'backupCount': 5,
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        # Example of more granular logging for specific apps
-        'apps.core': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
-}
-
-
-# ------------------------------------------------------------------------------
-# Default Primary Key Field Type
-# ------------------------------------------------------------------------------
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# ------------------------------------------------------------------------------
-# Additional Application Settings
-# ------------------------------------------------------------------------------
-
-# Multi-Tenancy Settings: For future use with django-tenants or similar multi-tenant packages.
-TENANT_MODEL = "organizations.Organization"
-
-# File Upload Settings: Limit upload sizes to 10MB.
-ENABLE_VIRUS_SCANNING = os.getenv('ENABLE_VIRUS_SCANNING', 'False').lower() == 'true'
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-
-# Session Configuration: Adjust session lifetime and behavior.
-SESSION_COOKIE_AGE = 86400  # Session lasts for 24 hours
-SESSION_SAVE_EVERY_REQUEST = True
-
-# Email Backend: Use console email backend during development.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-#--------------------------------------------------------------------------------------------
-LOGIN_URL = '/accounts/login/'  # or wherever your login page is
-
-LOGIN_REQUIRED_EXEMPT_URLS = [
-    '/accounts/login/',
-    '/accounts/signup/',
-    '/admin/',           # Exempts all admin URLs
-    '/static/',          # Always allow static files
-    # Add other paths that should be publicly accessible
-]

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2 class="mb-4">Your Profile</h2>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ u_form.non_field_errors }}
+      {% for field in u_form %}
+      <div class="mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        <div class="form-text text-danger">{{ field.errors }}</div>
+      </div>
+      {% endfor %}
+
+      <h4 class="mt-4">Profile Details</h4>
+      {{ p_form.non_field_errors }}
+      {% for field in p_form %}
+      <div class="mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        <div class="form-text text-danger">{{ field.errors }}</div>
+      </div>
+      {% endfor %}
+
+      <button type="submit" class="btn btn-success">Save Changes</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

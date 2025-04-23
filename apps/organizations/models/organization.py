@@ -1,18 +1,23 @@
 # apps/organizations/models/organization.py
 
 from django.db import models
+from django_tenants.models import TenantMixin
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
 
-from apps.core.models.abstract_models import AuditableModel  # Inherits TimeStampedModel
+# from apps.core.models.abstract_models import AuditableModel 
+from core.models.abstract_models import AuditableModel # Inherits TimeStampedModel
 
-class Organization(AuditableModel):
+class Organization(TenantMixin, AuditableModel):
     """
     Represents a subscribing customer or tenant in the system.
     Supports multi-tenancy via unique customer_code.
     """
 
+    # tell django-tenants to auto-create the tenant schema for you:
+    auto_create_schema = True
+    
     customer_code = models.CharField(
         max_length=8,
         unique=True,
@@ -44,7 +49,15 @@ class Organization(AuditableModel):
         db_index=True,
         verbose_name=_("Industry"),
         help_text=_("Optional industry classification for reporting.")
+    )  
+
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active Organization",
+        help_text="Uncheck to disable all users under this organization."
     )
+    
 
     class Meta:
         verbose_name = _("Organization")
@@ -71,3 +84,5 @@ class Organization(AuditableModel):
         Assumes a related_name='users' in CustomUser model.
         """
         return self.users.all().select_related('profile')
+    
+    

@@ -1,4 +1,7 @@
 # apps/organizations/views.py
+from rest_framework import generics, permissions
+from .serializers import OrganizationSettingsSerializer
+
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
@@ -9,9 +12,29 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from .models import OrganizationUser
+from .serializers import OrganizationUserSerializer
 from .models import Organization, ArchivedOrganization, OrganizationSettings, Subscription
 from .forms import OrganizationForm
 from .mixins import AdminRequiredMixin  # Custom mixin (defined below)
+
+
+class OrganizationUsersListView(generics.ListAPIView):
+    """GET /api/organizations/<org_pk>/users/"""
+    serializer_class = OrganizationUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        org_pk = self.kwargs['org_pk']
+        return OrganizationUser.objects.filter(organization__pk=org_pk)
+
+class OrganizationSettingsView(generics.RetrieveAPIView):
+    """GET /api/organizations/<org_pk>/settings/"""
+    queryset = OrganizationSettings.objects.all()
+    serializer_class = OrganizationSettingsSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'organization__pk'
+    lookup_url_kwarg = 'org_pk'
 
 class OrganizationListView(LoginRequiredMixin, ListView):
     model = Organization

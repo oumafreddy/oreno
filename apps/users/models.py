@@ -1,78 +1,78 @@
-"""
-Users Models
+# oreno\apps\users\models.py
+from datetime import timedelta
+import logging
 
-This module defines:
-    - CustomUser: An extended user model with multi-tenant support.
-    - Profile: Additional user profile information.
-    - OrganizationRole: Tracks the role of a user within an organization.
-    - OTP: One-Time Password model for user verification.
-
-Each model includes:
-    - Verbose names and help texts to improve clarity.
-    - Proper indexing for performance.
-    - Relationships that integrate with the organizations app.
-"""
-
-from datetime import datetime
-import os
-
-from django.db import models
-from django_ckeditor_5.fields import CKEditor5Field
 from django.conf import settings
-from django.utils.timezone import make_aware
+from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.utils.translation import gettext_lazy as _
+from core.models.abstract_models import TimeStampedModel
+from django.core.exceptions import ValidationError
+from django.db.models import F
+from django.utils.crypto import get_random_string
 
-# You can eventually move this helper into a shared utilities module.
+
+logger = logging.getLogger(__name__)
+
+def default_expiration():
+    """Generate expiration time 5 minutes from now."""
+    return timezone.now() + timedelta(minutes=5)
+
 def default_datetime():
-    """
-    Provide a default timezone-aware datetime.
-    This default is used for the user registration date.
-    """
-    dt = datetime(2024, 8, 1, 0, 0)
-    return make_aware(dt)
+    """Provide a default timezone-aware datetime for registration."""
+    return timezone.now()
+
+
+def generate_otp_code():
+    """Generate a random 6-digit numeric OTP code."""
+    return get_random_string(6, allowed_chars='0123456789')
+
 
 class CustomUser(AbstractUser):
     """
     Extended User model for multi-tenancy with additional fields.
-    
-    Fields include:
-        - email: Used as the unique identifier for authentication.
-        - organization: The tenant association (optional for some users).
-        - role: The role of the user (e.g., staff, manager, admin).
-        - registration_date: When the user registered.
-    
-    The USERNAME_FIELD is set to email, and REQUIRED_FIELDS must include 'username'.
     """
+    ROLE_ADMIN = 'admin'
+    ROLE_MANAGER = 'manager'
+    ROLE_STAFF = 'staff'
+    ROLE_CHOICES = [
+        (ROLE_ADMIN, _('Admin')),
+        (ROLE_MANAGER, _('Manager')),
+        (ROLE_STAFF, _('Staff')),
+    ]
+
     email = models.EmailField(
         unique=True,
         verbose_name=_("Email Address")
     )
     organization = models.ForeignKey(
-        'organizations.Organization',  # Use string reference for decoupling apps
+        'organizations.Organization',
         on_delete=models.CASCADE,
         related_name='users',
         null=True,
         blank=True,
-        verbose_name=_("Organization")
+        verbose_name=_("Organization"),
+        help_text=_("Organization this user belongs to.")
     )
     role = models.CharField(
-        max_length=128,
-        default='staff',
+        max_length=50,
+        choices=ROLE_CHOICES,
+        default=ROLE_STAFF,
         verbose_name=_("User Role"),
-        help_text=_("Defines the role assigned to the user.")
+        help_text=_("Role of the user within their organization.")
     )
     registration_date = models.DateTimeField(
         default=default_datetime,
         verbose_name=_("Registration Date"),
         help_text=_("The date and time when the user registered.")
     )
-    
-    # Use email as the unique user identifier.
+
+    # Use email for authentication
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-    
-    # Override the built-in groups and permissions to use custom related names.
+
+    # Permissions
     groups = models.ManyToManyField(
         Group,
         related_name='customuser_set',
@@ -87,7 +87,7 @@ class CustomUser(AbstractUser):
         verbose_name=_("User Permissions"),
         help_text=_("Specific permissions granted to the user.")
     )
-    
+
     class Meta:
         verbose_name = _("User")
         verbose_name_plural = _("Users")
@@ -96,33 +96,21 @@ class CustomUser(AbstractUser):
             models.Index(fields=['organization']),
             models.Index(fields=['role']),
         ]
-    
+
     def __str__(self):
         return self.email
-    
+
     def get_full_name(self):
-        """
-        Return the user's full name if available, or fall back to username.
-        """
-        full_name = f"{self.first_name} {self.last_name}".strip()
-        return full_name if full_name else self.username
-    
-    # In your custom user model
+        full = f"{self.first_name} {self.last_name}".strip()
+        return full if full else self.username
+
     def has_org_admin_access(self, organization):
-        return self.organization == organization and \
-            self.roles.filter(role='admin').exists()
+        return self.organization == organization and self.role == self.ROLE_ADMIN
+
 
 class Profile(models.Model):
-    """
-    Profile model for storing additional information for a user.
-    
-    Each profile is linked one-to-one with a CustomUser.
-    """
     user = models.OneToOneField(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name='profile',
-        verbose_name=_("User")
+        CustomUser, on_delete=models.CASCADE, related_name='profile'
     )
     avatar = models.ImageField(
         upload_to='avatars/',
@@ -130,47 +118,22 @@ class Profile(models.Model):
         verbose_name=_("Profile Picture"),
         help_text=_("User's avatar image.")
     )
-    
+
     class Meta:
         verbose_name = _("User Profile")
         verbose_name_plural = _("User Profiles")
-    
+
     def __str__(self):
         return f"Profile for {self.user.email}"
 
+
 class OrganizationRole(models.Model):
-    """
-    Model for managing the role of a user within a specific organization.
-    
-    This model establishes a many-to-one relation with both Organization and CustomUser,
-    allowing each user to have a distinct role in the context of an organization.
-    """
-    # Optionally, you could inherit from a TimeStampedModel for audit trails.
     organization = models.ForeignKey(
-        'organizations.Organization',
-        on_delete=models.CASCADE,
-        related_name='roles',
-        verbose_name=_("Organization")
+        'organizations.Organization', on_delete=models.CASCADE, related_name='roles'
     )
-    user = models.ForeignKey(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name='user_roles',
-        verbose_name=_("User")
-    )
-    role = models.CharField(
-        max_length=50,
-        choices=[
-            ('admin', _("Admin")),
-            ('manager', _("Manager")),
-            ('staff', _("Staff")),
-        ],
-        default='staff',
-        db_index=True,
-        verbose_name=_("Role"),
-        help_text=_("Role of the user within the organization.")
-    )
-    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='user_roles')
+    role = models.CharField(max_length=50, choices=CustomUser.ROLE_CHOICES, default=CustomUser.ROLE_STAFF)
+
     class Meta:
         verbose_name = _("Organization Role")
         verbose_name_plural = _("Organization Roles")
@@ -179,52 +142,78 @@ class OrganizationRole(models.Model):
             models.Index(fields=['organization', 'role']),
             models.Index(fields=['user', 'role']),
         ]
-    
+
     def __str__(self):
         return f"{self.user.email} as {self.get_role_display()} in {self.organization}"
 
+
 class OTP(models.Model):
-    """
-    One-Time Password (OTP) model for verifying a user's identity.
-    
-    OTPs are associated with a user and are used to enhance security during critical operations.
-    """
-    # Optionally, you could inherit timestamps from a TimeStampedModel.
+    MAX_ATTEMPTS = 3
+    OTP_LENGTH = 6
+
     user = models.ForeignKey(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name='otps',
-        verbose_name=_("User")
+        CustomUser, on_delete=models.CASCADE, related_name='otps'
     )
     otp = models.CharField(
-        max_length=6,
+        max_length=OTP_LENGTH,
+        default=generate_otp_code,
         verbose_name=_("One-Time Password"),
-        help_text=_("The OTP code for verification.")
+        help_text=_("6-digit one-time verification code."),
     )
-    is_verified = models.BooleanField(
-        default=False,
-        verbose_name=_("Verification Status"),
-        help_text=_("Indicates whether this OTP has been verified.")
-    )
-    role = models.CharField(
-        max_length=50,
-        choices=[
-            ('admin', _("Admin")),
-            ('manager', _("Manager")),
-            ('staff', _("Staff")),
-        ],
-        default='staff',
-        verbose_name=_("Role"),
-        help_text=_("Role context for the OTP usage.")
-    )
-    
+    is_verified = models.BooleanField(default=False)
+    role = models.CharField(max_length=50, choices=CustomUser.ROLE_CHOICES, default=CustomUser.ROLE_STAFF)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField(default=default_expiration)
+    created_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         verbose_name = _("OTP")
         verbose_name_plural = _("OTPs")
         indexes = [
             models.Index(fields=['user', 'is_verified']),
             models.Index(fields=['otp']),
+            models.Index(fields=['expires_at']),
         ]
-    
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"OTP for {self.user.email} - {self.otp} (Verified: {self.is_verified})"
+
+    def clean(self):
+        valid_roles = [r[0] for r in self._meta.get_field('role').choices]
+        if self.role not in valid_roles:
+            raise ValidationError({'role': _(f"Invalid role. Valid: {', '.join(valid_roles)}")})
+        if not self.otp.isdigit() or len(self.otp) != self.OTP_LENGTH:
+            raise ValidationError({'otp': _(f"OTP must be {self.OTP_LENGTH}-digit")})
+
+    def save(self, *args, **kwargs):
+        if not self.otp:
+            self.otp = generate_otp_code()
+        super().save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def is_valid(self):
+        return not self.is_expired() and self.attempts < self.MAX_ATTEMPTS
+
+    def increment_attempts(self):
+        self.attempts = F('attempts') + 1
+        self.save(update_fields=['attempts'])
+        self.refresh_from_db(fields=['attempts'])
+
+    def verify(self, code):
+        if self.is_verified:
+            return True
+        if not self.is_valid():
+            return False
+        if self.otp == code:
+            self.is_verified = True
+            self.save(update_fields=['is_verified'])
+            return True
+        self.increment_attempts()
+        return False
+
+    @classmethod
+    def cleanup_expired(cls):
+        cls.objects.filter(expires_at__lte=timezone.now()).delete()

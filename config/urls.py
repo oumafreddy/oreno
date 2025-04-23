@@ -1,31 +1,36 @@
+# C:\Users\ouma.fred\Desktop\GRC\oreno\config\urls.py
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import HttpResponse
 
+from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView,)
+
 # Define a simple home view
 def home(request):
     return HttpResponse("Welcome to Oreno!")
 
+
 urlpatterns = [
-    # Admin URLs
     path('admin/', admin.site.urls),
-
-    # API URLs (if you plan to use Django REST Framework)
     path('api/', include('rest_framework.urls')),
-
-    # Simple home view
+    path('', lambda req: HttpResponse("Welcome to Oreno!"), name='home'),
+      
+    # Home page
     path('', home, name='home'),
-    
-    # Uncomment these when you implement the corresponding apps
-    # path('organizations/', include('apps.organizations.urls')),
-    path('organizations/', include(('apps.organizations.urls', 'organizations'), namespace='organizations')),
-    # path('users/', include('apps.users.urls')),
-    # path('risk/', include('apps.risk.urls')),
-    # path('audit/', include('apps.audit.urls')),
-    # path('documents/', include('apps.document_management.urls')),
-]
+
+    # Web UI for users (register, login, profile, password)
+    path('accounts/', include('users.urls', namespace='users')),
+
+    # REST API for users (JWT & OTP)
+    path('api/users/', include(('users.urls', 'users'), namespace='users-api')),
+
+    # Organizations
+    path('organizations/', include('organizations.urls', namespace='organizations')),       
+
+] 
 
 # Debug and static/media file handling for development
 if settings.DEBUG:
