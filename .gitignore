@@ -1,5 +1,6 @@
 # Virtual environment directories
 .venv/
+venv/
 env/
 
 # SQLite database files
@@ -11,6 +12,11 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py[cod]
+
+# IDEs, OS files
+.vscode/
+.DS_Store
 
 # Logs and temporary files
 config/logs/
@@ -18,6 +24,7 @@ config/logs/
 
 # Other unnecessary files
 media/
+/staticfiles/
 staticfiles/
 
 oreno-backup.git/
