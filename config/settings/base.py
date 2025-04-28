@@ -3,6 +3,7 @@
 import os
 import sys
 from pathlib import Path
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -25,6 +26,21 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://localhost:8000',
+    'https://127.0.0.1:8000',
+]
+# Add any additional domains from ALLOWED_HOSTS with proper schemes
+for host in ALLOWED_HOSTS:
+    if host != '*':
+        CSRF_TRUSTED_ORIGINS.extend([
+            f'http://{host}',
+            f'https://{host}'
+        ])
+
 # ------------------------------------------------------------------------------
 # Installed Applications
 # ------------------------------------------------------------------------------
@@ -39,12 +55,17 @@ INSTALLED_APPS = [
     'django.contrib.postgres',  # optional PostgreSQL extensions
 
     # Third-party
+    'django_tenants', 
     'debug_toolbar',
+    'widget_tweaks',
+    'reversion',
     'crispy_forms',
     'crispy_bootstrap5',
     'django_extensions',
     'rest_framework',
+    'rest_framework_simplejwt',  # JWT authentication
     'django_scopes',
+    'django_ckeditor_5',  # Add CKEditor 5
     # Note: django-tenants is loaded in tenants.py
 
     # Local apps
@@ -59,19 +80,84 @@ INSTALLED_APPS = [
     'risk.apps.RiskConfig',
 ]
 
+# Apps that should be audited
+AUDIT_ENABLED_APPS = [
+    'organizations',
+    'users',
+    'audit',
+    'compliance',
+    'contracts',
+    'document_management',
+    'risk',
+]
+
 # Custom user model
 AUTH_USER_MODEL = 'users.CustomUser'
+
+# ------------------------------------------------------------------------------
+# REST Framework Configuration
+# ------------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    # Authentication classes
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    # Default permission classes
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    # Pagination settings
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 25,
+    # Throttling settings
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day'
+    },
+    # Renderer settings
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ] if DEBUG else [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}
+
+# JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+# Crispy Forms configuration
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # ------------------------------------------------------------------------------
 # Middleware
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
+    'django_tenants.middleware.TenantMainMiddleware',  # Must be first
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'django_scopes.middleware.ScopeMiddleware',
     'apps.core.middleware.OrganizationMiddleware',
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -91,7 +177,10 @@ ASGI_APPLICATION = 'config.asgi.application'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'templates/tenants',  # Tenant-specific overrides
+            BASE_DIR / 'templates',          # Global templates
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -100,6 +189,13 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            # Template caching in production
+            'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ]),
+            ] if not DEBUG else None,
         },
     },
 ]
@@ -116,6 +212,10 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
         # For Postgres with django-tenants: set in tenants.py
+        'CONN_MAX_AGE': 60 if not DEBUG else 0,  # Persistent connections in production
+        'OPTIONS': {
+            'connect_timeout': 10,  # Connection timeout in seconds
+        },
     }
 }
 
@@ -126,9 +226,12 @@ DATABASE_ROUTERS = []
 # Caches
 # ------------------------------------------------------------------------------
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 
@@ -173,10 +276,20 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 3600))
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true','1','yes')
 
+# Session settings
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# CSRF settings
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 # ------------------------------------------------------------------------------
 # Debug toolbar
 # ------------------------------------------------------------------------------
-INTERNAL_IPS = ['127.0.0.1', 'localhost',]
+INTERNAL_IPS = ['127.0.0.1']
 
 # ------------------------------------------------------------------------------
 # Logging
@@ -192,6 +305,10 @@ LOGGING = {
             'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         },
+        'verbose': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
     },
     'handlers': {
         'console': {
@@ -201,20 +318,28 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'formatter': 'standard',
+            'formatter': 'verbose',
             'filename': LOG_DIR / 'django.log',
+            'maxBytes': 5*1024*1024,
+            'backupCount': 5,
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'verbose',
+            'filename': LOG_DIR / 'error.log',
             'maxBytes': 5*1024*1024,
             'backupCount': 5,
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console','file'],
+            'handlers': ['console', 'file', 'error_file'],
             'level': 'INFO',
             'propagate': True,
         },
         **{app: {
-            'handlers': ['file'],
+            'handlers': ['file', 'error_file'],
             'level': 'DEBUG',
             'propagate': False,
         } for app in [
@@ -230,22 +355,54 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ------------------------------------------------------------------------------
-# Email (console by default)
+# Email Configuration
 # ------------------------------------------------------------------------------
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 25))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+EMAIL_TIMEOUT = 30  # seconds
 
 # ------------------------------------------------------------------------------
 # Login redirection
 # ------------------------------------------------------------------------------
-LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
 LOGIN_REQUIRED_EXEMPT_URLS = [
-    r'^/accounts/login/',
-    r'^/accounts/signup/',
-    r'^/admin/',
-    r'^/static/',
+    '/accounts/login/',         # login view
+    '/admin/',
+    '/accounts/register/',     # your registration view
+    '/accounts/password-reset/',   # if applicable
+    '/static/', '/media/',      # static assets
 ]
 
+# ------------------------------------------------------------------------------
+# File Upload Settings
+# ------------------------------------------------------------------------------
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+# ------------------------------------------------------------------------------
+# Custom Settings
+# ------------------------------------------------------------------------------
+# Maximum number of failed login attempts before account is locked
+MAX_LOGIN_ATTEMPTS = 5
+# Time in minutes to lock account after max attempts
+LOGIN_LOCKOUT_TIME = 15
+
+# OTP settings
+OTP_EXPIRY_MINUTES = 5
+OTP_MAX_ATTEMPTS = 3
+
+# Organization settings
+DEFAULT_ORGANIZATION_ROLE = 'staff'
+ORGANIZATION_ADMIN_ROLES = ['admin', 'manager']
 
 #*****************************************New Era*********************************
 # ------------------------------------------------------------------------------
@@ -280,12 +437,7 @@ customColorPalette = [
     },
 ]
 
-# Optional: Path to custom CSS file for CKEditor
-
-# Or use default storage
-CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-
-# CKEditor configuration
+# CKEditor 5 configuration
 CKEDITOR_5_CONFIGS = {
     'default': {
         'toolbar': ['heading', '|', 'bold', 'italic', 'link',
@@ -318,14 +470,6 @@ CKEDITOR_5_CONFIGS = {
         'table': {
             'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells',
                                'tableProperties', 'tableCellProperties'],
-            'tableProperties': {
-                'borderColors': customColorPalette,
-                'backgroundColors': customColorPalette
-            },
-            'tableCellProperties': {
-                'borderColors': customColorPalette,
-                'backgroundColors': customColorPalette
-            }
         },
         'heading': {
             'options': [
@@ -345,6 +489,5 @@ CKEDITOR_5_CONFIGS = {
     }
 }
 
-# Crispy Forms configuration
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
+# CKEditor 5 file storage
+CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"

@@ -1,33 +1,166 @@
 # apps/users/signals.py
-from django.db.models.signals import post_save
+from django.db.models.signals import (
+    post_save, pre_save, post_delete,
+    m2m_changed, pre_delete
+)
 from django.dispatch import receiver
-from .models import OTP
-from django.utils import timezone
-from datetime import timedelta
+from django.utils.translation import gettext_lazy as _
+from django.core.cache import cache
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.conf import settings
 
-from .models import Profile, OTP
-User = settings.AUTH_USER_MODEL
+from .models import Profile, OTP, OrganizationRole
+from .tasks import send_welcome_email, cleanup_old_otps
+
+User = get_user_model()
+
+def safe_delete_pattern(pattern):
+    if hasattr(cache, "delete_pattern"):
+        cache.delete_pattern(pattern)
+    else:
+        # Optionally log or skip
+        pass
 
 @receiver(post_save, sender=User)
 def create_user_related_profiles(sender, instance, created, **kwargs):
     """
     Signal to auto-create Profile and initial OTP whenever a new user is created.
+    Also handles organization context and welcome email.
     """
     if created:
-        # 1) Create the one-to-one Profile
-        Profile.objects.create(user=instance)
+        with transaction.atomic():
+            # Create the one-to-one Profile
+            Profile.objects.create(user=instance)
 
-        # 2) Optionally, generate an OTP for email verification / 2FA
-        OTP.objects.create(user=instance)
+            # Generate an OTP for email verification
+            OTP.objects.create(user=instance)
 
+            # Send welcome email asynchronously
+            send_welcome_email.delay(instance.id)
+
+            # Clear any cached user data
+            safe_delete_pattern(f'user_{instance.id}_*')
+
+@receiver(pre_save, sender=User)
+def handle_user_state_changes(sender, instance, **kwargs):
+    """
+    Handle user state changes and organization updates.
+    """
+    if not instance.pk:  # New user
+        return
+
+    try:
+        old_instance = User.objects.get(pk=instance.pk)
+    except User.DoesNotExist:
+        return
+
+    # Handle organization changes
+    if old_instance.organization != instance.organization:
+        # Clear old organization roles
+        OrganizationRole.objects.filter(user=instance).delete()
+        # Clear cached data
+        safe_delete_pattern(f'user_{instance.id}_*')
+        safe_delete_pattern(f'org_{old_instance.organization_id}_*')
+
+    # Handle active state changes
+    if old_instance.is_active != instance.is_active:
+        if not instance.is_active:
+            # Deactivate all OTPs
+            OTP.objects.filter(user=instance).update(is_expired=True)
+            # Clear sessions
+            instance.session_set.all().delete()
 
 @receiver(post_save, sender=OTP)
-def cleanup_otps(sender, instance, **kwargs):
-    """Cleanup expired OTPs when new ones are created"""
-    OTP.cleanup_expired()
-    # Delete verified OTPs older than 1 hour
-    OTP.objects.filter(
-        is_verified=True,
-        created_at__lte=timezone.now() - timedelta(hours=1)
-    ).delete()
+def handle_otp_creation(sender, instance, created, **kwargs):
+    """
+    Handle OTP creation and cleanup.
+    """
+    if created:
+        # Cleanup old OTPs asynchronously
+        cleanup_old_otps.delay(instance.user.id)
+        
+        # Send OTP via email
+        subject = _("Your OTP Code")
+        message = render_to_string('users/email/otp.txt', {
+            'user': instance.user,
+            'otp': instance.otp,
+            'expires_at': instance.expires_at
+        })
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [instance.user.email],
+            fail_silently=False
+        )
+
+@receiver(post_save, sender=OrganizationRole)
+def handle_role_changes(sender, instance, created, **kwargs):
+    """
+    Handle organization role changes and cache updates.
+    """
+    # Clear cached user and organization data
+    safe_delete_pattern(f'user_{instance.user_id}_*')
+    safe_delete_pattern(f'org_{instance.organization_id}_*')
+
+    if created:
+        # Send notification email for new role assignment
+        subject = _("New Organization Role Assigned")
+        message = render_to_string('users/email/new_role.txt', {
+            'user': instance.user,
+            'organization': instance.organization,
+            'role': instance.get_role_display()
+        })
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [instance.user.email],
+            fail_silently=False
+        )
+
+@receiver(pre_delete, sender=User)
+def handle_user_deletion(sender, instance, **kwargs):
+    """
+    Handle cleanup before user deletion.
+    """
+    # Clear all related data
+    instance.profile.delete()
+    instance.otp_set.all().delete()
+    instance.user_roles.all().delete()
+    
+    # Clear cached data
+    safe_delete_pattern(f'user_{instance.id}_*')
+    if instance.organization:
+        safe_delete_pattern(f'org_{instance.organization_id}_*')
+
+@receiver(m2m_changed, sender=User.groups.through)
+def handle_group_changes(sender, instance, action, **kwargs):
+    """
+    Handle user group membership changes.
+    """
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        # Clear cached user data
+        safe_delete_pattern(f'user_{instance.id}_*')
+        
+        # Update user permissions
+        instance.user_permissions.clear()
+        for group in instance.groups.all():
+            instance.user_permissions.add(*group.permissions.all())
+
+@receiver(post_save, sender=Profile)
+def handle_profile_changes(sender, instance, created, **kwargs):
+    """
+    Handle profile updates and cache management.
+    """
+    # Clear cached user data
+    safe_delete_pattern(f'user_{instance.user_id}_*')
+    
+    if not created and 'avatar' in instance.get_dirty_fields():
+        # Handle avatar changes (e.g., cleanup old files)
+        old_avatar = instance.get_dirty_fields().get('avatar')
+        if old_avatar:
+            old_avatar.delete(save=False)

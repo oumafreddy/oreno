@@ -1,139 +1,192 @@
 # apps/organizations/views.py
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from .serializers import OrganizationSettingsSerializer
 
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
+    ListView, DetailView, CreateView, UpdateView, DeleteView,
+    TemplateView
 )
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import get_object_or_404
 from django.db import transaction
-from .models import OrganizationUser
-from .serializers import OrganizationUserSerializer
-from .models import Organization, ArchivedOrganization, OrganizationSettings, Subscription
-from .forms import OrganizationForm
-from .mixins import AdminRequiredMixin  # Custom mixin (defined below)
+from django.db.models import Q, Prefetch, Count
+from django.contrib import messages
+from django.http import Http404
 
+from .models import (
+    Organization, OrganizationSettings, Subscription,
+    Domain, OrganizationUser
+)
+from .forms import OrganizationForm, OrganizationSettingsForm, SubscriptionForm
+from .serializers import (
+    OrganizationSerializer, OrganizationDetailSerializer,
+    OrganizationSettingsSerializer, SubscriptionSerializer,
+    DomainSerializer, OrganizationUserSerializer
+)
+from .mixins import OrganizationContextMixin, OrganizationPermissionMixin, AdminRequiredMixin
+from core.permissions import IsTenantMember
 
-class OrganizationUsersListView(generics.ListAPIView):
-    """GET /api/organizations/<org_pk>/users/"""
-    serializer_class = OrganizationUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+# API ViewSets
+class OrganizationViewSet(viewsets.ModelViewSet):
+    """API endpoint for organizations."""
+    serializer_class = OrganizationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
 
     def get_queryset(self):
-        org_pk = self.kwargs['org_pk']
-        return OrganizationUser.objects.filter(organization__pk=org_pk)
+        return Organization.objects.filter(users=self.request.user)
 
-class OrganizationSettingsView(generics.RetrieveAPIView):
-    """GET /api/organizations/<org_pk>/settings/"""
-    queryset = OrganizationSettings.objects.all()
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return OrganizationDetailSerializer
+        return self.serializer_class
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+class OrganizationSettingsViewSet(viewsets.ModelViewSet):
+    """API endpoint for organization settings."""
     serializer_class = OrganizationSettingsSerializer
-    permission_classes = [permissions.IsAdminUser]
-    lookup_field = 'organization__pk'
-    lookup_url_kwarg = 'org_pk'
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
 
+    def get_queryset(self):
+        return OrganizationSettings.objects.filter(organization__users=self.request.user)
+
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    """API endpoint for subscriptions."""
+    serializer_class = SubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return Subscription.objects.filter(organization__users=self.request.user)
+
+class DomainViewSet(viewsets.ModelViewSet):
+    """API endpoint for domains."""
+    serializer_class = DomainSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return Domain.objects.filter(tenant__users=self.request.user)
+
+class OrganizationUserViewSet(viewsets.ModelViewSet):
+    """API endpoint for organization users."""
+    serializer_class = OrganizationUserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return OrganizationUser.objects.filter(organization__users=self.request.user)
+
+# Web Views
 class OrganizationListView(LoginRequiredMixin, ListView):
     model = Organization
     template_name = 'organizations/organization_list.html'
     context_object_name = 'organizations'
     paginate_by = 20
-    ordering = ['customer_name']
-    
-    def get_queryset(self):
-        """Add optional filtering capabilities"""
-        queryset = super().get_queryset().select_related('settings', 'subscription')
-        # Example filter implementation
-        if 'inactive' in self.request.GET:
-            queryset = queryset.filter(is_active=False)
-        return queryset
 
-class OrganizationDetailView(LoginRequiredMixin, DetailView):
+    def get_queryset(self):
+        return Organization.objects.filter(users=self.request.user)
+
+class OrganizationDetailView(OrganizationPermissionMixin, DetailView):
     model = Organization
     template_name = 'organizations/organization_detail.html'
     context_object_name = 'organization'
-    slug_field = 'pk'  # Explicitly use PK for URLs
-    slug_url_kwarg = 'pk'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        organization = self.object
-        
-        # Add related data efficiently
-        context.update({
-            'settings': organization.settings,
-            'subscription': organization.subscription,
-            'employees': organization.get_employees().select_related('profile'),
-            'user_role': self.request.user.get_organization_role(organization),
-        })
-        return context
+    def get_queryset(self):
+        return Organization.objects.filter(users=self.request.user)
 
-class OrganizationCreateView(AdminRequiredMixin, SuccessMessageMixin, CreateView):
+class OrganizationCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = Organization
     form_class = OrganizationForm
     template_name = 'organizations/organization_form.html'
-    success_message = _("Organization %(customer_name)s was created successfully")
-    
-    @transaction.atomic
+    success_message = _("Organization %(name)s was created successfully")
+
     def form_valid(self, form):
-        """Handle creation of related models atomically"""
-        form.instance.created_by = self.request.user
-        response = super().form_valid(form)
-        
-        # Create related settings and subscription
-        OrganizationSettings.objects.create(organization=self.object)
-        Subscription.objects.create(organization=self.object)
-        
-        return response
+        with transaction.atomic():
+            organization = form.save()
+            OrganizationUser.objects.create(
+                organization=organization,
+                user=self.request.user,
+                role='admin'
+            )
+            return super().form_valid(form)
 
     def get_success_url(self):
         return reverse_lazy('organizations:detail', kwargs={'pk': self.object.pk})
 
-class OrganizationUpdateView(AdminRequiredMixin, SuccessMessageMixin, UpdateView):
+class OrganizationUpdateView(OrganizationPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Organization
     form_class = OrganizationForm
     template_name = 'organizations/organization_form.html'
-    success_message = _("Organization %(customer_name)s was updated successfully")
-    
+    success_message = _("Organization %(name)s was updated successfully")
+
     def get_success_url(self):
         return reverse_lazy('organizations:detail', kwargs={'pk': self.object.pk})
 
-class OrganizationDeleteView(AdminRequiredMixin, SuccessMessageMixin, DeleteView):
+class OrganizationDeleteView(OrganizationPermissionMixin, SuccessMessageMixin, DeleteView):
     model = Organization
     template_name = 'organizations/organization_confirm_delete.html'
     success_url = reverse_lazy('organizations:list')
     success_message = _("Organization was archived successfully")
-    
+
     @transaction.atomic
     def delete(self, request, *args, **kwargs):
-        """Archive before deletion"""
         organization = self.get_object()
-        
-        # Create archived record
-        ArchivedOrganization.objects.create(
-            original_org_id=organization.id,
-            customer_code=organization.customer_code,
-            customer_name=organization.customer_name,
-            archived_by_user=request.user,
-            # ... copy other relevant fields ...
-        )
-        
-        return super().delete(request, *args, **kwargs)
+        organization.is_active = False
+        organization.save()
+        messages.success(self.request, self.success_message)
+        return redirect(self.success_url)
 
-# Custom Mixins (apps/organizations/mixins.py)
-class AdminRequiredMixin(LoginRequiredMixin):
-    """Verify that current user has admin privileges for the organization"""
-    
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return self.handle_no_permission()
-            
-        if 'pk' in kwargs:
-            organization = get_object_or_404(Organization, pk=kwargs['pk'])
-            if not request.user.has_org_admin_access(organization):
-                raise PermissionDenied(_("You don't have permission to modify this organization"))
-        
-        return super().dispatch(request, *args, **kwargs)
+class OrganizationSettingsView(OrganizationPermissionMixin, UpdateView):
+    model = OrganizationSettings
+    form_class = OrganizationSettingsForm
+    template_name = 'organizations/settings_form.html'
+    success_message = _("Organization settings were updated successfully")
+
+    def get_object(self):
+        return get_object_or_404(
+            OrganizationSettings,
+            organization__users=self.request.user,
+            organization=self.kwargs.get('org_pk')
+        )
+
+    def get_success_url(self):
+        return reverse_lazy('organizations:settings', kwargs={'org_pk': self.object.organization.pk})
+
+class SubscriptionUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = Subscription
+    form_class = SubscriptionForm
+    template_name = 'organizations/subscription_form.html'
+    success_message = _("Subscription was updated successfully")
+
+    def get_object(self):
+        return get_object_or_404(
+            Subscription,
+            organization__users=self.request.user,
+            organization=self.kwargs.get('org_pk')
+        )
+
+    def get_success_url(self):
+        return reverse_lazy('organizations:subscription', kwargs={'org_pk': self.object.organization.pk})
+
+class OrganizationDashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'organizations/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_organizations = Organization.objects.filter(users=self.request.user)
+        context.update({
+            'organizations': user_organizations,
+            'total_organizations': user_organizations.count(),
+            'active_organizations': user_organizations.filter(is_active=True).count(),
+            'recent_activities': self.get_recent_activities(user_organizations)
+        })
+        return context
+
+    def get_recent_activities(self, organizations):
+        # Implement activity tracking logic here
+        return []

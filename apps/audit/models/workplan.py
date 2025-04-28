@@ -1,45 +1,50 @@
 # apps/audit/models/workplan.py
 
+import reversion
+from datetime import date
 from django.db import models
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
 
-from apps.core.models.abstract_models import OrganizationOwnedModel, AuditableModel
-from apps.core.mixins.state import ApprovalStateMixin
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.mixins.state import ApprovalStateMixin
 
+@reversion.register()
 class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
     """
-    Model for audit workplans.
-
-    This model encapsulates audit workplan details, including a unique code,
-    descriptive name, fiscal year, set of objectives (stored in JSON format),
-    a creation date, and an optional detailed description. It includes approval state
-    transitions via ApprovalStateMixin.
+    Audit workplan model with FSM-driven approval state, rich-text objectives,
+    description, and tenant isolation.
     """
     code = models.CharField(
         max_length=8,
         db_index=True,
         verbose_name=_("Workplan Code"),
-        help_text=_("Unique code for the audit workplan.")
+        help_text=_("Unique code for the audit workplan within the organization."),
     )
     name = models.CharField(
         max_length=512,
         db_index=True,
         verbose_name=_("Workplan Name"),
-        help_text=_("Name of the audit workplan.")
+        help_text=_("Name of the audit workplan."),
     )
     fiscal_year = models.PositiveIntegerField(
         verbose_name=_("Fiscal Year"),
-        help_text=_("Fiscal year to which the workplan applies.")
+        help_text=_("Fiscal year to which the workplan applies."),
     )
-    objectives = models.JSONField(
-        verbose_name=_("Objectives"),
-        help_text=_("Audit objectives specified in structured (JSON) format.")
-    )
+    objectives = CKEditor5Field(
+        'Objectives',
+        config_name='extends',
+        max_length=512,
+        blank=True,
+        null=True,
+        help_text=_("Detailed Objectives of the audit workplan."),
+    )    
     creation_date = models.DateField(
         auto_now_add=True,
-        verbose_name=_("Creation Date")
+        verbose_name=_("Creation Date"),
+        help_text=_("Date when this workplan was created."),
     )
     description = CKEditor5Field(
         'Description',
@@ -47,16 +52,18 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         max_length=512,
         blank=True,
         null=True,
-        help_text=_("Detailed description of the audit workplan.")
+        help_text=_("Detailed description of the audit workplan."),
     )
 
     class Meta:
+        app_label = 'audit'
         verbose_name = _("Audit Workplan")
         verbose_name_plural = _("Audit Workplans")
         ordering = ['-creation_date', 'name']
+        unique_together = (('organization', 'code'),)
         indexes = [
-            models.Index(fields=['organization', 'code']),
-            models.Index(fields=['name']),
+            models.Index(fields=['organization', 'code'], name='wp_org_code_idx'),
+            models.Index(fields=['name'], name='wp_name_idx'),
         ]
 
     def __str__(self):
@@ -65,11 +72,28 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
     def get_absolute_url(self):
         return reverse('audit:workplan_detail', kwargs={'pk': self.pk})
 
+    def clean(self):
+        super().clean()
+
+        # Fiscal year sanity
+        current_year = date.today().year
+        if self.fiscal_year < 2000 or self.fiscal_year > current_year + 1:
+            raise ValidationError({'fiscal_year': _(
+                'Fiscal year must be between 2000 and %(max_year)s'
+            )}, params={'max_year': current_year + 1})
+
+    def save(self, *args, **kwargs):
+        # Skip full_clean() to avoid state validation issues
+        with reversion.create_revision():
+            if hasattr(self, 'last_modified_by') and self.last_modified_by:
+                reversion.set_user(self.last_modified_by)
+            # record the FSM field state
+            reversion.set_comment(f"Saved workplan '{self.code}' (State: {self.state})")
+            super().save(*args, **kwargs)
+
     def get_approvers(self):
-        """
-        Returns a list of users who should approve this workplan.
-        Assumes the related Organization model has a method get_supervisors().
-        """
-        if hasattr(self.organization, 'get_supervisors'):
-            return self.organization.get_supervisors()
-        return []
+        return self.organization.get_approvers()
+
+    @property
+    def engagements(self):
+        return self.engagements.all()

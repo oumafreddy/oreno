@@ -105,7 +105,35 @@ class CustomUser(AbstractUser):
         return full if full else self.username
 
     def has_org_admin_access(self, organization):
-        return self.organization == organization and self.role == self.ROLE_ADMIN
+        """Check if user has admin access to the organization"""
+        if self.is_superuser:
+            return True
+        from organizations.models import OrganizationUser
+        return OrganizationUser.objects.filter(
+            user=self,
+            organization=organization,
+            role__in=['admin', 'manager']
+        ).exists()
+
+    def has_audit_access(self, organization):
+        """
+        Check if user has audit access to the organization.
+        Users with admin/manager roles or specific audit permissions have access.
+        """
+        if self.is_superuser:
+            return True
+            
+        # Check if user has admin/manager role in the organization
+        if self.has_org_admin_access(organization):
+            return True
+            
+        # Check for specific audit permissions
+        from organizations.models import OrganizationUser
+        return OrganizationUser.objects.filter(
+            user=self,
+            organization=organization,
+            role__in=['admin', 'manager', 'staff']  # Staff can have audit access
+        ).exists()
 
 
 class Profile(models.Model):

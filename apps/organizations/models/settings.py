@@ -2,7 +2,7 @@
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from apps.core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from django_ckeditor_5.fields import CKEditor5Field
 
 class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
@@ -45,14 +45,14 @@ class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
     class Meta:
         verbose_name = _("Organization Setting")
         verbose_name_plural = _("Organization Settings")
-        ordering = ['organization__customer_name']
+        ordering = ['organization__name']
         indexes = [
             models.Index(fields=['subscription_plan']),
             models.Index(fields=['is_active']),
         ]
     
     def __str__(self):
-        return f"Settings for {self.organization.customer_name}"
+        return f"Settings for {self.organization.name}"
     
     def get_setting(self, key, default=None):
         """

@@ -1,8 +1,11 @@
 # apps/users/urls.py
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from rest_framework_nested import routers
+from django.utils.translation import gettext_lazy as _
+
 from .views import (
-    # HTML / Web Views
-    UserRegisterView,
+    # Web Views
     UserLoginView,
     UserLogoutView,
     ProfileView,
@@ -12,6 +15,13 @@ from .views import (
     UserPasswordResetDoneView,
     UserPasswordResetConfirmView,
     UserPasswordResetCompleteView,
+    UserListView,
+    UserDetailView,
+    UserUpdateView,
+    UserDeleteView,
+    OrganizationRoleCreateView,
+    OrganizationRoleUpdateView,
+    OrganizationRoleDeleteView,
     # API Views
     UserRegisterAPIView,
     UserLoginAPIView,
@@ -21,39 +31,37 @@ from .views import (
 )
 
 app_name = 'users'
+
+# Web URL patterns
 urlpatterns = [
-    # HTML / Web Views
-    path('register/', UserRegisterView.as_view(), name='register'),
-    path('login/',    UserLoginView.as_view(),    name='login'),
-    path('logout/',   UserLogoutView.as_view(),   name='logout'),
-    path('profile/',  ProfileView.as_view(),      name='profile'),
-
-    # Password Change
-    path('password/change/',
-         UserPasswordChangeView.as_view(),
-         name='password_change'),
-    path('password/change/done/',
-         UserPasswordChangeDoneView.as_view(),
-         name='password_change_done'),
-
-    # Password Reset
-    path('password/reset/',
-         UserPasswordResetView.as_view(),
-         name='password_reset'),
-    path('password/reset/done/',
-         UserPasswordResetDoneView.as_view(),
-         name='password_reset_done'),
-    path('password/reset/confirm/<uidb64>/<token>/',
-         UserPasswordResetConfirmView.as_view(),
-         name='password_reset_confirm'),
-    path('password/reset/complete/',
-         UserPasswordResetCompleteView.as_view(),
-         name='password_reset_complete'),
-
-    # REST API Endpoints
-    path('api/register/',      UserRegisterAPIView.as_view(), name='api-register'),
-    path('api/login/',         UserLoginAPIView.as_view(),    name='api-login'),
-    path('api/token/refresh/', TokenRefreshAPIView.as_view(), name='token_refresh'),
-    path('api/verify-otp/',    OTPVerifyAPIView.as_view(),    name='api-verify-otp'),
-    path('api/otp/resend/',    OTPResendAPIView.as_view(),    name='api-otp-resend'),
+    # Authentication
+    path('login/', UserLoginView.as_view(), name='login'),
+    path('logout/', UserLogoutView.as_view(), name='logout'),
+    path('profile/', ProfileView.as_view(), name='profile'),
+    
+    # Password Management
+    path('password/change/', UserPasswordChangeView.as_view(), name='password_change'),
+    path('password/change/done/', UserPasswordChangeDoneView.as_view(), name='password_change_done'),
+    path('password/reset/', UserPasswordResetView.as_view(), name='password_reset'),
+    path('password/reset/done/', UserPasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('password/reset/<uidb64>/<token>/', UserPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('password/reset/complete/', UserPasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    
+    # User Management
+    path('', UserListView.as_view(), name='user-list'),
+    path('<int:pk>/', UserDetailView.as_view(), name='user-detail'),
+    path('<int:pk>/update/', UserUpdateView.as_view(), name='user-update'),
+    path('<int:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
+    
+    # Organization Roles
+    path('roles/create/', OrganizationRoleCreateView.as_view(), name='role-create'),
+    path('roles/<int:pk>/update/', OrganizationRoleUpdateView.as_view(), name='role-update'),
+    path('roles/<int:pk>/delete/', OrganizationRoleDeleteView.as_view(), name='role-delete'),
+    
+    # API endpoints
+    path('api/register/', UserRegisterAPIView.as_view(), name='api-register'),
+    path('api/login/', UserLoginAPIView.as_view(), name='api-login'),
+    path('api/token/refresh/', TokenRefreshAPIView.as_view(), name='token-refresh'),
+    path('api/verify-otp/', OTPVerifyAPIView.as_view(), name='verify-otp'),
+    path('api/resend-otp/', OTPResendAPIView.as_view(), name='resend-otp'),
 ]

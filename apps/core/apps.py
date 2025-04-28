@@ -1,7 +1,11 @@
 # apps/core/apps.py
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 class CoreConfig(AppConfig):
-    name = 'core'        # if using sys.path hack and __init__.py added
-    # …or…
-    # name = 'apps.core'  # if you prefer fully qualified imports without altering sys.path
+    name = 'core'
+    verbose_name = 'Core'
+    default_auto_field = 'django.db.models.BigAutoField'
+
+    def ready(self):
+        import core.signals  # noqa

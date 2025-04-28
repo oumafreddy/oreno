@@ -1,9 +1,10 @@
 # apps/organizations/models/history.py
 
 from django.db import models
+from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from apps.core.models.abstract_models import AuditableModel  # Already includes TimeStampedModel
+from core.models.abstract_models import AuditableModel  # Already includes TimeStampedModel
 from django_ckeditor_5.fields import CKEditor5Field
 
 class ArchivedOrganization(AuditableModel):

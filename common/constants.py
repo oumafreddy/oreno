@@ -95,3 +95,18 @@ DEFAULT_LANGUAGE_CODE = "en-us"
 DEFAULT_TIME_ZONE = "UTC"
 
 # For any additional default values, add them below.
+
+# apps/core/constants.py
+
+# ─── Approval States ────────────────────────────────────────────
+DRAFT             = 'draft'
+PENDING           = 'pending'
+APPROVED          = 'approved'
+REJECTED          = 'rejected'
+
+STATUS_CHOICES = (
+    (DRAFT,    'Draft'),
+    (PENDING,  'Pending Approval'),
+    (APPROVED, 'Approved'),
+    (REJECTED, 'Rejected'),
+)

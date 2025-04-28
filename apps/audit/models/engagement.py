@@ -1,36 +1,37 @@
 # apps/audit/models/engagement.py
 
+import reversion
 from django.db import models
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
 
-from apps.core.models.abstract_models import OrganizationOwnedModel, AuditableModel
-from apps.core.mixins.state import ApprovalStateMixin
-from apps.audit.models.workplan import AuditWorkplan
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.mixins.state import ApprovalStateMixin
+from audit.models.workplan import AuditWorkplan
 
+@reversion.register()
 class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
     """
-    Model for audit engagements.
-
-    Represents a specific engagement within an audit workplan.
-    Includes audit details such as title, type, project dates, and textual descriptions.
-    New fields (assigned_to and assigned_by) have been added so that engagements are
-    assigned from the pool of registered users within an organization. Approval state
-    is managed through the ApprovalStateMixin.
+    Audit engagement model with FSM state, rich-text fields, and assignments.
     """
+    code = models.CharField(
+        max_length=16,
+        db_index=True,
+        verbose_name=_("Engagement Code"),
+        help_text=_("Unique code for identifying the engagement within a workplan."),
+    )
     audit_workplan = models.ForeignKey(
         AuditWorkplan,
         on_delete=models.CASCADE,
         related_name='engagements',
         verbose_name=_("Audit Workplan"),
-        help_text=_("The audit workplan to which this engagement belongs.")
     )
     title = models.CharField(
         max_length=255,
         verbose_name=_("Engagement Title"),
-        help_text=_("Title of the engagement.")
     )
     engagement_type = models.CharField(
         max_length=80,
@@ -38,17 +39,14 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         null=True,
         default='Compliance Audit',
         verbose_name=_("Engagement Type"),
-        help_text=_("Type of audit engagement (e.g., Compliance Audit, Operational Audit).")
     )
     project_start_date = models.DateField(
         verbose_name=_("Project Start Date"),
-        help_text=_("The start date of the engagement.")
     )
     target_end_date = models.DateField(
         blank=True,
         null=True,
         verbose_name=_("Target End Date"),
-        help_text=_("Proposed end date for the engagement; leave blank if ongoing.")
     )
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -57,58 +55,50 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         blank=True,
         related_name='engagements_assigned',
         verbose_name=_("Assigned To"),
-        help_text=_("User assigned to this engagement from within the organization.")
     )
     assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='engagements_assigned_by',
+        related_name='engagements_created',
         verbose_name=_("Assigned By"),
-        help_text=_("User who assigned this engagement.")
     )
     executive_summary = CKEditor5Field(
-        'Executive Summary',
+        _('Executive Summary'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Summary of the engagement.")
     )
     purpose = CKEditor5Field(
-        'Purpose',
+        _('Purpose'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Purpose of undertaking the engagement.")
     )
     background = CKEditor5Field(
-        'Background',
+        _('Background'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Background context relevant to the engagement.")
     )
     scope = CKEditor5Field(
-        'Scope',
+        _('Scope'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Scope of audit procedures to be performed.")
     )
     project_objectives = CKEditor5Field(
-        'Project Objectives',
+        _('Project Objectives'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Specific objectives for the engagement.")
     )
     conclusion_description = CKEditor5Field(
-        'Conclusion Description',
+        _('Conclusion Description'),
         config_name='extends',
         blank=True,
         null=True,
-        help_text=_("Summary of conclusions drawn from the engagement.")
     )
     CONCLUSION_CHOICES = [
         ('satisfactory', _('Satisfactory')),
@@ -120,7 +110,6 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         choices=CONCLUSION_CHOICES,
         default='satisfactory',
         verbose_name=_("Conclusion"),
-        help_text=_("Overall conclusion derived from the engagement.")
     )
     PROJECT_STATUS_CHOICES = [
         ('draft', _('Draft')),
@@ -133,37 +122,43 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         default='draft',
         db_index=True,
         verbose_name=_("Project Status"),
-        help_text=_("Current status of the engagement.")
     )
 
     class Meta:
-        verbose_name = _("Engagement")
-        verbose_name_plural = _("Engagements")
-        ordering = ['-project_start_date', 'title']
+        app_label = 'audit'
+        verbose_name = _('Engagement')
+        verbose_name_plural = _('Engagements')
+        ordering = ['-project_start_date', 'code']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organization', 'audit_workplan', 'code'],
+                name='unique_engagement_per_workplan'
+            )
+        ]
         indexes = [
             models.Index(fields=['organization']),
-            models.Index(fields=['title']),
-            models.Index(fields=['project_status']),
             models.Index(fields=['audit_workplan']),
+            models.Index(fields=['code']),
+            models.Index(fields=['project_status']),
         ]
 
-    def __str__(self):
-        return f"{self.title} ({self.audit_workplan.code})"
+    def clean(self):
+        if self.target_end_date and self.project_start_date > self.target_end_date:
+            raise ValidationError(
+                _('Project start date must be on or before target end date.')
+            )
+
+    def save(self, *args, **kwargs):
+        # Skip full_clean() to avoid state validation issues
+        with reversion.create_revision():
+            if hasattr(self, 'last_modified_by') and self.last_modified_by:
+                reversion.set_user(self.last_modified_by)
+            # record the FSM field state
+            reversion.set_comment(f"Saved engagement '{self.code}' (State: {self.state})")
+            super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse('audit:engagement_detail', kwargs={'pk': self.pk})
 
-    def clean(self):
-        """
-        Validate that the project start date is before the target end date.
-        """
-        if self.project_start_date and self.target_end_date and self.project_start_date > self.target_end_date:
-            from django.core.exceptions import ValidationError
-            raise ValidationError(_('Target end date cannot be before the project start date.'))
-
     def get_approvers(self):
-        """
-        Retrieve the list of approvers for this engagement.
-        This method delegates approval responsibility to the associated workplan.
-        """
         return self.audit_workplan.get_approvers()

@@ -1,9 +1,12 @@
 # oreno\apps\core\models\abstract_models.py
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
+from core.middleware import get_current_user
 
 class TimeStampedModel(models.Model):
     """
@@ -79,12 +82,12 @@ class AuditableModel(TimeStampedModel):
 
     class Meta:
         abstract = True
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(created_by__isnull=False) | models.Q(updated_by__isnull=False),
-                name='audit_trail_required'
-            )
-        ]
+        # constraints = [
+        #     models.CheckConstraint(
+        #         check=models.Q(created_by__isnull=False) | models.Q(updated_by__isnull=False),
+        #         name='audit_trail_required'
+        #     )
+        # ]
         verbose_name = _('Auditable Model')
         verbose_name_plural = _('Auditable Models')
 
@@ -94,7 +97,6 @@ class AuditableModel(TimeStampedModel):
         Note: Requires implementation of CurrentUserMiddleware
         """
         try:
-            from apps.core.middleware import get_current_user
             user = get_current_user()
             if user and user.is_authenticated:
                 if not self.pk:

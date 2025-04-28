@@ -1,45 +1,115 @@
 # apps/organizations/admin.py
 
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from django_tenants.admin import TenantAdminMixin
-
-from .models import (
-    Organization,
-    ArchivedOrganization,
-    OrganizationSettings,
-    Subscription,
-    Domain,
-)
+from reversion.admin import VersionAdmin
+from .models import Organization, OrganizationSettings, Subscription, Domain
 
 @admin.register(Organization)
-class OrganizationAdmin(TenantAdminMixin, admin.ModelAdmin):
+class OrganizationAdmin(TenantAdminMixin, VersionAdmin):
     """
-    Admin for tenant Organizations.  We display:
-      - customer_name
-      - customer_code
-      - is_active
-      - primary custom domain (via the Domain model)
+    Admin for tenant Organizations with enhanced security and privacy controls.
     """
     list_display = (
-        'customer_name',
-        'customer_code',
+        'name',
+        'code',
         'is_active',
-        'primary_domain',   # <— this method replaces the old custom_domain field
+        'created_at',
     )
-    list_filter = ('is_active', 'customer_industry')
-    search_fields = ('customer_name', 'customer_code', 'customer_industry')
+    list_filter = (
+        'is_active',
+        'created_at',
+    )
+    search_fields = (
+        'name',
+        'code',
+        'description',
+    )
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+    )
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'code', 'is_active')
+        }),
+        (_('Details'), {
+            'fields': ('description', 'website', 'logo')
+        }),
+        (_('System Information'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    actions = ['deactivate_organizations', 'archive_organizations']
 
-    def primary_domain(self, obj):
-        """
-        Look up the Domain record marked is_primary for this tenant.
-        Returns its hostname or empty string if none.
-        """
-        primary = Domain.objects.filter(tenant=obj, is_primary=True).first()
-        return primary.domain if primary else ''
-    primary_domain.short_description = 'Custom Domain'
+    def get_queryset(self, request):
+        return super().get_queryset(request)
 
-# Register the rest of your models
-admin.site.register(ArchivedOrganization)
-admin.site.register(OrganizationSettings)
-admin.site.register(Subscription)
-admin.site.register(Domain)
+    def has_change_permission(self, request, obj=None):
+        if not obj:
+            return True
+        return request.user.is_superuser or (
+            request.user.is_authenticated and
+            request.user.organization == obj and
+            request.user.role == 'admin'
+        )
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def deactivate_organizations(self, request, queryset):
+        queryset.update(is_active=False)
+    deactivate_organizations.short_description = _("Deactivate selected organizations")
+
+    def archive_organizations(self, request, queryset):
+        for org in queryset:
+            org.archive()
+    archive_organizations.short_description = _("Archive selected organizations")
+
+@admin.register(OrganizationSettings)
+class OrganizationSettingsAdmin(VersionAdmin):
+    list_display = ('organization', 'subscription_plan', 'is_active')
+    list_filter = ('subscription_plan', 'is_active')
+    readonly_fields = ('organization',)
+
+    def has_change_permission(self, request, obj=None):
+        if not obj:
+            return True
+        return request.user.is_superuser or (
+            request.user.is_authenticated and
+            request.user.organization == obj.organization and
+            request.user.role == 'admin'
+        )
+
+@admin.register(Subscription)
+class SubscriptionAdmin(VersionAdmin):
+    list_display = ('organization', 'subscription_plan', 'status', 'start_date', 'end_date')
+    list_filter = ('subscription_plan', 'status', 'billing_cycle')
+    readonly_fields = ('organization',)
+
+    def has_change_permission(self, request, obj=None):
+        if not obj:
+            return True
+        return request.user.is_superuser or (
+            request.user.is_authenticated and
+            request.user.organization == obj.organization and
+            request.user.role == 'admin'
+        )
+
+@admin.register(Domain)
+class DomainAdmin(VersionAdmin):
+    list_display = ('domain', 'tenant', 'is_primary', 'created_at')
+    list_filter = ('is_primary', 'created_at')
+    search_fields = ('domain', 'tenant__name')
+    readonly_fields = ('tenant',)
+
+    def has_change_permission(self, request, obj=None):
+        if not obj:
+            return True
+        return request.user.is_superuser or (
+            request.user.is_authenticated and
+            request.user.organization == obj.tenant and
+            request.user.role == 'admin'
+        )

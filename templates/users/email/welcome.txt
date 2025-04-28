@@ -1,0 +1,8 @@
+Hello {{ username }},
+
+Welcome to Oreno! Your account has been created.
+
+If you have any questions, contact {{ support_email }}.
+
+Thanks,
+The Oreno Team

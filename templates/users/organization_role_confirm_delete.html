@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Confirm Role Deletion</h2>
+<p>Are you sure you want to remove this role?</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Delete</button>
+  <a href="{% url 'users:user-list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,9 @@
+Hello {{ user.get_full_name|default:user.email }},
+
+Your OTP code is: {{ otp }}
+It expires at: {{ expires_at }}
+
+If you did not request this, please ignore this email.
+
+Thanks,
+The Oreno Team

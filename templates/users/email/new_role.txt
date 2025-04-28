@@ -1,0 +1,6 @@
+Hello {{ user.get_full_name|default:user.email }},
+
+You have been assigned a new role: {{ role }} in {{ organization }}.
+
+Thanks,
+The Oreno Team

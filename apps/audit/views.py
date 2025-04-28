@@ -1,0 +1,625 @@
+# apps/audit/views.py
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+from django.views.generic import (
+    ListView, DetailView, CreateView, UpdateView, DeleteView,
+    TemplateView
+)
+from django_fsm import can_proceed
+
+from core.mixins import OrganizationMixin, OrganizationPermissionMixin
+from core.decorators import skip_org_check
+from organizations.models import Organization
+
+from .models import AuditWorkplan, Engagement, Issue, Approval
+from .forms import (
+    AuditWorkplanForm, EngagementForm, IssueForm,
+    ApprovalForm
+)
+
+from rest_framework import generics, permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from .serializers import (
+    AuditWorkplanSerializer, EngagementSerializer, IssueSerializer,
+    ApprovalSerializer
+)
+
+from core.permissions import IsTenantMember
+from django.contrib.contenttypes.models import ContentType
+
+# ─── MIXINS ──────────────────────────────────────────────────────────────────
+class AuditPermissionMixin(OrganizationPermissionMixin):
+    """Verify that current user has audit permissions for the organization"""
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+            
+        # Get organization from the view's object or kwargs
+        organization = None
+        if hasattr(self, 'object'):
+            organization = self.object.organization
+        elif 'organization_pk' in kwargs:
+            organization = get_object_or_404(Organization, pk=kwargs['organization_pk'])
+        
+        if organization and not request.user.has_audit_access(organization):
+            raise PermissionDenied(_("You don't have permission to access audit data for this organization"))
+        
+        return super().dispatch(request, *args, **kwargs)
+
+# ─── WORKPLAN VIEWS ──────────────────────────────────────────────────────────
+class WorkplanListView(AuditPermissionMixin, ListView):
+    model = AuditWorkplan
+    template_name = 'audit/workplan_list.html'
+    context_object_name = 'workplans'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        organization = self.request.user.current_organization
+        return queryset.filter(organization=organization).select_related(
+            'created_by', 'updated_by'
+        ).prefetch_related('engagements')
+
+class WorkplanDetailView(AuditPermissionMixin, DetailView):
+    model = AuditWorkplan
+    template_name = 'audit/workplan_detail.html'
+    context_object_name = 'workplan'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        workplan = self.object
+        
+        # Add related data efficiently
+        context.update({
+            'engagements': workplan.engagements.all().select_related(
+                'assigned_to', 'assigned_by'
+            ),
+            'approvals': workplan.approvals.all().select_related(
+                'requester', 'approver'
+            ),
+            'can_submit': can_proceed(workplan.submit_for_approval),
+            'can_approve': can_proceed(workplan.approve),
+            'can_reject': can_proceed(workplan.reject),
+        })
+        return context
+
+class WorkplanCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = AuditWorkplan
+    form_class = AuditWorkplanForm
+    template_name = 'audit/workplan_form.html'
+    success_message = _("Workplan %(name)s was created successfully")
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.current_organization
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:workplan_detail', kwargs={'pk': self.object.pk})
+
+class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = AuditWorkplan
+    form_class = AuditWorkplanForm
+    template_name = 'audit/workplan_form.html'
+    success_message = _("Workplan %(name)s was updated successfully")
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:workplan_detail', kwargs={'pk': self.object.pk})
+
+# ─── ENGAGEMENT VIEWS ────────────────────────────────────────────────────────
+class EngagementListView(AuditPermissionMixin, ListView):
+    model = Engagement
+    template_name = 'audit/engagement_list.html'
+    context_object_name = 'engagements'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        organization = self.request.user.current_organization
+        return queryset.filter(organization=organization).select_related(
+            'audit_workplan', 'assigned_to', 'assigned_by'
+        ).prefetch_related('issues')
+
+class EngagementDetailView(AuditPermissionMixin, DetailView):
+    model = Engagement
+    template_name = 'audit/engagement_detail.html'
+    context_object_name = 'engagement'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        engagement = self.object
+        
+        # Add related data efficiently
+        context.update({
+            'issues': engagement.issues.all().select_related(
+                'issue_owner', 'engagement'
+            ),
+            'approvals': engagement.approvals.all().select_related(
+                'requester', 'approver'
+            ),
+            'can_submit': can_proceed(engagement.submit_for_approval),
+            'can_approve': can_proceed(engagement.approve),
+            'can_reject': can_proceed(engagement.reject),
+        })
+        return context
+
+class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = Engagement
+    form_class = EngagementForm
+    template_name = 'audit/engagement_form.html'
+    success_message = _("Engagement %(title)s was created successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.current_organization
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.current_organization
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:engagement_detail', kwargs={'pk': self.object.pk})
+
+class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = Engagement
+    form_class = EngagementForm
+    template_name = 'audit/engagement_form.html'
+    success_message = _("Engagement %(title)s was updated successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.current_organization
+        return kwargs
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:engagement_detail', kwargs={'pk': self.object.pk})
+
+# ─── ISSUE VIEWS ─────────────────────────────────────────────────────────────
+class IssueListView(AuditPermissionMixin, ListView):
+    model = Issue
+    template_name = 'audit/issue_list.html'
+    context_object_name = 'issues'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        organization = self.request.user.current_organization
+        return queryset.filter(organization=organization).select_related(
+            'engagement', 'issue_owner'
+        )
+
+class IssueDetailView(AuditPermissionMixin, DetailView):
+    model = Issue
+    template_name = 'audit/issue_detail.html'
+    context_object_name = 'issue'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        issue = self.object
+        
+        # Add related data efficiently
+        context.update({
+            'approvals': issue.approvals.all().select_related(
+                'requester', 'approver'
+            ),
+        })
+        return context
+
+class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = Issue
+    form_class = IssueForm
+    template_name = 'audit/issue_form.html'
+    success_message = _("Issue %(issue_title)s was created successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.current_organization
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.current_organization
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:issue_detail', kwargs={'pk': self.object.pk})
+
+class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = Issue
+    form_class = IssueForm
+    template_name = 'audit/issue_form.html'
+    success_message = _("Issue %(issue_title)s was updated successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.current_organization
+        return kwargs
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:issue_detail', kwargs={'pk': self.object.pk})
+
+# ─── APPROVAL VIEWS ──────────────────────────────────────────────────────────
+class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = Approval
+    form_class = ApprovalForm
+    template_name = 'audit/approval_form.html'
+    success_message = _("Approval request was created successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.current_organization
+        kwargs['requester'] = self.request.user
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.current_organization
+        form.instance.requester = self.request.user
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:approval_detail', kwargs={'pk': self.object.pk})
+
+class ApprovalDetailView(AuditPermissionMixin, DetailView):
+    model = Approval
+    template_name = 'audit/approval_detail.html'
+    context_object_name = 'approval'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        approval = self.object
+        
+        # Add related data efficiently
+        context.update({
+            'content_object': approval.content_object,
+            'can_approve': self.request.user.has_perm('audit.can_approve_workplan'),
+        })
+        return context
+
+# ─── DASHBOARD VIEW ──────────────────────────────────────────────────────────
+class AuditDashboardView(AuditPermissionMixin, TemplateView):
+    template_name = 'audit/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.user.current_organization
+        
+        # Get counts and recent items for dashboard
+        context.update({
+            'workplan_count': AuditWorkplan.objects.filter(organization=organization).count(),
+            'engagement_count': Engagement.objects.filter(organization=organization).count(),
+            'issue_count': Issue.objects.filter(organization=organization).count(),
+            'pending_approvals': Approval.objects.filter(
+                organization=organization,
+                status='pending'
+            ).select_related('requester', 'approver')[:5],
+            'recent_workplans': AuditWorkplan.objects.filter(
+                organization=organization
+            ).select_related('created_by')[:5],
+            'recent_engagements': Engagement.objects.filter(
+                organization=organization
+            ).select_related('assigned_to')[:5],
+            'recent_issues': Issue.objects.filter(
+                organization=organization
+            ).select_related('issue_owner')[:5],
+        })
+        return context
+
+class AuditWorkplanViewSet(viewsets.ModelViewSet):
+    """API endpoint for audit workplans."""
+    serializer_class = AuditWorkplanSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return AuditWorkplan.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(organization=self.request.organization)
+
+class EngagementViewSet(viewsets.ModelViewSet):
+    """API endpoint for audit engagements."""
+    serializer_class = EngagementSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return Engagement.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(organization=self.request.organization)
+
+class IssueViewSet(viewsets.ModelViewSet):
+    """API endpoint for audit issues."""
+    serializer_class = IssueSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return Issue.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(organization=self.request.organization)
+
+class ApprovalViewSet(viewsets.ModelViewSet):
+    """API endpoint for audit approvals."""
+    serializer_class = ApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        return Approval.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organization=self.request.organization,
+            requester=self.request.user
+        )
+
+class WorkplanEngagementViewSet(viewsets.ModelViewSet):
+    """API endpoint for workplan engagements."""
+    serializer_class = EngagementSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        workplan_pk = self.kwargs.get('workplan_pk')
+        return Engagement.objects.filter(
+            organization=self.request.organization,
+            audit_workplan_id=workplan_pk
+        )
+
+    def perform_create(self, serializer):
+        workplan_pk = self.kwargs.get('workplan_pk')
+        workplan = AuditWorkplan.objects.get(pk=workplan_pk)
+        serializer.save(
+            organization=self.request.organization,
+            audit_workplan=workplan
+        )
+
+class WorkplanApprovalViewSet(viewsets.ModelViewSet):
+    """API endpoint for workplan approvals."""
+    serializer_class = ApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+
+    def get_queryset(self):
+        """Return approvals for the specified workplan."""
+        workplan_id = self.kwargs.get('workplan_pk')
+        return Approval.objects.filter(
+            content_type__model='auditworkplan',
+            object_id=workplan_id
+        )
+
+    def perform_create(self, serializer):
+        """Create a new approval for the workplan."""
+        workplan_id = self.kwargs.get('workplan_pk')
+        workplan = get_object_or_404(AuditWorkplan, pk=workplan_id)
+        serializer.save(
+            content_type=ContentType.objects.get_for_model(AuditWorkplan),
+            object_id=workplan_id,
+            organization=workplan.organization
+        )
+
+class EngagementIssueViewSet(viewsets.ModelViewSet):
+    """API endpoint for engagement issues."""
+    serializer_class = IssueSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    
+    def get_queryset(self):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        return Issue.objects.filter(
+            engagement_id=engagement_pk
+        ).select_related('issue_owner', 'engagement')
+    
+    def perform_create(self, serializer):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        engagement = get_object_or_404(Engagement, pk=engagement_pk)
+        serializer.save(
+            engagement=engagement,
+            organization=self.request.user.current_organization,
+            created_by=self.request.user
+        )
+
+class EngagementApprovalViewSet(viewsets.ModelViewSet):
+    """API endpoint for engagement approvals."""
+    serializer_class = ApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    
+    def get_queryset(self):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        return Approval.objects.filter(
+            content_type__model='engagement',
+            object_id=engagement_pk
+        ).select_related('requester', 'approver')
+    
+    def perform_create(self, serializer):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        engagement = get_object_or_404(Engagement, pk=engagement_pk)
+        serializer.save(
+            content_object=engagement,
+            organization=self.request.user.current_organization,
+            requester=self.request.user
+        )
+
+class IssueApprovalViewSet(viewsets.ModelViewSet):
+    """API endpoint for issue approvals."""
+    serializer_class = ApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    
+    def get_queryset(self):
+        issue_pk = self.kwargs.get('issue_pk')
+        return Approval.objects.filter(
+            content_type__model='issue',
+            object_id=issue_pk
+        ).select_related('requester', 'approver')
+    
+    def perform_create(self, serializer):
+        issue_pk = self.kwargs.get('issue_pk')
+        issue = get_object_or_404(Issue, pk=issue_pk)
+        serializer.save(
+            content_object=issue,
+            organization=self.request.user.current_organization,
+            requester=self.request.user
+        )
+
+@login_required
+def submit_workplan(request, pk):
+    workplan = get_object_or_404(AuditWorkplan, pk=pk)
+    if can_proceed(workplan.submit_for_approval):
+        workplan.submit_for_approval()
+        workplan.save()
+        messages.success(request, _("Workplan submitted for approval successfully."))
+    else:
+        messages.error(request, _("Cannot submit workplan for approval in its current state."))
+    return redirect('audit:workplan-detail', pk=pk)
+
+@login_required
+def approve_workplan(request, pk):
+    workplan = get_object_or_404(AuditWorkplan, pk=pk)
+    if can_proceed(workplan.approve):
+        workplan.approve()
+        workplan.save()
+        messages.success(request, _("Workplan approved successfully."))
+    else:
+        messages.error(request, _("Cannot approve workplan in its current state."))
+    return redirect('audit:workplan-detail', pk=pk)
+
+@login_required
+def reject_workplan(request, pk):
+    workplan = get_object_or_404(AuditWorkplan, pk=pk)
+    if can_proceed(workplan.reject):
+        workplan.reject()
+        workplan.save()
+        messages.success(request, _("Workplan rejected."))
+    else:
+        messages.error(request, _("Cannot reject workplan in its current state."))
+    return redirect('audit:workplan-detail', pk=pk)
+
+@login_required
+def submit_engagement(request, pk):
+    engagement = get_object_or_404(Engagement, pk=pk)
+    if can_proceed(engagement.submit_for_approval):
+        engagement.submit_for_approval()
+        engagement.save()
+        messages.success(request, _("Engagement submitted for approval successfully."))
+    else:
+        messages.error(request, _("Cannot submit engagement for approval in its current state."))
+    return redirect('audit:engagement-detail', pk=pk)
+
+@login_required
+def approve_engagement(request, pk):
+    engagement = get_object_or_404(Engagement, pk=pk)
+    if can_proceed(engagement.approve):
+        engagement.approve()
+        engagement.save()
+        messages.success(request, _("Engagement approved successfully."))
+    else:
+        messages.error(request, _("Cannot approve engagement in its current state."))
+    return redirect('audit:engagement-detail', pk=pk)
+
+@login_required
+def reject_engagement(request, pk):
+    engagement = get_object_or_404(Engagement, pk=pk)
+    if can_proceed(engagement.reject):
+        engagement.reject()
+        engagement.save()
+        messages.success(request, _("Engagement rejected."))
+    else:
+        messages.error(request, _("Cannot reject engagement in its current state."))
+    return redirect('audit:engagement-detail', pk=pk)
+
+@login_required
+def close_issue(request, pk):
+    issue = get_object_or_404(Issue, pk=pk)
+    issue.issue_status = 'closed'
+    issue.save()
+    messages.success(request, _("Issue closed successfully."))
+    return redirect('audit:issue-detail', pk=pk)
+
+@login_required
+def reopen_issue(request, pk):
+    issue = get_object_or_404(Issue, pk=pk)
+    issue.issue_status = 'open'
+    issue.save()
+    messages.success(request, _("Issue reopened successfully."))
+    return redirect('audit:issue-detail', pk=pk)
+
+@login_required
+def approve_approval(request, pk):
+    approval = get_object_or_404(Approval, pk=pk)
+    approval.status = 'approved'
+    approval.save()
+    messages.success(request, _("Approval request approved successfully."))
+    return redirect('audit:approval-detail', pk=pk)
+
+@login_required
+def reject_approval(request, pk):
+    approval = get_object_or_404(Approval, pk=pk)
+    approval.status = 'rejected'
+    approval.save()
+    messages.success(request, _("Approval request rejected."))
+    return redirect('audit:approval-detail', pk=pk)
+
+@login_required
+def bulk_approve(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('selected_items')
+        Approval.objects.filter(id__in=ids).update(status='approved')
+        messages.success(request, _("Selected items approved successfully."))
+    return redirect('audit:approval-list')
+
+@login_required
+def bulk_reject(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('selected_items')
+        Approval.objects.filter(id__in=ids).update(status='rejected')
+        messages.success(request, _("Selected items rejected successfully."))
+    return redirect('audit:approval-list')
+
+@login_required
+def export_data(request):
+    # Implement export logic here
+    pass
+
+@login_required
+def workplan_report(request):
+    # Implement workplan report generation here
+    pass
+
+@login_required
+def engagement_report(request):
+    # Implement engagement report generation here
+    pass
+
+@login_required
+def issue_report(request):
+    # Implement issue report generation here
+    pass
+
+@login_required
+def approval_report(request):
+    # Implement approval report generation here
+    pass
+
+@login_required
+def search(request):
+    # Implement search functionality here
+    pass
+
+@login_required
+def autocomplete(request):
+    # Implement autocomplete functionality here
+    pass
+
+@login_required
+def validate(request):
+    # Implement validation functionality here
+    pass

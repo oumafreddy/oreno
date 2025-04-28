@@ -1,30 +1,31 @@
 # apps/core/mixins/state.py
-from django_fsm import FSMField, transition
+
 from django.db import models
+from django_fsm import FSMField, transition
+from common.constants import DRAFT, PENDING, APPROVED, REJECTED, STATUS_CHOICES
 
 class ApprovalStateMixin(models.Model):
-    STATE_DRAFT = 'draft'
-    STATE_PENDING = 'pending_approval'
-    STATE_APPROVED = 'approved'
-    STATE_REJECTED = 'rejected'
-    STATE_CHOICES = (
-        (STATE_DRAFT, 'Draft'),
-        (STATE_PENDING, 'Pending Approval'),
-        (STATE_APPROVED, 'Approved'),
-        (STATE_REJECTED, 'Rejected'),
+    """
+    Adds a `state` FSMField with transitions:
+      draft → pending → approved or rejected.
+    """
+    state = FSMField(
+        default=DRAFT,
+        choices=STATUS_CHOICES,
+        protected=True,
+        verbose_name="Approval State",
+        help_text="Current approval state.",
     )
 
-    state = FSMField(default=STATE_DRAFT, protected=True)
-
-    @transition(field=state, source=STATE_DRAFT, target=STATE_PENDING)
+    @transition(field=state, source=DRAFT,  target=PENDING)
     def submit_for_approval(self):
         pass
 
-    @transition(field=state, source=STATE_PENDING, target=STATE_APPROVED)
+    @transition(field=state, source=PENDING, target=APPROVED)
     def approve(self):
         pass
 
-    @transition(field=state, source=STATE_PENDING, target=STATE_REJECTED)
+    @transition(field=state, source=PENDING, target=REJECTED)
     def reject(self):
         pass
 
