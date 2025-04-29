@@ -110,6 +110,32 @@ class OTPResendAPIView(generics.GenericAPIView):
             "expires_at": otp.expires_at
         })
 
+@method_decorator(skip_org_check, name='dispatch')
+class ProfileAPIView(generics.RetrieveUpdateAPIView):
+    """
+    API view for retrieving and updating user profile information.
+    Requires authentication.
+    """
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """
+        Return the authenticated user's profile
+        """
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        """
+        Handle PUT requests to update profile
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
 # ─── WEB VIEWS ──────────────────────────────────────────────────────────────
 @method_decorator(skip_org_check, name='dispatch')
 class UserRegisterView(SuccessMessageMixin, CreateView):
@@ -134,9 +160,13 @@ class UserLoginView(LoginView):
     template_name = 'users/login.html'
     redirect_authenticated_user = True
 
+@method_decorator(skip_org_check, name='dispatch')
 class UserLogoutView(LogoutView):
+    """
+    Handle user logout and display the logged_out.html template.
+    """
     template_name = 'users/logged_out.html'
-    
+    next_page = None  # Let settings.LOGOUT_REDIRECT_URL handle redirection
 
 class ProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Profile
@@ -204,7 +234,22 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         if self.get_object() == request.user:
             raise PermissionDenied(_("You cannot delete your own account"))
-        return super().delete(request, *args, **kwargs)
+            
+        user = self.get_object()
+        
+        with transaction.atomic():
+            # First, delete any tenant-specific data in the user's organization schema
+            if user.organization:
+                from django_tenants.utils import tenant_context
+                with tenant_context(user.organization):
+                    # Delete audit-related records first
+                    from audit.models import Approval
+                    Approval.objects.filter(
+                        Q(requester=user) | Q(approver=user)
+                    ).delete()
+            
+            # Now delete the user from the public schema
+            return super().delete(request, *args, **kwargs)
 
 # ─── PASSWORD MANAGEMENT VIEWS ──────────────────────────────────────────────
 @method_decorator(login_required, name='dispatch')

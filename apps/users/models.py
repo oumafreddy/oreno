@@ -193,6 +193,7 @@ class OTP(models.Model):
     attempts = models.PositiveSmallIntegerField(default=0)
     expires_at = models.DateTimeField(default=default_expiration)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_expired = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _("OTP")

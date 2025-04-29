@@ -3,19 +3,25 @@ from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from .models import AuditLog
+from django.db.utils import ProgrammingError, OperationalError, DatabaseError
+from django.db import connection
 
 def log_change(instance, action, changes=None, user=None):
     """Helper function to log model changes."""
-    content_type = ContentType.objects.get_for_model(instance)
-    AuditLog.objects.create(
-        content_type=content_type,
-        object_id=instance.pk,
-        action=action,
-        changes=changes or {},
-        object_repr=str(instance),
-        user=user,
-        model=f"{instance._meta.app_label}.{instance._meta.model_name}"
-    )
+    try:
+        content_type = ContentType.objects.get_for_model(instance)
+        AuditLog.objects.create(
+            content_type=content_type,
+            object_id=instance.pk,
+            action=action,
+            changes=changes or {},
+            object_repr=str(instance),
+            user=user,
+            model=f"{instance._meta.app_label}.{instance._meta.model_name}"
+        )
+    except (ProgrammingError, OperationalError, DatabaseError):
+        # Silently fail if table doesn't exist
+        pass
 
 @receiver(post_save)
 def log_save(sender, instance, created, **kwargs):

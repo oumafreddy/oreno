@@ -36,6 +36,7 @@ urlpatterns = [
     
     # Public Authentication
     path('accounts/', include('users.urls', namespace='public-users')),
+    path('organizations/', include('organizations.urls', namespace='organizations')),
     
     # Public API Documentation
     path('api/docs/', TemplateView.as_view(

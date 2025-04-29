@@ -11,9 +11,14 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.utils import timezone
+from django.contrib.sessions.models import Session
+from django_tenants.utils import tenant_context
+from django.db.models import Q
 
 from .models import Profile, OTP, OrganizationRole
 from .tasks import send_welcome_email, cleanup_old_otps
+from organizations.models import Organization
 
 User = get_user_model()
 
@@ -39,7 +44,7 @@ def create_user_related_profiles(sender, instance, created, **kwargs):
             OTP.objects.create(user=instance)
 
             # Send welcome email asynchronously
-            send_welcome_email.delay(instance.id)
+            send_welcome_email.delay(instance.id, instance.email, instance.username)
 
             # Clear any cached user data
             safe_delete_pattern(f'user_{instance.id}_*')
@@ -68,10 +73,13 @@ def handle_user_state_changes(sender, instance, **kwargs):
     # Handle active state changes
     if old_instance.is_active != instance.is_active:
         if not instance.is_active:
-            # Deactivate all OTPs
-            OTP.objects.filter(user=instance).update(is_expired=True)
-            # Clear sessions
-            instance.session_set.all().delete()
+            # Deactivate all OTPs (set expires_at to now instead of is_expired)
+            OTP.objects.filter(user=instance).update(expires_at=timezone.now())
+            # Delete all sessions for this user
+            for session in Session.objects.all():
+                data = session.get_decoded()
+                if data.get('_auth_user_id') == str(instance.pk):
+                    session.delete()
 
 @receiver(post_save, sender=OTP)
 def handle_otp_creation(sender, instance, created, **kwargs):
@@ -125,17 +133,27 @@ def handle_role_changes(sender, instance, created, **kwargs):
 @receiver(pre_delete, sender=User)
 def handle_user_deletion(sender, instance, **kwargs):
     """
-    Handle cleanup before user deletion.
+    Handle cleanup and anonymization before user deletion.
     """
-    # Clear all related data
+    # Clear all related data in the public schema
     instance.profile.delete()
     instance.otp_set.all().delete()
     instance.user_roles.all().delete()
-    
     # Clear cached data
     safe_delete_pattern(f'user_{instance.id}_*')
     if instance.organization:
         safe_delete_pattern(f'org_{instance.organization_id}_*')
+        # Switch to tenant schema and anonymize/delete tenant data
+        with tenant_context(instance.organization):
+            try:
+                from audit.models import Approval, Engagement, Issue, AuditWorkplan
+                # Anonymize audit records
+                Approval.objects.filter(Q(requester=instance) | Q(approver=instance)).update(requester=None, approver=None, comments='[ANONYMIZED]')
+                Engagement.objects.filter(assigned_to=instance).update(assigned_to=None)
+                Issue.objects.filter(issue_owner=instance).update(issue_owner=None, issue_owner_title='[ANONYMIZED]')
+                AuditWorkplan.objects.filter(created_by=instance).update(created_by=None)
+            except Exception:
+                pass  # Table may not exist in public schema
 
 @receiver(m2m_changed, sender=User.groups.through)
 def handle_group_changes(sender, instance, action, **kwargs):
@@ -164,3 +182,25 @@ def handle_profile_changes(sender, instance, created, **kwargs):
         old_avatar = instance.get_dirty_fields().get('avatar')
         if old_avatar:
             old_avatar.delete(save=False)
+
+@receiver(pre_delete, sender=Organization)
+def handle_organization_deletion(sender, instance, **kwargs):
+    """
+    Handle cleanup and anonymization before organization deletion.
+    Applies to all users in the organization.
+    """
+    from audit.models import Approval, Engagement, Issue, AuditWorkplan
+    from users.models import CustomUser
+    from django.db.models import Q
+    # Clear cached data
+    safe_delete_pattern(f'org_{instance.id}_*')
+    with tenant_context(instance):
+        # Anonymize or delete all tenant data for all users in this org
+        for user in CustomUser.objects.filter(organization=instance):
+            try:
+                Approval.objects.filter(Q(requester=user) | Q(approver=user)).update(requester=None, approver=None, comments='[ANONYMIZED]')
+                Engagement.objects.filter(assigned_to=user).update(assigned_to=None)
+                Issue.objects.filter(issue_owner=user).update(issue_owner=None, issue_owner_title='[ANONYMIZED]')
+                AuditWorkplan.objects.filter(created_by=user).update(created_by=None)
+            except Exception:
+                pass  # Table may not exist in schema

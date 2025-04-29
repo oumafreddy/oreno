@@ -71,7 +71,8 @@ SHARED_APPS = [
 
     # Tenant definition + public models
     'organizations.apps.OrganizationsConfig',  # Tenant and Domain models
-    'users.apps.UsersConfig',                  # CustomUser lives here
+    'users.apps.UsersConfig',  
+    'core.apps.CoreConfig',    # Core functionality including audit logging
 ]
 
 # ------------------------------------------------------------------------------
@@ -81,8 +82,8 @@ TENANT_APPS = [
     'reversion',
     'django_ckeditor_5',  # Rich text editor
     # Core application logic
-    'core.apps.CoreConfig',
-    'audit.apps.AuditConfig',
+    'core.apps.CoreConfig',  # Core functionality in tenant context
+    'audit.apps.AuditConfig',  # Audit management (workplans, engagements, issues)
     'admin_module.apps.AdminModuleConfig',
     'compliance.apps.ComplianceConfig',
     'contracts.apps.ContractsConfig',

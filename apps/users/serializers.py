@@ -12,11 +12,31 @@ from organizations.models import Organization
 User = get_user_model()
 
 class ProfileSerializer(serializers.ModelSerializer):
-    """Serializer for user profiles"""
+    """
+    Serializer for user profile data.
+    Handles serialization and deserialization of User instances for profile operations.
+    """
     class Meta:
-        model = Profile
-        fields = ('avatar',)
-        read_only_fields = ('user',)
+        model = User
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 'phone_number',
+            'avatar', 'date_joined', 'is_active', 'organization'
+        ]
+        read_only_fields = ['id', 'email', 'date_joined', 'is_active', 'organization']
+
+    def update(self, instance, validated_data):
+        """
+        Update and return an existing user instance, given the validated data.
+        """
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        
+        if 'avatar' in validated_data:
+            instance.avatar = validated_data['avatar']
+            
+        instance.save()
+        return instance
 
 class OrganizationRoleSerializer(serializers.ModelSerializer):
     """Serializer for organization roles"""

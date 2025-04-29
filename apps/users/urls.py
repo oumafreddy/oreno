@@ -28,6 +28,7 @@ from .views import (
     TokenRefreshAPIView,
     OTPVerifyAPIView,
     OTPResendAPIView,
+    ProfileAPIView,
 )
 
 app_name = 'users'
@@ -64,4 +65,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshAPIView.as_view(), name='token-refresh'),
     path('api/verify-otp/', OTPVerifyAPIView.as_view(), name='verify-otp'),
     path('api/resend-otp/', OTPResendAPIView.as_view(), name='resend-otp'),
+    path('api/users/profile/', ProfileAPIView.as_view(), name='api-profile'),
 ]

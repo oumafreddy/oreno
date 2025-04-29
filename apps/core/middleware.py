@@ -45,9 +45,17 @@ class OrganizationMiddleware:
 
     # Paths to bypass org‑check entirely
     EXEMPT_PATH_PREFIXES = (
-        '/accounts/login/', '/accounts/register/',
-        '/accounts/logout/', '/admin/',
-        '/static/', '/media/', '/favicon.ico',
+        '/accounts/login/',
+        '/accounts/register/',
+        '/accounts/logout/',
+        '/admin/',
+        '/static/',
+        '/media/',
+        '/favicon.ico',
+        '/organizations/create/',
+        '/api/users/profile/',
+        '/api/users/logout/',
+        '/api/',  # Exempt all API endpoints
     )
 
     def __init__(self, get_response):
@@ -70,18 +78,27 @@ class OrganizationMiddleware:
         # 3) Enforce for authenticated users
         user = getattr(request, 'user', None)
         organization = None
+        
         if user and user.is_authenticated:
-            # If user has no org, redirect them
-            if not getattr(user, 'organization', None):
-                return redirect('organizations:organization-create')  # 302 redirect :contentReference[oaicite:6]{index=6}
-            organization = user.organization
+            # Get organization from user or their memberships
+            organization = getattr(user, 'organization', None)
+            if not organization:
+                # Check OrganizationUser memberships
+                from organizations.models import OrganizationUser
+                org_user = OrganizationUser.objects.filter(user=user).first()
+                if org_user:
+                    organization = org_user.organization
+                elif not path.startswith('/organizations/create/'):
+                    return redirect('organizations:create')
 
         # 4) Store for downstream use
         _thread_locals.organization = organization
         request.organization = organization
 
         response = self.get_response(request)
+        
         # Prevent thread‑local leakage
         if hasattr(_thread_locals, 'organization'):
             del _thread_locals.organization
+            
         return response

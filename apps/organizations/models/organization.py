@@ -44,7 +44,7 @@ class Organization(TenantMixin, AuditMixin, models.Model):
         help_text=_('Unique identifier code for the organization'),
         validators=[RegexValidator(r'^[A-Z0-9]+$', 'Only uppercase letters and numbers allowed')]
     )
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True)    
     logo = models.ImageField(upload_to='organizations/logos/', null=True, blank=True)
     website = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)

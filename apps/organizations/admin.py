@@ -103,7 +103,6 @@ class DomainAdmin(VersionAdmin):
     list_display = ('domain', 'tenant', 'is_primary', 'created_at')
     list_filter = ('is_primary', 'created_at')
     search_fields = ('domain', 'tenant__name')
-    readonly_fields = ('tenant',)
 
     def has_change_permission(self, request, obj=None):
         if not obj:

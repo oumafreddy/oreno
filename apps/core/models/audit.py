@@ -1,13 +1,13 @@
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from django.apps import apps
 
 class AuditLog(models.Model):
     """
-    Model for tracking changes to model instances
+    Robust audit log model for tracking changes to model instances.
+    Integrates with multi-tenancy and existing audit mixins/signals.
     """
     ACTION_CHOICES = (
         ('create', _('Created')),
@@ -28,7 +28,7 @@ class AuditLog(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
     
     user = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -67,14 +67,14 @@ class AuditLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True)
     user_agent = models.TextField(null=True)
     created_by = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='audit_logs_created'
     )
 
     class Meta:
-        app_label = 'core'
+        # app_label = 'core'
         verbose_name = _('audit log')
         verbose_name_plural = _('audit logs')
         ordering = ['-timestamp']

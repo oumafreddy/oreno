@@ -200,26 +200,27 @@ TEMPLATES = [
     },
 ]
 
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Database (defaults to SQLite, override via environment for Postgres)
-# ------------------------------------------------------------------------------
+# -------------------------------------------------------------------
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.getenv('DB_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.getenv('DB_USER', ''),
-        'PASSWORD': os.getenv('DB_PASS', ''),
-        'HOST': os.getenv('DB_HOST', ''),
-        'PORT': os.getenv('DB_PORT', ''),
-        # For Postgres with django-tenants: set in tenants.py
-        'CONN_MAX_AGE': 60 if not DEBUG else 0,  # Persistent connections in production
+        # use DB_ENGINE for all backends (Postgres, SQLite, etc.)
+        'ENGINE':   os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        # fall back to sqlite3 file if DB_NAME isn't set
+        'NAME':     os.getenv('DB_NAME',   BASE_DIR / 'db.sqlite3'),
+        # use the same vars you put in .env
+        'USER':     os.getenv('DB_USER',   ''),
+        'PASSWORD': os.getenv('DB_PASS',   ''),
+        'HOST':     os.getenv('DB_HOST',   ''),
+        'PORT':     os.getenv('DB_PORT',   ''),
+        'CONN_MAX_AGE': 60 if not DEBUG else 0,
         'OPTIONS': {
-            'connect_timeout': 10,  # Connection timeout in seconds
+            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
         },
     }
 }
 
-# Database routers (tenants router added in tenants.py)
 DATABASE_ROUTERS = []
 
 # ------------------------------------------------------------------------------
@@ -369,16 +370,21 @@ EMAIL_TIMEOUT = 30  # seconds
 # ------------------------------------------------------------------------------
 # Login redirection
 # ------------------------------------------------------------------------------
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/accounts/profile/'
 LOGIN_URL = '/accounts/login/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
-
+LOGOUT_REDIRECT_URL = '/accounts/logout/'  # Changed to home page
 LOGIN_REQUIRED_EXEMPT_URLS = [
     '/accounts/login/',         # login view
+    '/accounts/logout/',        # logout view
     '/admin/',
     '/accounts/register/',     # your registration view
     '/accounts/password-reset/',   # if applicable
-    '/static/', '/media/',      # static assets
+    '/accounts/password-reset/done/',
+    '/accounts/password-reset/confirm/',
+    '/accounts/password-reset/complete/',
+    '/static/', '/media/', '/favicon.ico',
+    '/organizations/create/',
+    '/',                       # home page
 ]
 
 # ------------------------------------------------------------------------------

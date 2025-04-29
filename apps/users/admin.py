@@ -13,6 +13,8 @@ from .models import CustomUser, Profile, OTP, OrganizationRole
 class CustomUserAdmin(UserAdmin, VersionAdmin):
     """
     Enhanced admin interface for CustomUser with version control and organization context.
+    Note: Tenant data cleanup/anonymization is handled by signals and management commands, not by admin cascade deletion.
+    User deletion is disabled in the admin for multi-tenant safety. Use the management command or a custom view for deletion and cleanup.
     """
     list_display = (
         'email', 'username', 'get_full_name', 'organization', 'role',
@@ -27,7 +29,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         'organization__customer_name', 'organization__customer_code'
     )
     ordering = ('-date_joined',)
-    readonly_fields = ('date_joined', 'last_login')
+    readonly_fields = ('date_joined', 'last_login', 'admin_delete_help')
     
     fieldsets = (
         (None, {
@@ -80,11 +82,18 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         return obj.organization == request.user.organization
     
     def has_delete_permission(self, request, obj=None):
-        if not obj:
-            return True
-        if request.user.is_superuser:
-            return True
-        return obj.organization == request.user.organization and obj != request.user
+        return False  # Remove delete from admin UI for CustomUser
+
+    def admin_delete_help(self, obj=None):
+        return (
+            '<div style="color: #b94a48; font-weight: bold;">'
+            'User deletion and tenant data cleanup must be performed via the '
+            '<b>management command</b> or a <b>custom view</b>.<br>'
+            'This is required for multi-tenant safety and to avoid database errors.'
+            '</div>'
+        )
+    admin_delete_help.short_description = 'Delete User (Important Notice)'
+    admin_delete_help.allow_tags = True
 
 @admin.register(Profile)
 class ProfileAdmin(VersionAdmin):
@@ -94,7 +103,6 @@ class ProfileAdmin(VersionAdmin):
     list_display = ('user', 'get_organization', 'avatar')
     list_filter = ('user__organization',)
     search_fields = ('user__email', 'user__username')
-    readonly_fields = ('user',)
     
     def get_organization(self, obj):
         return obj.user.organization
@@ -105,6 +113,10 @@ class ProfileAdmin(VersionAdmin):
         if not request.user.is_superuser:
             return qs.filter(user__organization=request.user.organization)
         return qs
+    
+    def has_add_permission(self, request):
+        """Prevent direct profile creation - profiles are created via signals"""
+        return False
 
 @admin.register(OTP)
 class OTPAdmin(VersionAdmin):
