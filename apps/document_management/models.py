@@ -10,6 +10,7 @@ from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel
 from core.models.validators import validate_file_extension, validate_file_size
 import secrets
 from datetime import timedelta
+import uuid
 
 # Document management
 class DocumentRequest(OrganizationOwnedModel, AuditableModel):
@@ -129,8 +130,8 @@ class DocumentRequest(OrganizationOwnedModel, AuditableModel):
 class Document(OrganizationOwnedModel, AuditableModel):
     """Model for documents."""
     document_request = models.ForeignKey(
-        DocumentRequest, 
-        related_name='documents', 
+        DocumentRequest,
+        related_name='documents',
         on_delete=models.CASCADE,
         verbose_name="Document Request"
     )
