@@ -1,0 +1,15 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Audit Workplan Summary</h2>
+<p>Filters: Year: {{ filters.year|default:'All' }}, Status: {{ filters.status|default:'All' }}</p>
+<table class="table table-sm">
+  <tr><th>Fiscal Year</th><th>Status</th><th>Count</th></tr>
+  {% for row in summary %}
+    <tr>
+      <td>{{ row.fiscal_year }}</td>
+      <td>{{ row.state|title }}</td>
+      <td>{{ row.count }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

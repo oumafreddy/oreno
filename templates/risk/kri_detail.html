@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}KRI Detail{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>KRI: {{ kri.name }}</h2>
+            <a href="{% url 'risk:kri_update' kri.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:kri_delete' kri.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header bg-light"><strong>KRI Details</strong></div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Risk</dt><dd class="col-sm-8"><a href="{% url 'risk:risk_detail' kri.risk.pk %}">{{ kri.risk.risk_name }}</a></dd>
+                <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ kri.name }}</dd>
+                <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ kri.description|safe }}</dd>
+                <dt class="col-sm-4">Value</dt><dd class="col-sm-8">{{ kri.value }}</dd>
+                <dt class="col-sm-4">Unit</dt><dd class="col-sm-8">{{ kri.unit }}</dd>
+                <dt class="col-sm-4">Timestamp</dt><dd class="col-sm-8">{{ kri.timestamp|date:'Y-m-d H:i' }}</dd>
+                <dt class="col-sm-4">Warning Threshold</dt><dd class="col-sm-8">{{ kri.threshold_warning }}</dd>
+                <dt class="col-sm-4">Critical Threshold</dt><dd class="col-sm-8">{{ kri.threshold_critical }}</dd>
+                <dt class="col-sm-4">Direction</dt><dd class="col-sm-8">{{ kri.get_direction_display }}</dd>
+                <dt class="col-sm-4">Data Source</dt><dd class="col-sm-8">{{ kri.data_source }}</dd>
+                <dt class="col-sm-4">Collection Frequency</dt><dd class="col-sm-8">{{ kri.collection_frequency }}</dd>
+                <dt class="col-sm-4">Status</dt><dd class="col-sm-8">
+                    {% if kri.get_status == 'critical' %}
+                        <span class="badge bg-danger">Critical</span>
+                    {% elif kri.get_status == 'warning' %}
+                        <span class="badge bg-warning text-dark">Warning</span>
+                    {% else %}
+                        <span class="badge bg-success">Normal</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %} 

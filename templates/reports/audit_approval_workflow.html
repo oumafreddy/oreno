@@ -1,0 +1,20 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Audit Approval Workflow</h2>
+<p>Filters: Status: {{ filters.status|default:'All' }}</p>
+<table class="table table-sm">
+  <tr>
+    <th>Object</th><th>Requester</th><th>Approver</th><th>Status</th><th>Created</th><th>Updated</th>
+  </tr>
+  {% for approval in approvals %}
+    <tr>
+      <td>{{ approval.content_object }}</td>
+      <td>{{ approval.requester.get_full_name|default:approval.requester.email }}</td>
+      <td>{{ approval.approver.get_full_name|default:approval.approver.email }}</td>
+      <td>{{ approval.get_status_display }}</td>
+      <td>{{ approval.created_at|date:'Y-m-d' }}</td>
+      <td>{{ approval.updated_at|date:'Y-m-d' }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

@@ -73,13 +73,15 @@ urlpatterns = [
     path('approvals/<int:pk>/', ApprovalDetailView.as_view(), name='approval-detail'),
     path('approvals/<int:pk>/approve/', views.approve_approval, name='approval-approve'),
     path('approvals/<int:pk>/reject/', views.reject_approval, name='approval-reject'),
+
     
     # ─── API URLS ───────────────────────────────────────────────────────────
-    path('api/', include(router.urls)),
-    path('api/', include(workplan_router.urls)),
-    path('api/', include(engagement_router.urls)),
-    path('api/', include(issue_router.urls)),
-    
+    #path('api/', include(router.urls)),
+    #path('api/', include(workplan_router.urls)),
+    #path('api/', include(engagement_router.urls)),
+    #path('api/', include(issue_router.urls)),
+
+
     # ─── ACTION URLS ────────────────────────────────────────────────────────
     path('actions/bulk-approve/', views.bulk_approve, name='bulk-approve'),
     path('actions/bulk-reject/', views.bulk_reject, name='bulk-reject'),

@@ -1,5 +1,5 @@
 from django.test import TestCase
-from apps.organizations.services import create_organization
+from organizations.services import create_organization
 from django.contrib.auth import get_user_model
 
 class OrganizationServiceTest(TestCase):

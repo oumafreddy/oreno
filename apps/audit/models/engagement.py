@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
+from django.contrib.contenttypes.fields import GenericRelation
 
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from core.mixins.state import ApprovalStateMixin
@@ -123,6 +124,13 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         db_index=True,
         verbose_name=_("Project Status"),
     )
+    approvals = GenericRelation(
+        'audit.Approval',
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='engagement',
+        related_name='approvals',
+    )
 
     class Meta:
         app_label = 'audit'
@@ -133,6 +141,10 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
             models.UniqueConstraint(
                 fields=['organization', 'audit_workplan', 'code'],
                 name='unique_engagement_per_workplan'
+            ),
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_engagement'
             )
         ]
         indexes = [
@@ -158,7 +170,10 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
             super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('audit:engagement_detail', kwargs={'pk': self.pk})
+        return reverse('audit:engagement-detail', kwargs={'pk': self.pk})
 
     def get_approvers(self):
         return self.audit_workplan.get_approvers()
+
+    def __str__(self):
+        return f"{self.title} ({self.code})"

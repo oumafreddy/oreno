@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-12 text-center">
+      <h2 class="fw-bold">Welcome to Oreno GRC</h2>
+      <p class="lead">Your unified platform for Governance, Risk, Legal and Compliance management.</p>
+    </div>
+  </div>
+  <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center">
+    <!-- Audit Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-clipboard-data display-4 text-primary mb-3"></i>
+          <h5 class="card-title">Audit Management</h5>
+          <p class="card-text">Plan, execute, and track audits across your organization.</p>
+          <a href="{% url 'audit:dashboard' %}" class="btn btn-primary">Go to Audit</a>
+        </div>
+      </div>
+    </div>
+    <!-- Risk Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-shield-check display-4 text-success mb-3"></i>
+          <h5 class="card-title">Risk Management</h5>
+          <p class="card-text">Identify, assess, and mitigate risks effectively.</p>
+          <a href="{% url 'risk:list' %}" class="btn btn-success">Go to Risk</a>
+        </div>
+      </div>
+    </div>
+    <!-- Contracts Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-file-earmark-text display-4 text-info mb-3"></i>
+          <h5 class="card-title">Contracts Management</h5>
+          <p class="card-text">Manage contracts, renewals, and compliance in one place.</p>
+          <a href="{% url 'contracts:dashboard' %}" class="btn btn-info">Go to Contracts</a>
+        </div>
+      </div>
+    </div>
+    <!-- Compliance Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-check2-circle display-4 text-warning mb-3"></i>
+          <h5 class="card-title">Compliance Management</h5>
+          <p class="card-text">Monitor and ensure regulatory compliance across your business.</p>
+          <a href="{% url 'compliance:dashboard' %}" class="btn btn-warning text-white">Go to Compliance</a>
+        </div>
+      </div>
+    </div>
+    <!-- Document Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-folder2-open display-4 text-secondary mb-3"></i>
+          <h5 class="card-title">Document Management</h5>
+          <p class="card-text">Securely store, organize, and share critical documents.</p>
+          <a href="{% url 'document_management:dashboard' %}" class="btn btn-secondary">Go to Documents</a>
+        </div>
+      </div>
+    </div>
+    <!-- Legal Management -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-briefcase display-4 text-danger mb-3"></i>
+          <h5 class="card-title">Legal Management</h5>
+          <p class="card-text">Track cases, parties, documents, and legal tasks at a glance.</p>
+          <a href="{% url 'legal:dashboard' %}" class="btn btn-danger">Go to Legal</a>
+        </div>
+      </div>
+    </div>
+    <!-- Application Administration -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body text-center" style="min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-gear display-4 text-dark mb-3"></i>
+          <h5 class="card-title">Application Administration</h5>
+          <p class="card-text">Manage users, roles, and organization settings.</p>
+          <a href="{% url 'admin_module:dashboard' %}" class="btn btn-dark">Go to Admin</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

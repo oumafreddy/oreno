@@ -1,0 +1,11 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>KRI Status Summary</h2>
+<p>This table shows the count of Key Risk Indicators (KRIs) by status.</p>
+<table class="table table-sm">
+  <tr><th>Status</th><th>Count</th></tr>
+  <tr><td>Normal</td><td>{{ status_counts.normal }}</td></tr>
+  <tr><td>Warning</td><td>{{ status_counts.warning }}</td></tr>
+  <tr><td>Critical</td><td>{{ status_counts.critical }}</td></tr>
+</table>
+{% endblock %} 

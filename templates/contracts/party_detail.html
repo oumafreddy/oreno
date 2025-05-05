@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Party Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ party.name }}</h2>
+    <div class="mb-3"><strong>Type:</strong> {{ party.get_party_type_display }}</div>
+    <div class="mb-3"><strong>Legal Entity:</strong> {{ party.legal_entity_name }}</div>
+    <div class="mb-3"><strong>Registration Number:</strong> {{ party.registration_number|default:'-' }}</div>
+    <div class="mb-3"><strong>Address:</strong><br>{{ party.address|safe }}</div>
+    <div class="mb-3"><strong>Contact Person:</strong> {{ party.contact_person|default:'-' }}</div>
+    <div class="mb-3"><strong>Email:</strong> {{ party.contact_email|default:'-' }}</div>
+    <div class="mb-3"><strong>Phone:</strong> {{ party.contact_phone|default:'-' }}</div>
+    <a href="{% url 'contracts:party-edit' party.pk %}" class="btn btn-outline-info">Edit</a>
+    <a href="{% url 'contracts:party-delete' party.pk %}" class="btn btn-outline-danger">Delete</a>
+    <a href="{% url 'contracts:party-list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

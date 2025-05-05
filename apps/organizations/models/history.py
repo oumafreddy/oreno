@@ -75,6 +75,12 @@ class ArchivedOrganization(AuditableModel):
             models.Index(fields=['customer_name']),
             models.Index(fields=['archived_by_user']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(original_org_id__isnull=False),
+                name='organization_required_archivedorganization'
+            )
+        ]
 
     def __str__(self):
         return f"{self.customer_name} [ARCHIVED]"

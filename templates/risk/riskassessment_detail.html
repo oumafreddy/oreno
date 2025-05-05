@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Risk Assessment Detail{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Risk Assessment for {{ assessment.risk.risk_name }}</h2>
+            <a href="{% url 'risk:riskassessment_update' assessment.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:riskassessment_delete' assessment.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:riskassessment_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header bg-light"><strong>Assessment Details</strong></div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Risk</dt><dd class="col-sm-8"><a href="{% url 'risk:risk_detail' assessment.risk.pk %}">{{ assessment.risk.risk_name }}</a></dd>
+                <dt class="col-sm-4">Assessment Date</dt><dd class="col-sm-8">{{ assessment.assessment_date }}</dd>
+                <dt class="col-sm-4">Assessor</dt><dd class="col-sm-8">{{ assessment.assessor }}</dd>
+                <dt class="col-sm-4">Assessment Type</dt><dd class="col-sm-8">{{ assessment.get_assessment_type_display }}</dd>
+                <dt class="col-sm-4">Impact Score</dt><dd class="col-sm-8">{{ assessment.impact_score }}</dd>
+                <dt class="col-sm-4">Likelihood Score</dt><dd class="col-sm-8">{{ assessment.likelihood_score }}</dd>
+                <dt class="col-sm-4">Risk Score</dt><dd class="col-sm-8">{{ assessment.risk_score }}</dd>
+                <dt class="col-sm-4">Notes</dt><dd class="col-sm-8">{{ assessment.notes|safe }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,10 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Smart Engagement Progress</h2>
+<table class="table table-sm w-50 mx-auto">
+  <tr><th>Total Engagements</th><td>{{ total }}</td></tr>
+  <tr><th>Closed Engagements</th><td>{{ closed }}</td></tr>
+  <tr><th>Percent Closed</th><td>{% if total %}{{ closed|divisibleby:total|floatformat:2 }}%{% else %}0%{% endif %}</td></tr>
+  <tr><th>Average Duration</th><td>{% if avg_duration %}{{ avg_duration.days }} days{% else %}-{% endif %}</td></tr>
+</table>
+{% endblock %} 

@@ -1,5 +1,9 @@
 from django.shortcuts import render
 from django.utils.translation import gettext as _
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from services.ai.ai_service import ai_assistant_answer
 
 def bad_request(request, exception=None):
     """400 error handler"""
@@ -34,4 +38,15 @@ def server_error(request):
         'title': _('Server Error (500)'),
         'message': _('An internal server error occurred.'),
     }
-    return render(request, 'core/error.html', context, status=500) 
+    return render(request, 'core/error.html', context, status=500)
+
+class AIAssistantAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        question = request.data.get('question', '').strip()
+        if not question:
+            return Response({'error': 'No question provided.'}, status=400)
+        user = request.user
+        org = getattr(request, 'tenant', None) or getattr(request, 'organization', None)
+        answer = ai_assistant_answer(question, user, org)
+        return Response({'answer': answer}) 

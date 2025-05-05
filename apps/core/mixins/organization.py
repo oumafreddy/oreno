@@ -51,4 +51,16 @@ class OrganizationMixin(models.Model):
     @property
     def org_name(self):
         """Return the organization name"""
-        return self.organization.name if self.organization else None 
+        return self.organization.name if self.organization else None
+
+class OrganizationScopedQuerysetMixin:
+    """
+    DRF mixin to enforce multi-tenant queryset filtering by request.tenant (or request.organization).
+    Inherit this in all ModelViewSets and DRF generic views that expose org-owned data.
+    """
+    def get_queryset(self):
+        base_qs = super().get_queryset()
+        org = getattr(self.request, 'tenant', None) or getattr(self.request, 'organization', None)
+        if org is not None and hasattr(base_qs.model, 'organization'):
+            return base_qs.filter(organization=org)
+        return base_qs 

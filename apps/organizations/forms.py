@@ -18,12 +18,8 @@ class BaseOrganizationForm(forms.ModelForm):
             Fieldset(
                 _('Basic Information'),
                 Row(
-                    Column('customer_code', css_class='col-md-6'),
-                    Column('customer_name', css_class='col-md-6'),
-                ),
-                Row(
-                    Column('customer_industry', css_class='col-md-6'),
-                    Column('financial_year_end_date', css_class='col-md-6'),
+                    Column('name', css_class='col-md-6'),
+                    Column('code', css_class='col-md-6'),
                 ),
             ),
             Fieldset(

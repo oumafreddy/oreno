@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Legal Document: {{ object.title }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Legal Document: {{ object.title }}</h2>
+    <div>
+      <a href="{% url 'legal:legaldocument_update' object.pk %}" class="btn btn-secondary">Edit</a>
+      <a href="{% url 'legal:legaldocument_delete' object.pk %}" class="btn btn-danger">Delete</a>
+      <a href="{% url 'legal:legaldocument_list' %}" class="btn btn-outline-primary">Back to List</a>
+    </div>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">Title</dt>
+        <dd class="col-sm-9">{{ object.title }}</dd>
+        <dt class="col-sm-3">Case</dt>
+        <dd class="col-sm-9">{{ object.legal_case }}</dd>
+        <dt class="col-sm-3">Type</dt>
+        <dd class="col-sm-9">{{ object.document_type }}</dd>
+        <dt class="col-sm-3">File</dt>
+        <dd class="col-sm-9">{% if object.file %}<a href="{{ object.file.url }}" target="_blank">Download</a>{% else %}-{% endif %}</dd>
+        <dt class="col-sm-3">Uploaded By</dt>
+        <dd class="col-sm-9">{{ object.uploaded_by }}</dd>
+        <dt class="col-sm-3">Uploaded At</dt>
+        <dd class="col-sm-9">{{ object.uploaded_at }}</dd>
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">{{ object.description|linebreaks }}</dd>
+        <dt class="col-sm-3">Organization</dt>
+        <dd class="col-sm-9">{{ object.organization }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %} 

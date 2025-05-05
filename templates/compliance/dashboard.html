@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% block title %}Compliance Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Compliance Dashboard</h2>
+        </div>
+    </div>
+    <!-- Advanced Analytics Cards (top) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-bar-chart"></i></div>
+                    <h6 class="card-title">Frameworks (Distinct)</h6>
+                    <h3>{{ requirement_framework_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-pie-chart"></i></div>
+                    <h6 class="card-title">Jurisdictions (Distinct)</h6>
+                    <h3>{{ requirement_jurisdiction_chart|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-check2-circle"></i></div>
+                    <h6 class="card-title">Mandatory</h6>
+                    <h3>{{ requirement_mandatory_dist.Mandatory }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-x-circle"></i></div>
+                    <h6 class="card-title">Optional</h6>
+                    <h3>{{ requirement_mandatory_dist.Optional }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h6 class="card-title">Overdue Obligations</h6>
+                    <h3>{{ obligation_overdue_ontime.Overdue }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-calendar-check"></i></div>
+                    <h6 class="card-title">Completed Obligations</h6>
+                    <h3>{{ obligation_completion_rate.Completed }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Advanced Analytics Charts (below summary cards) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Requirements by Framework</strong></div>
+                <div class="card-body">
+                    <div id="framework-dist-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Obligation Status (Overdue/On Time)</strong></div>
+                <div class="card-body">
+                    <div id="obligation-overdue-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Policy Expiry Distribution</strong></div>
+                <div class="card-body">
+                    <div id="policy-expiry-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Owner Workload Chart -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-12">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Obligation Owner Workload</strong></div>
+                <div class="card-body">
+                    <div id="owner-workload-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Summary Cards Row -->
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-diagram-3 display-4 mb-2"></i>
+                    <h5 class="card-title">Frameworks</h5>
+                    <h3><a href="{% url 'compliance:framework_list' %}" class="stretched-link text-white text-decoration-none">{{ framework_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check display-4 mb-2"></i>
+                    <h5 class="card-title">Requirements</h5>
+                    <h3><a href="{% url 'compliance:requirement_list' %}" class="stretched-link text-white text-decoration-none">{{ requirement_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-flag display-4 mb-2"></i>
+                    <h5 class="card-title">Obligations</h5>
+                    <h3><a href="{% url 'compliance:obligation_list' %}" class="stretched-link text-white text-decoration-none">{{ obligation_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-check display-4 mb-2"></i>
+                    <h5 class="card-title">Evidences</h5>
+                    <h3><a href="{% url 'compliance:evidence_list' %}" class="stretched-link text-white text-decoration-none">{{ evidence_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-text display-4 mb-2"></i>
+                    <h5 class="card-title">Policy Docs</h5>
+                    <h3><a href="{% url 'compliance:policydocument_list' %}" class="stretched-link text-white text-decoration-none">{{ policydocument_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white"><strong>Recent Compliance Activity</strong></div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for activity in recent_activity %}
+                        <li class="list-group-item">
+                            <i class="bi bi-info-circle me-2 text-primary"></i>
+                            <span>{{ activity.message }}</span>
+                            <span class="text-muted float-end">{{ activity.timestamp|date:"M d, Y H:i" }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent activity.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Quick Actions</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'compliance:framework_create' %}" class="btn btn-primary mb-2 w-100">Add Framework</a>
+                    <a href="{% url 'compliance:requirement_create' %}" class="btn btn-outline-success mb-2 w-100">Add Requirement</a>
+                    <a href="{% url 'compliance:obligation_create' %}" class="btn btn-outline-warning mb-2 w-100">Add Obligation</a>
+                    <a href="{% url 'compliance:evidence_create' %}" class="btn btn-outline-info mb-2 w-100">Add Evidence</a>
+                    <a href="{% url 'compliance:policydocument_create' %}" class="btn btn-outline-secondary mb-2 w-100">Add Policy Document</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Reports Section (Bottom) -->
+    <div class="row mt-5">
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Compliance Reports</strong></div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i> Generate and download professional, filterable compliance management reports. All reports are scoped to your organization and support PDF export.
+                    </div>
+                    <div class="row g-4">
+                        <!-- Compliance Requirement Summary Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Requirement Summary</h5>
+                                    <form method="get" action="{% url 'reports:compliance_requirement_summary_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Framework</label>
+                                            <input type="text" name="framework" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Jurisdiction</label>
+                                            <input type="text" name="jurisdiction" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Mandatory</label>
+                                            <select name="mandatory" class="form-select">
+                                                <option value="">All</option>
+                                                <option value="1">Yes</option>
+                                                <option value="0">No</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Policy</label>
+                                            <input type="text" name="policy" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Requirement Title</label>
+                                            <input type="text" name="title" class="form-control" placeholder="Type or select...">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Obligation Register Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Obligation Register</h5>
+                                    <form method="get" action="{% url 'reports:compliance_obligation_register_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Status</label>
+                                            <input type="text" name="status" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Owner (email)</label>
+                                            <input type="text" name="owner" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Due Date</label>
+                                            <input type="date" name="due_date" class="form-control">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Priority</label>
+                                            <input type="number" name="priority" class="form-control" min="1" max="5" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Requirement</label>
+                                            <input type="text" name="requirement" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Obligation ID</label>
+                                            <input type="text" name="obligation_id" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Evidence Register Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Evidence Register</h5>
+                                    <form method="get" action="{% url 'reports:compliance_evidence_register_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Obligation</label>
+                                            <input type="text" name="obligation" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Document</label>
+                                            <input type="text" name="document" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Validity Start</label>
+                                            <input type="date" name="validity_start" class="form-control">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Validity End</label>
+                                            <input type="date" name="validity_end" class="form-control">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Policy Document Register Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Policy Document Register</h5>
+                                    <form method="get" action="{% url 'reports:policy_document_register_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Owner (email)</label>
+                                            <input type="text" name="owner" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Effective Date</label>
+                                            <input type="date" name="effective_date" class="form-control">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Expiration Date</label>
+                                            <input type="date" name="expiration_date" class="form-control">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Title</label>
+                                            <input type="text" name="title" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Detailed Reports Links -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Detailed Reports</h5>
+                                    <a href="{% url 'reports:compliance_requirement_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100 mb-2">Requirement Details</a>
+                                    <a href="{% url 'reports:compliance_obligation_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100">Obligation Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END Compliance Reports Section -->
+</div>
+<!-- JSON data for Plotly charts -->
+{{ obligation_status_chart|json_script:"obligation-status-data" }}
+{{ requirement_jurisdiction_chart|json_script:"requirement-jurisdiction-data" }}
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Requirements by Framework Pie Chart
+const frameworkDist = {{ requirement_framework_dist|safe }};
+Plotly.newPlot('framework-dist-chart', [{
+    labels: Object.keys(frameworkDist),
+    values: Object.values(frameworkDist),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Obligation Overdue/On Time Pie Chart
+const overdueData = {{ obligation_overdue_ontime|safe }};
+Plotly.newPlot('obligation-overdue-chart', [{
+    labels: Object.keys(overdueData),
+    values: Object.values(overdueData),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Policy Expiry Distribution Pie Chart
+const policyExpiry = {{ policy_expiry_dist|safe }};
+Plotly.newPlot('policy-expiry-chart', [{
+    labels: Object.keys(policyExpiry),
+    values: Object.values(policyExpiry),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Obligation Owner Workload Bar Chart
+const ownerWorkload = {{ obligation_owner_workload|safe }};
+Plotly.newPlot('owner-workload-chart', [{
+    x: Object.keys(ownerWorkload),
+    y: Object.values(ownerWorkload),
+    type: 'bar',
+    marker: { color: '#2563eb' },
+    text: Object.values(ownerWorkload).map(String),
+    textposition: 'auto',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+<!-- Modal for Requirement List -->
+<div class="modal fade" id="requirementListModal" tabindex="-1" aria-labelledby="requirementListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="requirementListModalLabel">Requirements Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+          {% for req in requirements %}
+            <li class="list-group-item">{{ req.title }} - {{ req.status }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No requirements found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

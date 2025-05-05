@@ -1,15 +1,66 @@
 <!-- C:\Users\ouma.fred\Desktop\GRC\oreno\templates\organizations\organization_detail.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ organization.customer_name }} - Details</title>
-</head>
-<body>
-    <h1>{{ organization.customer_name }}</h1>
-    <p>Customer Code: {{ organization.customer_code }}</p>
-    <p>Industry: {{ organization.customer_industry }}</p>
-    <p>Financial Year End Date: {{ organization.financial_year_end_date }}</p>
-    <!-- Add additional fields as needed -->
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Organization: {{ organization.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h3 class="mb-0">{{ organization.name }}</h3>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-sm-4">Customer Code:</dt>
+            <dd class="col-sm-8">{{ organization.code }}</dd>
+
+            <dt class="col-sm-4">Industry:</dt>
+            <dd class="col-sm-8">{{ organization.customer_industry|default:'—' }}</dd>
+
+            <dt class="col-sm-4">Financial Year End Date:</dt>
+            <dd class="col-sm-8">{{ organization.financial_year_end_date|date:'F j, Y'|default:'—' }}</dd>
+
+            <dt class="col-sm-4">Website:</dt>
+            <dd class="col-sm-8">
+              {% if organization.website %}
+                <a href="{{ organization.website }}" target="_blank">{{ organization.website }}</a>
+              {% else %}
+                —
+              {% endif %}
+            </dd>
+
+            <dt class="col-sm-4">Status:</dt>
+            <dd class="col-sm-8">
+              {% if organization.is_active %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-danger">Inactive</span>
+              {% endif %}
+            </dd>
+
+            <dt class="col-sm-4">Description:</dt>
+            <dd class="col-sm-8">{{ organization.description|safe|default:'—' }}</dd>
+          </dl>
+        </div>
+      </div>
+      {% if can_edit_org %}
+      <a href="{% url 'organizations:update' pk=organization.pk %}" class="btn btn-outline-primary me-2">Edit Organization</a>
+      <a href="{% url 'organizations:settings' org_pk=organization.pk %}" class="btn btn-outline-secondary">Settings</a>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      {% if organization.logo %}
+        <img src="{{ organization.logo.url }}" class="img-fluid rounded shadow-sm mb-3" alt="Logo">
+      {% else %}
+        <div class="text-muted text-center mb-3">No logo uploaded</div>
+      {% endif %}
+      <div class="card">
+        <div class="card-body text-center">
+          <h5 class="card-title">Quick Actions</h5>
+          <a href="{% url 'organizations:list' %}" class="btn btn-sm btn-light">Back to List</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

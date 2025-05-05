@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Risk Registers{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Risk Registers</h2>
+            <a href="{% url 'risk:riskregister_create' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Register</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Period</th>
+                        <th>Created</th>
+                        <th>Description</th>
+                        <th>Risks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for register in object_list %}
+                    <tr>
+                        <td>{{ register.code }}</td>
+                        <td><a href="{% url 'risk:riskregister_detail' register.pk %}">{{ register.register_name }}</a></td>
+                        <td>{{ register.register_period }}</td>
+                        <td>{{ register.register_creation_date }}</td>
+                        <td>{{ register.register_description|truncatechars:40|safe }}</td>
+                        <td>{{ register.get_risk_count }}</td>
+                        <td>
+                            <a href="{% url 'risk:riskregister_detail' register.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                            <a href="{% url 'risk:riskregister_update' register.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'risk:riskregister_delete' register.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">No risk registers found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

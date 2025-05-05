@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Audit Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Navigation Bar -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Audit Dashboard</h2>
+        </div>
+    </div>
+    <!-- Advanced Analytics Cards (top) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-bar-chart"></i></div>
+                    <h6 class="card-title">Engagement Statuses</h6>
+                    <h3><a href="{% url 'audit:engagement-list' %}" class="stretched-link text-white text-decoration-none">{{ engagement_status_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-clock-history"></i></div>
+                    <h6 class="card-title">Avg. Duration (days)</h6>
+                    <h3>{{ avg_engagement_duration|floatformat:1 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h6 class="card-title">Overdue Issues</h6>
+                    <h3><a href="{% url 'audit:issue-list' %}?overdue=1" class="stretched-link text-white text-decoration-none">{{ overdue_issues }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-pie-chart"></i></div>
+                    <h6 class="card-title">Issue Severities</h6>
+                    <h3><a href="{% url 'audit:issue-list' %}" class="stretched-link text-white text-decoration-none">{{ issue_severity_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-check2-circle"></i></div>
+                    <h6 class="card-title">Workplans Completed</h6>
+                    <h3><a href="{% url 'audit:workplan-list' %}?status=Completed" class="stretched-link text-white text-decoration-none">{{ workplan_completion_rate.Completed }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-person-lines-fill"></i></div>
+                    <h6 class="card-title">Approvals</h6>
+                    <h3><a href="{% url 'audit:approval-report' %}" class="stretched-link text-white text-decoration-none">{{ approval_status_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Summary Cards Only, Organization Info Removed -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-12">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card text-bg-primary h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-journal-check"></i></div>
+                            <h6 class="card-title">Workplans</h6>
+                            <h3><a href="{% url 'audit:workplan-list' %}" class="stretched-link text-white text-decoration-none">{{ workplan_count }}</a></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-bg-info h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-clipboard-data"></i></div>
+                            <h6 class="card-title">Engagements</h6>
+                            <h3><a href="{% url 'audit:engagement-list' %}" class="stretched-link text-white text-decoration-none">{{ engagement_count }}</a></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-bg-danger h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                            <h6 class="card-title">Issues</h6>
+                            <h3><a href="{% url 'audit:issue-list' %}" class="stretched-link text-white text-decoration-none">{{ issue_count }}</a></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-bg-warning h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-hourglass-split"></i></div>
+                            <h6 class="card-title">Approvals</h6>
+                            <h3><a href="{% url 'audit:approval-report' %}" class="stretched-link text-white text-decoration-none">{{ approval_count }}</a></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Advanced Analytics Charts (below summary cards) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Engagement Status Distribution</strong></div>
+                <div class="card-body">
+                    <div id="engagement-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Issue Severity Distribution</strong></div>
+                <div class="card-body">
+                    <div id="issue-severity-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Approval Status Distribution</strong></div>
+                <div class="card-body">
+                    <div id="approval-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Owner Workload Chart -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-12">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Engagement Owner Workload</strong></div>
+                <div class="card-body">
+                    <div id="owner-workload-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Scrollable Recent Lists -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white"><i class="bi bi-clock-history me-2"></i>Recent Workplans</div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for workplan in recent_workplans %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'audit:workplan-detail' workplan.pk %}">{{ workplan.name }}</a>
+                            <span class="badge bg-secondary">{{ workplan.fiscal_year }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent workplans.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white"><i class="bi bi-clock-history me-2"></i>Recent Engagements</div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for engagement in recent_engagements %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'audit:engagement-detail' engagement.pk %}">{{ engagement.title }}</a>
+                            <span class="badge bg-secondary">{{ engagement.get_project_status_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent engagements.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white"><i class="bi bi-clock-history me-2"></i>Recent Issues</div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for issue in recent_issues %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a>
+                            <span class="badge bg-secondary">{{ issue.get_issue_status_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent issues.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- Pending Approvals -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark"><i class="bi bi-hourglass-split me-2"></i>Pending Approvals</div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for approval in pending_approvals %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ approval.content_object }}</span>
+                            <span class="badge bg-secondary">{{ approval.get_status_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No pending approvals.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer text-end">
+                    <a href="{% url 'audit:approval-create' %}" class="btn btn-outline-warning">Request Approval</a>
+                </div>
+            </div>
+        </div>
+        <!-- Quick Links -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Quick Links</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'audit:workplan-create' %}" class="btn btn-primary me-2">Create Workplan</a>
+                    <a href="{% url 'audit:engagement-create' %}" class="btn btn-outline-info me-2">Create Engagement</a>
+                    <a href="{% url 'audit:issue-create' %}" class="btn btn-outline-danger me-2">Create Issue</a>
+                    <a href="{% url 'audit:approval-create' %}" class="btn btn-outline-warning me-2">Request Approval</a>
+                    <a href="{% url 'audit:export-data' %}" class="btn btn-outline-dark me-2">Export</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Reports Section (Bottom) -->
+    <div class="row mt-5">
+      <div class="col">
+        <div class="card shadow">
+          <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Audit Reports</strong></div>
+          <div class="card-body">
+            <div class="alert alert-info mb-4">
+              <i class="bi bi-info-circle"></i> Generate and download a wide range of intelligent, filterable audit management reports. All reports are scoped to your organization and support PDF export.
+            </div>
+            <div class="row g-4">
+              <!-- Workplan Summary Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Workplan Summary</h5>
+                    <form method="get" action="{% url 'reports:audit_workplan_summary_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Fiscal Year</label>
+                        <input type="number" name="year" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <input type="text" name="status" class="form-control" placeholder="All">
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Engagement Summary Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Engagement Summary</h5>
+                    <form method="get" action="{% url 'reports:audit_engagement_summary_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <input type="text" name="status" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Assigned To (email)</label>
+                        <input type="text" name="assigned_to" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Engagement Name</label>
+                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
+                        <select name="engagement_name" class="form-select">
+                          <option value="">All</option>
+                          {% for name in engagement_names %}
+                            <option value="{{ name }}">{{ name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Issue Register Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Issue Register</h5>
+                    <form method="get" action="{% url 'reports:audit_issue_register_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <input type="text" name="status" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Severity</label>
+                        <input type="text" name="severity" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Engagement Name</label>
+                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
+                        <select name="engagement_name" class="form-select">
+                          <option value="">All</option>
+                          {% for name in engagement_names %}
+                            <option value="{{ name }}">{{ name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Issue Follow-up Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Issue Follow-up</h5>
+                    <form method="get" action="{% url 'reports:audit_issue_followup_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Overdue Only</label>
+                        <select name="overdue" class="form-select">
+                          <option value="">No</option>
+                          <option value="1">Yes</option>
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Approval Workflow Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Approval Workflow</h5>
+                    <form method="get" action="{% url 'reports:audit_approval_workflow_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <input type="text" name="status" class="form-control" placeholder="All">
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Smart Engagement Progress Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Smart Engagement Progress</h5>
+                    <a href="{% url 'reports:audit_engagement_progress_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- Engagement Details Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Engagement Details</h5>
+                    <form method="get" action="{% url 'reports:audit_engagement_details_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Engagement Name</label>
+                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
+                        <select name="engagement_name" class="form-select">
+                          <option value="">All</option>
+                          {% for name in engagement_names %}
+                            <option value="{{ name }}">{{ name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Engagement Details with Issues Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Engagement Details with Issues</h5>
+                    <form method="get" action="{% url 'reports:audit_engagement_with_issues_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Engagement Name</label>
+                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
+                        <select name="engagement_name" class="form-select">
+                          <option value="">All</option>
+                          {% for name in engagement_names %}
+                            <option value="{{ name }}">{{ name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+<!-- JSON data for Plotly charts -->
+{{ engagement_status_dist|json_script:"engagement-status-data" }}
+{{ issue_severity_dist|json_script:"issue-severity-data" }}
+{{ approval_status_dist|json_script:"approval-status-data" }}
+{{ engagement_owner_workload|json_script:"owner-workload-data" }}
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Engagement Status Pie Chart
+const engagementStatus = JSON.parse(document.getElementById('engagement-status-data').textContent);
+Plotly.newPlot('engagement-status-chart', [{
+    labels: Object.keys(engagementStatus),
+    values: Object.values(engagementStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Issue Severity Pie Chart
+const issueSeverity = JSON.parse(document.getElementById('issue-severity-data').textContent);
+Plotly.newPlot('issue-severity-chart', [{
+    labels: Object.keys(issueSeverity),
+    values: Object.values(issueSeverity),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Approval Status Pie Chart
+const approvalStatus = JSON.parse(document.getElementById('approval-status-data').textContent);
+Plotly.newPlot('approval-status-chart', [{
+    labels: Object.keys(approvalStatus),
+    values: Object.values(approvalStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Engagement Owner Workload Bar Chart
+const ownerWorkload = {{ engagement_owner_workload|safe }};
+Plotly.newPlot('owner-workload-chart', [{
+    x: Object.keys(ownerWorkload),
+    y: Object.values(ownerWorkload),
+    type: 'bar',
+    marker: { color: '#2563eb' },
+    text: Object.keys(ownerWorkload),
+    hovertemplate: '%{text}: %{y}<extra></extra>',
+    textposition: 'auto',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+{% endblock %} 

@@ -128,6 +128,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        # Enforce OTP verification before issuing tokens
+        user = User.objects.filter(email=attrs.get('email')).first()
+        if user:
+            latest_otp = user.otps.order_by('-created_at').first()
+            if latest_otp and not latest_otp.is_verified:
+                raise serializers.ValidationError({'otp_required': True, 'detail': 'OTP verification required before login.'})
         data = super().validate(attrs)
         # Include extra user info
         data['user'] = {

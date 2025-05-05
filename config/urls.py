@@ -12,15 +12,18 @@ from django.views.defaults import (
     permission_denied,
     bad_request
 )
+from django.shortcuts import render
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from apps.common.views import service_paused
+from core.views import AIAssistantAPIView
 
 # Define a simple home view
 def home(request):
-    return HttpResponse("Welcome to Oreno!")
+    return render(request, 'home/dashboard.html')
 
 # Define error handlers
 handler400 = 'core.views.bad_request'
@@ -51,21 +54,37 @@ urlpatterns = [
     path('api/compliance/', include(('compliance.urls', 'compliance'), namespace='compliance-api')),
     path('api/contracts/', include(('contracts.urls', 'contracts'), namespace='contracts-api')),
     path('api/risk/', include(('risk.urls', 'risk'), namespace='risk-api')),
+    path('api/legal/', include(('legal.urls', 'legal'), namespace='legal-api')),
+    path('api/ai/ask/', AIAssistantAPIView.as_view(), name='ai-assistant-ask'),
     
     # Web UI URLs
     path('', home, name='home'),
     path('accounts/', include('users.urls', namespace='users')),
     path('organizations/', include('organizations.urls', namespace='organizations')),
     path('audit/', include('audit.urls', namespace='audit')),
-    path('compliance/', include('compliance.urls', namespace='compliance')),
-    path('contracts/', include('contracts.urls', namespace='contracts')),
-    path('risk/', include('risk.urls', namespace='risk')),
+    path('compliance/', include(('compliance.urls', 'compliance'), namespace='compliance')),
+    path('contracts/', include(('contracts.urls', 'contracts'), namespace='contracts')),
+    path('risk/', include(('risk.urls', 'risk'), namespace='risk')),
+    path('document_management/', include(('document_management.urls', 'document_management'), namespace='document_management')),
+    path('legal/', include(('legal.urls', 'legal'), namespace='legal')),
     
     # CKEditor 5
     path('upload/', include('django_ckeditor_5.urls')),
     
     # Health Check
     path('health/', lambda r: HttpResponse('OK'), name='health_check'),
+
+    # Service Paused Info Page
+    path('service-paused/', service_paused, name='service_paused'),
+
+    # Admin Module
+    path('admin-module/', include('admin_module.urls', namespace='admin_module')),
+
+    # Reports
+    path('reports/', include('reports.urls', namespace='reports')),
+
+    # Service Info Page
+    path('service-info/', TemplateView.as_view(template_name='service_info.html'), name='service_info'),
 ]
 
 # Debug-specific URL patterns

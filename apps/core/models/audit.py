@@ -74,7 +74,7 @@ class AuditLog(models.Model):
     )
 
     class Meta:
-        # app_label = 'core'
+        app_label = 'core'
         verbose_name = _('audit log')
         verbose_name_plural = _('audit logs')
         ordering = ['-timestamp']

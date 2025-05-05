@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Contract Party Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Contract Party</h2>
+    <div class="mb-3"><strong>Contract:</strong> {{ contractparty.contract.code }} - {{ contractparty.contract.title }}</div>
+    <div class="mb-3"><strong>Party:</strong> {{ contractparty.party.name }}</div>
+    <div class="mb-3"><strong>Primary Party:</strong> {% if contractparty.is_primary_party %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</div>
+    <div class="mb-3"><strong>Role in Contract:</strong> {{ contractparty.role_in_contract }}</div>
+    <a href="{% url 'contracts:contractparty-edit' contractparty.pk %}" class="btn btn-outline-info">Edit</a>
+    <a href="{% url 'contracts:contractparty-delete' contractparty.pk %}" class="btn btn-outline-danger">Delete</a>
+    <a href="{% url 'contracts:contractparty-list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

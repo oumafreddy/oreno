@@ -11,6 +11,8 @@ from core.models.abstract_models import TimeStampedModel
 from django.core.exceptions import ValidationError
 from django.db.models import F
 from django.utils.crypto import get_random_string
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 
 logger = logging.getLogger(__name__)
@@ -246,3 +248,18 @@ class OTP(models.Model):
     @classmethod
     def cleanup_expired(cls):
         cls.objects.filter(expires_at__lte=timezone.now()).delete()
+
+    def send_via_email(self):
+        subject = "Your OTP Code"
+        message = render_to_string('users/email/otp.txt', {
+            'user': self.user,
+            'otp': self.otp,
+            'expires_at': self.expires_at
+        })
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [self.user.email],
+            fail_silently=False
+        )

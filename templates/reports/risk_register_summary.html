@@ -1,0 +1,45 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Risk Register Summary</h2>
+<p>Filters: Category: {{ filters.category|default:'All' }}, Owner: {{ filters.owner|default:'All' }}, Status: {{ filters.status|default:'All' }}, Register: {{ filters.register|default:'All' }}</p>
+<div class="row">
+  <div class="col-md-6">
+    <h4>By Status</h4>
+    <table class="table table-sm">
+      <tr><th>Status</th><th>Count</th></tr>
+      {% for row in summary.by_status %}
+        <tr><td>{{ row.status|title }}</td><td>{{ row.count }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="col-md-6">
+    <h4>By Category</h4>
+    <table class="table table-sm">
+      <tr><th>Category</th><th>Count</th></tr>
+      {% for row in summary.by_category %}
+        <tr><td>{{ row.category|title }}</td><td>{{ row.count }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-6">
+    <h4>By Owner</h4>
+    <table class="table table-sm">
+      <tr><th>Owner</th><th>Count</th></tr>
+      {% for row in summary.by_owner %}
+        <tr><td>{{ row.risk_owner }}</td><td>{{ row.count }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="col-md-6">
+    <h4>By Register</h4>
+    <table class="table table-sm">
+      <tr><th>Register</th><th>Count</th></tr>
+      {% for row in summary.by_register %}
+        <tr><td>{{ row.risk_register__register_name }}</td><td>{{ row.count }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %} 

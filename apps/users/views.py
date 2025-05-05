@@ -20,11 +20,13 @@ from django.db.models import Q, Prefetch
 from django.utils.translation import gettext_lazy as _
 
 from core.decorators import skip_org_check
+from core.mixins.organization import OrganizationScopedQuerysetMixin
 
 from rest_framework import generics, permissions, status
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm
 from .models import CustomUser, Profile, OTP, OrganizationRole
@@ -33,10 +35,12 @@ from .serializers import (
     OTPVerifySerializer,
     OTPResendSerializer,
     CustomTokenObtainPairSerializer,
-    ProfileSerializer
+    ProfileSerializer,
+    UserSerializer,
 )
 from organizations.mixins import OrganizationContextMixin, OrganizationPermissionMixin
 from organizations.models import Organization
+from .permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
 
 # ─── MIXINS ──────────────────────────────────────────────────────────────────
 class UserPermissionMixin(OrganizationPermissionMixin):
@@ -62,7 +66,7 @@ class UserPermissionMixin(OrganizationPermissionMixin):
 @method_decorator(skip_org_check, name='dispatch')
 class UserRegisterAPIView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny, HasOrgAdminAccess]
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -110,25 +114,16 @@ class OTPResendAPIView(generics.GenericAPIView):
             "expires_at": otp.expires_at
         })
 
-@method_decorator(skip_org_check, name='dispatch')
-class ProfileAPIView(generics.RetrieveUpdateAPIView):
+class ProfileAPIView(OrganizationScopedQuerysetMixin, generics.RetrieveUpdateAPIView):
     """
     API view for retrieving and updating user profile information.
-    Requires authentication.
+    Requires authentication and tenant scoping.
     """
     serializer_class = ProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
     def get_object(self):
-        """
-        Return the authenticated user's profile
-        """
         return self.request.user
-
     def update(self, request, *args, **kwargs):
-        """
-        Handle PUT requests to update profile
-        """
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -160,13 +155,26 @@ class UserLoginView(LoginView):
     template_name = 'users/login.html'
     redirect_authenticated_user = True
 
+    def get_success_url(self):
+        # Always redirect to the Professional Home Dashboard
+        return reverse_lazy('home')
+
 @method_decorator(skip_org_check, name='dispatch')
 class UserLogoutView(LogoutView):
-    """
-    Handle user logout and display the logged_out.html template.
-    """
-    template_name = 'users/logged_out.html'
-    next_page = None  # Let settings.LOGOUT_REDIRECT_URL handle redirection
+    """Logs out user and blacklists their refresh tokens."""
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        if request.user.is_authenticated:
+            try:
+                for token in OutstandingToken.objects.filter(user=request.user):
+                    BlacklistedToken.objects.get_or_create(token=token)
+            except Exception:
+                pass  # Don't break logout if blacklist fails
+        return response
+
+def custom_logout(request):
+    logout(request)
+    return render(request, 'users/logged_out.html')
 
 class ProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Profile
@@ -176,7 +184,17 @@ class ProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     success_message = _("Profile updated successfully")
 
     def get_object(self):
-        return self.request.user.profile
+        # Robust: create profile if missing
+        user = self.request.user
+        try:
+            return user.profile
+        except Profile.DoesNotExist:
+            # Option 1: Create the profile automatically
+            profile = Profile.objects.create(user=user)
+            return profile
+            # Option 2: Show a user-friendly error instead:
+            # from django.http import Http404
+            # raise Http404("Profile not found for this user. Please contact support.")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -200,13 +218,16 @@ class UserListView(UserPermissionMixin, ListView):
     context_object_name = 'users'
     paginate_by = 20
 
+    def get_organization(self):
+        return self.request.user.organization
+
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.user.organization
         return queryset.filter(
             Q(organization=organization) |
-            Q(organizationuser__organization=organization)
-        ).select_related('profile').prefetch_related('organizationuser_set')
+            Q(organization_memberships__organization=organization)
+        ).select_related('profile').prefetch_related('organization_memberships')
 
 class UserDetailView(UserPermissionMixin, DetailView):
     model = CustomUser
@@ -216,6 +237,9 @@ class UserDetailView(UserPermissionMixin, DetailView):
     def get_queryset(self):
         return super().get_queryset().select_related('profile')
 
+    def get_organization(self):
+        return self.get_object().organization
+
 class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
     model = CustomUser
     form_class = CustomUserChangeForm
@@ -224,6 +248,9 @@ class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('users:user-detail', kwargs={'pk': self.object.pk})
+
+    def get_organization(self):
+        return self.get_object().organization
 
 class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
     model = CustomUser
@@ -254,8 +281,19 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
 # ─── PASSWORD MANAGEMENT VIEWS ──────────────────────────────────────────────
 @method_decorator(login_required, name='dispatch')
 class UserPasswordChangeView(PasswordChangeView):
+    """Blacklists all tokens on password change."""
     template_name = 'users/password_change.html'
     success_url = reverse_lazy('users:password_change_done')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.user.is_authenticated:
+            try:
+                for token in OutstandingToken.objects.filter(user=self.request.user):
+                    BlacklistedToken.objects.get_or_create(token=token)
+            except Exception:
+                pass
+        return response
 
 @method_decorator(login_required, name='dispatch')
 class UserPasswordChangeDoneView(PasswordChangeDoneView):
@@ -307,4 +345,12 @@ class OrganizationRoleDeleteView(UserPermissionMixin, SuccessMessageMixin, Delet
 
     def get_success_url(self):
         return reverse_lazy('users:user-detail', kwargs={'pk': self.object.user.pk})
+
+# Example: restrict user list API to org admins only
+class UserListAPIView(OrganizationScopedQuerysetMixin, generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
+    def get_queryset(self):
+        org = self.request.user.organization
+        return CustomUser.objects.filter(organization=org)
 

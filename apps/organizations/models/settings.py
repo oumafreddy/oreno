@@ -4,6 +4,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from django_ckeditor_5.fields import CKEditor5Field
+from django.db.models import JSONField
 
 class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
     """
@@ -41,6 +42,12 @@ class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
         verbose_name=_("Additional Settings"),
         help_text=_("A JSON field to store additional configuration parameters.")
     )
+    subscribed_apps = JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_('Subscribed Apps'),
+        help_text=_('List of app codes this organization is subscribed to, e.g. ["audit", "risk", "legal", "compliance", "contracts", "document_management"]')
+    )
     
     class Meta:
         verbose_name = _("Organization Setting")
@@ -49,6 +56,12 @@ class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
         indexes = [
             models.Index(fields=['subscription_plan']),
             models.Index(fields=['is_active']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_organizationsettings'
+            )
         ]
     
     def __str__(self):

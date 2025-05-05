@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Milestone Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ contractmilestone.title }}</h2>
+    <div class="mb-3"><strong>Contract:</strong> {{ contractmilestone.contract.code }} - {{ contractmilestone.contract.title }}</div>
+    <div class="mb-3"><strong>Type:</strong> {{ contractmilestone.get_milestone_type_display }}</div>
+    <div class="mb-3"><strong>Due Date:</strong> {{ contractmilestone.due_date }}</div>
+    <div class="mb-3"><strong>Completed:</strong> {% if contractmilestone.is_completed %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</div>
+    <div class="mb-3"><strong>Description:</strong><br>{{ contractmilestone.description|linebreaksbr }}</div>
+    <div class="mb-3"><strong>Completion Date:</strong> {{ contractmilestone.completion_date|default:'-' }}</div>
+    <div class="mb-3"><strong>Reminder Days:</strong> {{ contractmilestone.reminder_days }}</div>
+    <a href="{% url 'contracts:contractmilestone-edit' contractmilestone.pk %}" class="btn btn-outline-info">Edit</a>
+    <a href="{% url 'contracts:contractmilestone-delete' contractmilestone.pk %}" class="btn btn-outline-danger">Delete</a>
+    <a href="{% url 'contracts:contractmilestone-list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

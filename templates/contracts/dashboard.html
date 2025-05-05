@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Contracts Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Contracts Dashboard</h2>
+        </div>
+    </div>
+    <!-- Advanced Analytics Cards (top) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-bar-chart"></i></div>
+                    <h6 class="card-title">Statuses</h6>
+                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_status_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-pie-chart"></i></div>
+                    <h6 class="card-title">Types</h6>
+                    <h3><a href="{% url 'contracts:contracttype-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_type_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-people"></i></div>
+                    <h6 class="card-title">Top Parties</h6>
+                    <h3><a href="{% url 'contracts:party-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_party_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-calendar-event"></i></div>
+                    <h6 class="card-title">Milestone Types</h6>
+                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_type_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h6 class="card-title">Milestone Statuses</h6>
+                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_status_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-calendar-range"></i></div>
+                    <h6 class="card-title">Expiry Years</h6>
+                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_expiry_dist|length }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Advanced Analytics Charts (below summary cards) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Contract Status Distribution</strong></div>
+                <div class="card-body">
+                    <div id="contract-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Contracts by Type</strong></div>
+                <div class="card-body">
+                    <div id="contract-type-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Contracts by Top Party</strong></div>
+                <div class="card-body">
+                    <div id="contract-party-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Milestone Type Distribution</strong></div>
+                <div class="card-body">
+                    <div id="milestone-type-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Milestone Status Distribution</strong></div>
+                <div class="card-body">
+                    <div id="milestone-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Contract Expiry by Year</strong></div>
+                <div class="card-body">
+                    <div id="contract-expiry-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card text-bg-primary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-file-earmark-text"></i></div>
+                    <h6 class="card-title">Contracts</h6>
+                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-bg-info h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-people"></i></div>
+                    <h6 class="card-title">Parties</h6>
+                    <h3><a href="{% url 'contracts:party-list' %}" class="stretched-link text-white text-decoration-none">{{ party_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-bg-warning h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-calendar-event"></i></div>
+                    <h6 class="card-title">Milestones</h6>
+                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_count }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Recent Contracts -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Recent Contracts</strong></div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for contract in recent_contracts %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'contracts:contract-detail' contract.pk %}">{{ contract.title }}</a>
+                            <span class="badge bg-secondary">{{ contract.get_status_display }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent contracts.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <!-- Quick Links -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Quick Links</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'contracts:contract-add' %}" class="btn btn-primary me-2 mb-2">Create Contract</a>
+                    <a href="{% url 'contracts:party-add' %}" class="btn btn-outline-info me-2 mb-2">Add Party</a>
+                    <a href="{% url 'contracts:contracttype-add' %}" class="btn btn-outline-dark me-2 mb-2">Add Contract Type</a>
+                    <a href="{% url 'contracts:contractmilestone-add' %}" class="btn btn-outline-warning me-2 mb-2">Add Milestone</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Reports Section (Bottom) -->
+    <div class="row mt-5">
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Contracts Reports</strong></div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i> Generate and download professional, filterable contract management reports. All reports are scoped to your organization and support PDF export.
+                    </div>
+                    <div class="row g-4">
+                        <!-- Contract Register Summary Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Contract Register Summary</h5>
+                                    <form method="get" action="{% url 'reports:contract_register_summary_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Status</label>
+                                            <input type="text" name="status" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Type</label>
+                                            <input type="text" name="type" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Party</label>
+                                            <input type="text" name="party" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Title</label>
+                                            <input type="text" name="title" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Contract Register Detailed Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Contract Register Detailed</h5>
+                                    <form method="get" action="{% url 'reports:contract_register_detailed_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Status</label>
+                                            <input type="text" name="status" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Type</label>
+                                            <input type="text" name="type" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Party</label>
+                                            <input type="text" name="party" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Title</label>
+                                            <input type="text" name="title" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Milestone Register Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Milestone Register</h5>
+                                    <form method="get" action="{% url 'reports:milestone_register_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Type</label>
+                                            <input type="text" name="type" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Due Date</label>
+                                            <input type="date" name="due_date" class="form-control">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Status</label>
+                                            <input type="text" name="status" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Party Register Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Party Register</h5>
+                                    <form method="get" action="{% url 'reports:party_register_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Party Name</label>
+                                            <input type="text" name="party_name" class="form-control" placeholder="All">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Role</label>
+                                            <input type="text" name="role" class="form-control" placeholder="All">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Contract Expiry Report -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Contract Expiry</h5>
+                                    <form method="get" action="{% url 'reports:contract_expiry_pdf' %}" target="_blank">
+                                        <div class="mb-2">
+                                            <label class="form-label">Expiry Date</label>
+                                            <input type="date" name="expiry_date" class="form-control">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Detailed Reports Links -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Detailed Reports</h5>
+                                    <a href="{% url 'reports:contract_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100 mb-2">Contract Details</a>
+                                    <a href="{% url 'reports:milestone_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100 mb-2">Milestone Details</a>
+                                    <a href="{% url 'reports:party_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100">Party Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END Contracts Reports Section -->
+</div>
+<!-- JSON data for Plotly charts -->
+{{ contract_status_dist|json_script:"contract-status-data" }}
+{{ contract_type_dist|json_script:"contract-type-data" }}
+{{ contract_party_dist|json_script:"contract-party-data" }}
+{{ milestone_type_dist|json_script:"milestone-type-data" }}
+{{ milestone_status_dist|json_script:"milestone-status-data" }}
+{{ contract_expiry_dist|json_script:"contract-expiry-data" }}
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Contract Status Pie Chart
+const contractStatus = JSON.parse(document.getElementById('contract-status-data').textContent);
+Plotly.newPlot('contract-status-chart', [{
+    labels: Object.keys(contractStatus),
+    values: Object.values(contractStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Contract Type Pie Chart
+const contractType = JSON.parse(document.getElementById('contract-type-data').textContent);
+Plotly.newPlot('contract-type-chart', [{
+    labels: Object.keys(contractType),
+    values: Object.values(contractType),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Contract Party Bar Chart
+const contractParty = JSON.parse(document.getElementById('contract-party-data').textContent);
+Plotly.newPlot('contract-party-chart', [{
+    x: Object.keys(contractParty),
+    y: Object.values(contractParty),
+    type: 'bar',
+    marker: { color: '#2563eb' },
+    text: Object.values(contractParty).map(String),
+    textposition: 'auto',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+// Milestone Type Pie Chart
+const milestoneType = JSON.parse(document.getElementById('milestone-type-data').textContent);
+Plotly.newPlot('milestone-type-chart', [{
+    labels: Object.keys(milestoneType),
+    values: Object.values(milestoneType),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Milestone Status Pie Chart
+const milestoneStatus = JSON.parse(document.getElementById('milestone-status-data').textContent);
+Plotly.newPlot('milestone-status-chart', [{
+    labels: Object.keys(milestoneStatus),
+    values: Object.values(milestoneStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Contract Expiry Bar Chart
+const contractExpiry = JSON.parse(document.getElementById('contract-expiry-data').textContent);
+Plotly.newPlot('contract-expiry-chart', [{
+    x: Object.keys(contractExpiry),
+    y: Object.values(contractExpiry),
+    type: 'bar',
+    marker: { color: '#f59e42' },
+    text: Object.values(contractExpiry).map(String),
+    textposition: 'auto',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+<!-- Modal for Contract List -->
+<div class="modal fade" id="contractListModal" tabindex="-1" aria-labelledby="contractListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="contractListModalLabel">Contracts Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+          {% for contract in recent_contracts %}
+            <li class="list-group-item"><a href="{% url 'contracts:contract-detail' contract.pk %}">{{ contract.title }}</a> - {{ contract.get_status_display }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No contracts found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

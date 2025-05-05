@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-3">
+  <h2>Milestone Details</h2>
+  <p><strong>Organization:</strong> {{ organization.name }}</p>
+  {% for m in milestones %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <h4>{{ m.milestone_type|truncatechars:60 }}</h4>
+      <p><strong>ID:</strong> {{ m.milestone_id }}</p>
+      <p><strong>Contract:</strong> {{ m.contract.title|truncatechars:40 }}</p>
+      <p><strong>Due Date:</strong> {{ m.due_date }}</p>
+      <p><strong>Status:</strong> {{ m.get_status_display }}</p>
+      <p><strong>Description:</strong> {{ m.description|truncatechars:120 }}</p>
+    </div>
+  </div>
+  {% empty %}
+  <div class="alert alert-info">No milestones found.</div>
+  {% endfor %}
+</div>
+{% endblock %} 

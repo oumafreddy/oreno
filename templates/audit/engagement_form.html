@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Engagement{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">{% if object %}Edit{% else %}Create{% endif %} Engagement</h3>
+        {% if object %}
+          <span class="badge {% if object.project_status == 'draft' %}bg-secondary{% elif object.project_status == 'active' %}bg-info{% elif object.project_status == 'closed' %}bg-success{% endif %}">
+            <i class="bi bi-flag"></i> {{ object.get_project_status_display }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <strong>Please correct the errors below:</strong>
+          </div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+              <button type="submit" class="btn btn-success">Save</button>
+              {% if object and can_submit %}
+                <a href="{% url 'audit:engagement-submit' object.pk %}" class="btn btn-warning ms-2">Submit for Approval</a>
+              {% endif %}
+              <a href="{% url 'audit:engagement-list' %}" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+            {% if object and approvals %}
+              <div>
+                <span class="fw-bold">Approval Status:</span>
+                {% for approval in approvals %}
+                  <span class="badge {% if approval.status == 'approved' %}bg-success{% elif approval.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    <i class="bi bi-check-circle{% if approval.status == 'approved' %}-fill{% endif %}"></i> {{ approval.get_status_display }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

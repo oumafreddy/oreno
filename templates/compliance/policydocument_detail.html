@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Policy Document: {{ object.title }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Policy Document: {{ object.title }}</h2>
+    <dl class="row">
+        <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ object.title }}</dd>
+        <dt class="col-sm-3">Version</dt><dd class="col-sm-9">{{ object.version }}</dd>
+        <dt class="col-sm-3">Effective Date</dt><dd class="col-sm-9">{{ object.effective_date }}</dd>
+        <dt class="col-sm-3">Expiration Date</dt><dd class="col-sm-9">{{ object.expiration_date }}</dd>
+        <dt class="col-sm-3">Owner</dt><dd class="col-sm-9">{{ object.owner|default:object.owner_email }}</dd>
+        <dt class="col-sm-3">Is Anonymized</dt><dd class="col-sm-9">{{ object.is_anonymized|yesno:"Yes,No" }}</dd>
+        <dt class="col-sm-3">File</dt><dd class="col-sm-9"><a href="{{ object.file.url }}" target="_blank">Download</a></dd>
+    </dl>
+    <a href="{% url 'compliance:policydocument_update' object.pk %}" class="btn btn-warning">Edit</a>
+    <a href="{% url 'compliance:policydocument_delete' object.pk %}" class="btn btn-danger">Delete</a>
+    <a href="{% url 'compliance:policydocument_list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

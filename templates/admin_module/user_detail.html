@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}User Details{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">User Details</h3>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Email</dt>
+          <dd class="col-sm-8">{{ user.email }}</dd>
+          <dt class="col-sm-4">Name</dt>
+          <dd class="col-sm-8">{{ user.get_full_name }}</dd>
+          <dt class="col-sm-4">Role</dt>
+          <dd class="col-sm-8">{{ user.get_role_display }}</dd>
+          <dt class="col-sm-4">Status</dt>
+          <dd class="col-sm-8">
+            {% if user.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-danger">Inactive</span>
+            {% endif %}
+          </dd>
+        </dl>
+        <div class="mt-4 text-end">
+          <a href="{% url 'admin_module:user-update' user.pk %}" class="btn btn-outline-primary me-2">Edit</a>
+          <a href="{% url 'admin_module:user-activate' user.pk %}" class="btn btn-outline-warning me-2">Activate/Deactivate</a>
+          <a href="{% url 'admin_module:user-role' user.pk %}" class="btn btn-outline-secondary me-2">Role</a>
+          <a href="{% url 'admin_module:user-list' %}" class="btn btn-secondary">Back to Users</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

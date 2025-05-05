@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django_tenants.admin import TenantAdminMixin
 from reversion.admin import VersionAdmin
 from .models import Organization, OrganizationSettings, Subscription, Domain
+from django import forms
 
 @admin.register(Organization)
 class OrganizationAdmin(TenantAdminMixin, VersionAdmin):
@@ -68,12 +69,52 @@ class OrganizationAdmin(TenantAdminMixin, VersionAdmin):
             org.archive()
     archive_organizations.short_description = _("Archive selected organizations")
 
+class OrganizationSettingsAdminForm(forms.ModelForm):
+    APP_CHOICES = [
+        ('audit', 'Audit'),
+        ('risk', 'Risk'),
+        ('legal', 'Legal'),
+        ('compliance', 'Compliance'),
+        ('contracts', 'Contracts'),
+        ('document_management', 'Document Management'),
+    ]
+    subscribed_apps = forms.MultipleChoiceField(
+        choices=APP_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label='Subscribed Apps',
+        help_text='Select which apps this organization can access.'
+    )
+    class Meta:
+        model = OrganizationSettings
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial value from JSONField
+        if self.instance and self.instance.pk:
+            self.fields['subscribed_apps'].initial = self.instance.subscribed_apps
+
+    def clean_subscribed_apps(self):
+        return self.cleaned_data['subscribed_apps']
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.subscribed_apps = self.cleaned_data['subscribed_apps']
+        if commit:
+            instance.save()
+        return instance
+
 @admin.register(OrganizationSettings)
 class OrganizationSettingsAdmin(VersionAdmin):
+    form = OrganizationSettingsAdminForm
     list_display = ('organization', 'subscription_plan', 'is_active')
     list_filter = ('subscription_plan', 'is_active')
-    readonly_fields = ('organization',)
-
+    filter_horizontal = ()
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing existing
+            return ('organization',)
+        return ()
     def has_change_permission(self, request, obj=None):
         if not obj:
             return True
@@ -87,7 +128,11 @@ class OrganizationSettingsAdmin(VersionAdmin):
 class SubscriptionAdmin(VersionAdmin):
     list_display = ('organization', 'subscription_plan', 'status', 'start_date', 'end_date')
     list_filter = ('subscription_plan', 'status', 'billing_cycle')
-    readonly_fields = ('organization',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing existing
+            return ('organization',)
+        return ()
 
     def has_change_permission(self, request, obj=None):
         if not obj:

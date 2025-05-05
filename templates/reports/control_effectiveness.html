@@ -1,0 +1,8 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Control Effectiveness Distribution</h2>
+<p>This pie chart shows the distribution of control effectiveness ratings.</p>
+<div class="text-center">
+  <img src="data:image/png;base64,{{ image_base64 }}" alt="Control Effectiveness" style="max-width:100%; height:auto;">
+</div>
+{% endblock %} 

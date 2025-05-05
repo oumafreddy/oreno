@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Issues{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Issues</h3>
+        <a href="{% url 'audit:issue-create' %}" class="btn btn-success">New Issue</a>
+      </div>
+      <div class="card-body p-0">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show m-3" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Code</th>
+              <th>Title</th>
+              <th>Engagement</th>
+              <th>Owner</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in issues %}
+            <tr>
+              <td>{{ issue.code }}</td>
+              <td>{{ issue.issue_title }}</td>
+              <td>{{ issue.engagement }}</td>
+              <td>{{ issue.issue_owner }}</td>
+              <td>
+                <span class="badge {% if issue.issue_status == 'open' %}bg-info{% elif issue.issue_status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ issue.get_issue_status_display }}
+                </span>
+              </td>
+              <td>
+                <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a href="{% url 'audit:issue-close' issue.pk %}" class="btn btn-sm btn-warning">Close</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted">No issues found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

@@ -20,11 +20,11 @@ from .tasks import (
 )
 
 # ─── WORKPLAN SIGNALS ────────────────────────────────────────────────────────
-@receiver(pre_save, sender=AuditWorkplan)
-def workplan_pre_save(sender, instance, **kwargs):
-    """Handle pre-save operations for AuditWorkplan."""
-    if not instance.pk:  # New instance
-        instance.state = 'draft'
+# @receiver(pre_save, sender=AuditWorkplan)
+# def workplan_pre_save(sender, instance, **kwargs):
+#     if not instance.pk:  # New instance
+#         # instance.state = 'draft'  # <-- Direct assignment forbidden by django-fsm. Let FSMField default handle this.
+#         pass  # See django-fsm docs: https://github.com/viewflow/django-fsm#direct-state-modification-is-not-allowed
 
 @receiver(post_save, sender=AuditWorkplan)
 def workplan_post_save(sender, instance, created, **kwargs):
@@ -34,11 +34,11 @@ def workplan_post_save(sender, instance, created, **kwargs):
         pass
 
 # ─── ENGAGEMENT SIGNALS ──────────────────────────────────────────────────────
-@receiver(pre_save, sender=Engagement)
-def engagement_pre_save(sender, instance, **kwargs):
-    """Handle pre-save operations for Engagement."""
-    if not instance.pk:  # New instance
-        instance.state = 'draft'
+# @receiver(pre_save, sender=Engagement)
+# def engagement_pre_save(sender, instance, **kwargs):
+#     if not instance.pk:  # New instance
+#         # instance.state = 'draft'  # <-- Direct assignment forbidden by django-fsm. Let FSMField default handle this.
+#         pass
 
 @receiver(post_save, sender=Engagement)
 def engagement_post_save(sender, instance, created, **kwargs):
@@ -63,11 +63,11 @@ def issue_post_save(sender, instance, created, **kwargs):
         pass
 
 # ─── APPROVAL SIGNALS ────────────────────────────────────────────────────────
-@receiver(pre_save, sender=Approval)
-def approval_pre_save(sender, instance, **kwargs):
-    """Handle pre-save operations for Approval."""
-    if not instance.pk:  # New instance
-        instance.status = 'pending'
+# @receiver(pre_save, sender=Approval)
+# def approval_pre_save(sender, instance, **kwargs):
+#     if not instance.pk:  # New instance
+#         # instance.status = 'pending'  # <-- If this is FSMField, do not assign directly. Let default handle.
+#         pass
 
 @receiver(post_save, sender=Approval)
 def approval_post_save(sender, instance, created, **kwargs):

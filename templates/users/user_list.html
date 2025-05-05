@@ -1,28 +1,39 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}User List{% endblock %}
 {% block content %}
-<h2>User List</h2>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Email</th>
-      <th>Name</th>
-      <th>Role</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for user in users %}
-    <tr>
-      <td>{{ user.email }}</td>
-      <td>{{ user.get_full_name }}</td>
-      <td>{{ user.role }}</td>
-      <td>
-        <a href="{% url 'users:user-detail' user.pk %}">View</a>
-        <a href="{% url 'users:user-update' user.pk %}">Edit</a>
-        <a href="{% url 'users:user-delete' user.pk %}">Delete</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">User List</h3>
+      </div>
+      <div class="card-body">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td>{{ user.email }}</td>
+              <td>{{ user.get_full_name }}</td>
+              <td>{{ user.get_role_display }}</td>
+              <td>
+                <a href="{% url 'users:user-detail' user.pk %}" class="btn btn-sm btn-outline-info">View</a>
+                <a href="{% url 'users:user-update' user.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <a href="{% url 'users:user-delete' user.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

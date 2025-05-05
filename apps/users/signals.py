@@ -174,14 +174,12 @@ def handle_profile_changes(sender, instance, created, **kwargs):
     """
     Handle profile updates and cache management.
     """
-    # Clear cached user data
     safe_delete_pattern(f'user_{instance.user_id}_*')
-    
-    if not created and 'avatar' in instance.get_dirty_fields():
-        # Handle avatar changes (e.g., cleanup old files)
-        old_avatar = instance.get_dirty_fields().get('avatar')
-        if old_avatar:
-            old_avatar.delete(save=False)
+    if not created and hasattr(instance, 'get_dirty_fields'):
+        if 'avatar' in instance.get_dirty_fields():
+            old_avatar = instance.get_dirty_fields().get('avatar')
+            if old_avatar:
+                old_avatar.delete(save=False)
 
 @receiver(pre_delete, sender=Organization)
 def handle_organization_deletion(sender, instance, **kwargs):

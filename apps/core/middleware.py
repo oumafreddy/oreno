@@ -4,6 +4,7 @@ import threading
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
 
 _thread_locals = threading.local()
 
@@ -101,4 +102,5 @@ class OrganizationMiddleware:
         if hasattr(_thread_locals, 'organization'):
             del _thread_locals.organization
             
+        print(f"Current schema: {connection.schema_name}")
         return response

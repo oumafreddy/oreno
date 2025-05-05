@@ -1,0 +1,8 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Risk Heatmap</h2>
+<p>This heatmap visualizes the distribution of risks by impact and likelihood.</p>
+<div class="text-center">
+  <img src="data:image/png;base64,{{ image_base64 }}" alt="Risk Heatmap" style="max-width:100%; height:auto;">
+</div>
+{% endblock %} 

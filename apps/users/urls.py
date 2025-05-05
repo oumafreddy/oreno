@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from .views import (
     # Web Views
     UserLoginView,
-    UserLogoutView,
+    custom_logout,
     ProfileView,
     UserPasswordChangeView,
     UserPasswordChangeDoneView,
@@ -22,6 +22,7 @@ from .views import (
     OrganizationRoleCreateView,
     OrganizationRoleUpdateView,
     OrganizationRoleDeleteView,
+    UserRegisterView,
     # API Views
     UserRegisterAPIView,
     UserLoginAPIView,
@@ -37,7 +38,7 @@ app_name = 'users'
 urlpatterns = [
     # Authentication
     path('login/', UserLoginView.as_view(), name='login'),
-    path('logout/', UserLogoutView.as_view(), name='logout'),
+    path('logout/', custom_logout, name='logout'),
     path('profile/', ProfileView.as_view(), name='profile'),
     
     # Password Management
@@ -58,6 +59,9 @@ urlpatterns = [
     path('roles/create/', OrganizationRoleCreateView.as_view(), name='role-create'),
     path('roles/<int:pk>/update/', OrganizationRoleUpdateView.as_view(), name='role-update'),
     path('roles/<int:pk>/delete/', OrganizationRoleDeleteView.as_view(), name='role-delete'),
+    
+    # Registration
+    path('register/', UserRegisterView.as_view(), name='register'),
     
     # API endpoints
     path('api/register/', UserRegisterAPIView.as_view(), name='api-register'),

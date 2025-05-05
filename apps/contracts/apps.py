@@ -2,6 +2,8 @@
 from django.apps import AppConfig
 
 class ContractsConfig(AppConfig):
-    name = 'contracts'        # if using sys.path hack and __init__.py added
-    # …or…
-    # name = 'apps.core'  # if you prefer fully qualified imports without altering sys.path
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'contracts'
+
+    def ready(self):
+        import contracts.signals  # noqa

@@ -1,0 +1,304 @@
+from django.urls import reverse_lazy
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from core.mixins.permissions import OrganizationPermissionMixin
+from .models import CaseType, LegalParty, LegalCase, CaseParty, LegalTask, LegalDocument, LegalArchive
+from .forms import (
+    CaseTypeForm, LegalPartyForm, LegalCaseForm, CasePartyForm,
+    LegalTaskForm, LegalDocumentForm, LegalArchiveForm
+)
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import render
+from django.utils import timezone
+
+# CaseType Views
+class CaseTypeListView(OrganizationPermissionMixin, ListView):
+    model = CaseType
+    template_name = 'legal/casetype_list.html'
+    def get_queryset(self):
+        org = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        return CaseType.objects.filter(organization=org)
+
+class CaseTypeDetailView(OrganizationPermissionMixin, DetailView):
+    model = CaseType
+    template_name = 'legal/casetype_detail.html'
+    def get_queryset(self):
+        org = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        return CaseType.objects.filter(organization=org)
+
+class CaseTypeCreateView(OrganizationPermissionMixin, CreateView):
+    model = CaseType
+    form_class = CaseTypeForm
+    template_name = 'legal/casetype_form.html'
+    success_url = reverse_lazy('legal:casetype_list')
+
+    def form_valid(self, form):
+        # Set organization automatically
+        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        return super().form_valid(form)
+
+class CaseTypeUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = CaseType
+    form_class = CaseTypeForm
+    template_name = 'legal/casetype_form.html'
+    success_url = reverse_lazy('legal:casetype_list')
+
+class CaseTypeDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = CaseType
+    template_name = 'legal/casetype_confirm_delete.html'
+    success_url = reverse_lazy('legal:casetype_list')
+
+# LegalParty Views
+class LegalPartyListView(OrganizationPermissionMixin, ListView):
+    model = LegalParty
+    template_name = 'legal/legalparty_list.html'
+
+class LegalPartyDetailView(OrganizationPermissionMixin, DetailView):
+    model = LegalParty
+    template_name = 'legal/legalparty_detail.html'
+
+class LegalPartyCreateView(OrganizationPermissionMixin, CreateView):
+    model = LegalParty
+    form_class = LegalPartyForm
+    template_name = 'legal/legalparty_form.html'
+    success_url = reverse_lazy('legal:legalparty_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalPartyUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = LegalParty
+    form_class = LegalPartyForm
+    template_name = 'legal/legalparty_form.html'
+    success_url = reverse_lazy('legal:legalparty_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalPartyDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = LegalParty
+    template_name = 'legal/legalparty_confirm_delete.html'
+    success_url = reverse_lazy('legal:legalparty_list')
+
+# LegalCase Views
+class LegalCaseListView(OrganizationPermissionMixin, ListView):
+    model = LegalCase
+    template_name = 'legal/legalcase_list.html'
+
+class LegalCaseDetailView(OrganizationPermissionMixin, DetailView):
+    model = LegalCase
+    template_name = 'legal/legalcase_detail.html'
+
+class LegalCaseCreateView(OrganizationPermissionMixin, CreateView):
+    model = LegalCase
+    form_class = LegalCaseForm
+    template_name = 'legal/legalcase_form.html'
+    success_url = reverse_lazy('legal:legalcase_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
+
+class LegalCaseUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = LegalCase
+    form_class = LegalCaseForm
+    template_name = 'legal/legalcase_form.html'
+    success_url = reverse_lazy('legal:legalcase_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
+
+class LegalCaseDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = LegalCase
+    template_name = 'legal/legalcase_confirm_delete.html'
+    success_url = reverse_lazy('legal:legalcase_list')
+
+# CaseParty Views
+class CasePartyListView(OrganizationPermissionMixin, ListView):
+    model = CaseParty
+    template_name = 'legal/caseparty_list.html'
+
+class CasePartyDetailView(OrganizationPermissionMixin, DetailView):
+    model = CaseParty
+    template_name = 'legal/caseparty_detail.html'
+
+class CasePartyCreateView(OrganizationPermissionMixin, CreateView):
+    model = CaseParty
+    form_class = CasePartyForm
+    template_name = 'legal/caseparty_form.html'
+    success_url = reverse_lazy('legal:caseparty_list')
+
+class CasePartyUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = CaseParty
+    form_class = CasePartyForm
+    template_name = 'legal/caseparty_form.html'
+    success_url = reverse_lazy('legal:caseparty_list')
+
+class CasePartyDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = CaseParty
+    template_name = 'legal/caseparty_confirm_delete.html'
+    success_url = reverse_lazy('legal:caseparty_list')
+
+# LegalTask Views
+class LegalTaskListView(OrganizationPermissionMixin, ListView):
+    model = LegalTask
+    template_name = 'legal/legaltask_list.html'
+
+class LegalTaskDetailView(OrganizationPermissionMixin, DetailView):
+    model = LegalTask
+    template_name = 'legal/legaltask_detail.html'
+
+class LegalTaskCreateView(OrganizationPermissionMixin, CreateView):
+    model = LegalTask
+    form_class = LegalTaskForm
+    template_name = 'legal/legaltask_form.html'
+    success_url = reverse_lazy('legal:legaltask_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
+
+class LegalTaskUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = LegalTask
+    form_class = LegalTaskForm
+    template_name = 'legal/legaltask_form.html'
+    success_url = reverse_lazy('legal:legaltask_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
+
+class LegalTaskDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = LegalTask
+    template_name = 'legal/legaltask_confirm_delete.html'
+    success_url = reverse_lazy('legal:legaltask_list')
+
+# LegalDocument Views
+class LegalDocumentListView(OrganizationPermissionMixin, ListView):
+    model = LegalDocument
+    template_name = 'legal/legaldocument_list.html'
+
+class LegalDocumentDetailView(OrganizationPermissionMixin, DetailView):
+    model = LegalDocument
+    template_name = 'legal/legaldocument_detail.html'
+
+class LegalDocumentCreateView(OrganizationPermissionMixin, CreateView):
+    model = LegalDocument
+    form_class = LegalDocumentForm
+    template_name = 'legal/legaldocument_form.html'
+    success_url = reverse_lazy('legal:legaldocument_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalDocumentUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = LegalDocument
+    form_class = LegalDocumentForm
+    template_name = 'legal/legaldocument_form.html'
+    success_url = reverse_lazy('legal:legaldocument_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalDocumentDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = LegalDocument
+    template_name = 'legal/legaldocument_confirm_delete.html'
+    success_url = reverse_lazy('legal:legaldocument_list')
+
+# LegalArchive Views
+class LegalArchiveListView(OrganizationPermissionMixin, ListView):
+    model = LegalArchive
+    template_name = 'legal/legalarchive_list.html'
+
+class LegalArchiveDetailView(OrganizationPermissionMixin, DetailView):
+    model = LegalArchive
+    template_name = 'legal/legalarchive_detail.html'
+
+class LegalArchiveCreateView(OrganizationPermissionMixin, CreateView):
+    model = LegalArchive
+    form_class = LegalArchiveForm
+    template_name = 'legal/legalarchive_form.html'
+    success_url = reverse_lazy('legal:legalarchive_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalArchiveUpdateView(OrganizationPermissionMixin, UpdateView):
+    model = LegalArchive
+    form_class = LegalArchiveForm
+    template_name = 'legal/legalarchive_form.html'
+    success_url = reverse_lazy('legal:legalarchive_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+
+class LegalArchiveDeleteView(OrganizationPermissionMixin, DeleteView):
+    model = LegalArchive
+    template_name = 'legal/legalarchive_confirm_delete.html'
+    success_url = reverse_lazy('legal:legalarchive_list')
+
+class LegalDashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'legal/dashboard.html'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        org = self.request.organization
+        # Case counts
+        context['case_count'] = LegalCase.objects.filter(organization=org).count()
+        context['open_cases'] = LegalCase.objects.filter(organization=org, status='intake').count() + \
+                                 LegalCase.objects.filter(organization=org, status='investigation').count() + \
+                                 LegalCase.objects.filter(organization=org, status='litigation').count() + \
+                                 LegalCase.objects.filter(organization=org, status='settlement_negotiation').count()
+        context['closed_cases'] = LegalCase.objects.filter(organization=org, status='closed').count()
+        context['archived_cases'] = LegalCase.objects.filter(organization=org, status='archived').count()
+        # Party, document, task counts
+        context['party_count'] = LegalParty.objects.filter(organization=org).count()
+        context['document_count'] = LegalDocument.objects.filter(organization=org).count()
+        context['task_count'] = LegalTask.objects.filter(organization=org).count()
+        # Overdue tasks: status is 'overdue'
+        context['overdue_tasks'] = LegalTask.objects.filter(organization=org, status='overdue').count()
+        # Task status chart data
+        context['completed_tasks'] = LegalTask.objects.filter(organization=org, status='completed').count()
+        context['pending_tasks'] = LegalTask.objects.filter(organization=org, status='pending').count() + \
+                                   LegalTask.objects.filter(organization=org, status='in_progress').count()
+        # Recent activity (latest 8 cases, documents, or tasks)
+        context['recent_cases'] = LegalCase.objects.filter(organization=org).order_by('-created_at')[:4]
+        context['recent_documents'] = LegalDocument.objects.filter(organization=org).order_by('-id')[:2]
+        context['recent_tasks'] = LegalTask.objects.filter(organization=org).order_by('-id')[:2]
+        # Chart data for Plotly
+        context['case_status_chart'] = {
+            'Open': context['open_cases'],
+            'Closed': context['closed_cases'],
+            'Archived': context['archived_cases'],
+        }
+        context['task_status_chart'] = {
+            'Completed': context['completed_tasks'],
+            'Pending': context['pending_tasks'],
+            'Overdue': context['overdue_tasks'],
+        }
+        return context 

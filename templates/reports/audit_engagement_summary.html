@@ -1,0 +1,24 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Audit Engagement Summary</h2>
+<form method="get" class="mb-2">
+  <label for="engagement_name">Engagement Name:</label>
+  <select name="engagement_name" id="engagement_name" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+    <option value="">All</option>
+    {% for name in engagement_names %}
+      <option value="{{ name }}" {% if filters.engagement_name == name %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</form>
+<p>Filters: Status: {{ filters.status|default:'All' }}, Assigned To: {{ filters.assigned_to|default:'All' }}, Engagement: {{ filters.engagement_name|default:'All' }}</p>
+<table class="table table-sm">
+  <tr><th>Status</th><th>Assigned To</th><th>Count</th></tr>
+  {% for row in summary %}
+    <tr>
+      <td>{{ row.project_status|title }}</td>
+      <td>{{ row.assigned_to__email|default:'Unassigned' }}</td>
+      <td>{{ row.count }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

@@ -1,7 +1,7 @@
 # apps/organizations/tests/test_models.py
 
 from django.test import TestCase
-#from apps.organizations.models.organization import Organization
+#from organizations.models.organization import Organization
 from ..models.organization import Organization
 from django.urls import reverse
 from datetime import date

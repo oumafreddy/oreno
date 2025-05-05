@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Controls{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Controls</h2>
+            <a href="{% url 'risk:control_create' %}" class="btn btn-success float-end"><i class="bi bi-plus-circle"></i> New Control</a>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav class="nav nav-pills nav-fill mb-3">
+                <a class="nav-link" href="{% url 'risk:dashboard' %}">Dashboard</a>
+                <a class="nav-link" href="{% url 'risk:risk_list' %}">Risks</a>
+                <a class="nav-link active" href="#">Controls</a>
+                <a class="nav-link" href="{% url 'risk:kri_list' %}">KRIs</a>
+                <a class="nav-link" href="{% url 'risk:riskassessment_list' %}">Assessments</a>
+                <a class="nav-link" href="{% url 'risk:riskregister_list' %}">Risk Registers</a>
+                <a class="nav-link" href="{% url 'risk:riskmatrixconfig_list' %}">Matrix Configs</a>
+            </nav>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Owner</th>
+                            <th>Effectiveness</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for control in controls %}
+                        <tr>
+                            <td>{{ control.code }}</td>
+                            <td>{{ control.name }}</td>
+                            <td>{{ control.get_control_type_display }}</td>
+                            <td><span class="badge bg-{{ control.status|yesno:'success,warning,danger,secondary' }}">{{ control.get_status_display }}</span></td>
+                            <td>{{ control.control_owner }}</td>
+                            <td>{{ control.get_effectiveness_rating_display }}</td>
+                            <td>
+                                <a href="{% url 'risk:control_detail' control.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                <a href="{% url 'risk:control_update' control.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'risk:control_delete' control.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center">No controls found for your organization.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

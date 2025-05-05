@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Document Management Dashboard{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">Document Management Dashboard</h2>
+    <div>
+      <a href="{% url 'document_management:documentrequest-add' %}" class="btn btn-primary me-2">New Document Request</a>
+      <a href="{% url 'document_management:documentrequest-list' %}" class="btn btn-outline-secondary">View All Requests</a>
+    </div>
+  </div>
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-header bg-light"><strong>Requests by Status</strong></div>
+        <div class="card-body">
+          <div id="statusChart"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-header bg-light"><strong>Uploads Over Time</strong></div>
+        <div class="card-body">
+          <div id="uploadsChart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card text-white bg-primary mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Total Requests</h5>
+          <p class="card-text display-5">{{ request_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-success mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Total Documents</h5>
+          <p class="card-text display-5">{{ document_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-warning mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Pending Requests</h5>
+          <p class="card-text display-5">{{ pending_count }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card shadow-sm">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Recent Uploads</h5>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Request</th>
+            <th>File</th>
+            <th>Uploaded By</th>
+            <th>Uploaded At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in recent_uploads %}
+          <tr>
+            <td><a href="{% url 'document_management:documentrequest-detail' doc.document_request.pk %}">{{ doc.document_request.request_name }}</a></td>
+            <td><a href="{{ doc.file.url }}" download>{{ doc.file.name }}</a></td>
+            <td>{{ doc.uploaded_by|default:'External' }}</td>
+            <td>{{ doc.uploaded_at }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-muted">No recent uploads.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<!-- Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+var statusData = JSON.parse('{{ status_chart|escapejs }}');
+var uploadsData = JSON.parse('{{ uploads_chart|escapejs }}');
+// Requests by Status Pie
+Plotly.newPlot('statusChart', [{
+  type: 'pie',
+  labels: Object.keys(statusData),
+  values: Object.values(statusData),
+  textinfo: 'label+percent',
+  hole: .4
+}], {title: 'Requests by Status'});
+// Uploads Over Time Bar
+Plotly.newPlot('uploadsChart', [{
+  type: 'bar',
+  x: Object.keys(uploadsData),
+  y: Object.values(uploadsData),
+  marker: {color: 'rgb(58,200,225)'}
+}], {title: 'Uploads Over Time', xaxis: {title: 'Date'}, yaxis: {title: 'Uploads'}});
+</script>
+{% endblock %} 

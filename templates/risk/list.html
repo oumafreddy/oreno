@@ -1,0 +1,572 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Risk Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Navigation Bar -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Risk Dashboard</h2>
+        </div>
+    </div>
+    <!-- Risk App Nav Links -->
+    <div class="row mb-3">
+        <div class="col-auto ms-auto">
+            <a href="{% url 'risk:risk_list' %}" class="btn btn-outline-primary me-2">All Risks</a>
+            <a href="{% url 'risk:control_list' %}" class="btn btn-outline-secondary me-2">Controls</a>
+            <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-success me-2">KRIs</a>
+            <a href="{% url 'risk:riskassessment_list' %}" class="btn btn-outline-warning me-2">Assessments</a>
+            <a href="{% url 'risk:riskregister_list' %}" class="btn btn-outline-info me-2">Registers</a>
+            <a href="{% url 'risk:riskmatrixconfig_list' %}" class="btn btn-outline-dark">Matrix Config</a>
+        </div>
+    </div>
+    <!-- Register Selector -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <form id="register-filter-form" method="get">
+                <label for="register-select" class="form-label">Risk Register</label>
+                <select id="register-select" name="register" class="form-select">
+                    <option value="">All Registers</option>
+                    {% for reg in riskregisters %}
+                        <option value="{{ reg.pk }}" {% if reg.pk == selected_register %}selected{% endif %}>{{ reg.register_name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+    <!-- Advanced Analytics Cards (top) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-bar-chart"></i></div>
+                    <h6 class="card-title">Risk Categories</h6>
+                    <h3>{{ risk_category_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-pie-chart"></i></div>
+                    <h6 class="card-title">Risk Statuses</h6>
+                    <h3>{{ risk_status_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-person"></i></div>
+                    <h6 class="card-title">Owners</h6>
+                    <h3>{{ risk_owner_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-archive"></i></div>
+                    <h6 class="card-title">Registers</h6>
+                    <h3>{{ risk_register_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-activity"></i></div>
+                    <h6 class="card-title">KRI Statuses</h6>
+                    <h3>{{ kri_status_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 text-center">
+                <div class="card-body">
+                    <div class="display-6"><i class="bi bi-bar-chart-line"></i></div>
+                    <h6 class="card-title">Control Effectiveness</h6>
+                    <h3>{{ control_effectiveness_dist|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Advanced Analytics Charts (below summary cards) -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Category Distribution</strong></div>
+                <div class="card-body">
+                    <div id="risk-category-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Status Distribution</strong></div>
+                <div class="card-body">
+                    <div id="risk-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Owner Distribution</strong></div>
+                <div class="card-body">
+                    <div id="risk-owner-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Register Distribution</strong></div>
+                <div class="card-body">
+                    <div id="risk-register-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>KRI Status Breakdown</strong></div>
+                <div class="card-body">
+                    <div id="kri-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Control Effectiveness</strong></div>
+                <div class="card-body">
+                    <div id="control-effectiveness-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Risk Trend Line Chart -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-12">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Trend (Risks Identified per Month)</strong></div>
+                <div class="card-body">
+                    <div id="risk-trend-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h5 class="card-title">Total Risks</h5>
+                    <h3 id="total-risks">{{ total_risks }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-shield-check"></i></div>
+                    <h5 class="card-title">Controls</h5>
+                    <h3 id="total-controls">{{ total_controls }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-graph-up"></i></div>
+                    <h5 class="card-title">KRIs</h5>
+                    <h3 id="total-kris">{{ total_kris }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-clipboard-data"></i></div>
+                    <h5 class="card-title">Assessments</h5>
+                    <h3 id="total-assessments">{{ total_assessments }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-fire"></i></div>
+                    <h5 class="card-title">High/Critical</h5>
+                    <h3 id="high-critical">{{ high_critical_risks }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-clock-history"></i></div>
+                    <h5 class="card-title">Recent Activity</h5>
+                    <h3 id="recent-activity">{{ recent_activity_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Heat Map & Top Risks -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Risk Heat Map</strong></div>
+                <div class="card-body">
+                    <div id="risk-heatmap" style="height:400px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Top Risks</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Name</th><th>Score</th><th></th></tr></thead>
+                        <tbody>
+                        {% for risk in top_risks %}
+                            <tr>
+                                <td><a href="{% url 'risk:risk_detail' risk.pk %}">{{ risk.risk_name }}</a></td>
+                                <td>{{ risk.residual_risk_score }}</td>
+                                <td><span class="badge bg-{{ risk.get_risk_level }}">{{ risk.get_risk_level|title }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No risks found.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- KRI Status Widget & Assessment Timeline -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>KRI Status</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>KRI</th><th>Risk</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for kri in kris_status %}
+                            <tr>
+                                <td>{{ kri.name }}</td>
+                                <td><a href="{% url 'risk:risk_detail' kri.risk.pk %}">{{ kri.risk.risk_name }}</a></td>
+                                <td>
+                                    {% if kri.get_status == 'critical' %}
+                                        <span class="badge bg-danger">Critical</span>
+                                    {% elif kri.get_status == 'warning' %}
+                                        <span class="badge bg-warning text-dark">Warning</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No KRIs found.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Assessment Timeline</strong></div>
+                <div class="card-body">
+                    <div id="assessment-timeline" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Recent Activity Widget -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-light"><strong>Recent Activity</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for activity in recent_activity %}
+                            <li class="list-group-item">{{ activity }}</li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">No recent activity.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Reports Section (Bottom) -->
+    <div class="row mt-5">
+      <div class="col">
+        <div class="card shadow">
+          <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Risk Reports</strong></div>
+          <div class="card-body">
+            <div class="alert alert-info mb-4">
+              <i class="bi bi-info-circle"></i> Generate and download a wide range of intelligent, filterable risk management reports. All reports are scoped to your organization and support PDF export.
+            </div>
+            <div class="row g-4">
+              <!-- Risk Register Summary Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Risk Register Summary</h5>
+                    <form method="get" action="{% url 'reports:risk_register_summary_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Register Name</label>
+                        <select name="register" class="form-select">
+                          <option value="">All</option>
+                          {% for reg in riskregisters %}
+                            <option value="{{ reg.pk }}">{{ reg.register_name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Category</label>
+                        <input type="text" name="category" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Owner</label>
+                        <input type="text" name="owner" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                          <option value="">All</option>
+                          <option value="open">Open</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Risk Register Detailed Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Risk Register Detailed</h5>
+                    <form method="get" action="{% url 'reports:risk_register_detailed_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Register Name</label>
+                        <select name="register" class="form-select">
+                          <option value="">All</option>
+                          {% for reg in riskregisters %}
+                            <option value="{{ reg.pk }}">{{ reg.register_name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Category</label>
+                        <input type="text" name="category" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Owner</label>
+                        <input type="text" name="owner" class="form-control" placeholder="All">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                          <option value="">All</option>
+                          <option value="open">Open</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Risk Heatmap Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Risk Heatmap</h5>
+                    <a href="{% url 'reports:risk_heatmap_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- Risk Trends Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Risk Trends</h5>
+                    <a href="{% url 'reports:risk_trends_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- Control Effectiveness Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Control Effectiveness</h5>
+                    <a href="{% url 'reports:control_effectiveness_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- KRI Status Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">KRI Status</h5>
+                    <a href="{% url 'reports:kri_status_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- Assessment Timeline Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Assessment Timeline</h5>
+                    <form method="get" action="{% url 'reports:assessment_timeline_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Assessment Name</label>
+                        <select name="assessment" class="form-select">
+                          <option value="">All</option>
+                          {% for assessment in riskassessments %}
+                            <option value="{{ assessment.pk }}">{{ assessment.risk.risk_name }} ({{ assessment.get_assessment_type_display }})</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Risk Assessment Details Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Risk Assessment Details</h5>
+                    <form method="get" action="{% url 'reports:risk_assessment_details_pdf' %}" target="_blank">
+                      <div class="mb-2">
+                        <label class="form-label">Assessment Name</label>
+                        <select name="assessment" class="form-select">
+                          <option value="">All</option>
+                          {% for assessment in riskassessments %}
+                            <option value="{{ assessment.pk }}">{{ assessment.risk.risk_name }} ({{ assessment.get_assessment_type_display }})</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              <!-- Control Details Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">Control Details</h5>
+                    <a href="{% url 'reports:control_details_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+              <!-- KRI Details Report -->
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">KRI Details</h5>
+                    <a href="{% url 'reports:kri_details_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Heatmap AJAX placeholder
+fetch('{% url "risk:api_heatmap_data" %}?register={{ selected_register|default:"" }}')
+    .then(response => response.json())
+    .then(data => {
+        Plotly.newPlot('risk-heatmap', data.data, data.layout);
+    });
+// Assessment Timeline AJAX placeholder
+fetch('{% url "risk:api_assessment_timeline" %}?register={{ selected_register|default:"" }}')
+    .then(response => response.json())
+    .then(data => {
+        Plotly.newPlot('assessment-timeline', data.data, data.layout);
+    });
+// Register selector auto-submit
+const regSelect = document.getElementById('register-select');
+if (regSelect) {
+    regSelect.addEventListener('change', function() {
+        this.form.submit();
+    });
+}
+// Risk Category Pie Chart
+const riskCategory = {{ risk_category_dist|safe }};
+Plotly.newPlot('risk-category-chart', [{
+    labels: Object.keys(riskCategory),
+    values: Object.values(riskCategory),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Risk Status Pie Chart
+const riskStatus = {{ risk_status_dist|safe }};
+Plotly.newPlot('risk-status-chart', [{
+    labels: Object.keys(riskStatus),
+    values: Object.values(riskStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Risk Owner Pie Chart
+const riskOwner = {{ risk_owner_dist|safe }};
+Plotly.newPlot('risk-owner-chart', [{
+    labels: Object.keys(riskOwner),
+    values: Object.values(riskOwner),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Risk Register Pie Chart
+const riskRegister = {{ risk_register_dist|safe }};
+Plotly.newPlot('risk-register-chart', [{
+    labels: Object.keys(riskRegister),
+    values: Object.values(riskRegister),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// KRI Status Pie Chart
+const kriStatus = {{ kri_status_dist|safe }};
+Plotly.newPlot('kri-status-chart', [{
+    labels: Object.keys(kriStatus),
+    values: Object.values(kriStatus),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Control Effectiveness Pie Chart
+const controlEffectiveness = {{ control_effectiveness_dist|safe }};
+Plotly.newPlot('control-effectiveness-chart', [{
+    labels: Object.keys(controlEffectiveness),
+    values: Object.values(controlEffectiveness),
+    type: 'pie',
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Risk Trend Line Chart
+const riskTrend = {{ risk_trend|safe }};
+Plotly.newPlot('risk-trend-chart', [{
+    x: riskTrend.map(r => r.month),
+    y: riskTrend.map(r => r.count),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Risks Identified'
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+{% endblock %} 

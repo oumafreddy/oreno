@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Delete Risk Register{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Delete Risk Register</h2>
+            <p class="text-danger">Are you sure you want to delete the risk register <strong>{{ register.register_name }}</strong>? This action cannot be undone.</p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
+                <a href="{% url 'risk:riskregister_detail' register.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
+from django.db.utils import ProgrammingError, OperationalError
 
 from core.models.abstract_models import AuditableModel  # Inherits TimeStampedModel
 from apps.core.mixins import AuditMixin, OrganizationMixin
@@ -55,6 +56,12 @@ class Organization(TenantMixin, AuditMixin, models.Model):
         verbose_name = _('Organization')
         verbose_name_plural = _('Organizations')
         ordering = ['name']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(id__isnull=False),
+                name='organization_required_organization'
+            )
+        ]
 
     def __str__(self):
         return self.name
@@ -64,8 +71,8 @@ class Organization(TenantMixin, AuditMixin, models.Model):
         if not self.slug:
             self.slug = self.name.lower().replace(' ', '-')
         super().save(*args, **kwargs)
-        # Ensure a settings object exists for this organization
-        OrganizationSettings.objects.get_or_create(organization=self)
+        # Do NOT create OrganizationSettings here!
+        # Instead, create it after tenant migrations are applied (see management command or post-migrate signal).
 
     def get_members(self):
         return get_user_model().objects.filter(organization=self)
@@ -85,7 +92,12 @@ class Organization(TenantMixin, AuditMixin, models.Model):
 
     @property
     def settings(self):
-        return OrganizationSettings.objects.get_or_create(organization=self)[0]
+        from django.db.utils import ProgrammingError, OperationalError
+        try:
+            return OrganizationSettings.objects.get_or_create(organization=self)[0]
+        except (ProgrammingError, OperationalError):
+            # Table does not exist yet (schema not migrated)
+            return None
 
     def get_absolute_url(self):
-        return reverse('organizations:organization_detail', args=[str(self.id)])
+        return reverse('organizations:detail', args=[str(self.id)])

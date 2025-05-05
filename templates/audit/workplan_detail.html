@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Workplan: {{ workplan.name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-journal-check me-2"></i>Workplan: {{ workplan.name }}</h3>
+        <span class="badge {% if workplan.status == 'draft' %}bg-secondary{% elif workplan.status == 'active' %}bg-info{% elif workplan.status == 'closed' %}bg-success{% endif %}">
+          <i class="bi bi-flag"></i> {{ workplan.get_status_display }}
+        </span>
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ workplan.code }}</dd>
+          <dt class="col-sm-3">Fiscal Year</dt><dd class="col-sm-9">{{ workplan.fiscal_year }}</dd>
+          <dt class="col-sm-3">Objectives</dt><dd class="col-sm-9">{{ workplan.objectives|safe }}</dd>
+          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ workplan.description|safe }}</dd>
+        </dl>
+        <hr>
+        <h5>Engagements</h5>
+        <ul class="mb-3">
+          {% for engagement in engagements %}
+            <li><a href="{% url 'audit:engagement-detail' engagement.pk %}">{{ engagement.title }}</a></li>
+          {% empty %}
+            <li class="text-muted">No engagements linked to this workplan.</li>
+          {% endfor %}
+        </ul>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            {% if can_submit %}
+              <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-warning btn-sm ms-2">Submit</a>
+            {% endif %}
+            <a href="{% url 'audit:workplan-list' %}" class="btn btn-secondary btn-sm ms-2">Back</a>
+          </div>
+          <div>
+            <span class="fw-bold">Approval Status:</span>
+            {% for approval in approvals %}
+              <span class="badge {% if approval.status == 'approved' %}bg-success{% elif approval.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                <i class="bi bi-check-circle{% if approval.status == 'approved' %}-fill{% endif %}"></i> {{ approval.get_status_display }}
+              </span>
+            {% empty %}
+              <span class="text-muted">No approval records.</span>
+            {% endfor %}
+            {% if can_approve %}
+              <a href="{% url 'audit:workplan-approve' workplan.pk %}" class="btn btn-success btn-sm ms-2">Approve</a>
+            {% endif %}
+            {% if can_reject %}
+              <a href="{% url 'audit:workplan-reject' workplan.pk %}" class="btn btn-danger btn-sm ms-2">Reject</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

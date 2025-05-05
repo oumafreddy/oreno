@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Legal Management Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Navigation Bar -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Legal Management Dashboard</h2>
+        </div>
+    </div>
+    <div class="container py-4">
+      <!-- Charts Row (moved up) -->
+      <div class="row mt-4 g-3">
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header bg-light"><strong>Case Status Distribution</strong></div>
+            <div class="card-body">
+              <div id="case-status-chart" style="height:250px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header bg-light"><strong>Task Status Distribution</strong></div>
+            <div class="card-body">
+              <div id="task-status-chart" style="height:250px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Summary Cards (moved below charts) -->
+      <div class="row g-4 justify-content-center mt-4">
+        <div class="col-md-3">
+          <div class="card text-bg-primary h-100 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-briefcase display-4 mb-2"></i>
+              <h5 class="card-title">Total Cases</h5>
+              <h3><a href="{% url 'legal:legalcase_list' %}" class="stretched-link text-white text-decoration-none">{{ case_count }}</a></h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-bg-success h-100 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-people display-4 mb-2"></i>
+              <h5 class="card-title">Parties</h5>
+              <h3><a href="{% url 'legal:legalparty_list' %}" class="stretched-link text-white text-decoration-none">{{ party_count }}</a></h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-bg-warning h-100 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-list-task display-4 mb-2"></i>
+              <h5 class="card-title">Tasks</h5>
+              <h3><a href="{% url 'legal:legaltask_list' %}" class="stretched-link text-white text-decoration-none">{{ task_count }}</a></h3>
+              <p class="mb-1">Overdue: <span class="fw-bold text-danger">{{ overdue_tasks }}</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-bg-info h-100 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-file-earmark-text display-4 mb-2"></i>
+              <h5 class="card-title">Documents</h5>
+              <h3><a href="{% url 'legal:legaldocument_list' %}" class="stretched-link text-white text-decoration-none">{{ document_count }}</a></h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Recent Activity & Quick Actions -->
+      <div class="row mt-4 g-3">
+        <div class="col-md-8">
+          <div class="card h-100">
+            <div class="card-header bg-secondary text-white"><strong>Recent Activity</strong></div>
+            <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+              {% for case in recent_cases %}
+                <li class="list-group-item">
+                  <i class="bi bi-briefcase me-2 text-primary"></i>
+                  <a href="{% url 'legal:legalcase_detail' case.pk %}"><strong>{{ case.title }}</strong></a>
+                  <span class="badge bg-primary ms-2">Case</span>
+                  <span class="text-muted float-end">{{ case.created_at|date:"M d, Y H:i" }}</span>
+                </li>
+              {% endfor %}
+              {% for doc in recent_documents %}
+                <li class="list-group-item">
+                  <i class="bi bi-file-earmark-text me-2 text-info"></i>
+                  <a href="{% url 'legal:legaldocument_detail' doc.pk %}"><strong>{{ doc.title }}</strong></a>
+                  <span class="badge bg-info ms-2">Document</span>
+                  <span class="text-muted float-end">{{ doc.uploaded_at|date:"M d, Y H:i" }}</span>
+                </li>
+              {% endfor %}
+              {% for task in recent_tasks %}
+                <li class="list-group-item">
+                  <i class="bi bi-list-task me-2 text-warning"></i>
+                  <a href="{% url 'legal:legaltask_detail' task.pk %}"><strong>{{ task.title }}</strong></a>
+                  <span class="badge bg-warning ms-2">Task</span>
+                  <span class="text-muted float-end">{{ task.created_at|date:"M d, Y H:i" }}</span>
+                </li>
+              {% endfor %}
+              {% if not recent_cases and not recent_documents and not recent_tasks %}
+                <li class="list-group-item text-muted">No recent activity.</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-header bg-light"><strong>Quick Actions</strong></div>
+            <div class="card-body">
+              <a href="{% url 'legal:legalcase_create' %}" class="btn btn-primary mb-2 w-100">Add Case</a>
+              <a href="{% url 'legal:legaldocument_create' %}" class="btn btn-outline-info mb-2 w-100">Add Document</a>
+              <a href="{% url 'legal:legaltask_create' %}" class="btn btn-outline-warning mb-2 w-100">Add Task</a>
+              <a href="{% url 'legal:legalparty_create' %}" class="btn btn-outline-success mb-2 w-100">Add Party</a>
+              <a href="{% url 'legal:casetype_create' %}" class="btn btn-outline-dark mb-2 w-100">Add Case Type</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Reports Section (Bottom) -->
+      <div class="row mt-5">
+        <div class="col">
+          <div class="card shadow">
+            <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Legal Reports</strong></div>
+            <div class="card-body">
+              <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle"></i> Generate and download professional, filterable legal management reports. All reports are scoped to your organization and support PDF export.
+              </div>
+              <div class="row g-4">
+                <!-- Legal Case Summary Report -->
+                <div class="col-md-6 col-lg-4">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <h5 class="card-title">Legal Case Summary</h5>
+                      <form method="get" action="{% url 'reports:legal_case_summary_pdf' %}" target="_blank">
+                        <div class="mb-2">
+                          <label class="form-label">Status</label>
+                          <input type="text" name="status" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Type</label>
+                          <input type="text" name="case_type" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Priority</label>
+                          <input type="text" name="priority" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Lead Attorney (email)</label>
+                          <input type="text" name="lead_attorney" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Case Name</label>
+                          <input type="text" name="case_name" class="form-control mb-1" placeholder="Type or select...">
+                          <select name="case_name" class="form-select">
+                            <option value="">All</option>
+                            {% for case in recent_cases %}
+                              <option value="{{ case.title }}">{{ case.title }}</option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+                <!-- Legal Case Details Report -->
+                <div class="col-md-6 col-lg-4">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <h5 class="card-title">Legal Case Details</h5>
+                      <form method="get" action="{% url 'reports:legal_case_details_pdf' %}" target="_blank">
+                        <div class="mb-2">
+                          <label class="form-label">Case Name</label>
+                          <input type="text" name="case_name" class="form-control mb-1" placeholder="Type or select...">
+                          <select name="case_name" class="form-select">
+                            <option value="">All</option>
+                            {% for case in recent_cases %}
+                              <option value="{{ case.title }}">{{ case.title }}</option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+<!-- JSON data for Plotly charts -->
+{{ case_status_chart|json_script:"case-status-data" }}
+{{ task_status_chart|json_script:"task-status-data" }}
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Case Status Pie Chart
+const caseStatus = JSON.parse(document.getElementById('case-status-data').textContent);
+const caseLabels = Object.keys(caseStatus);
+const caseValues = Object.values(caseStatus);
+Plotly.newPlot('case-status-chart', [{
+    values: caseValues,
+    labels: caseLabels,
+    type: 'pie',
+    marker: { colors: ['#2563eb', '#22c55e', '#6c757d'] },
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+// Task Status Bar Chart
+const taskStatus = JSON.parse(document.getElementById('task-status-data').textContent);
+const taskLabels = Object.keys(taskStatus);
+const taskValues = Object.values(taskStatus);
+Plotly.newPlot('task-status-chart', [{
+    x: taskLabels,
+    y: taskValues,
+    type: 'bar',
+    marker: { color: ['#22c55e', '#f59e42', '#ef4444'] },
+    text: taskValues.map(String),
+    textposition: 'auto',
+}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+<!-- Modal for Case List -->
+<div class="modal fade" id="caseListModal" tabindex="-1" aria-labelledby="caseListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="caseListModalLabel">Cases Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+          {% for case in recent_cases %}
+            <li class="list-group-item"><a href="{% url 'legal:legalcase_detail' case.pk %}">{{ case.title }}</a> - {{ case.status }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No cases found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

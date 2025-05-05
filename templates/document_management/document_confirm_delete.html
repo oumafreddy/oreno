@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Delete Document{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+          <h4 class="mb-0">Delete Document</h4>
+        </div>
+        <div class="card-body">
+          <p>Are you sure you want to delete the document <strong>{{ object.file.name }}</strong>?</p>
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'document_management:document-list' %}" class="btn btn-secondary ms-2">Cancel</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

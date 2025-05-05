@@ -106,6 +106,12 @@ class Subscription(OrganizationOwnedModel, AuditableModel):
             models.Index(fields=['subscription_plan']),
             models.Index(fields=['status']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_subscription'
+            )
+        ]
     
     def __str__(self):
         return f"{self.organization} - {self.subscription_plan}"
@@ -114,7 +120,7 @@ class Subscription(OrganizationOwnedModel, AuditableModel):
         """
         Returns the canonical URL to access subscription details.
         """
-        return reverse('organizations:subscription_detail', args=[str(self.organization.id)])
+        return reverse('organizations:subscription', args=[str(self.organization.id)])
     
     def is_active(self):
         """

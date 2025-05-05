@@ -1,0 +1,28 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<style>
+table.table-sm th, table.table-sm td {
+  padding: 4px 6px;
+  font-size: 12px;
+  word-break: break-word;
+}
+</style>
+<h2>Risk Assessment Details</h2>
+<table class="table table-sm">
+  <tr>
+    <th>Risk</th><th>Date</th><th>Assessor</th><th>Type</th><th>Impact</th><th>Likelihood</th><th>Score</th><th>Notes</th>
+  </tr>
+  {% for a in assessments %}
+    <tr>
+      <td>{{ a.risk.risk_name }}</td>
+      <td>{{ a.assessment_date }}</td>
+      <td>{{ a.assessor }}</td>
+      <td>{{ a.get_assessment_type_display }}</td>
+      <td>{{ a.impact_score }}</td>
+      <td>{{ a.likelihood_score }}</td>
+      <td>{{ a.risk_score }}</td>
+      <td>{{ a.notes|striptags|truncatechars:50 }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

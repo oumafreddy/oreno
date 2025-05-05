@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
+from django.contrib.contenttypes.fields import GenericRelation
 
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from core.mixins.state import ApprovalStateMixin
@@ -55,6 +56,14 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         help_text=_("Detailed description of the audit workplan."),
     )
 
+    approvals = GenericRelation(
+        'audit.Approval',
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='workplan',
+        related_name='approvals',
+    )
+
     class Meta:
         app_label = 'audit'
         verbose_name = _("Audit Workplan")
@@ -65,12 +74,18 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
             models.Index(fields=['organization', 'code'], name='wp_org_code_idx'),
             models.Index(fields=['name'], name='wp_name_idx'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_auditworkplan'
+            )
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
 
     def get_absolute_url(self):
-        return reverse('audit:workplan_detail', kwargs={'pk': self.pk})
+        return reverse('audit:workplan-detail', kwargs={'pk': self.pk})
 
     def clean(self):
         super().clean()

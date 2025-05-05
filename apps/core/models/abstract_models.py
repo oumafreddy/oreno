@@ -47,12 +47,6 @@ class OrganizationOwnedModel(TimeStampedModel):
 
     class Meta:
         abstract = True
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(organization__isnull=False),
-                name='organization_required'
-            )
-        ]
         verbose_name = _('Organization-Owned Model')
         verbose_name_plural = _('Organization-Owned Models')
 

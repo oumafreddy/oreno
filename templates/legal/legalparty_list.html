@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Legal Parties{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Legal Parties</h2>
+    <a href="{% url 'legal:legalparty_create' %}" class="btn btn-primary">Add Party</a>
+  </div>
+  <table class="table table-hover table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Role</th>
+        <th>Case</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for party in object_list %}
+      <tr>
+        <td><a href="{% url 'legal:legalparty_detail' party.pk %}">{{ party.name }}</a></td>
+        <td>{{ party.party_type }}</td>
+        <td>{{ party.role }}</td>
+        <td>{{ party.legal_case }}</td>
+        <td>
+          <a href="{% url 'legal:legalparty_detail' party.pk %}" class="btn btn-sm btn-outline-info">View</a>
+          <a href="{% url 'legal:legalparty_update' party.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <a href="{% url 'legal:legalparty_delete' party.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center">No legal parties found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %} 

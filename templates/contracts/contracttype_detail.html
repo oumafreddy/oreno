@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Contract Type Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ contracttype.name }}</h2>
+    <div class="mb-3">
+        <strong>Description:</strong><br>
+        {{ contracttype.description|safe }}
+    </div>
+    <div class="mb-3">
+        <strong>Standard Template:</strong>
+        {% if contracttype.is_standard_template %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}
+    </div>
+    <div class="mb-3">
+        <strong>Template File:</strong>
+        {% if contracttype.template_file %}
+            <a href="{{ contracttype.template_file.url }}" target="_blank">Download</a>
+        {% else %}
+            <span class="text-muted">None</span>
+        {% endif %}
+    </div>
+    <a href="{% url 'contracts:contracttype-edit' contracttype.pk %}" class="btn btn-outline-info">Edit</a>
+    <a href="{% url 'contracts:contracttype-delete' contracttype.pk %}" class="btn btn-outline-danger">Delete</a>
+    <a href="{% url 'contracts:contracttype-list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

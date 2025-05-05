@@ -11,13 +11,17 @@ class OrganizationPermissionMixin(LoginRequiredMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         
-        # Get the organization from the view's get_object method
-        obj = self.get_object()
-        if not obj or not hasattr(obj, 'organization'):
-            raise PermissionDenied("Object does not belong to an organization")
-            
-        # Check if user has access to the organization
-        if not request.user.organization == obj.organization:
-            raise PermissionDenied("You do not have permission to access this organization")
-            
+        obj = None
+        if hasattr(self, 'get_object') and callable(getattr(self, 'get_object', None)):
+            try:
+                obj = self.get_object()
+            except Exception:
+                obj = None
+
+        if obj is not None:
+            if not hasattr(obj, 'organization'):
+                raise PermissionDenied("Object does not belong to an organization")
+            if not request.user.organization == obj.organization:
+                raise PermissionDenied("You do not have permission to access this organization")
+
         return super().dispatch(request, *args, **kwargs) 

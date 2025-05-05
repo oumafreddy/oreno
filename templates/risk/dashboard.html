@@ -1,0 +1,22 @@
+<h3><a href="{% url 'risk:risk_list' %}" class="stretched-link text-white text-decoration-none">{{ total_risks }}</a></h3>
+
+<!-- Modal for Risk List -->
+<div class="modal fade" id="riskListModal" tabindex="-1" aria-labelledby="riskListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="riskListModalLabel">Risk Register Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+          {% for risk in risks %}
+            <li class="list-group-item">{{ risk.title }} - {{ risk.status }}</li>
+          {% empty %}
+            <li class="list-group-item text-muted">No risks found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div> 

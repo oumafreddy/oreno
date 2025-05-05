@@ -41,15 +41,15 @@ PUBLIC_SCHEMA_URLCONF = 'config.urls_public'
 # Database engine for tenant schemas
 TENANT_DB_ENGINE = 'django_tenants.postgresql_backend'
 # Database name for tenant schemas
-TENANT_DB_NAME = os.getenv('POSTGRES_DB', 'oreno')
-# Database user for tenant schemas
-TENANT_DB_USER = os.getenv('POSTGRES_USER', 'ouma_fred')
+TENANT_DB_NAME = os.getenv('DB_NAME', ' ')
+# Database user for tenant schemash 
+TENANT_DB_USER = os.getenv('DB_USER', ' ')
 # Database password for tenant schemas
-TENANT_DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', '123@Team*')
+TENANT_DB_PASSWORD = os.getenv('DB_PASS', ' ')
 # Database host for tenant schemas
-TENANT_DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+TENANT_DB_HOST = os.getenv('DB_HOST', ' ')
 # Database port for tenant schemas
-TENANT_DB_PORT = os.getenv('POSTGRES_PORT', '5432')
+TENANT_DB_PORT = os.getenv('DB_PORT', ' ')
 
 # ------------------------------------------------------------------------------
 # Shared Apps (public schema only)
@@ -88,6 +88,7 @@ TENANT_APPS = [
     'compliance.apps.ComplianceConfig',
     'contracts.apps.ContractsConfig',
     'document_management.apps.DocumentManagementConfig',
+    'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
 
     # Third-party integrations

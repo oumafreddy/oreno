@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Risk Matrix Config Detail{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Risk Matrix Config: {{ matrix.name }}</h2>
+            <a href="{% url 'risk:riskmatrixconfig_update' matrix.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:riskmatrixconfig_delete' matrix.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:riskmatrixconfig_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header bg-light"><strong>Matrix Configuration Details</strong></div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ matrix.name }}</dd>
+                <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ matrix.description }}</dd>
+                <dt class="col-sm-4">Impact Levels</dt><dd class="col-sm-8">{{ matrix.impact_levels }}</dd>
+                <dt class="col-sm-4">Likelihood Levels</dt><dd class="col-sm-8">{{ matrix.likelihood_levels }}</dd>
+                <dt class="col-sm-4">Low Threshold</dt><dd class="col-sm-8">{{ matrix.low_threshold }}</dd>
+                <dt class="col-sm-4">Medium Threshold</dt><dd class="col-sm-8">{{ matrix.medium_threshold }}</dd>
+                <dt class="col-sm-4">High Threshold</dt><dd class="col-sm-8">{{ matrix.high_threshold }}</dd>
+                <dt class="col-sm-4">Very High Threshold</dt><dd class="col-sm-8">{{ matrix.very_high_threshold }}</dd>
+                <dt class="col-sm-4">Low Color</dt><dd class="col-sm-8"><span style="background:{{ matrix.low_color }};padding:2px 10px;border-radius:4px;">{{ matrix.low_color }}</span></dd>
+                <dt class="col-sm-4">Medium Color</dt><dd class="col-sm-8"><span style="background:{{ matrix.medium_color }};padding:2px 10px;border-radius:4px;">{{ matrix.medium_color }}</span></dd>
+                <dt class="col-sm-4">High Color</dt><dd class="col-sm-8"><span style="background:{{ matrix.high_color }};padding:2px 10px;border-radius:4px;">{{ matrix.high_color }}</span></dd>
+                <dt class="col-sm-4">Very High Color</dt><dd class="col-sm-8"><span style="background:{{ matrix.very_high_color }};padding:2px 10px;border-radius:4px;">{{ matrix.very_high_color }}</span></dd>
+                <dt class="col-sm-4">Critical Color</dt><dd class="col-sm-8"><span style="background:{{ matrix.critical_color }};padding:2px 10px;border-radius:4px;">{{ matrix.critical_color }}</span></dd>
+                <dt class="col-sm-4">Active</dt><dd class="col-sm-8">{% if matrix.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
-from apps.organizations.models import Organization
+from organizations.models import Organization
 from datetime import date
 
 User = get_user_model()

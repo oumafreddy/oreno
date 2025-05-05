@@ -1,0 +1,22 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>KRI Details</h2>
+<table class="table table-sm">
+  <tr>
+    <th>Risk</th><th>Name</th><th>Value</th><th>Unit</th><th>Status</th><th>Timestamp</th><th>Direction</th><th>Warning Threshold</th><th>Critical Threshold</th>
+  </tr>
+  {% for k in kris %}
+    <tr>
+      <td>{{ k.risk.risk_name }}</td>
+      <td>{{ k.name }}</td>
+      <td>{{ k.value }}</td>
+      <td>{{ k.unit }}</td>
+      <td>{{ k.get_status|title }}</td>
+      <td>{{ k.timestamp }}</td>
+      <td>{{ k.get_direction_display }}</td>
+      <td>{{ k.threshold_warning }}</td>
+      <td>{{ k.threshold_critical }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

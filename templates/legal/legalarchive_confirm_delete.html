@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Delete Legal Archive{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="alert alert-danger">
+    <h4 class="alert-heading">Confirm Delete</h4>
+    <p>Are you sure you want to delete the legal archive <strong>{{ object.title }}</strong>? This action cannot be undone.</p>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a href="{% url 'legal:legalarchive_detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %} 

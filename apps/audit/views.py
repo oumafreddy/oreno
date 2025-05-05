@@ -37,6 +37,8 @@ from .serializers import (
 
 from core.permissions import IsTenantMember
 from django.contrib.contenttypes.models import ContentType
+from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
+from core.mixins.organization import OrganizationScopedQuerysetMixin
 
 # ─── MIXINS ──────────────────────────────────────────────────────────────────
 class AuditPermissionMixin(OrganizationPermissionMixin):
@@ -67,7 +69,7 @@ class WorkplanListView(AuditPermissionMixin, ListView):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        organization = self.request.user.current_organization
+        organization = self.request.organization
         return queryset.filter(organization=organization).select_related(
             'created_by', 'updated_by'
         ).prefetch_related('engagements')
@@ -102,12 +104,12 @@ class WorkplanCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     success_message = _("Workplan %(name)s was created successfully")
     
     def form_valid(self, form):
-        form.instance.organization = self.request.user.current_organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('audit:workplan_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:workplan-detail', kwargs={'pk': self.object.pk})
 
 class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = AuditWorkplan
@@ -116,7 +118,7 @@ class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     success_message = _("Workplan %(name)s was updated successfully")
     
     def get_success_url(self):
-        return reverse_lazy('audit:workplan_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:workplan-detail', kwargs={'pk': self.object.pk})
 
 # ─── ENGAGEMENT VIEWS ────────────────────────────────────────────────────────
 class EngagementListView(AuditPermissionMixin, ListView):
@@ -127,7 +129,7 @@ class EngagementListView(AuditPermissionMixin, ListView):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        organization = self.request.user.current_organization
+        organization = self.request.organization
         return queryset.filter(organization=organization).select_related(
             'audit_workplan', 'assigned_to', 'assigned_by'
         ).prefetch_related('issues')
@@ -163,16 +165,16 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.current_organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     
     def form_valid(self, form):
-        form.instance.organization = self.request.user.current_organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('audit:engagement_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
 
 class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Engagement
@@ -182,11 +184,11 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.current_organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     
     def get_success_url(self):
-        return reverse_lazy('audit:engagement_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
 
 # ─── ISSUE VIEWS ─────────────────────────────────────────────────────────────
 class IssueListView(AuditPermissionMixin, ListView):
@@ -197,7 +199,7 @@ class IssueListView(AuditPermissionMixin, ListView):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        organization = self.request.user.current_organization
+        organization = self.request.organization
         return queryset.filter(organization=organization).select_related(
             'engagement', 'issue_owner'
         )
@@ -227,16 +229,16 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.current_organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     
     def form_valid(self, form):
-        form.instance.organization = self.request.user.current_organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('audit:issue_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.pk})
 
 class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Issue
@@ -246,11 +248,11 @@ class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.current_organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     
     def get_success_url(self):
-        return reverse_lazy('audit:issue_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.pk})
 
 # ─── APPROVAL VIEWS ──────────────────────────────────────────────────────────
 class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
@@ -261,12 +263,12 @@ class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.current_organization
+        kwargs['organization'] = self.request.organization
         kwargs['requester'] = self.request.user
         return kwargs
     
     def form_valid(self, form):
-        form.instance.organization = self.request.user.current_organization
+        form.instance.organization = self.request.organization
         form.instance.requester = self.request.user
         return super().form_valid(form)
     
@@ -290,38 +292,62 @@ class ApprovalDetailView(AuditPermissionMixin, DetailView):
         return context
 
 # ─── DASHBOARD VIEW ──────────────────────────────────────────────────────────
-class AuditDashboardView(AuditPermissionMixin, TemplateView):
+class AuditDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'audit/dashboard.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        organization = self.request.user.current_organization
+        organization = self.request.organization
+        from collections import Counter
+        from django.utils import timezone
         
-        # Get counts and recent items for dashboard
-        context.update({
-            'workplan_count': AuditWorkplan.objects.filter(organization=organization).count(),
-            'engagement_count': Engagement.objects.filter(organization=organization).count(),
-            'issue_count': Issue.objects.filter(organization=organization).count(),
-            'pending_approvals': Approval.objects.filter(
-                organization=organization,
-                status='pending'
-            ).select_related('requester', 'approver')[:5],
-            'recent_workplans': AuditWorkplan.objects.filter(
-                organization=organization
-            ).select_related('created_by')[:5],
-            'recent_engagements': Engagement.objects.filter(
-                organization=organization
-            ).select_related('assigned_to')[:5],
-            'recent_issues': Issue.objects.filter(
-                organization=organization
-            ).select_related('issue_owner')[:5],
-        })
+        # Summary counts
+        context['workplan_count'] = AuditWorkplan.objects.filter(organization=organization).count()
+        context['engagement_count'] = Engagement.objects.filter(organization=organization).count()
+        context['issue_count'] = Issue.objects.filter(organization=organization).count()
+        context['approval_count'] = Approval.objects.filter(organization=organization).count()
+        # Recent objects (limit 8)
+        context['recent_workplans'] = AuditWorkplan.objects.filter(organization=organization).order_by('-creation_date')[:8]
+        context['recent_engagements'] = Engagement.objects.filter(organization=organization).order_by('-project_start_date')[:8]
+        context['recent_issues'] = Issue.objects.filter(organization=organization).order_by('-date_identified')[:8]
+        context['pending_approvals'] = Approval.objects.filter(organization=organization, status='pending').order_by('-created_at')[:8]
+        # Org info (if available)
+        org = organization
+        context['org_name'] = getattr(org, 'name', None)
+        context['org_code'] = getattr(org, 'code', None)
+        context['org_logo'] = org.logo.url if getattr(org, 'logo', None) else None
+        context['org_status'] = 'Active' if getattr(org, 'is_active', True) else 'Inactive'
+        # Engagement status distribution
+        engagement_status_dist = Engagement.objects.filter(organization=organization).values_list('project_status', flat=True)
+        context['engagement_status_dist'] = dict(Counter(engagement_status_dist))
+        # Average engagement duration
+        engagements = Engagement.objects.filter(organization=organization)
+        durations = [(e.target_end_date - e.project_start_date).days for e in engagements if e.target_end_date and e.project_start_date]
+        context['avg_engagement_duration'] = sum(durations) / len(durations) if durations else 0
+        # Overdue issues
+        today = timezone.now().date()
+        overdue_issues = Issue.objects.filter(organization=organization, issue_status__in=['open', 'in_progress'], remediation_deadline_date__lt=today).count()
+        context['overdue_issues'] = overdue_issues
+        # Issue severity distribution
+        issue_severity_dist = Issue.objects.filter(organization=organization).values_list('severity_status', flat=True)
+        context['issue_severity_dist'] = dict(Counter(issue_severity_dist))
+        # Workplan completion rates
+        workplans = AuditWorkplan.objects.filter(organization=organization)
+        completed_workplans = workplans.filter(state='completed').count()
+        context['workplan_completion_rate'] = {'Completed': completed_workplans, 'Total': workplans.count()}
+        # Approval status breakdown
+        approvals = Approval.objects.filter(organization=organization)
+        approval_status_dist = approvals.values_list('status', flat=True)
+        context['approval_status_dist'] = dict(Counter(approval_status_dist))
+        # Owner workload (engagements assigned)
+        owner_workload = engagements.values_list('assigned_to__email', flat=True)
+        context['engagement_owner_workload'] = dict(Counter(owner_workload))
         return context
 
 class AuditWorkplanViewSet(viewsets.ModelViewSet):
     """API endpoint for audit workplans."""
     serializer_class = AuditWorkplanSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
 
     def get_queryset(self):
         return AuditWorkplan.objects.filter(organization=self.request.organization)
@@ -329,35 +355,26 @@ class AuditWorkplanViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(organization=self.request.organization)
 
-class EngagementViewSet(viewsets.ModelViewSet):
+class EngagementViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     """API endpoint for audit engagements."""
     serializer_class = EngagementSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
-
-    def get_queryset(self):
-        return Engagement.objects.filter(organization=self.request.organization)
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.organization)
 
-class IssueViewSet(viewsets.ModelViewSet):
+class IssueViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     """API endpoint for audit issues."""
     serializer_class = IssueSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
-
-    def get_queryset(self):
-        return Issue.objects.filter(organization=self.request.organization)
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.organization)
 
-class ApprovalViewSet(viewsets.ModelViewSet):
+class ApprovalViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     """API endpoint for audit approvals."""
     serializer_class = ApprovalSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
-
-    def get_queryset(self):
-        return Approval.objects.filter(organization=self.request.organization)
+    permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
 
     def perform_create(self, serializer):
         serializer.save(
@@ -368,7 +385,7 @@ class ApprovalViewSet(viewsets.ModelViewSet):
 class WorkplanEngagementViewSet(viewsets.ModelViewSet):
     """API endpoint for workplan engagements."""
     serializer_class = EngagementSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
 
     def get_queryset(self):
         workplan_pk = self.kwargs.get('workplan_pk')
@@ -388,7 +405,7 @@ class WorkplanEngagementViewSet(viewsets.ModelViewSet):
 class WorkplanApprovalViewSet(viewsets.ModelViewSet):
     """API endpoint for workplan approvals."""
     serializer_class = ApprovalSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
 
     def get_queryset(self):
         """Return approvals for the specified workplan."""
@@ -411,7 +428,7 @@ class WorkplanApprovalViewSet(viewsets.ModelViewSet):
 class EngagementIssueViewSet(viewsets.ModelViewSet):
     """API endpoint for engagement issues."""
     serializer_class = IssueSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
     
     def get_queryset(self):
         engagement_pk = self.kwargs.get('engagement_pk')
@@ -424,14 +441,14 @@ class EngagementIssueViewSet(viewsets.ModelViewSet):
         engagement = get_object_or_404(Engagement, pk=engagement_pk)
         serializer.save(
             engagement=engagement,
-            organization=self.request.user.current_organization,
+            organization=self.request.organization,
             created_by=self.request.user
         )
 
 class EngagementApprovalViewSet(viewsets.ModelViewSet):
     """API endpoint for engagement approvals."""
     serializer_class = ApprovalSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
     
     def get_queryset(self):
         engagement_pk = self.kwargs.get('engagement_pk')
@@ -445,14 +462,14 @@ class EngagementApprovalViewSet(viewsets.ModelViewSet):
         engagement = get_object_or_404(Engagement, pk=engagement_pk)
         serializer.save(
             content_object=engagement,
-            organization=self.request.user.current_organization,
+            organization=self.request.organization,
             requester=self.request.user
         )
 
 class IssueApprovalViewSet(viewsets.ModelViewSet):
     """API endpoint for issue approvals."""
     serializer_class = ApprovalSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTenantMember]
+    permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
     
     def get_queryset(self):
         issue_pk = self.kwargs.get('issue_pk')
@@ -466,7 +483,7 @@ class IssueApprovalViewSet(viewsets.ModelViewSet):
         issue = get_object_or_404(Issue, pk=issue_pk)
         serializer.save(
             content_object=issue,
-            organization=self.request.user.current_organization,
+            organization=self.request.organization,
             requester=self.request.user
         )
 

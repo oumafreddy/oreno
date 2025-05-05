@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import timedelta
 
 from dotenv import load_dotenv
+from django.urls import reverse_lazy
 
 # ------------------------------------------------------------------------------
 # Base Directory & Environment Loading
@@ -30,6 +31,10 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    'http://krcs',
+    'http://oreno',
+    'https://krcs',
+    'https://oreno',
     'https://localhost:8000',
     'https://127.0.0.1:8000',
 ]
@@ -57,6 +62,7 @@ INSTALLED_APPS = [
     # Third-party
     'django_tenants', 
     'debug_toolbar',
+    'django_ckeditor_5', 
     'widget_tweaks',
     'reversion',
     'crispy_forms',
@@ -65,7 +71,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',  # JWT authentication
     'django_scopes',
-    'django_ckeditor_5',  # Add CKEditor 5
+    'rest_framework_simplejwt.token_blacklist',
     # Note: django-tenants is loaded in tenants.py
 
     # Local apps
@@ -77,7 +83,9 @@ INSTALLED_APPS = [
     'compliance.apps.ComplianceConfig',
     'contracts.apps.ContractsConfig',
     'document_management.apps.DocumentManagementConfig',
+    'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
+    'reports.apps.ReportsConfig',
 ]
 
 # Apps that should be audited
@@ -158,7 +166,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.common.middleware.OrganizationActiveMiddleware',
     'apps.core.middleware.OrganizationMiddleware',
+    'apps.common.middleware.AppAccessControlMiddleware',
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -246,6 +256,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
+
 # ------------------------------------------------------------------------------
 # Internationalization
 # ------------------------------------------------------------------------------
@@ -272,7 +287,7 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = False
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 3600))
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true','1','yes')
@@ -284,7 +299,7 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 # CSRF settings
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # ------------------------------------------------------------------------------
@@ -370,9 +385,9 @@ EMAIL_TIMEOUT = 30  # seconds
 # ------------------------------------------------------------------------------
 # Login redirection
 # ------------------------------------------------------------------------------
-LOGIN_REDIRECT_URL = '/accounts/profile/'
+LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
-LOGOUT_REDIRECT_URL = '/accounts/logout/'  # Changed to home page
+LOGOUT_REDIRECT_URL = '/accounts/logout/'
 LOGIN_REQUIRED_EXEMPT_URLS = [
     '/accounts/login/',         # login view
     '/accounts/logout/',        # logout view
@@ -447,7 +462,7 @@ customColorPalette = [
 CKEDITOR_5_CONFIGS = {
     'default': {
         'toolbar': ['heading', '|', 'bold', 'italic', 'link',
-                    'bulletedList', 'numberedList', 'blockQuote', 'imageUpload', ],
+                    'bulletedList', 'numberedList', 'blockQuote', ],
     },
     'extends': {
         'blockToolbar': [
@@ -458,7 +473,7 @@ CKEDITOR_5_CONFIGS = {
             'blockQuote',
         ],
         'toolbar': ['heading', '|', 'outdent', 'indent', '|', 'bold', 'italic', 'link', 'underline', 'strikethrough',
-                    'code', 'subscript', 'superscript', 'highlight', '|', 'codeBlock', 'sourceEditing', 'insertImage',
+                    'code', 'subscript', 'superscript', 'highlight', '|',
                     'bulletedList', 'numberedList', 'todoList', '|', 'blockQuote', 'imageUpload', '|',
                     'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', 'mediaEmbed', 'removeFormat',
                     'insertTable', ],
@@ -497,3 +512,6 @@ CKEDITOR_5_CONFIGS = {
 
 # CKEditor 5 file storage
 CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+
+# Absolute site URL for building links in emails, etc.
+SITE_URL = "http://org001.localhost:8000"

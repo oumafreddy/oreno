@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Case Type: {{ object.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Case Type: {{ object.name }}</h2>
+    <div>
+      <a href="{% url 'legal:casetype_update' object.pk %}" class="btn btn-secondary">Edit</a>
+      <a href="{% url 'legal:casetype_delete' object.pk %}" class="btn btn-danger">Delete</a>
+      <a href="{% url 'legal:casetype_list' %}" class="btn btn-outline-primary">Back to List</a>
+    </div>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">Name</dt>
+        <dd class="col-sm-9">{{ object.name }}</dd>
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">{{ object.description|safe }}</dd>
+        <dt class="col-sm-3">Default Priority</dt>
+        <dd class="col-sm-9">{{ object.default_priority }}</dd>
+        <dt class="col-sm-3">Organization</dt>
+        <dd class="col-sm-9">{{ object.organization }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %} 

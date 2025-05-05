@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Issue: {{ issue.issue_title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Issue: {{ issue.issue_title }}</h3>
+        <span class="badge {% if issue.issue_status == 'open' %}bg-info{% elif issue.issue_status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
+          <i class="bi bi-flag"></i> {{ issue.get_issue_status_display }}
+        </span>
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ issue.code }}</dd>
+          <dt class="col-sm-3">Engagement</dt><dd class="col-sm-9">{{ issue.engagement }}</dd>
+          <dt class="col-sm-3">Owner</dt><dd class="col-sm-9">{{ issue.issue_owner }}</dd>
+          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ issue.issue_description|safe }}</dd>
+          <dt class="col-sm-3">Root Cause</dt><dd class="col-sm-9">{{ issue.root_cause|safe }}</dd>
+          <dt class="col-sm-3">Risks</dt><dd class="col-sm-9">{{ issue.risks|safe }}</dd>
+          <dt class="col-sm-3">Recommendation</dt><dd class="col-sm-9">{{ issue.recommendation|safe }}</dd>
+          <dt class="col-sm-3">Remediation Status</dt><dd class="col-sm-9">{{ issue.get_remediation_status_display }}</dd>
+          <dt class="col-sm-3">Remediation Deadline</dt><dd class="col-sm-9">{{ issue.remediation_deadline_date }}</dd>
+          <dt class="col-sm-3">Actual Remediation Date</dt><dd class="col-sm-9">{{ issue.actual_remediation_date }}</dd>
+          <dt class="col-sm-3">Management Action Plan</dt><dd class="col-sm-9">{{ issue.management_action_plan|safe }}</dd>
+        </dl>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'audit:issue-close' issue.pk %}" class="btn btn-warning btn-sm ms-2">Close</a>
+            <a href="{% url 'audit:issue-list' %}" class="btn btn-secondary btn-sm ms-2">Back</a>
+          </div>
+          <div>
+            <span class="fw-bold">Approval Status:</span>
+            {% for approval in approvals %}
+              <span class="badge {% if approval.status == 'approved' %}bg-success{% elif approval.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                <i class="bi bi-check-circle{% if approval.status == 'approved' %}-fill{% endif %}"></i> {{ approval.get_status_display }}
+              </span>
+            {% empty %}
+              <span class="text-muted">No approval records.</span>
+            {% endfor %}
+            {% if can_approve %}
+              <a href="{% url 'audit:issue-approve' issue.pk %}" class="btn btn-success btn-sm ms-2">Approve</a>
+            {% endif %}
+            {% if can_reject %}
+              <a href="{% url 'audit:issue-reject' issue.pk %}" class="btn btn-danger btn-sm ms-2">Reject</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

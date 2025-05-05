@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Upload Document{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h4 class="mb-0">Upload Document for: {{ doc_request.request_name }}</h4>
+        </div>
+        <div class="card-body">
+          <p><strong>Requested by:</strong> {{ doc_request.request_owner.get_full_name }} ({{ doc_request.request_owner.email }})</p>
+          <p><strong>Due Date:</strong> {{ doc_request.due_date }}</p>
+          <p><strong>Remarks:</strong> {{ doc_request.remarks|default:'-' }}</p>
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-info">Upload Document</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

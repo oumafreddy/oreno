@@ -4,6 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHolder
 from crispy_bootstrap5.bootstrap5 import FloatingField
+from django.forms import EmailInput, TextInput
+from django.core.validators import RegexValidator
 
 from organizations.models import Organization
 from users.models import CustomUser

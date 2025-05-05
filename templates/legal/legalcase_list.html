@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Legal Cases{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Legal Cases</h2>
+    <a href="{% url 'legal:legalcase_create' %}" class="btn btn-primary">Add Case</a>
+  </div>
+  <table class="table table-hover table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Lead Attorney</th>
+        <th>Opened</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for case in object_list %}
+      <tr>
+        <td><a href="{% url 'legal:legalcase_detail' case.pk %}">{{ case.title }}</a></td>
+        <td>{{ case.case_type }}</td>
+        <td>{{ case.get_status_display }}</td>
+        <td>{{ case.get_priority_display }}</td>
+        <td>{{ case.lead_attorney }}</td>
+        <td>{{ case.opened_date }}</td>
+        <td>
+          <a href="{% url 'legal:legalcase_detail' case.pk %}" class="btn btn-sm btn-outline-info">View</a>
+          <a href="{% url 'legal:legalcase_update' case.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <a href="{% url 'legal:legalcase_delete' case.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center">No legal cases found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %} 

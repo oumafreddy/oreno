@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Legal Tasks{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Legal Tasks</h2>
+    <a href="{% url 'legal:legaltask_create' %}" class="btn btn-primary">Add Task</a>
+  </div>
+  <table class="table table-hover table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Title</th>
+        <th>Case</th>
+        <th>Assigned To</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in object_list %}
+      <tr>
+        <td><a href="{% url 'legal:legaltask_detail' task.pk %}">{{ task.title }}</a></td>
+        <td>{{ task.legal_case }}</td>
+        <td>{{ task.assigned_to }}</td>
+        <td>{{ task.get_status_display }}</td>
+        <td>{{ task.due_date }}</td>
+        <td>
+          <a href="{% url 'legal:legaltask_detail' task.pk %}" class="btn btn-sm btn-outline-info">View</a>
+          <a href="{% url 'legal:legaltask_update' task.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <a href="{% url 'legal:legaltask_delete' task.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center">No legal tasks found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %} 

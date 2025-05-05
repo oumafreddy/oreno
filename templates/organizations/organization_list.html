@@ -21,9 +21,10 @@
                         <tr>
                             <th>{% trans "Name" %}</th>
                             <th>{% trans "Code" %}</th>
-                            <th>{% trans "Industry" %}</th>
+                            <!--th>{% trans "Industry" %}</th-->
                             <th>{% trans "Status" %}</th>
                             <th>{% trans "Subscription" %}</th>
+                            <th>{% trans "Website" %}</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -32,11 +33,11 @@
                         <tr>
                             <td>
                                 <a href="{% url 'organizations:detail' pk=org.pk %}" class="text-decoration-none">
-                                    {{ org.customer_name }}
+                                    {{ org.name }}
                                 </a>
                             </td>
-                            <td>{{ org.customer_code }}</td>
-                            <td>{{ org.customer_industry|default:"-" }}</td>
+                            <td>{{ org.code }}</td>
+                            <!--td>{{ org.customer_industry|default:"-" }}</td-->
                             <td>
                                 <span class="badge bg-{% if org.is_active %}success{% else %}danger{% endif %}">
                                     {{ org.is_active|yesno:"Active,Inactive" }}
@@ -49,8 +50,15 @@
                                 </span>
                                 {% endwith %}
                             </td>
+                            <td>
+                                {% if org.website %}
+                                    <a href="{{ org.website }}" target="_blank">{{ org.website }}</a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end">
-                                {% if request.user|can_edit:org %}
+                                {% if request.user.is_superuser or request.user.organization == org %}
                                 <a href="{% url 'organizations:update' pk=org.pk %}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
@@ -66,4 +74,4 @@
                 </table>
             </div>
             
-            {% if page_obj.p
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<style>
+table.table-sm th, table.table-sm td {
+  padding: 4px 6px;
+  font-size: 12px;
+  word-break: break-word;
+  vertical-align: top;
+}
+tr, td, th { page-break-inside: avoid; }
+h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
+table.table-sm tr:nth-child(even) { background: #f8f9fa; }
+.truncate { max-width: 400px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
+.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
+.label { font-weight: bold; color: #2563eb; margin-top: 0.5em; display: block; }
+</style>
+<h2 class="section-title">Engagement Details</h2>
+{% if engagement %}
+  <table class="table table-sm">
+    <tr><th>Engagement</th><td class="truncate">{{ engagement.title }}</td></tr>
+    <tr><th>Status</th><td>{{ engagement.get_project_status_display }}</td></tr>
+    <tr><th>Code</th><td>{{ engagement.code }}</td></tr>
+    <tr><th>Workplan</th><td class="truncate">{{ engagement.audit_workplan.name }} ({{ engagement.audit_workplan.fiscal_year }})</td></tr>
+    <tr><th>Type</th><td>{{ engagement.engagement_type }}</td></tr>
+    <tr><th>Start Date</th><td>{{ engagement.project_start_date }}</td></tr>
+    <tr><th>End Date</th><td>{{ engagement.target_end_date }}</td></tr>
+    <tr><th>Assigned To</th><td>{{ engagement.assigned_to.email }}</td></tr>
+  </table>
+  <span class="label">Executive Summary:</span>
+  <div class="truncate">{{ engagement.executive_summary|striptags|truncatechars:300 }}</div>
+  <span class="label">Purpose:</span>
+  <div class="truncate">{{ engagement.purpose|striptags|truncatechars:300 }}</div>
+  <span class="label">Background:</span>
+  <div class="truncate">{{ engagement.background|striptags|truncatechars:300 }}</div>
+  <span class="label">Scope:</span>
+  <div class="truncate">{{ engagement.scope|striptags|truncatechars:300 }}</div>
+  <span class="label">Objectives:</span>
+  <div class="truncate">{{ engagement.project_objectives|striptags|truncatechars:300 }}</div>
+  <span class="label">Conclusion:</span>
+  <div>{{ engagement.get_conclusion_display }}</div>
+  <span class="label">Conclusion Description:</span>
+  <div class="truncate">{{ engagement.conclusion_description|striptags|truncatechars:300 }}</div>
+  <h4 class="section-title">Issues</h4>
+  <p>No issues linked to this engagement.</p>
+{% else %}
+  <div class="alert alert-warning">No engagement found for the selected name.</div>
+{% endif %}
+{% endblock %} 

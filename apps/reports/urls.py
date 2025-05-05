@@ -1,0 +1,43 @@
+from django.urls import path
+from . import views
+
+app_name = 'reports'
+
+urlpatterns = [
+    path('risk/pdf/', views.risk_report_pdf, name='risk_report_pdf'),
+    path('risk/register/summary/', views.risk_register_summary_pdf, name='risk_register_summary_pdf'),
+    path('risk/register/detailed/', views.risk_register_detailed_pdf, name='risk_register_detailed_pdf'),
+    path('risk/heatmap/', views.risk_heatmap_pdf, name='risk_heatmap_pdf'),
+    path('risk/trends/', views.risk_trends_pdf, name='risk_trends_pdf'),
+    path('control/effectiveness/', views.control_effectiveness_pdf, name='control_effectiveness_pdf'),
+    path('kri/status/', views.kri_status_pdf, name='kri_status_pdf'),
+    path('assessment/timeline/', views.assessment_timeline_pdf, name='assessment_timeline_pdf'),
+    path('assessment/details/', views.risk_assessment_details_pdf, name='risk_assessment_details_pdf'),
+    path('control/details/', views.control_details_pdf, name='control_details_pdf'),
+    path('kri/details/', views.kri_details_pdf, name='kri_details_pdf'),
+    # Audit reports
+    path('audit/workplan/summary/', views.workplan_summary_pdf, name='audit_workplan_summary_pdf'),
+    path('audit/engagement/summary/', views.engagement_summary_pdf, name='audit_engagement_summary_pdf'),
+    path('audit/issue/register/', views.issue_register_pdf, name='audit_issue_register_pdf'),
+    path('audit/issue/followup/', views.issue_followup_pdf, name='audit_issue_followup_pdf'),
+    path('audit/approval/workflow/', views.approval_workflow_pdf, name='audit_approval_workflow_pdf'),
+    path('audit/engagement/progress/', views.smart_engagement_progress_pdf, name='audit_engagement_progress_pdf'),
+    path('audit/engagement/details/', views.engagement_details_pdf, name='audit_engagement_details_pdf'),
+    path('audit/engagement/with_issues/', views.engagement_with_issues_pdf, name='audit_engagement_with_issues_pdf'),
+    path('legal/case/summary/', views.legal_case_summary_pdf, name='legal_case_summary_pdf'),
+    path('legal/case/details/', views.legal_case_details_pdf, name='legal_case_details_pdf'),
+    path('compliance/requirement/summary/', views.compliance_requirement_summary_pdf, name='compliance_requirement_summary_pdf'),
+    path('compliance/obligation/register/', views.compliance_obligation_register_pdf, name='compliance_obligation_register_pdf'),
+    path('compliance/evidence/register/', views.compliance_evidence_register_pdf, name='compliance_evidence_register_pdf'),
+    path('compliance/policy/register/', views.policy_document_register_pdf, name='policy_document_register_pdf'),
+    path('compliance/requirement/details/', views.compliance_requirement_details_pdf, name='compliance_requirement_details_pdf'),
+    path('compliance/obligation/details/', views.compliance_obligation_details_pdf, name='compliance_obligation_details_pdf'),
+    path('contracts/register/summary/', views.contract_register_summary_pdf, name='contract_register_summary_pdf'),
+    path('contracts/register/detailed/', views.contract_register_detailed_pdf, name='contract_register_detailed_pdf'),
+    path('contracts/milestone/register/', views.milestone_register_pdf, name='milestone_register_pdf'),
+    path('contracts/party/register/', views.party_register_pdf, name='party_register_pdf'),
+    path('contracts/expiry/', views.contract_expiry_pdf, name='contract_expiry_pdf'),
+    path('contracts/details/', views.contract_details_pdf, name='contract_details_pdf'),
+    path('contracts/milestone/details/', views.milestone_details_pdf, name='milestone_details_pdf'),
+    path('contracts/party/details/', views.party_details_pdf, name='party_details_pdf'),
+] 

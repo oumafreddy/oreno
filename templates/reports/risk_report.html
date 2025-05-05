@@ -1,0 +1,14 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Risk Register</h2>
+<table>
+  <tr><th>Code</th><th>Name</th><th>Status</th></tr>
+  {% for risk in risks %}
+    <tr>
+      <td>{{ risk.code }}</td>
+      <td>{{ risk.risk_name }}</td>
+      <td>{{ risk.status }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %} 

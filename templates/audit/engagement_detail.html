@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Engagement: {{ engagement.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Engagement: {{ engagement.title }}</h3>
+        <span class="badge {% if engagement.project_status == 'draft' %}bg-secondary{% elif engagement.project_status == 'active' %}bg-info{% elif engagement.project_status == 'closed' %}bg-success{% endif %}">
+          <i class="bi bi-flag"></i> {{ engagement.get_project_status_display }}
+        </span>
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ engagement.code }}</dd>
+          <dt class="col-sm-3">Workplan</dt><dd class="col-sm-9">{{ engagement.audit_workplan }}</dd>
+          <dt class="col-sm-3">Type</dt><dd class="col-sm-9">{{ engagement.engagement_type }}</dd>
+          <dt class="col-sm-3">Start Date</dt><dd class="col-sm-9">{{ engagement.project_start_date }}</dd>
+          <dt class="col-sm-3">End Date</dt><dd class="col-sm-9">{{ engagement.target_end_date }}</dd>
+          <dt class="col-sm-3">Assigned To</dt><dd class="col-sm-9">{{ engagement.assigned_to }}</dd>
+          <dt class="col-sm-3">Executive Summary</dt><dd class="col-sm-9">{{ engagement.executive_summary|safe }}</dd>
+          <dt class="col-sm-3">Purpose</dt><dd class="col-sm-9">{{ engagement.purpose|safe }}</dd>
+          <dt class="col-sm-3">Background</dt><dd class="col-sm-9">{{ engagement.background|safe }}</dd>
+          <dt class="col-sm-3">Scope</dt><dd class="col-sm-9">{{ engagement.scope|safe }}</dd>
+          <dt class="col-sm-3">Objectives</dt><dd class="col-sm-9">{{ engagement.project_objectives|safe }}</dd>
+          <dt class="col-sm-3">Conclusion</dt><dd class="col-sm-9">{{ engagement.get_conclusion_display }}</dd>
+          <dt class="col-sm-3">Conclusion Description</dt><dd class="col-sm-9">{{ engagement.conclusion_description|safe }}</dd>
+        </dl>
+        <hr>
+        <h5>Issues</h5>
+        <ul class="mb-3">
+          {% for issue in issues %}
+            <li><a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a></li>
+          {% empty %}
+            <li class="text-muted">No issues linked to this engagement.</li>
+          {% endfor %}
+        </ul>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            {% if can_submit %}
+              <a href="{% url 'audit:engagement-submit' engagement.pk %}" class="btn btn-warning btn-sm ms-2">Submit</a>
+            {% endif %}
+            <a href="{% url 'audit:engagement-list' %}" class="btn btn-secondary btn-sm ms-2">Back</a>
+          </div>
+          <div>
+            <span class="fw-bold">Approval Status:</span>
+            {% for approval in approvals %}
+              <span class="badge {% if approval.status == 'approved' %}bg-success{% elif approval.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                <i class="bi bi-check-circle{% if approval.status == 'approved' %}-fill{% endif %}"></i> {{ approval.get_status_display }}
+              </span>
+            {% empty %}
+              <span class="text-muted">No approval records.</span>
+            {% endfor %}
+            {% if can_approve %}
+              <a href="{% url 'audit:engagement-approve' engagement.pk %}" class="btn btn-success btn-sm ms-2">Approve</a>
+            {% endif %}
+            {% if can_reject %}
+              <a href="{% url 'audit:engagement-reject' engagement.pk %}" class="btn btn-danger btn-sm ms-2">Reject</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

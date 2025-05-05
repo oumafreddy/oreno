@@ -1,0 +1,82 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<style>
+table.table-sm th, table.table-sm td {
+  padding: 4px 6px;
+  font-size: 12px;
+  word-break: break-word;
+  vertical-align: top;
+}
+table.table-sm tr:nth-child(even) { background: #f8f9fa; }
+tr, td, th { page-break-inside: avoid; }
+h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
+.truncate { max-width: 400px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
+.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
+.label { font-weight: bold; color: #2563eb; margin-top: 0.5em; display: block; }
+</style>
+<h2 class="section-title">Legal Case Details</h2>
+{% if case %}
+  <table class="table table-sm">
+    <tr><th>Title</th><td class="truncate">{{ case.title }}</td></tr>
+    <tr><th>Status</th><td>{{ case.get_status_display }}</td></tr>
+    <tr><th>Type</th><td>{{ case.case_type.name }}</td></tr>
+    <tr><th>Priority</th><td>{{ case.get_priority_display }}</td></tr>
+    <tr><th>Lead Attorney</th><td>{{ case.lead_attorney.email|default:'-' }}</td></tr>
+    <tr><th>Opened</th><td>{{ case.opened_date }}</td></tr>
+    <tr><th>Closed</th><td>{{ case.closed_date|default:'-' }}</td></tr>
+    <tr><th>Estimated Resolution</th><td>{{ case.estimated_resolution_date|default:'-' }}</td></tr>
+  </table>
+  <span class="label">Description:</span>
+  <div class="truncate">{{ case.description|striptags|truncatechars:300 }}</div>
+  <span class="label">Risk Description:</span>
+  <div class="truncate">{{ case.risk_description|striptags|truncatechars:200 }}</div>
+  <span class="label">Compliance Description:</span>
+  <div class="truncate">{{ case.compliance_description|striptags|truncatechars:200 }}</div>
+  <span class="label">Internal Notes:</span>
+  <div class="truncate">{{ case.internal_notes|striptags|truncatechars:200 }}</div>
+  <h4 class="section-title">Parties</h4>
+  <table class="table table-sm">
+    <tr><th>Name</th><th>Type</th><th>Organization</th><th>Contact</th></tr>
+    {% for party in parties %}
+      <tr>
+        <td class="truncate">{{ party.name }}</td>
+        <td>{{ party.get_party_type_display }}</td>
+        <td>{{ party.organization|default:'-' }}</td>
+        <td>{{ party.contact_email|default:'-' }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-muted">No parties linked to this case.</td></tr>
+    {% endfor %}
+  </table>
+  <h4 class="section-title">Tasks</h4>
+  <table class="table table-sm">
+    <tr><th>Title</th><th>Status</th><th>Due</th><th>Assigned To</th></tr>
+    {% for task in tasks %}
+      <tr>
+        <td class="truncate">{{ task.title }}</td>
+        <td>{{ task.get_status_display }}</td>
+        <td>{{ task.due_date }}</td>
+        <td>{{ task.assigned_to.email|default:'-' }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-muted">No tasks linked to this case.</td></tr>
+    {% endfor %}
+  </table>
+  <h4 class="section-title">Documents</h4>
+  <table class="table table-sm">
+    <tr><th>Title</th><th>Description</th><th>Version</th><th>Confidential?</th></tr>
+    {% for doc in documents %}
+      <tr>
+        <td class="truncate">{{ doc.title }}</td>
+        <td class="truncate">{{ doc.description|truncatechars:100 }}</td>
+        <td>{{ doc.version }}</td>
+        <td>{% if doc.is_confidential %}Yes{% else %}No{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-muted">No documents linked to this case.</td></tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <div class="alert alert-warning">No case found for the selected name.</div>
+{% endif %}
+{% endblock %} 

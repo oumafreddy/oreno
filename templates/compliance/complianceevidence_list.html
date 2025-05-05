@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Compliance Evidences{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Compliance Evidences</h2>
+        <a href="{% url 'compliance:evidence_create' %}" class="btn btn-primary">Add Evidence</a>
+    </div>
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Obligation</th>
+                <th>Document</th>
+                <th>Validity Start</th>
+                <th>Validity End</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in object_list %}
+            <tr>
+                <td>{{ ev.obligation }}</td>
+                <td>{{ ev.document }}</td>
+                <td>{{ ev.validity_start }}</td>
+                <td>{{ ev.validity_end }}</td>
+                <td>
+                    <a href="{% url 'compliance:evidence_detail' ev.pk %}" class="btn btn-sm btn-info">View</a>
+                    <a href="{% url 'compliance:evidence_update' ev.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'compliance:evidence_delete' ev.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">No evidences found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

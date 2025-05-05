@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Organization Admin Dashboard</h2>
+        </div>
+    </div>
+    <!-- Organization Info -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card h-100 text-center">
+                {% if org_logo %}
+                <img src="{{ org_logo }}" class="card-img-top mx-auto mt-3" style="max-width:80px;max-height:80px;" alt="Logo">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ org_name }}</h5>
+                    <p class="mb-1"><span class="badge bg-info">Code: {{ org_code }}</span></p>
+                    <p class="mb-1">
+                        {% if org_status == 'Active' %}
+                            <span class="badge bg-success">{{ org_status }}</span>
+                        {% else %}
+                            <span class="badge bg-danger">{{ org_status }}</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0"><span class="badge bg-secondary">Plan: {{ subscription_plan }}</span></p>
+                </div>
+            </div>
+        </div>
+        <!-- Summary Cards -->
+        <div class="col-md-9">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <div class="card text-bg-primary h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-people"></i></div>
+                            <h6 class="card-title">Total Users</h6>
+                            <h3>{{ user_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-bg-success h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-person-check"></i></div>
+                            <h6 class="card-title">Active</h6>
+                            <h3>{{ active_user_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-bg-danger h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-person-x"></i></div>
+                            <h6 class="card-title">Inactive</h6>
+                            <h3>{{ inactive_user_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-bg-info h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-person-badge"></i></div>
+                            <h6 class="card-title">Admins</h6>
+                            <h3>{{ admin_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-bg-warning h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-person-gear"></i></div>
+                            <h6 class="card-title">Managers</h6>
+                            <h3>{{ manager_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-bg-secondary h-100 text-center">
+                        <div class="card-body">
+                            <div class="display-6"><i class="bi bi-person"></i></div>
+                            <h6 class="card-title">Staff</h6>
+                            <h3>{{ staff_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Role Distribution Pie Chart & Recent Users -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>User Role Distribution</strong></div>
+                <div class="card-body">
+                    <div id="role-pie-chart" style="height:300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Recent Users</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.get_full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                        <span class="badge bg-info">{{ user.get_role_display }}</span>
+                                    {% elif user.role == 'manager' %}
+                                        <span class="badge bg-warning">{{ user.get_role_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ user.get_role_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{% if user.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-muted">No recent users.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Quick Links -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-light"><strong>Quick Links</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'admin_module:user-list' %}" class="btn btn-primary me-2">Manage Users</a>
+                    <a href="{% url 'admin_module:org-settings' %}" class="btn btn-outline-secondary me-2">Organization Settings</a>
+                    <a href="/risk/" class="btn btn-outline-primary me-2">Risk Dashboard</a>
+                    <a href="/audit/" class="btn btn-outline-secondary me-2">Audit Dashboard</a>
+                    <a href="/legal/" class="btn btn-outline-success me-2">Legal Dashboard</a>
+                    <a href="/compliance/" class="btn btn-outline-warning me-2">Compliance Dashboard</a>
+                    <a href="/contracts/" class="btn btn-outline-info me-2">Contracts Dashboard</a>
+                    <a href="/document_management/" class="btn btn-outline-dark me-2">Document Management</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Plotly.js for charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+const roleDist = JSON.parse("{{ role_distribution|escapejs }}");
+const roleData = {
+    values: roleDist.map(x => x.count),
+    labels: roleDist.map(x => x.role),
+    type: 'pie',
+    marker: {
+        colors: ['#2563eb', '#f59e42', '#6c757d']
+    },
+    textinfo: 'label+percent',
+    insidetextorientation: 'radial',
+};
+const roleLayout = {
+    height: 300,
+    margin: { t: 0, b: 0, l: 0, r: 0 },
+    showlegend: true
+};
+Plotly.newPlot('role-pie-chart', [roleData], roleLayout);
+</script>
+{% endblock %} 

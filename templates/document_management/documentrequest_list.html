@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Document Requests{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Document Requests</h2>
+    <a href="{% url 'document_management:documentrequest-add' %}" class="btn btn-primary">New Request</a>
+  </div>
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>Requestee</th>
+            <th>Requested By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in document_requests %}
+          <tr>
+            <td><a href="{% url 'document_management:documentrequest-detail' req.pk %}">{{ req.request_name }}</a></td>
+            <td>{{ req.get_status_display }}</td>
+            <td>{{ req.due_date }}</td>
+            <td>{{ req.requestee_email|default:req.requestee_identifier }}</td>
+            <td>{{ req.request_owner.get_full_name }}</td>
+            <td>
+              <a href="{% url 'document_management:documentrequest-detail' req.pk %}" class="btn btn-sm btn-outline-info">View</a>
+              <a href="{% url 'document_management:documentrequest-edit' req.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+              <a href="{% url 'document_management:documentrequest-delete' req.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-muted">No document requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Contract Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ contract.title }}</h2>
+    <div class="mb-3"><strong>Code:</strong> {{ contract.code }}</div>
+    <div class="mb-3"><strong>Type:</strong> {{ contract.contract_type.name }}</div>
+    <div class="mb-3"><strong>Status:</strong> {{ contract.get_status_display }}</div>
+    <div class="mb-3"><strong>Start Date:</strong> {{ contract.start_date }}</div>
+    <div class="mb-3"><strong>End Date:</strong> {{ contract.end_date }}</div>
+    <div class="mb-3"><strong>Value:</strong> {{ contract.value }} {{ contract.currency }}</div>
+    <div class="mb-3"><strong>Description:</strong><br>{{ contract.description|safe }}</div>
+    <div class="mb-3"><strong>Payment Terms:</strong><br>{{ contract.payment_terms|safe }}</div>
+    <div class="mb-3"><strong>Governing Law:</strong> {{ contract.governing_law }}</div>
+    <div class="mb-3"><strong>Jurisdiction:</strong> {{ contract.jurisdiction }}</div>
+    <div class="mb-3"><strong>Termination Clause:</strong><br>{{ contract.termination_clause|safe }}</div>
+    <div class="mb-3"><strong>Parties:</strong> {% for party in contract.parties.all %}<span class="badge bg-info">{{ party.name }}</span> {% endfor %}</div>
+    <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-outline-info">Edit</a>
+    <a href="{% url 'contracts:contract-delete' contract.pk %}" class="btn btn-outline-danger">Delete</a>
+    <a href="{% url 'contracts:contract-list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

@@ -1,0 +1,42 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<style>
+table.table-sm th, table.table-sm td {
+  padding: 4px 6px;
+  font-size: 12px;
+  word-break: break-word;
+  vertical-align: top;
+}
+table.table-sm tr:nth-child(even) { background: #f8f9fa; }
+tr, td, th { page-break-inside: avoid; }
+h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
+.truncate { max-width: 300px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
+.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
+</style>
+<h2 class="section-title">Legal Case Summary</h2>
+<p>Filters:
+  Status: {{ filters.status|default:'All' }},
+  Type: {{ filters.case_type|default:'All' }},
+  Priority: {{ filters.priority|default:'All' }},
+  Lead Attorney: {{ filters.lead_attorney|default:'All' }},
+  Case Name: {{ filters.case_name|default:'All' }}
+</p>
+<table class="table table-sm">
+  <tr>
+    <th>Title</th><th>Type</th><th>Status</th><th>Priority</th><th>Lead Attorney</th><th>Opened</th><th>Closed</th>
+  </tr>
+  {% for case in cases %}
+    <tr>
+      <td class="truncate">{{ case.title }}</td>
+      <td>{{ case.case_type.name }}</td>
+      <td>{{ case.get_status_display }}</td>
+      <td>{{ case.get_priority_display }}</td>
+      <td>{{ case.lead_attorney.email|default:'-' }}</td>
+      <td>{{ case.opened_date }}</td>
+      <td>{{ case.closed_date|default:'-' }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="text-muted">No cases found for the selected filters.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %} 

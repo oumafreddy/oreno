@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
+from django.contrib.contenttypes.fields import GenericRelation
 
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from audit.models.engagement import Engagement
@@ -56,13 +57,15 @@ class Issue(OrganizationOwnedModel, AuditableModel):
         null=True,
         blank=True,
         related_name='issues_owned',
-        verbose_name=_("Issue Owner"),
+        verbose_name=_('Issue Owner'),
+        help_text=_('Select a user as owner, or leave blank to specify an email below.'),
     )
+    issue_owner_email = models.EmailField(blank=True, null=True, help_text=_('If owner is not a user, enter their email here.'))
     issue_owner_title = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        verbose_name=_("Issue Owner Title"),
+        verbose_name=_('Issue Owner Title'),
     )
     audit_procedures = CKEditor5Field(
         _('Audit Procedures'),
@@ -145,6 +148,14 @@ class Issue(OrganizationOwnedModel, AuditableModel):
         verbose_name=_("Working Papers"),
     )
 
+    approvals = GenericRelation(
+        'audit.Approval',
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='issue',
+        related_name='approvals',
+    )
+
     class Meta:
         app_label = 'audit'
         verbose_name = _('Issue')
@@ -159,12 +170,19 @@ class Issue(OrganizationOwnedModel, AuditableModel):
             models.Index(fields=['remediation_status']),
             models.Index(fields=['engagement']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_issue'
+            )
+        ]
 
     def __str__(self):
-        return f"{self.issue_title} ({self.issue_status})"
+        owner_str = self.issue_owner.email if self.issue_owner else (self.issue_owner_email or 'No Owner')
+        return f"{self.issue_title} ({self.issue_status}) - Owner: {owner_str}"
 
     def get_absolute_url(self):
-        return reverse('audit:issue_detail', kwargs={'pk': self.pk})
+        return reverse('audit:issue-detail', kwargs={'pk': self.pk})
 
     def clean(self):
         if self.date_identified > timezone.now().date():

@@ -1,32 +1,38 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
 {% block title %}Profile{% endblock %}
 {% block content %}
-<div class="row">
+<div class="row justify-content-center">
   <div class="col-md-8">
-    <h2 class="mb-4">Your Profile</h2>
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      {{ u_form.non_field_errors }}
-      {% for field in u_form %}
-      <div class="mb-3">
-        <label class="form-label">{{ field.label }}</label>
-        {{ field }}
-        <div class="form-text text-danger">{{ field.errors }}</div>
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">Your Profile</h3>
       </div>
-      {% endfor %}
-
-      <h4 class="mt-4">Profile Details</h4>
-      {{ p_form.non_field_errors }}
-      {% for field in p_form %}
-      <div class="mb-3">
-        <label class="form-label">{{ field.label }}</label>
-        {{ field }}
-        <div class="form-text text-danger">{{ field.errors }}</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row">
+            <div class="col-md-8">
+              <h5 class="mb-3">Account Details</h5>
+              {{ u_form|crispy }}
+            </div>
+            <div class="col-md-4 text-center">
+              <h5 class="mb-3">Profile Picture</h5>
+              {% if user.profile.avatar %}
+                <img src="{{ user.profile.avatar.url }}" class="img-thumbnail mb-2" style="max-width: 120px; max-height: 120px;" alt="Avatar">
+              {% else %}
+                <img src="{% static 'img/default-avatar.png' %}" class="img-thumbnail mb-2" style="max-width: 120px; max-height: 120px;" alt="Avatar">
+              {% endif %}
+              {{ p_form|crispy }}
+            </div>
+          </div>
+          <div class="text-end mt-3">
+            <button type="submit" class="btn btn-success">Save Changes</button>
+          </div>
+        </form>
       </div>
-      {% endfor %}
-
-      <button type="submit" class="btn btn-success">Save Changes</button>
-    </form>
+    </div>
   </div>
 </div>
 {% endblock %}

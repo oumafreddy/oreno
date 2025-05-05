@@ -2,6 +2,10 @@
 from django.apps import AppConfig
 
 class RiskConfig(AppConfig):
-    name = 'risk'        # if using sys.path hack and __init__.py added
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'risk'
+
+    def ready(self):
+        import risk.signals  # noqa
     # …or…
     # name = 'apps.core'  # if you prefer fully qualified imports without altering sys.path

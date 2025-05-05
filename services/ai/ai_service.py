@@ -1,0 +1,34 @@
+import os
+from .llm_adapter import ask_llm
+
+# Example FAQ knowledge base (could be loaded from a file or DB)
+FAQ_KB = [
+    {
+        'question': 'how do i use the legal app',
+        'answer': 'The Legal app in Oreno GRC helps you manage contracts and legal documents. You can create, review, and store legal documents securely. To get started, go to the Legal app from the dashboard and follow the on-screen instructions.'
+    },
+    {
+        'question': 'what does the risk app do',
+        'answer': 'The Risk app allows you to identify, assess, and monitor risks within your organization. You can create risk registers, assign owners, and track mitigation actions.'
+    },
+    {
+        'question': 'how do i get started',
+        'answer': 'Welcome to Oreno GRC! Start by exploring the dashboard. Each app (Audit, Risk, Legal, Compliance, etc.) is accessible from the main menu. Click on any app to see its features and guides.'
+    },
+    # Add more FAQ entries as needed
+]
+
+def find_faq_answer(question: str) -> str:
+    q = question.lower().strip()
+    for entry in FAQ_KB:
+        if entry['question'] in q:
+            return entry['answer']
+    return None
+
+def ai_assistant_answer(question: str, user, org) -> str:
+    # 1. Try FAQ/RAG first
+    faq_answer = find_faq_answer(question)
+    if faq_answer:
+        return faq_answer
+    # 2. Otherwise, use LLM for best practice/platform Q&A
+    return ask_llm(question, user, org)

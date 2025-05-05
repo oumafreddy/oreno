@@ -1,0 +1,8 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<h2>Risk Identification Trends</h2>
+<p>This chart shows the number of risks identified per month.</p>
+<div class="text-center">
+  <img src="data:image/png;base64,{{ image_base64 }}" alt="Risk Trends" style="max-width:100%; height:auto;">
+</div>
+{% endblock %} 

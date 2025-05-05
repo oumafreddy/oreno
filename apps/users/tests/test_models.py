@@ -2,7 +2,7 @@
 
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from apps.organizations.models.organization import Organization
+from organizations.models.organization import Organization
 from datetime import date
 
 CustomUser = get_user_model()

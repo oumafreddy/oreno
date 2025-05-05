@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Case Types{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Case Types</h2>
+    <a href="{% url 'legal:casetype_create' %}" class="btn btn-primary">Add Case Type</a>
+  </div>
+  <table class="table table-hover table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Default Priority</th>
+        <th>Organization</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for casetype in object_list %}
+      <tr>
+        <td><a href="{% url 'legal:casetype_detail' casetype.pk %}">{{ casetype.name }}</a></td>
+        <td>{{ casetype.description|truncatewords:12|safe }}</td>
+        <td>{{ casetype.default_priority }}</td>
+        <td>{{ casetype.organization }}</td>
+        <td>
+          <a href="{% url 'legal:casetype_detail' casetype.pk %}" class="btn btn-sm btn-outline-info">View</a>
+          <a href="{% url 'legal:casetype_update' casetype.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <a href="{% url 'legal:casetype_delete' casetype.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center">No case types found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %} 

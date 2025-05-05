@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Service Information{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow border-info">
+        <div class="card-header bg-info text-white">
+          <h4 class="mb-0"><i class="bi bi-info-circle"></i> App Access Restricted</h4>
+        </div>
+        <div class="card-body">
+          <p class="lead">You are not subscribed to the <strong>{{ request.GET.app|title }}</strong> app.</p>
+          <p class="mb-3">To access this app, your organization must subscribe to it. Please contact your organization admin or the app provider for more information.</p>
+          <div class="alert alert-secondary">
+            <strong>Need help?</strong> <br>
+            Contact your admin or email <a href="mailto:support@yourcompany.com">support@yourcompany.com</a> for assistance.
+          </div>
+          <a href="/" class="btn btn-outline-info">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 
