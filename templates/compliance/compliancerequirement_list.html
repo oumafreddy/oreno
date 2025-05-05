@@ -6,6 +6,28 @@
         <h2>Compliance Requirements</h2>
         <a href="{% url 'compliance:requirement_create' %}" class="btn btn-primary">Add Requirement</a>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="q" placeholder="Title or ID" value="{{ request.GET.q|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="framework" placeholder="Framework" value="{{ request.GET.framework|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control" name="jurisdiction" placeholder="Jurisdiction" value="{{ request.GET.jurisdiction|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" name="mandatory">
+                <option value="">All</option>
+                <option value="yes" {% if request.GET.mandatory == 'yes' %}selected{% endif %}>Mandatory</option>
+                <option value="no" {% if request.GET.mandatory == 'no' %}selected{% endif %}>Optional</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
     <table class="table table-striped table-hover">
         <thead>
             <tr>

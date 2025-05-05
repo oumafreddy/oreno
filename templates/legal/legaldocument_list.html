@@ -6,6 +6,21 @@
     <h2 class="fw-bold">Legal Documents</h2>
     <a href="{% url 'legal:legaldocument_create' %}" class="btn btn-primary">Add Document</a>
   </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <input type="text" class="form-control" name="q" placeholder="Title or Case" value="{{ request.GET.q|default:'' }}">
+    </div>
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="type" placeholder="Type" value="{{ request.GET.type|default:'' }}">
+    </div>
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="uploaded_by" placeholder="Uploaded By" value="{{ request.GET.uploaded_by|default:'' }}">
+    </div>
+    <div class="col-md-2 d-flex align-items-center">
+      <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+      <a href="?" class="btn btn-outline-secondary">Reset</a>
+    </div>
+  </form>
   <table class="table table-hover table-bordered align-middle">
     <thead class="table-light">
       <tr>

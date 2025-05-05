@@ -40,6 +40,12 @@ from django.contrib.contenttypes.models import ContentType
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
 from core.mixins.organization import OrganizationScopedQuerysetMixin
 
+import csv
+from django.http import HttpResponse
+import openpyxl
+from openpyxl.utils import get_column_letter
+from django.utils.encoding import smart_str
+
 # ─── MIXINS ──────────────────────────────────────────────────────────────────
 class AuditPermissionMixin(OrganizationPermissionMixin):
     """Verify that current user has audit permissions for the organization"""
@@ -70,9 +76,16 @@ class WorkplanListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
-        return queryset.filter(organization=organization).select_related(
+        queryset = queryset.filter(organization=organization).select_related(
             'created_by', 'updated_by'
         ).prefetch_related('engagements')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
 class WorkplanDetailView(AuditPermissionMixin, DetailView):
     model = AuditWorkplan
@@ -130,9 +143,19 @@ class EngagementListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
-        return queryset.filter(organization=organization).select_related(
+        queryset = queryset.filter(organization=organization).select_related(
             'audit_workplan', 'assigned_to', 'assigned_by'
         ).prefetch_related('issues')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        owner = self.request.GET.get('owner')
+        if owner:
+            queryset = queryset.filter(assigned_to__icontains=owner)
+        return queryset
 
 class EngagementDetailView(AuditPermissionMixin, DetailView):
     model = Engagement
@@ -200,9 +223,19 @@ class IssueListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
-        return queryset.filter(organization=organization).select_related(
+        queryset = queryset.filter(organization=organization).select_related(
             'engagement', 'issue_owner'
         )
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(Q(title__icontains=q) | Q(code__icontains=q))
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        priority = self.request.GET.get('priority')
+        if priority:
+            queryset = queryset.filter(priority=priority)
+        return queryset
 
 class IssueDetailView(AuditPermissionMixin, DetailView):
     model = Issue
@@ -640,3 +673,91 @@ def autocomplete(request):
 def validate(request):
     # Implement validation functionality here
     pass
+
+def export_to_xlsx(headers, rows, filename):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(headers)
+    for row in rows:
+        ws.append([smart_str(cell) for cell in row])
+    for col_num, _ in enumerate(headers, 1):
+        ws.column_dimensions[get_column_letter(col_num)].width = 20
+    from io import BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(output.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+@login_required
+def export_workplans(request):
+    fiscal_year = request.GET.get('fiscal_year')
+    name = request.GET.get('name')
+    export_format = request.GET.get('format', 'csv')
+    qs = AuditWorkplan.objects.filter(organization=request.organization)
+    if fiscal_year:
+        qs = qs.filter(fiscal_year=fiscal_year)
+    if name:
+        qs = qs.filter(name__icontains=name)
+    headers = ['ID', 'Code', 'Name', 'Fiscal Year', 'State', 'Creation Date']
+    rows = [[wp.id, wp.code, wp.name, wp.fiscal_year, wp.state, wp.creation_date] for wp in qs]
+    if export_format == 'xlsx':
+        return export_to_xlsx(headers, rows, 'workplans.xlsx')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="workplans.csv"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+@login_required
+def export_engagements(request):
+    qs = Engagement.objects.filter(organization=request.organization)
+    # Apply the same filters as the list view
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(code__icontains=q))
+    status = request.GET.get('status')
+    if status:
+        qs = qs.filter(project_status=status)
+    owner = request.GET.get('owner')
+    if owner:
+        qs = qs.filter(assigned_to__email__icontains=owner)
+    # Add more filters as needed
+
+    export_format = request.GET.get('format', 'csv')
+    headers = ['ID', 'Code', 'Title', 'Status', 'Assigned To', 'Start Date', 'End Date']
+    rows = [[e.id, e.code, e.title, e.project_status, getattr(e.assigned_to, 'email', ''), e.project_start_date, e.target_end_date] for e in qs]
+    if export_format == 'xlsx':
+        return export_to_xlsx(headers, rows, 'engagements.xlsx')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="engagements.csv"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+@login_required
+def export_issues(request):
+    name = request.GET.get('name')
+    severity = request.GET.get('severity')
+    export_format = request.GET.get('format', 'csv')
+    qs = Issue.objects.filter(organization=request.organization)
+    if name:
+        qs = qs.filter(issue_title__icontains=name)
+    if severity:
+        qs = qs.filter(severity_status=severity)
+    headers = ['ID', 'Code', 'Title', 'Severity', 'Status', 'Owner', 'Date Identified']
+    rows = [[i.id, i.code, i.issue_title, i.severity_status, i.issue_status, getattr(i.issue_owner, 'email', ''), i.date_identified] for i in qs]
+    if export_format == 'xlsx':
+        return export_to_xlsx(headers, rows, 'issues.xlsx')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="issues.csv"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response

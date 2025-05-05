@@ -6,6 +6,18 @@
         <h2>Compliance Frameworks</h2>
         <a href="{% url 'compliance:framework_create' %}" class="btn btn-primary">Add Framework</a>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="q" placeholder="Name or Version" value="{{ request.GET.q|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="regulatory_body" placeholder="Regulatory Body" value="{{ request.GET.regulatory_body|default:'' }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
     <table class="table table-striped table-hover">
         <thead>
             <tr>

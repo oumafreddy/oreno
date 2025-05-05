@@ -6,6 +6,26 @@
     <h2 class="fw-bold">Legal Tasks</h2>
     <a href="{% url 'legal:legaltask_create' %}" class="btn btn-primary">Add Task</a>
   </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <input type="text" class="form-control" name="q" placeholder="Title or Case" value="{{ request.GET.q|default:'' }}">
+    </div>
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="assigned_to" placeholder="Assigned To" value="{{ request.GET.assigned_to|default:'' }}">
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="status">
+        <option value="">All Statuses</option>
+        <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
+        <option value="in-progress" {% if request.GET.status == 'in-progress' %}selected{% endif %}>In Progress</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex align-items-center">
+      <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+      <a href="?" class="btn btn-outline-secondary">Reset</a>
+    </div>
+  </form>
   <table class="table table-hover table-bordered align-middle">
     <thead class="table-light">
       <tr>

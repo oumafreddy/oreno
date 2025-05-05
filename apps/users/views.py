@@ -224,10 +224,24 @@ class UserListView(UserPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.user.organization
-        return queryset.filter(
+        queryset = queryset.filter(
             Q(organization=organization) |
             Q(organization_memberships__organization=organization)
-        ).select_related('profile').prefetch_related('organization_memberships')
+        ).select_related('profile').prefetch_related('organization_memberships').distinct()
+
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(email__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q)
+            )
+
+        role = self.request.GET.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+
+        return queryset
 
 class UserDetailView(UserPermissionMixin, DetailView):
     model = CustomUser

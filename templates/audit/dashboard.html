@@ -224,7 +224,72 @@
                     <a href="{% url 'audit:engagement-create' %}" class="btn btn-outline-info me-2">Create Engagement</a>
                     <a href="{% url 'audit:issue-create' %}" class="btn btn-outline-danger me-2">Create Issue</a>
                     <a href="{% url 'audit:approval-create' %}" class="btn btn-outline-warning me-2">Request Approval</a>
-                    <a href="{% url 'audit:export-data' %}" class="btn btn-outline-dark me-2">Export</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Export Cards Section -->
+    <div class="row mb-4 g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white"><strong>Export Workplans</strong></div>
+                <div class="card-body">
+                    <form class="mb-2" method="get" action="{% url 'audit:export-workplans' %}">
+                        <div class="mb-2">
+                            <label class="form-label">Fiscal Year</label>
+                            <input type="number" name="fiscal_year" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="All">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="format" value="csv" class="btn btn-outline-primary w-50">CSV</button>
+                            <button type="submit" name="format" value="xlsx" class="btn btn-outline-primary w-50">Excel (XLSX)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white"><strong>Export Engagements</strong></div>
+                <div class="card-body">
+                    <form class="mb-2" method="get" action="{% url 'audit:export-engagements' %}">
+                        <div class="mb-2">
+                            <label class="form-label">Engagement Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Status</label>
+                            <input type="text" name="status" class="form-control" placeholder="All">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="format" value="csv" class="btn btn-outline-success w-50">CSV</button>
+                            <button type="submit" name="format" value="xlsx" class="btn btn-outline-success w-50">Excel (XLSX)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-danger text-white"><strong>Export Issues</strong></div>
+                <div class="card-body">
+                    <form class="mb-2" method="get" action="{% url 'audit:export-issues' %}">
+                        <div class="mb-2">
+                            <label class="form-label">Issue Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="All">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Severity</label>
+                            <input type="text" name="severity" class="form-control" placeholder="All">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="format" value="csv" class="btn btn-outline-danger w-50">CSV</button>
+                            <button type="submit" name="format" value="xlsx" class="btn btn-outline-danger w-50">Excel (XLSX)</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -266,19 +331,18 @@
                     <form method="get" action="{% url 'reports:audit_engagement_summary_pdf' %}" target="_blank">
                       <div class="mb-2">
                         <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All">
+                        <input type="text" name="status" class="form-control" placeholder="All" value="{{ request.GET.status|default:'' }}">
                       </div>
                       <div class="mb-2">
                         <label class="form-label">Assigned To (email)</label>
-                        <input type="text" name="assigned_to" class="form-control" placeholder="All">
+                        <input type="text" name="assigned_to" class="form-control" placeholder="All" value="{{ request.GET.assigned_to|default:'' }}">
                       </div>
                       <div class="mb-2">
                         <label class="form-label">Engagement Name</label>
-                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
-                        <select name="engagement_name" class="form-select">
+                        <select name="engagement_name" class="form-select engagement-select">
                           <option value="">All</option>
                           {% for name in engagement_names %}
-                            <option value="{{ name }}">{{ name }}</option>
+                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -295,19 +359,18 @@
                     <form method="get" action="{% url 'reports:audit_issue_register_pdf' %}" target="_blank">
                       <div class="mb-2">
                         <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All">
+                        <input type="text" name="status" class="form-control" placeholder="All" value="{{ request.GET.status|default:'' }}">
                       </div>
                       <div class="mb-2">
                         <label class="form-label">Severity</label>
-                        <input type="text" name="severity" class="form-control" placeholder="All">
+                        <input type="text" name="severity" class="form-control" placeholder="All" value="{{ request.GET.severity|default:'' }}">
                       </div>
                       <div class="mb-2">
                         <label class="form-label">Engagement Name</label>
-                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
-                        <select name="engagement_name" class="form-select">
+                        <select name="engagement_name" class="form-select engagement-select">
                           <option value="">All</option>
                           {% for name in engagement_names %}
-                            <option value="{{ name }}">{{ name }}</option>
+                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -366,11 +429,10 @@
                     <form method="get" action="{% url 'reports:audit_engagement_details_pdf' %}" target="_blank">
                       <div class="mb-2">
                         <label class="form-label">Engagement Name</label>
-                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
-                        <select name="engagement_name" class="form-select">
+                        <select name="engagement_name" class="form-select engagement-select">
                           <option value="">All</option>
                           {% for name in engagement_names %}
-                            <option value="{{ name }}">{{ name }}</option>
+                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -387,11 +449,10 @@
                     <form method="get" action="{% url 'reports:audit_engagement_with_issues_pdf' %}" target="_blank">
                       <div class="mb-2">
                         <label class="form-label">Engagement Name</label>
-                        <input type="text" name="engagement_name" class="form-control mb-1" placeholder="Type or select...">
-                        <select name="engagement_name" class="form-select">
+                        <select name="engagement_name" class="form-select engagement-select">
                           <option value="">All</option>
                           {% for name in engagement_names %}
-                            <option value="{{ name }}">{{ name }}</option>
+                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -452,5 +513,18 @@ Plotly.newPlot('owner-workload-chart', [{
     hovertemplate: '%{text}: %{y}<extra></extra>',
     textposition: 'auto',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+</script>
+<!-- Add Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<!-- Add Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('.engagement-select').select2({
+      width: '100%',
+      placeholder: 'Type or select...',
+      allowClear: true
+    });
+  });
 </script>
 {% endblock %} 

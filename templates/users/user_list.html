@@ -8,6 +8,23 @@
         <h3 class="mb-0">User List</h3>
       </div>
       <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+          <div class="col-md-4">
+            <input type="text" class="form-control" name="q" placeholder="Name or Email" value="{{ request.GET.q|default:'' }}">
+          </div>
+          <div class="col-md-4">
+            <select class="form-select" name="role">
+              <option value="">All Roles</option>
+              <option value="admin" {% if request.GET.role == 'admin' %}selected{% endif %}>Admin</option>
+              <option value="manager" {% if request.GET.role == 'manager' %}selected{% endif %}>Manager</option>
+              <option value="user" {% if request.GET.role == 'user' %}selected{% endif %}>User</option>
+            </select>
+          </div>
+          <div class="col-md-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+          </div>
+        </form>
         <table class="table table-striped align-middle">
           <thead>
             <tr>

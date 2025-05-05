@@ -27,7 +27,18 @@ from collections import Counter
 # ComplianceFramework Views
 class ComplianceFrameworkListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ComplianceFramework
-    template_name = 'compliance/complianceframework_list.html'  # TODO: create template
+    template_name = 'compliance/complianceframework_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(version__icontains=q))
+        regulatory_body = self.request.GET.get('regulatory_body')
+        if regulatory_body:
+            qs = qs.filter(regulatory_body__icontains=regulatory_body)
+        return qs
 
 class ComplianceFrameworkDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceFramework
@@ -147,7 +158,26 @@ class DocumentProcessingDeleteView(OrganizationPermissionMixin, LoginRequiredMix
 # ComplianceRequirement Views
 class ComplianceRequirementListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ComplianceRequirement
-    template_name = 'compliance/compliancerequirement_list.html'  # TODO: create template
+    template_name = 'compliance/compliancerequirement_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(requirement_id__icontains=q))
+        framework = self.request.GET.get('framework')
+        if framework:
+            qs = qs.filter(regulatory_framework__icontains=framework)
+        jurisdiction = self.request.GET.get('jurisdiction')
+        if jurisdiction:
+            qs = qs.filter(jurisdiction__icontains=jurisdiction)
+        mandatory = self.request.GET.get('mandatory')
+        if mandatory == 'yes':
+            qs = qs.filter(mandatory=True)
+        elif mandatory == 'no':
+            qs = qs.filter(mandatory=False)
+        return qs
 
 class ComplianceRequirementDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceRequirement
@@ -187,7 +217,24 @@ class ComplianceRequirementDeleteView(OrganizationPermissionMixin, LoginRequired
 # ComplianceObligation Views
 class ComplianceObligationListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ComplianceObligation
-    template_name = 'compliance/complianceobligation_list.html'  # TODO: create template
+    template_name = 'compliance/complianceobligation_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        requirement = self.request.GET.get('requirement')
+        if requirement:
+            qs = qs.filter(requirement__title__icontains=requirement)
+        owner = self.request.GET.get('owner')
+        if owner:
+            qs = qs.filter(Q(owner__icontains=owner) | Q(owner_email__icontains=owner))
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        priority = self.request.GET.get('priority')
+        if priority:
+            qs = qs.filter(priority=priority)
+        return qs
 
 class ComplianceObligationDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceObligation
@@ -227,7 +274,24 @@ class ComplianceObligationDeleteView(OrganizationPermissionMixin, LoginRequiredM
 # ComplianceEvidence Views
 class ComplianceEvidenceListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ComplianceEvidence
-    template_name = 'compliance/complianceevidence_list.html'  # TODO: create template
+    template_name = 'compliance/complianceevidence_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        obligation = self.request.GET.get('obligation')
+        if obligation:
+            qs = qs.filter(obligation__icontains=obligation)
+        document = self.request.GET.get('document')
+        if document:
+            qs = qs.filter(document__icontains=document)
+        validity_start = self.request.GET.get('validity_start')
+        if validity_start:
+            qs = qs.filter(validity_start__gte=validity_start)
+        validity_end = self.request.GET.get('validity_end')
+        if validity_end:
+            qs = qs.filter(validity_end__lte=validity_end)
+        return qs
 
 class ComplianceEvidenceDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceEvidence

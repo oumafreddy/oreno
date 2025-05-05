@@ -6,6 +6,39 @@
     <h2 class="fw-bold">Legal Cases</h2>
     <a href="{% url 'legal:legalcase_create' %}" class="btn btn-primary">Add Case</a>
   </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <input type="text" class="form-control" name="q" placeholder="Title or Attorney" value="{{ request.GET.q|default:'' }}">
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="type">
+        <option value="">All Types</option>
+        {% for t in case_types %}
+        <option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:'s' %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="status">
+        <option value="">All Statuses</option>
+        <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
+        <option value="in-progress" {% if request.GET.status == 'in-progress' %}selected{% endif %}>In Progress</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="priority">
+        <option value="">All Priorities</option>
+        <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>Low</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex align-items-center">
+      <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+      <a href="?" class="btn btn-outline-secondary">Reset</a>
+    </div>
+  </form>
   <table class="table table-hover table-bordered align-middle">
     <thead class="table-light">
       <tr>

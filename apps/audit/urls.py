@@ -86,6 +86,9 @@ urlpatterns = [
     path('actions/bulk-approve/', views.bulk_approve, name='bulk-approve'),
     path('actions/bulk-reject/', views.bulk_reject, name='bulk-reject'),
     path('actions/export/', views.export_data, name='export-data'),
+    path('actions/export/workplans/', views.export_workplans, name='export-workplans'),
+    path('actions/export/engagements/', views.export_engagements, name='export-engagements'),
+    path('actions/export/issues/', views.export_issues, name='export-issues'),
     
     # ─── REPORT URLS ────────────────────────────────────────────────────────
     path('reports/workplans/', views.workplan_report, name='workplan-report'),

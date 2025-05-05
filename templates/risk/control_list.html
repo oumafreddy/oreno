@@ -8,6 +8,30 @@
             <a href="{% url 'risk:control_create' %}" class="btn btn-success float-end"><i class="bi bi-plus-circle"></i> New Control</a>
         </div>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="owner" placeholder="Owner" value="{{ request.GET.owner|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="effectiveness">
+                <option value="">All Effectiveness</option>
+                <option value="high" {% if request.GET.effectiveness == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if request.GET.effectiveness == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if request.GET.effectiveness == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
     <div class="row mb-3">
         <div class="col-12">
             <nav class="nav nav-pills nav-fill mb-3">

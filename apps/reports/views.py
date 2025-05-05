@@ -209,7 +209,6 @@ def assessment_timeline_pdf(request):
 def risk_register_detailed_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
-    # Apply filters as in summary
     category = request.GET.get('category')
     owner = request.GET.get('owner')
     status = request.GET.get('status')
@@ -235,8 +234,20 @@ def risk_assessment_details_pdf(request):
     org = request.tenant
     assessments = RiskAssessment.objects.filter(organization=org)
     risk_id = request.GET.get('risk')
+    assessment_type = request.GET.get('assessment_type')
+    assessor = request.GET.get('assessor')
+    min_score = request.GET.get('min_score')
+    max_score = request.GET.get('max_score')
     if risk_id:
         assessments = assessments.filter(risk_id=risk_id)
+    if assessment_type:
+        assessments = assessments.filter(assessment_type=assessment_type)
+    if assessor:
+        assessments = assessments.filter(assessor__icontains=assessor)
+    if min_score:
+        assessments = assessments.filter(risk_score__gte=min_score)
+    if max_score:
+        assessments = assessments.filter(risk_score__lte=max_score)
     html_string = render_to_string('reports/risk_assessment_details.html', {
         'organization': org,
         'assessments': assessments,
@@ -290,6 +301,9 @@ def workplan_summary_pdf(request):
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_workplan_summary.pdf"'
     return response
 
+def get_engagement_names(org):
+    return list(Engagement.objects.filter(organization=org).values_list('title', flat=True).distinct().order_by('title'))
+
 def engagement_summary_pdf(request):
     org = request.tenant
     status = request.GET.get('status')
@@ -301,9 +315,13 @@ def engagement_summary_pdf(request):
     if assigned_to:
         engagements = engagements.filter(assigned_to__email__icontains=assigned_to)
     if engagement_name:
-        engagements = engagements.filter(title__icontains=engagement_name)
+        # Try exact match first, then icontains
+        if engagements.filter(title=engagement_name).exists():
+            engagements = engagements.filter(title=engagement_name)
+        else:
+            engagements = engagements.filter(title__icontains=engagement_name)
     summary = engagements.values('project_status', 'assigned_to__email').annotate(count=Count('id')).order_by('project_status')
-    engagement_names = Engagement.objects.filter(organization=org).values_list('title', flat=True).distinct().order_by('title')
+    engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_engagement_summary.html', {
         'organization': org,
         'summary': summary,
@@ -326,8 +344,12 @@ def issue_register_pdf(request):
     if severity:
         issues = issues.filter(severity_status=severity)
     if engagement_name:
-        issues = issues.filter(engagement__title__icontains=engagement_name)
-    engagement_names = Engagement.objects.filter(organization=org).values_list('title', flat=True).distinct().order_by('title')
+        # Try exact match first, then icontains
+        if Engagement.objects.filter(organization=org, title=engagement_name).exists():
+            issues = issues.filter(engagement__title=engagement_name)
+        else:
+            issues = issues.filter(engagement__title__icontains=engagement_name)
+    engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_issue_register.html', {
         'organization': org,
         'issues': issues,
@@ -395,15 +417,34 @@ def smart_engagement_progress_pdf(request):
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_progress.pdf"'
     return response
 
+def get_engagement_by_name(org, engagement_name):
+    if engagement_name:
+        # Try exact match first
+        engagement = Engagement.objects.filter(organization=org, title=engagement_name).first()
+        if not engagement:
+            # Fallback to icontains for partial/typed input
+            engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
+        return engagement
+    return None
+
 def engagement_details_pdf(request):
     org = request.tenant
-    engagement_name = request.GET.get('engagement_name')
+    engagement_name = request.GET.get('engagement_name') or request.GET.get('q')
     engagement = None
     if engagement_name:
-        engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
+        # Try exact match first, then icontains
+        engagement = Engagement.objects.filter(organization=org, title=engagement_name).first()
+        if not engagement:
+            engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
+    else:
+        # If no filter, show the most recent engagement
+        engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
+    engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_engagement_details.html', {
         'organization': org,
         'engagement': engagement,
+        'engagement_names': engagement_names,
+        'filters': {'engagement_name': engagement_name},
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -412,17 +453,22 @@ def engagement_details_pdf(request):
 
 def engagement_with_issues_pdf(request):
     org = request.tenant
-    engagement_name = request.GET.get('engagement_name')
+    engagement_name = request.GET.get('engagement_name') or request.GET.get('q')
     engagement = None
-    issues = []
     if engagement_name:
-        engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
-        if engagement:
-            issues = engagement.issues.all()
+        engagement = Engagement.objects.filter(organization=org, title=engagement_name).first()
+        if not engagement:
+            engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
+    else:
+        engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
+    issues = engagement.issues.all() if engagement else []
+    engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_engagement_with_issues.html', {
         'organization': org,
         'engagement': engagement,
         'issues': issues,
+        'engagement_names': engagement_names,
+        'filters': {'engagement_name': engagement_name},
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

@@ -103,7 +103,17 @@ class PartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     template_name = 'contracts/party_list.html'
     context_object_name = 'parties'
     def get_queryset(self):
-        return Party.objects.all()
+        qs = Party.objects.all()
+        name = self.request.GET.get('q')
+        if name:
+            qs = qs.filter(name__icontains=name)
+        party_type = self.request.GET.get('type')
+        if party_type:
+            qs = qs.filter(party_type__icontains=party_type)
+        role = self.request.GET.get('role')
+        if role:
+            qs = qs.filter(role__icontains=role)
+        return qs
 
 class PartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = Party

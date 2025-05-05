@@ -6,6 +6,24 @@
         <h2>Compliance Evidences</h2>
         <a href="{% url 'compliance:evidence_create' %}" class="btn btn-primary">Add Evidence</a>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="obligation" placeholder="Obligation" value="{{ request.GET.obligation|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="document" placeholder="Document" value="{{ request.GET.document|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <input type="date" class="form-control" name="validity_start" value="{{ request.GET.validity_start|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <input type="date" class="form-control" name="validity_end" value="{{ request.GET.validity_end|default:'' }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
     <table class="table table-striped table-hover">
         <thead>
             <tr>

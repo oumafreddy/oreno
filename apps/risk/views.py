@@ -52,7 +52,29 @@ class RiskListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.tenant)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(risk_name__icontains=q) | Q(code__icontains=q))
+        owner = self.request.GET.get('owner')
+        if owner:
+            qs = qs.filter(risk_owner__icontains=owner)
+        category = self.request.GET.get('category')
+        if category:
+            qs = qs.filter(category=category)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        min_score = self.request.GET.get('min_score')
+        if min_score:
+            qs = qs.filter(residual_risk_score__gte=min_score)
+        max_score = self.request.GET.get('max_score')
+        if max_score:
+            qs = qs.filter(residual_risk_score__lte=max_score)
+        register = self.request.GET.get('register')
+        if register:
+            qs = qs.filter(risk_register_id=register)
+        return qs
 
 
 class RiskDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
@@ -75,7 +97,14 @@ class RiskRegisterListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.tenant)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(register_name__icontains=q) | Q(code__icontains=q))
+        period = self.request.GET.get('period')
+        if period:
+            qs = qs.filter(register_period__icontains=period)
+        return qs
 
 
 class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
@@ -85,6 +114,8 @@ class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Cr
     success_url = reverse_lazy('risk:riskregister_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -99,6 +130,7 @@ class RiskRegisterUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Up
     success_url = reverse_lazy('risk:riskregister_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -139,6 +171,8 @@ class RiskMatrixConfigCreateView(OrganizationPermissionMixin, LoginRequiredMixin
     success_url = reverse_lazy('risk:riskmatrixconfig_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -153,6 +187,7 @@ class RiskMatrixConfigUpdateView(OrganizationPermissionMixin, LoginRequiredMixin
     success_url = reverse_lazy('risk:riskmatrixconfig_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -183,6 +218,8 @@ class RiskCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView
     success_url = reverse_lazy('risk:risk_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -197,6 +234,7 @@ class RiskUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView
     success_url = reverse_lazy('risk:risk_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -218,7 +256,17 @@ class ControlListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView)
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.tenant)
+        owner = self.request.GET.get('owner')
+        if owner:
+            qs = qs.filter(control_owner__icontains=owner)
+        effectiveness = self.request.GET.get('effectiveness')
+        if effectiveness:
+            qs = qs.filter(effectiveness_rating__iexact=effectiveness)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status__iexact=status)
+        return qs
 
 
 class ControlCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
@@ -242,6 +290,9 @@ class ControlUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateV
     success_url = reverse_lazy('risk:control_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.updated_by = self.request.user
+        if not form.instance.pk:
+            form.instance.created_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -281,7 +332,6 @@ class KRICreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView)
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -295,7 +345,6 @@ class KRIUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView)
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -336,6 +385,8 @@ class RiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     success_url = reverse_lazy('risk:riskassessment_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -350,6 +401,7 @@ class RiskAssessmentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     success_url = reverse_lazy('risk:riskassessment_list')
     def form_valid(self, form):
         form.instance.organization = self.request.tenant
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

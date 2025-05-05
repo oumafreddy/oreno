@@ -9,6 +9,7 @@ from .forms import (
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Q
 
 # CaseType Views
 class CaseTypeListView(OrganizationPermissionMixin, ListView):
@@ -51,6 +52,20 @@ class CaseTypeDeleteView(OrganizationPermissionMixin, DeleteView):
 class LegalPartyListView(OrganizationPermissionMixin, ListView):
     model = LegalParty
     template_name = 'legal/legalparty_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(name__icontains=q)
+        party_type = self.request.GET.get('type')
+        if party_type:
+            qs = qs.filter(party_type__icontains=party_type)
+        role = self.request.GET.get('role')
+        if role:
+            qs = qs.filter(role__icontains=role)
+        return qs
 
 class LegalPartyDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalParty
@@ -85,6 +100,23 @@ class LegalPartyDeleteView(OrganizationPermissionMixin, DeleteView):
 class LegalCaseListView(OrganizationPermissionMixin, ListView):
     model = LegalCase
     template_name = 'legal/legalcase_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(lead_attorney__icontains=q))
+        case_type = self.request.GET.get('type')
+        if case_type:
+            qs = qs.filter(case_type__icontains=case_type)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        priority = self.request.GET.get('priority')
+        if priority:
+            qs = qs.filter(priority=priority)
+        return qs
 
 class LegalCaseDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalCase
@@ -155,6 +187,20 @@ class CasePartyDeleteView(OrganizationPermissionMixin, DeleteView):
 class LegalTaskListView(OrganizationPermissionMixin, ListView):
     model = LegalTask
     template_name = 'legal/legaltask_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(legal_case__title__icontains=q))
+        assigned_to = self.request.GET.get('assigned_to')
+        if assigned_to:
+            qs = qs.filter(assigned_to__icontains=assigned_to)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
 
 class LegalTaskDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalTask
@@ -199,6 +245,20 @@ class LegalTaskDeleteView(OrganizationPermissionMixin, DeleteView):
 class LegalDocumentListView(OrganizationPermissionMixin, ListView):
     model = LegalDocument
     template_name = 'legal/legaldocument_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(legal_case__title__icontains=q))
+        doc_type = self.request.GET.get('type')
+        if doc_type:
+            qs = qs.filter(document_type__icontains=doc_type)
+        uploaded_by = self.request.GET.get('uploaded_by')
+        if uploaded_by:
+            qs = qs.filter(uploaded_by__icontains=uploaded_by)
+        return qs
 
 class LegalDocumentDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalDocument

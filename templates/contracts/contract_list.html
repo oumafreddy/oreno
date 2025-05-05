@@ -6,6 +6,37 @@
         <h2>Contracts</h2>
         <a href="{% url 'contracts:contract-add' %}" class="btn btn-primary">Add Contract</a>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="q" placeholder="Title or Code" value="{{ request.GET.q|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" name="type">
+                <option value="">All Types</option>
+                {% for t in contract_types %}
+                <option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" name="status">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Expired</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="date" class="form-control" name="start" value="{{ request.GET.start|default:'' }}">
+        </div>
+        <div class="col-md-2">
+            <input type="date" class="form-control" name="end" value="{{ request.GET.end|default:'' }}">
+        </div>
+        <div class="col-md-1 d-flex align-items-center">
+            <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+            <a href="?" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
     <table class="table table-striped table-hover">
         <thead>
             <tr>

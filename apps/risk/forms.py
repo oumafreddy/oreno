@@ -23,22 +23,38 @@ class OrganizationScopedModelForm(forms.ModelForm):
 class RiskRegisterForm(OrganizationScopedModelForm):
     class Meta:
         model = RiskRegister
-        fields = '__all__'
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'register_creation_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class RiskMatrixConfigForm(OrganizationScopedModelForm):
     class Meta:
         model = RiskMatrixConfig
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by')
 
 class RiskForm(OrganizationScopedModelForm):
     class Meta:
         model = Risk
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'date_identified': forms.DateInput(attrs={'type': 'date'}),
+            'control_last_review_date': forms.DateInput(attrs={'type': 'date'}),
+            'control_next_review_date': forms.DateInput(attrs={'type': 'date'}),
+            'action_due_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_review_date': forms.DateInput(attrs={'type': 'date'}),
+            'last_reviewed_date': forms.DateInput(attrs={'type': 'date'}),
+            'closure_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class ControlForm(OrganizationScopedModelForm):
     class Meta:
         model = Control
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'last_review_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_review_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class KRIForm(OrganizationScopedModelForm):
     class Meta:
@@ -48,7 +64,10 @@ class KRIForm(OrganizationScopedModelForm):
 class RiskAssessmentForm(OrganizationScopedModelForm):
     class Meta:
         model = RiskAssessment
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 # If any risk forms add direct email/phone fields in the future, use the following pattern:
 # widgets = {'contact_email': EmailInput(attrs={'type': 'email'}), 'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'})} 

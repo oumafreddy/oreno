@@ -99,7 +99,6 @@ LOGGING = {
 if DEBUG_TOOLBAR:
     INSTALLED_APPS += [
         'debug_toolbar',
-        'django_extensions',
     ]
     
     MIDDLEWARE += [
@@ -134,7 +133,6 @@ MIDDLEWARE += [
 
 # Development-specific apps
 INSTALLED_APPS += [
-    'django_extensions',
     'django.contrib.admindocs',
 ]
 
