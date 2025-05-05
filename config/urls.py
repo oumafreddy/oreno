@@ -72,7 +72,7 @@ urlpatterns = [
     path('upload/', include('django_ckeditor_5.urls')),
     
     # Health Check
-    path('health/', lambda r: HttpResponse('OK'), name='health_check'),
+    path('health/', lambda request: HttpResponse('ok'), name='health'),
 
     # Service Paused Info Page
     path('service-paused/', service_paused, name='service_paused'),
