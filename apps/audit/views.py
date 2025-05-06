@@ -23,7 +23,7 @@ from organizations.models import Organization
 from .models import AuditWorkplan, Engagement, Issue, Approval
 from .forms import (
     AuditWorkplanForm, EngagementForm, IssueForm,
-    ApprovalForm
+    ApprovalForm, WorkplanFilterForm, EngagementFilterForm, IssueFilterForm
 )
 
 from rest_framework import generics, permissions, viewsets
@@ -79,13 +79,23 @@ class WorkplanListView(AuditPermissionMixin, ListView):
         queryset = queryset.filter(organization=organization).select_related(
             'created_by', 'updated_by'
         ).prefetch_related('engagements')
-        q = self.request.GET.get('q')
-        if q:
-            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
-        status = self.request.GET.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
+        form = WorkplanFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
+            status = form.cleaned_data.get('status')
+            if status:
+                queryset = queryset.filter(state=status)
+            fiscal_year = form.cleaned_data.get('fiscal_year')
+            if fiscal_year:
+                queryset = queryset.filter(fiscal_year=fiscal_year)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = WorkplanFilterForm(self.request.GET)
+        return context
 
 class WorkplanDetailView(AuditPermissionMixin, DetailView):
     model = AuditWorkplan
@@ -146,16 +156,23 @@ class EngagementListView(AuditPermissionMixin, ListView):
         queryset = queryset.filter(organization=organization).select_related(
             'audit_workplan', 'assigned_to', 'assigned_by'
         ).prefetch_related('issues')
-        q = self.request.GET.get('q')
-        if q:
-            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
-        status = self.request.GET.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
-        owner = self.request.GET.get('owner')
-        if owner:
-            queryset = queryset.filter(assigned_to__icontains=owner)
+        form = EngagementFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                queryset = queryset.filter(Q(title__icontains=q) | Q(code__icontains=q))
+            status = form.cleaned_data.get('status')
+            if status:
+                queryset = queryset.filter(project_status=status)
+            owner = form.cleaned_data.get('owner')
+            if owner:
+                queryset = queryset.filter(assigned_to__email__icontains=owner)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = EngagementFilterForm(self.request.GET)
+        return context
 
 class EngagementDetailView(AuditPermissionMixin, DetailView):
     model = Engagement
@@ -226,16 +243,23 @@ class IssueListView(AuditPermissionMixin, ListView):
         queryset = queryset.filter(organization=organization).select_related(
             'engagement', 'issue_owner'
         )
-        q = self.request.GET.get('q')
-        if q:
-            queryset = queryset.filter(Q(title__icontains=q) | Q(code__icontains=q))
-        status = self.request.GET.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
-        priority = self.request.GET.get('priority')
-        if priority:
-            queryset = queryset.filter(priority=priority)
+        form = IssueFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                queryset = queryset.filter(Q(issue_title__icontains=q) | Q(code__icontains=q))
+            status = form.cleaned_data.get('status')
+            if status:
+                queryset = queryset.filter(issue_status=status)
+            severity = form.cleaned_data.get('severity')
+            if severity:
+                queryset = queryset.filter(severity_status=severity)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = IssueFilterForm(self.request.GET)
+        return context
 
 class IssueDetailView(AuditPermissionMixin, DetailView):
     model = Issue
@@ -375,6 +399,8 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         # Owner workload (engagements assigned)
         owner_workload = engagements.values_list('assigned_to__email', flat=True)
         context['engagement_owner_workload'] = dict(Counter(owner_workload))
+        # Add engagement_names for dashboard dropdowns
+        context['engagement_names'] = list(Engagement.objects.filter(organization=organization).values_list('title', flat=True).distinct().order_by('title'))
         return context
 
 class AuditWorkplanViewSet(viewsets.ModelViewSet):

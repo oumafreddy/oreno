@@ -1,56 +1,35 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
 {% block content %}
-<style>
-.risk-section-title {
-  background: #2563eb;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px;
-  margin-top: 1.5em;
-  margin-bottom: 1em;
-}
-.risk-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 1.5em;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-  padding: 18px 24px;
-}
-.risk-meta-table th {
-  width: 180px;
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #2563eb;
-  border-right: 1px solid #e0e0e0;
-}
-.risk-meta-table td {
-  background: #fff;
-}
-.risk-label {
-  font-weight: bold;
-  color: #2563eb;
-  margin-top: 0.5em;
-  display: block;
-}
-.truncate {
-  max-width: 600px;
-  white-space: pre-line;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-</style>
-<h2 class="risk-section-title">Risk Register - Detailed</h2>
+<!-- PAGE 1: Logo and Title -->
+<div style="text-align:center; margin-top: 80px;">
+  <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
+  <h1 style="margin-top: 30px; color: #2563eb;">Risk Register - Detailed Report</h1>
+</div>
+<div style="page-break-after: always;"></div>
+<!-- PAGE 2: Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="mb-0">
+        {% crispy filter_form %}
+        <button type="submit" class="btn btn-primary">Apply Filter</button>
+        <a href="?download=pdf{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.code %}&code={{ request.GET.code }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-success ms-2">Download PDF</a>
+      </form>
+    </div>
+  </div>
+{% endif %}
+<!-- PAGE 2+: Risk Details -->
 {% for risk in risks %}
-  <div class="risk-card">
+  <div class="risk-card mb-4">
     <table class="table table-sm risk-meta-table mb-3">
-      <tr><th>Risk Code</th><td>{{ risk.code }}</td></tr>
-      <tr><th>Name</th><td>{{ risk.risk_name }}</td></tr>
       <tr><th>Status</th><td>{{ risk.status }}</td></tr>
-      <tr><th>Owner</th><td>{{ risk.risk_owner }}</td></tr>
       <tr><th>Category</th><td>{{ risk.category }}</td></tr>
       <tr><th>Date Identified</th><td>{{ risk.date_identified }}</td></tr>
       <tr><th>Register</th><td>{{ risk.risk_register.register_name }}</td></tr>
+      <tr><th>Risk Code</th><td>{{ risk.code }}</td></tr>
+      <tr><th>Name</th><td>{{ risk.risk_name }}</td></tr>
+      <tr><th>Owner</th><td>{{ risk.risk_owner }}</td></tr>
       <tr><th>Inherent Score</th><td>{{ risk.inherent_risk_score }}</td></tr>
       <tr><th>Residual Score</th><td>{{ risk.residual_risk_score }}</td></tr>
       <tr><th>Appetite</th><td>{{ risk.risk_appetite }}</td></tr>

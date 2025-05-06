@@ -1,57 +1,52 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-  vertical-align: top;
-}
-tr, td, th { page-break-inside: avoid; }
-h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
-.issue-header-table { width: 100%; margin-bottom: 0.2em; border-collapse: collapse; }
-.issue-header-table th, .issue-header-table td { font-size: 12px; padding: 2px 6px; border: 1px solid #e0e0e0; background: #f8f9fa; }
-.issue-section { margin-bottom: 1.2em; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; background: #fff; }
-.issue-label { font-weight: bold; color: #2563eb; margin-top: 0.5em; display: block; }
-.truncate { max-width: 400px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
-.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
-</style>
-<h2 class="section-title">Engagement Details (with Issues)</h2>
+<!-- PAGE 1: Logo and Title -->
+<div style="text-align:center; margin-top: 80px;">
+  <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
+  <h1 style="margin-top: 30px; color: #2563eb;">Audit Engagement With Issues Report</h1>
+</div>
+<div style="page-break-after: always;"></div>
+<!-- PAGE 2+: Engagement and Issues Details -->
 {% if engagement %}
+  <h2 class="section-title">Engagement Details</h2>
   <table class="table table-sm">
-    <tr><th>Engagement</th><td class="truncate">{{ engagement.title }}</td></tr>
     <tr><th>Status</th><td>{{ engagement.get_project_status_display }}</td></tr>
-    <tr><th>Code</th><td>{{ engagement.code }}</td></tr>
-    <tr><th>Workplan</th><td class="truncate">{{ engagement.audit_workplan.name }} ({{ engagement.audit_workplan.fiscal_year }})</td></tr>
     <tr><th>Type</th><td>{{ engagement.engagement_type }}</td></tr>
     <tr><th>Start Date</th><td>{{ engagement.project_start_date }}</td></tr>
     <tr><th>End Date</th><td>{{ engagement.target_end_date }}</td></tr>
+    <tr><th>Engagement</th><td class="truncate">{{ engagement.title }}</td></tr>
+    <tr><th>Code</th><td>{{ engagement.code }}</td></tr>
+    <tr><th>Workplan</th><td class="truncate">{{ engagement.audit_workplan.name }} ({{ engagement.audit_workplan.fiscal_year }})</td></tr>
     <tr><th>Assigned To</th><td>{{ engagement.assigned_to.email }}</td></tr>
-    <tr><th>Executive Summary</th><td class="truncate">{{ engagement.executive_summary|striptags|truncatechars:300 }}</td></tr>
-    <tr><th>Purpose</th><td class="truncate">{{ engagement.purpose|striptags|truncatechars:300 }}</td></tr>
-    <tr><th>Background</th><td class="truncate">{{ engagement.background|striptags|truncatechars:300 }}</td></tr>
-    <tr><th>Scope</th><td class="truncate">{{ engagement.scope|striptags|truncatechars:300 }}</td></tr>
-    <tr><th>Objectives</th><td class="truncate">{{ engagement.project_objectives|striptags|truncatechars:300 }}</td></tr>
-    <tr><th>Conclusion</th><td>{{ engagement.get_conclusion_display }}</td></tr>
-    <tr><th>Conclusion Description</th><td class="truncate">{{ engagement.conclusion_description|striptags|truncatechars:300 }}</td></tr>
   </table>
+  <span class="label">Executive Summary:</span>
+  <div class="truncate">{{ engagement.executive_summary|striptags|truncatechars:300 }}</div>
+  <span class="label">Purpose:</span>
+  <div class="truncate">{{ engagement.purpose|striptags|truncatechars:300 }}</div>
+  <span class="label">Background:</span>
+  <div class="truncate">{{ engagement.background|striptags|truncatechars:300 }}</div>
+  <span class="label">Scope:</span>
+  <div class="truncate">{{ engagement.scope|striptags|truncatechars:300 }}</div>
+  <span class="label">Objectives:</span>
+  <div class="truncate">{{ engagement.project_objectives|striptags|truncatechars:300 }}</div>
+  <span class="label">Conclusion:</span>
+  <div>{{ engagement.get_conclusion_display }}</div>
+  <span class="label">Conclusion Description:</span>
+  <div class="truncate">{{ engagement.conclusion_description|striptags|truncatechars:300 }}</div>
   <h4 class="section-title">Issues</h4>
   {% if issues and issues|length > 0 %}
     {% for issue in issues %}
-      <div class="issue-section">
-        <table class="issue-header-table">
-          <tr>
-            <th>Code</th><td>{{ issue.code }}</td>
-            <th>Title</th><td class="truncate">{{ issue.issue_title }}</td>
-            <th>Status</th><td>{{ issue.get_issue_status_display }}</td>
-            <th>Owner</th><td class="truncate">{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td>
-          </tr>
-          <tr>
-            <th>Remediation Status</th><td>{{ issue.get_remediation_status_display }}</td>
-            <th>Remediation Deadline</th><td>{{ issue.remediation_deadline_date|default:'-' }}</td>
-            <th>Actual Remediation Date</th><td>{{ issue.actual_remediation_date|default:'-' }}</td>
-            <th>Severity</th><td>{{ issue.get_severity_status_display }}</td>
-          </tr>
+      <div class="issue-section mb-4">
+        <table class="table table-sm">
+          <tr><th>Status</th><td>{{ issue.get_issue_status_display }}</td></tr>
+          <tr><th>Severity</th><td>{{ issue.get_severity_status_display }}</td></tr>
+          <tr><th>Remediation Status</th><td>{{ issue.get_remediation_status_display }}</td></tr>
+          <tr><th>Remediation Deadline</th><td>{{ issue.remediation_deadline_date|default:'-' }}</td></tr>
+          <tr><th>Actual Remediation Date</th><td>{{ issue.actual_remediation_date|default:'-' }}</td></tr>
+          <tr><th>Code</th><td>{{ issue.code }}</td></tr>
+          <tr><th>Title</th><td class="truncate">{{ issue.issue_title }}</td></tr>
+          <tr><th>Owner</th><td class="truncate">{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td></tr>
         </table>
         <span class="issue-label">Description:</span>
         <div class="truncate">{{ issue.issue_description|striptags|truncatechars:300 }}</div>

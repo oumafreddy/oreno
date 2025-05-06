@@ -229,3 +229,57 @@ class ApprovalForm(BaseAuditForm):
                 raise forms.ValidationError(_("Invalid object"))
         
         return cleaned_data
+
+class WorkplanFilterForm(forms.Form):
+    q = forms.CharField(label=_('Search'), required=False, widget=forms.TextInput(attrs={'placeholder': 'Name or Code', 'class': 'form-control'}))
+    status = forms.ChoiceField(label=_('Status'), required=False, choices=[('', 'All')] + AuditWorkplan._meta.get_field('state').choices, widget=forms.Select(attrs={'class': 'form-select'}))
+    fiscal_year = forms.IntegerField(label=_('Fiscal Year'), required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 2000, 'max': 2100}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-4'),
+                Column('status', css_class='col-md-3'),
+                Column('fiscal_year', css_class='col-md-3'),
+                Column(Submit('filter', _('Filter'), css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )
+
+class EngagementFilterForm(forms.Form):
+    q = forms.CharField(label=_('Search'), required=False, widget=forms.TextInput(attrs={'placeholder': 'Title or Code', 'class': 'form-control'}))
+    status = forms.ChoiceField(label=_('Status'), required=False, choices=[('', 'All')] + Engagement._meta.get_field('project_status').choices, widget=forms.Select(attrs={'class': 'form-select'}))
+    owner = forms.CharField(label=_('Assigned To'), required=False, widget=forms.TextInput(attrs={'placeholder': 'Owner Email', 'class': 'form-control'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-4'),
+                Column('status', css_class='col-md-3'),
+                Column('owner', css_class='col-md-3'),
+                Column(Submit('filter', _('Filter'), css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )
+
+class IssueFilterForm(forms.Form):
+    q = forms.CharField(label=_('Search'), required=False, widget=forms.TextInput(attrs={'placeholder': 'Title or Code', 'class': 'form-control'}))
+    status = forms.ChoiceField(label=_('Status'), required=False, choices=[('', 'All')] + Issue._meta.get_field('issue_status').choices, widget=forms.Select(attrs={'class': 'form-select'}))
+    severity = forms.ChoiceField(label=_('Severity'), required=False, choices=[('', 'All')] + Issue._meta.get_field('severity_status').choices, widget=forms.Select(attrs={'class': 'form-select'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-4'),
+                Column('status', css_class='col-md-3'),
+                Column('severity', css_class='col-md-3'),
+                Column(Submit('filter', _('Filter'), css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )

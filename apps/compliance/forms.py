@@ -1,6 +1,6 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit
+from crispy_forms.layout import Submit, Layout, Row, Column
 from .models import (
     ComplianceFramework,
     PolicyDocument,
@@ -78,4 +78,20 @@ class ComplianceEvidenceForm(OrganizationScopedModelForm):
         widgets = {
             'validity_start': forms.DateInput(attrs={'type': 'date'}),
             'validity_end': forms.DateInput(attrs={'type': 'date'}),
-        } 
+        }
+
+class PolicyDocumentFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Title or Code', 'class': 'form-control'}))
+    status = forms.ChoiceField(label='Status', required=False, choices=[('', 'All'), ('active', 'Active'), ('archived', 'Archived')], widget=forms.Select(attrs={'class': 'form-select'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-8'),
+                Column('status', css_class='col-md-2'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        ) 

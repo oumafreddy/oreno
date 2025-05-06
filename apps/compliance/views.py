@@ -18,6 +18,7 @@ from .forms import (
     ComplianceRequirementForm,
     ComplianceObligationForm,
     ComplianceEvidenceForm,
+    PolicyDocumentFilterForm,
 )
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
@@ -78,7 +79,27 @@ class ComplianceFrameworkDeleteView(OrganizationPermissionMixin, LoginRequiredMi
 # PolicyDocument Views
 class PolicyDocumentListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = PolicyDocument
-    template_name = 'compliance/policydocument_list.html'  # TODO: create template
+    template_name = 'compliance/policydocument_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.tenant)
+        form = PolicyDocumentFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(Q(title__icontains=q) | Q(version__icontains=q))
+            status = form.cleaned_data.get('status')
+            if status == 'active':
+                qs = qs.filter(is_anonymized=False)
+            elif status == 'archived':
+                qs = qs.filter(is_anonymized=True)
+        return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = PolicyDocumentFilterForm(self.request.GET)
+        return context
 
 class PolicyDocumentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = PolicyDocument

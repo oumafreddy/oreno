@@ -445,6 +445,7 @@ def engagement_details_pdf(request):
         'engagement': engagement,
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
+        'for_pdf': True,  # Always set for PDF context
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -469,6 +470,7 @@ def engagement_with_issues_pdf(request):
         'issues': issues,
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
+        'for_pdf': True,  # Always set for PDF context
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

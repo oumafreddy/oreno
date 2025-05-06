@@ -28,7 +28,7 @@ from .serializers import (
     RecentActivitySerializer, AssessmentTimelinePointSerializer,
     RiskCategoryDistributionSerializer, RiskStatusDistributionSerializer, ControlEffectivenessSerializer, KRIStatusCountSerializer, AssessmentTypeCountSerializer, RiskAssessmentSerializer
 )
-from .forms import RiskRegisterForm, RiskMatrixConfigForm, RiskForm, ControlForm, KRIForm, RiskAssessmentForm
+from .forms import RiskRegisterForm, RiskMatrixConfigForm, RiskForm, ControlForm, KRIForm, RiskAssessmentForm, RiskRegisterFilterForm, RiskMatrixConfigFilterForm
 
 
 @scope(provider=get_current_organization, name="organization")
@@ -98,13 +98,19 @@ class RiskRegisterListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.filter(organization=self.request.tenant)
-        q = self.request.GET.get('q')
-        if q:
-            qs = qs.filter(Q(register_name__icontains=q) | Q(code__icontains=q))
-        period = self.request.GET.get('period')
-        if period:
-            qs = qs.filter(register_period__icontains=period)
+        form = RiskRegisterFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(Q(register_name__icontains=q) | Q(code__icontains=q))
+            period = form.cleaned_data.get('period')
+            if period:
+                qs = qs.filter(register_period__icontains=period)
         return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = RiskRegisterFilterForm(self.request.GET)
+        return context
 
 
 class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
@@ -161,7 +167,22 @@ class RiskMatrixConfigListView(OrganizationPermissionMixin, LoginRequiredMixin, 
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.tenant)
+        form = RiskMatrixConfigFilterForm(self.request.GET)
+        if form.is_valid():
+            name = form.cleaned_data.get('name')
+            if name:
+                qs = qs.filter(name__icontains=name)
+            is_active = form.cleaned_data.get('is_active')
+            if is_active == '1':
+                qs = qs.filter(is_active=True)
+            elif is_active == '0':
+                qs = qs.filter(is_active=False)
+        return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = RiskMatrixConfigFilterForm(self.request.GET)
+        return context
 
 
 class RiskMatrixConfigCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):

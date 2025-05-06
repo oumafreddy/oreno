@@ -1,6 +1,6 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit
+from crispy_forms.layout import Submit, Layout, Row, Column
 from .models import ContractType, Party, Contract, ContractParty, ContractMilestone
 from django.forms import DateInput, EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -62,4 +62,52 @@ class ContractMilestoneForm(OrganizationScopedModelForm):
         widgets = {
             'due_date': DateInput(attrs={'type': 'date'}),
             'completion_date': DateInput(attrs={'type': 'date'}),
-        } 
+        }
+
+class PartyFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name', 'class': 'form-control'}))
+    party_type = forms.CharField(label='Type', required=False, widget=forms.TextInput(attrs={'placeholder': 'Type', 'class': 'form-control'}))
+    role = forms.CharField(label='Role', required=False, widget=forms.TextInput(attrs={'placeholder': 'Role', 'class': 'form-control'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-6'),
+                Column('party_type', css_class='col-md-3'),
+                Column('role', css_class='col-md-3'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )
+
+class ContractTypeFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name', 'class': 'form-control'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-10'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )
+
+class ContractMilestoneFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name or Description', 'class': 'form-control'}))
+    is_completed = forms.ChoiceField(label='Status', required=False, choices=[('', 'All'), ('1', 'Completed'), ('0', 'Pending')], widget=forms.Select(attrs={'class': 'form-select'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-8'),
+                Column('is_completed', css_class='col-md-2'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        ) 

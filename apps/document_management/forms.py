@@ -1,6 +1,6 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit
+from crispy_forms.layout import Submit, Layout, Row, Column
 from .models import DocumentRequest, Document
 from users.models import CustomUser
 from django.forms import EmailInput, DateInput
@@ -55,3 +55,19 @@ class DocumentForm(OrganizationScopedModelForm):
         super().__init__(*args, organization=organization, request=request, **kwargs)
         if self.organization:
             self.fields['uploaded_by'].queryset = CustomUser.objects.filter(organization=self.organization)
+
+class DocumentRequestFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Request Name or Requestee', 'class': 'form-control'}))
+    status = forms.ChoiceField(label='Status', required=False, choices=[('', 'All'), ('pending', 'Pending'), ('submitted', 'Submitted'), ('accepted', 'Accepted'), ('rejected', 'Rejected')], widget=forms.Select(attrs={'class': 'form-select'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-8'),
+                Column('status', css_class='col-md-2'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )

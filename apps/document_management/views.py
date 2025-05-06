@@ -3,7 +3,7 @@ from django.views import View
 from django.utils import timezone
 from django.contrib import messages
 from .models import DocumentRequest, Document
-from .forms import DocumentForm, DocumentRequestForm
+from .forms import DocumentForm, DocumentRequestForm, DocumentRequestFilterForm
 from django.http import Http404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from core.mixins.permissions import OrganizationPermissionMixin
@@ -15,6 +15,7 @@ from django.db.models import Count
 from django.utils.timezone import now, timedelta
 from users.permissions import IsOrgManagerOrReadOnly
 from core.mixins.organization import OrganizationScopedQuerysetMixin
+from django.db.models import Q
 
 class PublicDocumentUploadView(View):
     template_name = 'document_management/public_upload.html'
@@ -57,8 +58,27 @@ class DocumentRequestListView(OrganizationPermissionMixin, ListView):
     model = DocumentRequest
     template_name = 'document_management/documentrequest_list.html'
     context_object_name = 'document_requests'
+    paginate_by = 20
     def get_queryset(self):
-        return DocumentRequest.objects.filter(organization=self.request.user.organization)
+        qs = DocumentRequest.objects.filter(organization=self.request.user.organization)
+        form = DocumentRequestFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(
+                    Q(request_name__icontains=q) |
+                    Q(requestee__email__icontains=q) |
+                    Q(requestee_email__icontains=q) |
+                    Q(requestee_identifier__icontains=q)
+                )
+            status = form.cleaned_data.get('status')
+            if status:
+                qs = qs.filter(status=status)
+        return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = DocumentRequestFilterForm(self.request.GET)
+        return context
 
 class DocumentRequestDetailView(OrganizationPermissionMixin, DetailView):
     model = DocumentRequest

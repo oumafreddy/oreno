@@ -1,6 +1,6 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit
+from crispy_forms.layout import Submit, Layout, Row, Column
 from .models import RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -71,3 +71,35 @@ class RiskAssessmentForm(OrganizationScopedModelForm):
 
 # If any risk forms add direct email/phone fields in the future, use the following pattern:
 # widgets = {'contact_email': EmailInput(attrs={'type': 'email'}), 'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'})} 
+
+class RiskRegisterFilterForm(forms.Form):
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name or Code', 'class': 'form-control'}))
+    period = forms.CharField(label='Period', required=False, widget=forms.TextInput(attrs={'placeholder': 'Period', 'class': 'form-control'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('q', css_class='col-md-6'),
+                Column('period', css_class='col-md-4'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        )
+
+class RiskMatrixConfigFilterForm(forms.Form):
+    name = forms.CharField(label='Name', required=False, widget=forms.TextInput(attrs={'placeholder': 'Matrix Name', 'class': 'form-control'}))
+    is_active = forms.ChoiceField(label='Active', required=False, choices=[('', 'All'), ('1', 'Active'), ('0', 'Inactive')], widget=forms.Select(attrs={'class': 'form-select'}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column('name', css_class='col-md-8'),
+                Column('is_active', css_class='col-md-2'),
+                Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
+            )
+        ) 

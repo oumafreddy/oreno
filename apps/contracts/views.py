@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from core.middleware import get_current_organization
 from core.mixins.permissions import OrganizationPermissionMixin
 from .models import ContractType, Party, Contract, ContractParty, ContractMilestone
-from .forms import ContractTypeForm, PartyForm, ContractForm, ContractPartyForm, ContractMilestoneForm
+from .forms import ContractTypeForm, PartyForm, ContractForm, ContractPartyForm, ContractMilestoneForm, PartyFilterForm, ContractTypeFilterForm, ContractMilestoneFilterForm
 import json
 from django.db.models import Count
 from django.db.models.functions import ExtractYear
@@ -54,8 +54,19 @@ class ContractTypeListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     model = ContractType
     template_name = 'contracts/contracttype_list.html'
     context_object_name = 'contracttypes'
+    paginate_by = 20
     def get_queryset(self):
-        return ContractType.objects.filter(organization=self.request.user.organization)
+        qs = ContractType.objects.filter(organization=self.request.user.organization)
+        form = ContractTypeFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(name__icontains=q)
+        return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = ContractTypeFilterForm(self.request.GET)
+        return context
 
 class ContractTypeDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ContractType
@@ -102,18 +113,25 @@ class PartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = Party
     template_name = 'contracts/party_list.html'
     context_object_name = 'parties'
+    paginate_by = 20
     def get_queryset(self):
         qs = Party.objects.all()
-        name = self.request.GET.get('q')
-        if name:
-            qs = qs.filter(name__icontains=name)
-        party_type = self.request.GET.get('type')
-        if party_type:
-            qs = qs.filter(party_type__icontains=party_type)
-        role = self.request.GET.get('role')
-        if role:
-            qs = qs.filter(role__icontains=role)
+        form = PartyFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(name__icontains=q)
+            party_type = form.cleaned_data.get('party_type')
+            if party_type:
+                qs = qs.filter(party_type__icontains=party_type)
+            role = form.cleaned_data.get('role')
+            if role:
+                qs = qs.filter(role__icontains=role)
         return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = PartyFilterForm(self.request.GET)
+        return context
 
 class PartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = Party
@@ -127,6 +145,10 @@ class PartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateVie
     form_class = PartyForm
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.user.organization
@@ -137,6 +159,9 @@ class PartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateVie
     form_class = PartyForm
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.user.organization
@@ -169,6 +194,8 @@ class ContractCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Create
     success_url = reverse_lazy('contracts:contract-list')
     def form_valid(self, form):
         form.instance.organization = self.request.user.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -182,6 +209,7 @@ class ContractUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Update
     success_url = reverse_lazy('contracts:contract-list')
     def form_valid(self, form):
         form.instance.organization = self.request.user.organization
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -232,8 +260,24 @@ class ContractMilestoneListView(OrganizationPermissionMixin, LoginRequiredMixin,
     model = ContractMilestone
     template_name = 'contracts/contractmilestone_list.html'
     context_object_name = 'contractmilestones'
+    paginate_by = 20
     def get_queryset(self):
-        return ContractMilestone.objects.filter(organization=self.request.user.organization)
+        qs = ContractMilestone.objects.filter(organization=self.request.user.organization)
+        form = ContractMilestoneFilterForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data.get('q')
+            if q:
+                qs = qs.filter(name__icontains=q)
+            is_completed = form.cleaned_data.get('is_completed')
+            if is_completed == '1':
+                qs = qs.filter(is_completed=True)
+            elif is_completed == '0':
+                qs = qs.filter(is_completed=False)
+        return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = ContractMilestoneFilterForm(self.request.GET)
+        return context
 
 class ContractMilestoneDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ContractMilestone
@@ -249,6 +293,8 @@ class ContractMilestoneCreateView(OrganizationPermissionMixin, LoginRequiredMixi
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def form_valid(self, form):
         form.instance.organization = self.request.user.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -262,6 +308,7 @@ class ContractMilestoneUpdateView(OrganizationPermissionMixin, LoginRequiredMixi
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def form_valid(self, form):
         form.instance.organization = self.request.user.organization
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
