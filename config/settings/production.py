@@ -209,3 +209,24 @@ sentry_sdk.init(
     traces_sample_rate=0.1,
     send_default_pii=False,
 )
+
+# For local development/testing, allow .localhost tenant domains
+LOCAL_TENANT_DOMAINS = [
+    'org001.localhost',
+    'org002.localhost',
+    'org003.localhost',
+    'org004.localhost',
+    'org005.localhost',
+    'krcs.localhost',
+    'oreno.localhost',
+]
+
+if DEBUG or any(domain.endswith('.localhost') for domain in ALLOWED_HOSTS):
+    for domain in LOCAL_TENANT_DOMAINS:
+        if domain not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(domain)
+    for domain in LOCAL_TENANT_DOMAINS:
+        CSRF_TRUSTED_ORIGINS.extend([
+            f'http://{domain}',
+            f'https://{domain}',
+        ])

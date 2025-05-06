@@ -46,6 +46,29 @@ for host in ALLOWED_HOSTS:
             f'https://{host}'
         ])
 
+# Add custom local domains for multi-tenant local development
+LOCAL_TENANT_DOMAINS = [
+    'org001.localhost',
+    'org002.localhost',
+    'org003.localhost',
+    'org004.localhost',
+    'org005.localhost',
+    'krcs.localhost',
+    'oreno.localhost',
+]
+
+# Ensure these are in ALLOWED_HOSTS
+for domain in LOCAL_TENANT_DOMAINS:
+    if domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(domain)
+
+# Ensure these are in CSRF_TRUSTED_ORIGINS with both http and https
+for domain in LOCAL_TENANT_DOMAINS:
+    CSRF_TRUSTED_ORIGINS.extend([
+        f'http://{domain}',
+        f'https://{domain}',
+    ])
+
 # ------------------------------------------------------------------------------
 # Installed Applications
 # ------------------------------------------------------------------------------
@@ -222,8 +245,8 @@ DATABASES = {
         # use the same vars you put in .env
         'USER':     os.getenv('DB_USER',   ''),
         'PASSWORD': os.getenv('DB_PASS',   ''),
-        'HOST':     os.getenv('DB_HOST',   ''),
-        'PORT':     os.getenv('DB_PORT',   ''),
+        'HOST':     os.getenv('DB_HOST',   'db'),
+        'PORT':     os.getenv('DB_PORT',   '5432'),
         'CONN_MAX_AGE': 60 if not DEBUG else 0,
         'OPTIONS': {
             'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),

@@ -47,9 +47,9 @@ TENANT_DB_USER = os.getenv('DB_USER', ' ')
 # Database password for tenant schemas
 TENANT_DB_PASSWORD = os.getenv('DB_PASS', ' ')
 # Database host for tenant schemas
-TENANT_DB_HOST = os.getenv('DB_HOST', ' ')
+TENANT_DB_HOST = os.getenv('DB_HOST', 'db')
 # Database port for tenant schemas
-TENANT_DB_PORT = os.getenv('DB_PORT', ' ')
+TENANT_DB_PORT = os.getenv('DB_PORT', '5432')
 
 # ------------------------------------------------------------------------------
 # Shared Apps (public schema only)

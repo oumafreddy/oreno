@@ -12,10 +12,9 @@ TEMPLATE_DEBUG = DEBUG
 DEBUG_TOOLBAR = True
 
 # Security settings for development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'krcs', 'oreno', '[::1]']
+# ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS are set in base.py with LOCAL_TENANT_DOMAINS logic
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://krcs', 'http://oreno']
 
 # Email settings for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

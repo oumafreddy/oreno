@@ -7,6 +7,12 @@
         <div class="col">
             <h2 class="mb-0">Contracts Dashboard</h2>
         </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'contracts:contract-add' %}" class="btn btn-primary me-2">Create Contract</a>
+            <a href="{% url 'contracts:party-add' %}" class="btn btn-outline-info me-2">Add Party</a>
+            <a href="{% url 'contracts:contracttype-add' %}" class="btn btn-outline-dark me-2">Add Contract Type</a>
+            <a href="{% url 'contracts:contractmilestone-add' %}" class="btn btn-outline-warning">Add Milestone</a>
+        </div>
     </div>
     <!-- Advanced Analytics Cards (top) -->
     <div class="row mb-4 g-3">

@@ -8,6 +8,13 @@
         <div class="col">
             <h2 class="mb-0">Legal Management Dashboard</h2>
         </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'legal:legalcase_create' %}" class="btn btn-primary me-2">Add Case</a>
+            <a href="{% url 'legal:legaldocument_create' %}" class="btn btn-outline-info me-2">Add Document</a>
+            <a href="{% url 'legal:legaltask_create' %}" class="btn btn-outline-warning me-2">Add Task</a>
+            <a href="{% url 'legal:legalparty_create' %}" class="btn btn-outline-success me-2">Add Party</a>
+            <a href="{% url 'legal:casetype_create' %}" class="btn btn-outline-dark">Add Case Type</a>
+        </div>
     </div>
     <div class="container py-4">
       <!-- Charts Row (moved up) -->

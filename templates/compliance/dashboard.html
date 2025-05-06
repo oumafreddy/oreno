@@ -6,6 +6,13 @@
         <div class="col">
             <h2 class="mb-0">Compliance Dashboard</h2>
         </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'compliance:framework_create' %}" class="btn btn-primary me-2">Add Framework</a>
+            <a href="{% url 'compliance:requirement_create' %}" class="btn btn-outline-success me-2">Add Requirement</a>
+            <a href="{% url 'compliance:obligation_create' %}" class="btn btn-outline-warning me-2">Add Obligation</a>
+            <a href="{% url 'compliance:evidence_create' %}" class="btn btn-outline-info me-2">Add Evidence</a>
+            <a href="{% url 'compliance:policydocument_create' %}" class="btn btn-outline-secondary">Add Policy Document</a>
+        </div>
     </div>
     <!-- Advanced Analytics Cards (top) -->
     <div class="row mb-4 g-3">
