@@ -9,11 +9,11 @@
             <h2 class="mb-0">Legal Management Dashboard</h2>
         </div>
         <div class="col-auto ms-auto">
-            <a href="{% url 'legal:legalcase_create' %}" class="btn btn-primary me-2">Add Case</a>
-            <a href="{% url 'legal:legaldocument_create' %}" class="btn btn-outline-info me-2">Add Document</a>
-            <a href="{% url 'legal:legaltask_create' %}" class="btn btn-outline-warning me-2">Add Task</a>
-            <a href="{% url 'legal:legalparty_create' %}" class="btn btn-outline-success me-2">Add Party</a>
-            <a href="{% url 'legal:casetype_create' %}" class="btn btn-outline-dark">Add Case Type</a>
+            <a href="{% url 'legal:legalcase_list' %}" class="btn btn-primary me-2">Case List</a>
+            <a href="{% url 'legal:legaldocument_list' %}" class="btn btn-outline-info me-2">Document List</a>
+            <a href="{% url 'legal:legaltask_list' %}" class="btn btn-outline-success">Task List</a>
+            <a href="{% url 'legal:legalparty_list' %}" class="btn btn-outline-success me-2">Party List</a>
+            <a href="{% url 'legal:casetype_list' %}" class="btn btn-outline-dark">Case Type List</a>
         </div>
     </div>
     <div class="container py-4">

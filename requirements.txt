@@ -143,7 +143,6 @@ parso==0.8.4
 pdfminer.six==20231228
 pdfplumber==0.11.5
 pillow==11.1.0
-pip==25.1.1
 pipdeptree==2.26.0
 pkginfo==1.12.0
 platformdirs==4.3.6
@@ -217,8 +216,8 @@ tomlkit==0.13.2
 tqdm==4.67.1
 traitlets==5.14.3
 trove-classifiers==2025.1.15.22
-typing_extensions==4.12.2
 typing-inspection==0.4.0
+typing_extensions==4.12.2
 tzdata==2024.2
 tzlocal==5.3.1
 uritemplate==4.1.1

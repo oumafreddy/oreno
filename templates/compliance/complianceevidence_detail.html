@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Evidence for Obligation: {{ object.obligation }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Evidence for Obligation: {{ object.obligation }}</h2>
+    <dl class="row">
+        <dt class="col-sm-3">Obligation</dt><dd class="col-sm-9">{{ object.obligation }}</dd>
+        <dt class="col-sm-3">Document</dt><dd class="col-sm-9">{{ object.document }}</dd>
+        <dt class="col-sm-3">Validity Start</dt><dd class="col-sm-9">{{ object.validity_start }}</dd>
+        <dt class="col-sm-3">Validity End</dt><dd class="col-sm-9">{{ object.validity_end }}</dd>
+        <dt class="col-sm-3">Notes</dt><dd class="col-sm-9">{{ object.notes|safe }}</dd>
+    </dl>
+    <a href="{% url 'compliance:evidence_update' object.pk %}" class="btn btn-warning">Edit</a>
+    <a href="{% url 'compliance:evidence_delete' object.pk %}" class="btn btn-danger">Delete</a>
+    <a href="{% url 'compliance:evidence_list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %} 

@@ -6,7 +6,7 @@
     <div class="row mb-3">
         <div class="col">
             <h2>Contract Milestones</h2>
-            <a href="{% url 'contracts:contractmilestone-create' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Milestone</a>
+            <a href="{% url 'contracts:contractmilestone-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Milestone</a>
         </div>
     </div>
     <div class="card">
@@ -34,7 +34,7 @@
                         <td>{{ ms.due_date }}</td>
                         <td>
                             <a href="{% url 'contracts:contractmilestone-detail' ms.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
-                            <a href="{% url 'contracts:contractmilestone-update' ms.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'contracts:contractmilestone-edit' ms.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'contracts:contractmilestone-delete' ms.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                         </td>
                     </tr>

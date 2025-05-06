@@ -29,7 +29,7 @@ class PartyForm(OrganizationScopedModelForm):
     phone_validator = RegexValidator(r'^[\d\+\-]+$', 'Enter a valid phone number (digits, +, - only).')
     class Meta:
         model = Party
-        fields = '__all__'
+        exclude = ('created_by', 'updated_by', 'organization',)
         widgets = {
             'contact_email': EmailInput(attrs={'type': 'email'}),
             'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'}),
@@ -43,7 +43,7 @@ class PartyForm(OrganizationScopedModelForm):
 class ContractForm(OrganizationScopedModelForm):
     class Meta:
         model = Contract
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by',)
         widgets = {
             'start_date': DateInput(attrs={'type': 'date'}),
             'end_date': DateInput(attrs={'type': 'date'}),
@@ -58,7 +58,7 @@ class ContractPartyForm(forms.ModelForm):
 class ContractMilestoneForm(OrganizationScopedModelForm):
     class Meta:
         model = ContractMilestone
-        exclude = ('organization',)
+        exclude = ('organization', 'created_by', 'updated_by',)
         widgets = {
             'due_date': DateInput(attrs={'type': 'date'}),
             'completion_date': DateInput(attrs={'type': 'date'}),

@@ -9,9 +9,9 @@
             <h2 class="mb-0">Audit Dashboard</h2>
         </div>
         <div class="col-auto ms-auto">
-            <a href="{% url 'audit:workplan-create' %}" class="btn btn-primary me-2">Add Workplan</a>
-            <a href="{% url 'audit:engagement-create' %}" class="btn btn-outline-success me-2">Add Engagement</a>
-            <a href="{% url 'audit:issue-create' %}" class="btn btn-outline-danger me-2">Add Issue</a>
+            <a href="{% url 'audit:workplan-list' %}" class="btn btn-primary me-2">Workplan List</a>
+            <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-success me-2">Engagement List</a>
+            <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-danger me-2">Issue List</a>
         </div>
     </div>
     <!-- Advanced Analytics Cards (top) -->
@@ -508,7 +508,7 @@ Plotly.newPlot('approval-status-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Engagement Owner Workload Bar Chart
-const ownerWorkload = {{ engagement_owner_workload|safe }};
+const ownerWorkload = JSON.parse(document.getElementById('owner-workload-data').textContent);
 Plotly.newPlot('owner-workload-chart', [{
     x: Object.keys(ownerWorkload),
     y: Object.values(ownerWorkload),

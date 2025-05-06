@@ -4,7 +4,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Contract Parties</h2>
-        <a href="{% url 'contracts:contractparty-add' %}" class="btn btn-primary">Add Contract Party</a>
+        <a href="{% url 'contracts:contractparty-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Contract Party</a>
     </div>
     <table class="table table-striped table-hover">
         <thead>
@@ -24,9 +24,9 @@
                 <td>{% if contractparty.is_primary_party %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
                 <td>{{ contractparty.role_in_contract }}</td>
                 <td>
-                    <a href="{% url 'contracts:contractparty-detail' contractparty.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                    <a href="{% url 'contracts:contractparty-edit' contractparty.pk %}" class="btn btn-sm btn-outline-info">Edit</a>
-                    <a href="{% url 'contracts:contractparty-delete' contractparty.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    <a href="{% url 'contracts:contractparty-detail' contractparty.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'contracts:contractparty-edit' contractparty.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'contracts:contractparty-delete' contractparty.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                 </td>
             </tr>
             {% empty %}

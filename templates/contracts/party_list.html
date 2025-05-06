@@ -6,7 +6,7 @@
     <div class="row mb-3">
         <div class="col">
             <h2>Parties</h2>
-            <a href="{% url 'contracts:party-create' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Party</a>
+            <a href="{% url 'contracts:party-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Party</a>
         </div>
     </div>
     <div class="card">
@@ -36,7 +36,7 @@
                         <td>{{ party.phone }}</td>
                         <td>
                             <a href="{% url 'contracts:party-detail' party.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
-                            <a href="{% url 'contracts:party-update' party.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'contracts:party-edit' party.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                             <a href="{% url 'contracts:party-delete' party.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                         </td>
                     </tr>
