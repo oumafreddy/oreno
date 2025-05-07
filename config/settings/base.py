@@ -12,7 +12,7 @@ from django.urls import reverse_lazy
 # Base Directory & Environment Loading
 # ------------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env.oreno')
 APPS_DIR = BASE_DIR / 'apps'
 sys.path.insert(0, str(APPS_DIR))  # Allow imports from apps/ without prefix
 
