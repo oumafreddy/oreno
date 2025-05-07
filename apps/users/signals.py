@@ -36,18 +36,23 @@ def create_user_related_profiles(sender, instance, created, **kwargs):
     Also handles organization context and welcome email.
     """
     if created:
+        # Use a transaction block for DB-related operations (profile and OTP creation)
         with transaction.atomic():
             # Create the one-to-one Profile
             Profile.objects.create(user=instance)
 
-            # Generate an OTP for email verification
+            # Generate an OTP for email verification (but not inside transaction block)
             OTP.objects.create(user=instance)
 
-            # Send welcome email asynchronously
-            send_welcome_email.delay(instance.id, instance.email, instance.username)
+        # After DB changes are committed, handle async tasks independently
+        # Send welcome email asynchronously outside the transaction block
+        send_welcome_email.delay(instance.id, instance.email, instance.username)
 
-            # Clear any cached user data
-            safe_delete_pattern(f'user_{instance.id}_*')
+        # Cleanup OTPs asynchronously, outside transaction
+        cleanup_old_otps.delay(instance.user.id)
+
+        # Clear any cached user data
+        safe_delete_pattern(f'user_{instance.id}_*')
 
 @receiver(pre_save, sender=User)
 def handle_user_state_changes(sender, instance, **kwargs):
