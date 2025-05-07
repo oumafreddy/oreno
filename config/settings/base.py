@@ -245,7 +245,7 @@ DATABASES = {
         # use the same vars you put in .env
         'USER':     os.getenv('DB_USER',   ''),
         'PASSWORD': os.getenv('DB_PASS',   ''),
-        'HOST':     os.getenv('DB_HOST',   'db'),
+        'HOST':     os.getenv('DB_HOST',   ''),
         'PORT':     os.getenv('DB_PORT',   '5432'),
         'CONN_MAX_AGE': 60 if not DEBUG else 0,
         'OPTIONS': {
