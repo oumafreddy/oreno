@@ -1,7 +1,7 @@
 # apps/users/tests/test_otp.py
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from apps.users.models import OTP
+from users.models import OTP
 from django.core.exceptions import ValidationError
 
 User = get_user_model()

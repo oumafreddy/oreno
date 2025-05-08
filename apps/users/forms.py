@@ -8,7 +8,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHolder
 from crispy_bootstrap5.bootstrap5 import FloatingField
 
-from .models import CustomUser, Profile, OrganizationRole
+from users.models import CustomUser, Profile, OrganizationRole
 
 class BaseUserForm(forms.ModelForm):
     """Base form with common functionality for user-related forms"""

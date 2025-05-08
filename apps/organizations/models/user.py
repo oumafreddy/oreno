@@ -15,7 +15,7 @@ class OrganizationUser(models.Model):
         related_name='organization_memberships'
     )
     organization = models.ForeignKey(
-        'Organization',
+        'organizations.Organization',
         on_delete=models.CASCADE,
         related_name='members'
     )

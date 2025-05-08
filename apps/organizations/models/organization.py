@@ -8,7 +8,7 @@ from django.core.validators import RegexValidator
 from django.db.utils import ProgrammingError, OperationalError
 
 from core.models.abstract_models import AuditableModel  # Inherits TimeStampedModel
-from apps.core.mixins import AuditMixin, OrganizationMixin
+from core.mixins import AuditMixin, OrganizationMixin
 from .settings import OrganizationSettings
 
 

@@ -2,6 +2,7 @@
 from django.apps import AppConfig
 
 class AdminModuleConfig(AppConfig):
-    name = 'admin_module'        # if using sys.path hack and __init__.py added
+    name = 'admin_module'
+    verbose_name = "Admin Module"
     # …or…
     # name = 'apps.core'  # if you prefer fully qualified imports without altering sys.path

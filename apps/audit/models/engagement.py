@@ -11,7 +11,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from core.mixins.state import ApprovalStateMixin
-from audit.models.workplan import AuditWorkplan
+from .workplan import AuditWorkplan
 
 @reversion.register()
 class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):

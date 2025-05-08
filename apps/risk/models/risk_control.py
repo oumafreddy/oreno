@@ -1,5 +1,7 @@
 from django.db import models
 from .choices import CONTROL_RATING_CHOICES
+from .risk import Risk
+from .control import Control
 
 class RiskControl(models.Model):
     """Junction model for the many-to-many relationship between Risk and Control."""

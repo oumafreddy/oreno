@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from reversion.admin import VersionAdmin
 
-from .models import CustomUser, Profile, OTP, OrganizationRole
+from users.models import CustomUser, Profile, OTP, OrganizationRole
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin, VersionAdmin):

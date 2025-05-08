@@ -63,6 +63,7 @@ class OrganizationSettings(OrganizationOwnedModel, AuditableModel):
                 name='organization_required_organizationsettings'
             )
         ]
+        app_label = 'organizations'
     
     def __str__(self):
         return f"Settings for {self.organization.name}"

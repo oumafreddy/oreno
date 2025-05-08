@@ -14,6 +14,7 @@ from core.models.validators import validate_file_extension, validate_file_size
 from django.conf import settings
 from organizations.models import Organization
 from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel, AuditableModel
+from compliance.models import ComplianceObligation
 
 # ----------------------
 # CONTRACTS MANAGEMENT (Legal Unit)

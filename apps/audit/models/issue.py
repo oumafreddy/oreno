@@ -11,7 +11,7 @@ from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.contenttypes.fields import GenericRelation
 
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
-from audit.models.engagement import Engagement
+from .engagement import Engagement
 from core.models.validators import validate_file_extension, validate_file_size
 
 @reversion.register()

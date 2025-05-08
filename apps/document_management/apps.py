@@ -2,7 +2,8 @@
 from django.apps import AppConfig
 
 class DocumentManagementConfig(AppConfig):
-    name = 'document_management'        # if using sys.path hack and __init__.py added
+    name = 'document_management'
+    verbose_name = "Document Management"
     # …or…
     # name = 'apps.core'  # if you prefer fully qualified imports without altering sys.path
 

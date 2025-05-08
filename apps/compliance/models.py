@@ -9,6 +9,7 @@ from core.models.validators import validate_file_extension, validate_file_size
 from organizations.models import Organization
 from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel, AuditableModel
 from django.contrib.auth import get_user_model
+from risk.models import Risk
 
 # ----------------------
 # COMPLIANCE MANAGEMENT (Risk Unit)

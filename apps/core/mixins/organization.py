@@ -8,7 +8,7 @@ class OrganizationMixin(models.Model):
     A mixin that adds organization-related fields and methods to a model.
     """
     organization = models.ForeignKey(
-        'users.Organization',
+        'apps.users.Organization',
         on_delete=models.CASCADE,
         related_name='%(class)ss',
         help_text='The organization this record belongs to'

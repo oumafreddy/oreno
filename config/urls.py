@@ -18,7 +18,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from apps.common.views import service_paused
+from common.views import service_paused
 from core.views import AIAssistantAPIView
 
 # Define a simple home view

@@ -49,7 +49,7 @@ def create_user_related_profiles(sender, instance, created, **kwargs):
         send_welcome_email.delay(instance.id, instance.email, instance.username)
 
         # Cleanup OTPs asynchronously, outside transaction
-        cleanup_old_otps.delay(instance.user.id)
+        cleanup_old_otps.delay(instance.id)
 
         # Clear any cached user data
         safe_delete_pattern(f'user_{instance.id}_*')

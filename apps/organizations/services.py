@@ -13,7 +13,7 @@ from .models import (
 )
 
 # import the CustomUser model
-from apps.users.models import CustomUser
+from users.models import CustomUser
 
 def create_organization(data, created_by):
     """

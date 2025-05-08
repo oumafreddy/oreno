@@ -124,12 +124,9 @@ class CustomUser(AbstractUser):
         """
         if self.is_superuser:
             return True
-            
         # Check if user has admin/manager role in the organization
         if self.has_org_admin_access(organization):
             return True
-            
-        # Check for specific audit permissions
         from organizations.models import OrganizationUser
         return OrganizationUser.objects.filter(
             user=self,
