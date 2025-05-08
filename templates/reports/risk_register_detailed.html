@@ -3,7 +3,9 @@
 {% block content %}
 <!-- PAGE 1: Logo and Title -->
 <div style="text-align:center; margin-top: 80px;">
-  <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
+  {% if organization.logo and organization.logo.url %}
+    <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
+  {% endif %}
   <h1 style="margin-top: 30px; color: #2563eb;">Risk Register - Detailed Report</h1>
 </div>
 <div style="page-break-after: always;"></div>
@@ -12,7 +14,9 @@
   <div class="card mb-4">
     <div class="card-body">
       <form method="get" class="mb-0">
-        {% crispy filter_form %}
+        {% if filter_form %}
+          {% crispy filter_form %}
+        {% endif %}
         <button type="submit" class="btn btn-primary">Apply Filter</button>
         <a href="?download=pdf{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.code %}&code={{ request.GET.code }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-success ms-2">Download PDF</a>
       </form>

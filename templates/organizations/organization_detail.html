@@ -49,7 +49,7 @@
       {% endif %}
     </div>
     <div class="col-md-4">
-      {% if organization.logo %}
+      {% if organization.logo and organization.logo.url %}
         <img src="{{ organization.logo.url }}" class="img-fluid rounded shadow-sm mb-3" alt="Logo">
       {% else %}
         <div class="text-muted text-center mb-3">No logo uploaded</div>

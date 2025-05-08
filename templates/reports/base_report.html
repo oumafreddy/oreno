@@ -13,7 +13,7 @@
 </head>
 <body>
   <div class="header">
-    {% if organization.logo %}
+    {% if organization.logo and organization.logo.url %}
       <img src="{{ organization.logo.url }}" class="logo" alt="Logo">
     {% endif %}
     <h1>{{ title }}</h1>
