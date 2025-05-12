@@ -22,7 +22,7 @@
             <strong>Please correct the errors below:</strong>
           </div>
         {% endif %}
-        <form method="post" enctype="multipart/form-data" novalidate>
+        <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}">
           {% csrf_token %}
           {{ form|crispy }}
           <div class="text-end mt-3">
@@ -30,6 +30,9 @@
             <a href="{% url 'audit:issue-list' %}" class="btn btn-secondary ms-2">Cancel</a>
           </div>
         </form>
+        <div class="alert alert-info mt-3">
+          <i class="bi bi-info-circle"></i> You can upload working papers after saving the issue.
+        </div>
       </div>
     </div>
   </div>

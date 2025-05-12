@@ -9,6 +9,10 @@ from django.conf import settings
 
 from .models import AuditWorkplan, Engagement, Issue, Approval
 from core.mixins.state import PENDING, APPROVED, REJECTED
+from .models.note import Note
+from .models.issue_working_paper import IssueWorkingPaper
+from core.models.validators import validate_file_virus
+from core.signals import log_change
 
 # ─── NOTIFICATION TASKS ──────────────────────────────────────────────────────
 @shared_task
@@ -210,3 +214,49 @@ def archive_completed_engagements(days=90):
         project_status='closed',
         updated_at__lt=cutoff_date
     ).update(is_archived=True)
+
+@shared_task
+def send_note_notification(note_id):
+    note = Note.objects.get(pk=note_id)
+    if note.user and note.user.email:
+        send_mail(
+            subject="You have a new review note",
+            message=note.content,
+            from_email="noreply@yourdomain.com",
+            recipient_list=[note.user.email]
+        )
+
+# ─── ISSUE WORKING PAPER TASKS ───────────────────────────────────────────────
+@shared_task
+def process_issue_working_paper_upload(issue_working_paper_id):
+    """
+    Async processing of uploaded working papers: virus scan, audit log, notification.
+    """
+    try:
+        working_paper = IssueWorkingPaper.objects.get(pk=issue_working_paper_id)
+        file = working_paper.file
+        user = getattr(working_paper, 'created_by', None)
+        # Virus scan
+        try:
+            validate_file_virus(file)
+            scan_result = 'clean'
+        except Exception as e:
+            scan_result = f'virus_detected: {str(e)}'
+            # Log virus detection
+            log_change(working_paper, 'update', changes={'virus_scan': scan_result}, user=user)
+            # Optionally notify admin or security team
+            return
+        # Log successful scan
+        log_change(working_paper, 'update', changes={'virus_scan': scan_result}, user=user)
+        # Notify issue owner
+        issue = getattr(working_paper, 'issue', None)
+        if issue and issue.issue_owner and issue.issue_owner.email:
+            send_mail(
+                subject=f"Working Paper Virus Scan Result for Issue: {issue.issue_title}",
+                message=f"The uploaded working paper for issue '{issue.issue_title}' has been scanned and is {scan_result}.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[issue.issue_owner.email],
+                fail_silently=True,
+            )
+    except IssueWorkingPaper.DoesNotExist:
+        pass

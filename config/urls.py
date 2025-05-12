@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import (
 )
 from common.views import service_paused
 from core.views import AIAssistantAPIView
+from audit import views as audit_views
 
 # Define a simple home view
 def home(request):
@@ -56,6 +57,10 @@ urlpatterns = [
     path('api/risk/', include(('risk.urls', 'risk'), namespace='risk-api')),
     path('api/legal/', include(('legal.urls', 'legal'), namespace='legal-api')),
     path('api/ai/ask/', AIAssistantAPIView.as_view(), name='ai-assistant-ask'),
+    path('api/engagements/', audit_views.api_engagements, name='api-engagements'),
+    path('api/objectives/', audit_views.api_objectives, name='api-objectives'),
+    path('api/issues/', audit_views.api_issues, name='api-issues'),
+    path('api/recommendations/', audit_views.api_recommendations, name='api-recommendations'),
     
     # Web UI URLs
     path('', home, name='home'),

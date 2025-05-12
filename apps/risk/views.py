@@ -725,8 +725,6 @@ def api_risk_advanced_filter(request):
     owner = request.GET.get('owner')
     category = request.GET.get('category')
     status = request.GET.get('status')
-    min_score = request.GET.get('min_score')
-    max_score = request.GET.get('max_score')
     register = request.GET.get('register')
     if owner:
         qs = qs.filter(risk_owner__icontains=owner)
@@ -734,10 +732,6 @@ def api_risk_advanced_filter(request):
         qs = qs.filter(category=category)
     if status:
         qs = qs.filter(status=status)
-    if min_score:
-        qs = qs.filter(residual_risk_score__gte=min_score)
-    if max_score:
-        qs = qs.filter(residual_risk_score__lte=max_score)
     if register:
         qs = qs.filter(risk_register_id=register)
     # Pagination

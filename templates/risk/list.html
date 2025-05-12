@@ -483,6 +483,16 @@
       </div>
     </div>
 </div>
+
+<!-- Inject JSON data for JS -->
+{{ risk_category_dist|json_script:"risk-category-data" }}
+{{ risk_status_dist|json_script:"risk-status-data" }}
+{{ risk_owner_dist|json_script:"risk-owner-data" }}
+{{ risk_register_dist|json_script:"risk-register-data" }}
+{{ kri_status_dist|json_script:"kri-status-data" }}
+{{ control_effectiveness_dist|json_script:"control-effectiveness-data" }}
+{{ risk_trend|json_script:"risk-trend-data" }}
+
 <!-- Plotly.js for charts -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
@@ -506,7 +516,7 @@ if (regSelect) {
     });
 }
 // Risk Category Pie Chart
-const riskCategory = {{ risk_category_dist|safe }};
+const riskCategory = JSON.parse(document.getElementById('risk-category-data').textContent);
 Plotly.newPlot('risk-category-chart', [{
     labels: Object.keys(riskCategory),
     values: Object.values(riskCategory),
@@ -515,7 +525,7 @@ Plotly.newPlot('risk-category-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Risk Status Pie Chart
-const riskStatus = {{ risk_status_dist|safe }};
+const riskStatus = JSON.parse(document.getElementById('risk-status-data').textContent);
 Plotly.newPlot('risk-status-chart', [{
     labels: Object.keys(riskStatus),
     values: Object.values(riskStatus),
@@ -524,7 +534,7 @@ Plotly.newPlot('risk-status-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Risk Owner Pie Chart
-const riskOwner = {{ risk_owner_dist|safe }};
+const riskOwner = JSON.parse(document.getElementById('risk-owner-data').textContent);
 Plotly.newPlot('risk-owner-chart', [{
     labels: Object.keys(riskOwner),
     values: Object.values(riskOwner),
@@ -533,7 +543,7 @@ Plotly.newPlot('risk-owner-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Risk Register Pie Chart
-const riskRegister = {{ risk_register_dist|safe }};
+const riskRegister = JSON.parse(document.getElementById('risk-register-data').textContent);
 Plotly.newPlot('risk-register-chart', [{
     labels: Object.keys(riskRegister),
     values: Object.values(riskRegister),
@@ -542,7 +552,7 @@ Plotly.newPlot('risk-register-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // KRI Status Pie Chart
-const kriStatus = {{ kri_status_dist|safe }};
+const kriStatus = JSON.parse(document.getElementById('kri-status-data').textContent);
 Plotly.newPlot('kri-status-chart', [{
     labels: Object.keys(kriStatus),
     values: Object.values(kriStatus),
@@ -551,7 +561,7 @@ Plotly.newPlot('kri-status-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Control Effectiveness Pie Chart
-const controlEffectiveness = {{ control_effectiveness_dist|safe }};
+const controlEffectiveness = JSON.parse(document.getElementById('control-effectiveness-data').textContent);
 Plotly.newPlot('control-effectiveness-chart', [{
     labels: Object.keys(controlEffectiveness),
     values: Object.values(controlEffectiveness),
@@ -560,7 +570,7 @@ Plotly.newPlot('control-effectiveness-chart', [{
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
 // Risk Trend Line Chart
-const riskTrend = {{ risk_trend|safe }};
+const riskTrend = JSON.parse(document.getElementById('risk-trend-data').textContent);
 Plotly.newPlot('risk-trend-chart', [{
     x: riskTrend.map(r => r.month),
     y: riskTrend.map(r => r.count),

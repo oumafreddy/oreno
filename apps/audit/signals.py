@@ -16,8 +16,13 @@ from .models import AuditWorkplan, Engagement, Issue, Approval
 from .tasks import (
     send_approval_notification,
     process_approval_chain,
-    update_related_states
+    update_related_states,
+    process_issue_working_paper_upload
 )
+from .models.note import Note, Notification
+from .models.procedureresult import ProcedureResult
+from .models.issue_working_paper import IssueWorkingPaper
+from core.signals import log_change
 
 # ─── WORKPLAN SIGNALS ────────────────────────────────────────────────────────
 # @receiver(pre_save, sender=AuditWorkplan)
@@ -99,3 +104,87 @@ def workplan_engagements_changed(sender, instance, action, **kwargs):
                 'state',
                 PENDING
             )
+
+def send_notification(user, message):
+    # Placeholder for notification logic (email, in-app, etc.)
+    pass
+
+@receiver(post_save, sender=Note)
+def notify_note_assignment(sender, instance, created, **kwargs):
+    # On creation, notify assigned_to for review, to-do, or review_request
+    if created and instance.assigned_to and instance.status == 'open' and instance.note_type in ['review', 'todo', 'review_request']:
+        send_mail(
+            subject=f"New {instance.get_note_type_display()} Assigned",
+            message=f"You have been assigned a new {instance.get_note_type_display()} on {instance.content_object}.\n\nContent: {instance.content}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[instance.assigned_to.email],
+            fail_silently=True,
+        )
+        # In-app notification
+        Notification.objects.create(
+            user=instance.assigned_to,
+            note=instance,
+            message=f"You have been assigned a new {instance.get_note_type_display()} on {instance.content_object}.",
+            notification_type=instance.note_type
+        )
+    # On status change to 'cleared', notify supervisor (user field)
+    elif not created and instance.status == 'cleared' and instance.user:
+        send_mail(
+            subject=f"Review Note/To-Do Cleared: {instance.note_type.title()}",
+            message=f"The note you assigned on {instance.content_object} has been marked as cleared by {instance.assigned_to}.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[instance.user.email],
+            fail_silently=True,
+        )
+        # In-app notification
+        Notification.objects.create(
+            user=instance.user,
+            note=instance,
+            message=f"The note you assigned on {instance.content_object} has been marked as cleared by {instance.assigned_to}.",
+            notification_type='note_cleared'
+        )
+
+@receiver(post_save, sender=Issue)
+def log_issue_change(sender, instance, created, **kwargs):
+    # Log creation or update of issues (could be to a log file, audit trail, etc.)
+    pass
+
+@receiver(post_save, sender=ProcedureResult)
+def auto_close_procedure(sender, instance, **kwargs):
+    # Example: if all results for a procedure are 'operating_effectively', mark procedure as complete
+    pass
+
+# ─── ISSUE WORKING PAPER SIGNALS ─────────────────────────────────────────────
+@receiver(post_save, sender=IssueWorkingPaper)
+def issue_working_paper_post_save(sender, instance, created, **kwargs):
+    # Log creation or update of working papers (could be to a log file, audit trail, etc.)
+    user = getattr(instance, 'created_by', None)
+    action = 'create' if created else 'update'
+    log_change(instance, action, user=user)
+    # Trigger async processing (virus scan, notification, etc.)
+    process_issue_working_paper_upload.delay(instance.pk)
+    # Notify issue owner if available
+    issue = getattr(instance, 'issue', None)
+    if issue and issue.issue_owner and issue.issue_owner.email:
+        send_mail(
+            subject=f"New Working Paper Uploaded for Issue: {issue.issue_title}",
+            message=f"A new working paper has been uploaded for the issue '{issue.issue_title}'.\n\nDescription: {instance.description}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[issue.issue_owner.email],
+            fail_silently=True,
+        )
+
+@receiver(post_delete, sender=IssueWorkingPaper)
+def issue_working_paper_post_delete(sender, instance, **kwargs):
+    user = getattr(instance, 'created_by', None)
+    log_change(instance, 'delete', user=user)
+    # Optionally notify issue owner of deletion
+    issue = getattr(instance, 'issue', None)
+    if issue and issue.issue_owner and issue.issue_owner.email:
+        send_mail(
+            subject=f"Working Paper Deleted for Issue: {issue.issue_title}",
+            message=f"A working paper has been deleted for the issue '{issue.issue_title}'.\n\nDescription: {instance.description}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[issue.issue_owner.email],
+            fail_silently=True,
+        )

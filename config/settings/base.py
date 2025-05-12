@@ -25,7 +25,7 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
@@ -192,6 +192,7 @@ MIDDLEWARE = [
     'apps.common.middleware.OrganizationActiveMiddleware',
     'apps.core.middleware.OrganizationMiddleware',
     'apps.common.middleware.AppAccessControlMiddleware',
+    'common.middleware.AjaxLoginRequiredMiddleware',
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -402,8 +403,9 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 25))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@oreno.tech')
 EMAIL_TIMEOUT = 30  # seconds
+
 
 # ------------------------------------------------------------------------------
 # Login redirection

@@ -8,12 +8,13 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.contenttypes.fields import GenericRelation
+from simple_history.models import HistoricalRecords
 
-from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from core.mixins.state import ApprovalStateMixin
 
 @reversion.register()
-class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
+class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """
     Audit workplan model with FSM-driven approval state, rich-text objectives,
     description, and tenant isolation.
@@ -64,6 +65,8 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         related_name='approvals',
     )
 
+    history = HistoricalRecords()
+
     class Meta:
         app_label = 'audit'
         verbose_name = _("Audit Workplan")
@@ -112,3 +115,46 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
     @property
     def engagements(self):
         return self.engagements.all()
+
+    @property
+    def all_procedures(self):
+        """
+        Returns all procedures linked to this workplan via engagements > objectives > procedures.
+        """
+        Procedure = self._meta.apps.get_model('audit', 'Procedure')
+        return Procedure.objects.filter(objective__engagement__audit_workplan=self)
+
+    @property
+    def all_issues(self):
+        """
+        Returns all issues linked to this workplan via engagements > objectives > procedures > procedure_results > issues.
+        """
+        Issue = self._meta.apps.get_model('audit', 'Issue')
+        return Issue.objects.filter(procedure_result__procedure__objective__engagement__audit_workplan=self)
+
+    @property
+    def all_notes(self):
+        """
+        Returns all notes linked to this workplan, its engagements, objectives, procedures, or issues (via generic relation).
+        """
+        Note = self._meta.apps.get_model('audit', 'Note')
+        from django.contrib.contenttypes.models import ContentType
+        workplan_ct = ContentType.objects.get_for_model(self)
+        engagement_ct = ContentType.objects.get(app_label='audit', model='engagement')
+        objective_ct = ContentType.objects.get(app_label='audit', model='objective')
+        procedure_ct = ContentType.objects.get(app_label='audit', model='procedure')
+        issue_ct = ContentType.objects.get(app_label='audit', model='issue')
+        # All related IDs
+        engagement_ids = self.engagements.values_list('id', flat=True)
+        objective_ids = self.engagements.values_list('objectives__id', flat=True)
+        procedure_ids = self.all_procedures.values_list('id', flat=True)
+        issue_ids = self.all_issues.values_list('id', flat=True)
+        return Note.objects.filter(
+            (
+                models.Q(content_type=workplan_ct, object_id=self.pk) |
+                models.Q(content_type=engagement_ct, object_id__in=engagement_ids) |
+                models.Q(content_type=objective_ct, object_id__in=objective_ids) |
+                models.Q(content_type=procedure_ct, object_id__in=procedure_ids) |
+                models.Q(content_type=issue_ct, object_id__in=issue_ids)
+            )
+        )

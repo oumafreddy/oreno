@@ -7,10 +7,12 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
+from simple_history.models import HistoricalRecords
+from core.models.abstract_models import SoftDeletionModel
 
 from common.constants import PENDING, APPROVED, REJECTED, STATUS_CHOICES
 
-# Must match the migration’s list exactly
+# Must match the migration's list exactly
 ALLOWED_CONTENT_MODELS = ['issue', 'auditworkplan', 'engagement']
 
 
@@ -35,7 +37,7 @@ class ApprovalQuerySet(models.QuerySet):
 
 
 @reversion.register()
-class Approval(models.Model):
+class Approval(SoftDeletionModel):
     """
     Generic approval record. Links to any AuditWorkplan, Engagement or Issue.
     """
@@ -77,6 +79,8 @@ class Approval(models.Model):
     comments = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
 
     objects = ApprovalQuerySet.as_manager()
 

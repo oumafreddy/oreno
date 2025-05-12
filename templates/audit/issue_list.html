@@ -7,11 +7,13 @@
     <div class="card shadow-sm">
       <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
         <h3 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Issues</h3>
-        <a href="{% url 'audit:issue-create' %}" class="btn btn-success">New Issue</a>
+        <button class="btn btn-success" hx-get="{% url 'audit:issue-create' %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">New Issue</button>
       </div>
       <div class="card-body">
         <form method="get" class="mb-3">
-          {% crispy filter_form %}
+          {% if filter_form %}
+            {% crispy filter_form %}
+          {% endif %}
         </form>
         {% if messages %}
           {% for message in messages %}
@@ -22,42 +24,61 @@
           {% endfor %}
         {% endif %}
         <div class="p-0">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Code</th>
-              <th>Title</th>
-              <th>Engagement</th>
-              <th>Owner</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for issue in issues %}
-            <tr>
-              <td>{{ issue.code }}</td>
-              <td>{{ issue.issue_title }}</td>
-              <td>{{ issue.engagement }}</td>
-              <td>{{ issue.issue_owner }}</td>
-              <td>
-                <span class="badge {% if issue.issue_status == 'open' %}bg-info{% elif issue.issue_status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
-                  {{ issue.get_issue_status_display }}
-                </span>
-              </td>
-              <td>
-                <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                <a href="{% url 'audit:issue-close' issue.pk %}" class="btn btn-sm btn-warning">Close</a>
-              </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="text-center text-muted">No issues found.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+          <div id="issue-list-container">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Code</th>
+                  <th>Title</th>
+                  <th>Engagement</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for issue in issues %}
+                <tr>
+                  <td>{{ issue.code }}</td>
+                  <td>{{ issue.issue_title }}</td>
+                  <td>
+                    {% if issue.procedure_result and issue.procedure_result.procedure and issue.procedure_result.procedure.objective and issue.procedure_result.procedure.objective.engagement %}
+                      <a href="{% url 'audit:engagement-detail' issue.procedure_result.procedure.objective.engagement.pk %}">
+                        {{ issue.procedure_result.procedure.objective.engagement.title }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ issue.issue_owner }}</td>
+                  <td>
+                    <span class="badge {% if issue.issue_status == 'open' %}bg-info{% elif issue.issue_status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
+                      {{ issue.get_issue_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                    <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'audit:issue-update' issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">Edit</button>
+                    <a href="{% url 'audit:issue-close' issue.pk %}" class="btn btn-sm btn-warning">Close</a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">No issues found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="modal-body">
+      <!-- Modal content loaded here via htmx -->
     </div>
   </div>
 </div>

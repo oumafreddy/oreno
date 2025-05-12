@@ -8,4 +8,4 @@ class AuditConfig(AppConfig):
     verbose_name = 'Audit'
 
     def ready(self):
-        import audit.signals  # noqa
+        import audit.signals

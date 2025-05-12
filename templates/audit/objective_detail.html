@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Objective: {{ objective.title }} | Oreno GRC{% endblock %}
+{% block content %}
+<div class="container main-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">{{ objective.title }} <span class="badge bg-info">{{ objective.get_status_display }}</span></h1>
+      <div class="text-muted">Engagement: {{ objective.engagement }}</div>
+    </div>
+    <div>
+      <a href="{% url 'audit:objective-edit' objective.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
+      <button class="btn btn-primary" hx-get="{% url 'audit:procedure-modal-add' objective_pk=objective.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <i class="bi bi-plus-circle"></i> Add Procedure
+      </button>
+    </div>
+  </div>
+  <ul class="nav nav-tabs mb-3" id="objectiveTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="procedures-tab" data-bs-toggle="tab" data-bs-target="#procedures" type="button" role="tab">Procedures</button>
+    </li>
+  </ul>
+  <div class="tab-content" id="objectiveTabsContent">
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5>Description</h5>
+          <div>{{ objective.description|safe }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="procedures" role="tabpanel">
+      {% include 'audit/_procedure_list_partial.html' with procedures=objective.procedures.all engagement=objective.engagement objective=objective %}
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="modal-body">
+      <!-- Modal content loaded here via htmx -->
+    </div>
+  </div>
+</div>
+{% endblock %} 

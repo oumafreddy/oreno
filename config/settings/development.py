@@ -17,12 +17,14 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # Email settings for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
 EMAIL_USE_TLS = False
-EMAIL_HOST_USER = ''
-EMAIL_HOST_PASSWORD = ''
+EMAIL_HOST_USER = 'info@oreno.tech'
+EMAIL_HOST_PASSWORD = 'ShLD1Li2zHK9'
+
 
 # Database settings for development
 DATABASES = {
@@ -168,10 +170,10 @@ REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] += [
 ]
 
 # Development-specific email settings
-DEFAULT_FROM_EMAIL = 'development@example.com'
-SERVER_EMAIL = 'development@example.com'
+DEFAULT_FROM_EMAIL = 'info@oreno.tech'
+SERVER_EMAIL = 'info@oreno.tech'
 ADMINS = [
-    ('Development Admin', 'admin@example.com'),
+    ('Development Admin', 'info@oreno.tech'),
 ]
 MANAGERS = ADMINS
 

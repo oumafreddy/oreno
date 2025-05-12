@@ -7,6 +7,14 @@ from organizations.models import Organization
 from users.models import CustomUser
 
 from .models import AuditWorkplan, Engagement, Issue, Approval
+from .models.objective import Objective
+from .models.procedure import Procedure
+from .models.procedureresult import ProcedureResult
+from .models.followupaction import FollowUpAction
+from .models.issueretest import IssueRetest
+from .models.note import Note, Notification
+from .models.recommendation import Recommendation
+from .models.issue_working_paper import IssueWorkingPaper
 
 # ─── BASE SERIALIZER ──────────────────────────────────────────────────────────
 class BaseAuditSerializer(serializers.ModelSerializer):
@@ -58,7 +66,7 @@ class EngagementSerializer(BaseAuditSerializer):
             'id', 'code', 'title', 'audit_workplan', 'engagement_type',
             'project_start_date', 'target_end_date', 'assigned_to',
             'assigned_by', 'executive_summary', 'purpose', 'background',
-            'scope', 'project_objectives', 'conclusion_description',
+            'scope', 'conclusion_description',
             'conclusion', 'project_status', 'organization', 'state',
             'created_by', 'created_at', 'updated_at'
         ]
@@ -72,7 +80,19 @@ class EngagementSerializer(BaseAuditSerializer):
                 })
         return data
 
+# ─── RECOMMENDATION SERIALIZER ──────────────────────────────────────────────
+class RecommendationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recommendation
+        fields = '__all__'
+
 # ─── ISSUE SERIALIZERS ────────────────────────────────────────────────────────
+class IssueWorkingPaperSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IssueWorkingPaper
+        fields = ['id', 'issue', 'file', 'description', 'uploaded_at', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['uploaded_at', 'created_by', 'created_at', 'updated_at']
+
 class IssueSerializer(BaseAuditSerializer):
     engagement = serializers.PrimaryKeyRelatedField(
         queryset=Engagement.objects.all()
@@ -82,17 +102,20 @@ class IssueSerializer(BaseAuditSerializer):
         required=False,
         allow_null=True
     )
+    recommendations = RecommendationSerializer(many=True, read_only=True)
+    working_papers = IssueWorkingPaperSerializer(many=True, read_only=True, source='issueworkingpaper_set')
+    get_absolute_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Issue
         fields = [
             'id', 'code', 'issue_title', 'issue_description', 'root_cause',
             'risks', 'date_identified', 'issue_owner', 'issue_owner_title',
-            'audit_procedures', 'recommendation', 'engagement',
+            'audit_procedures', 'engagement',
             'severity_status', 'issue_status', 'remediation_status',
             'remediation_deadline_date', 'actual_remediation_date',
-            'management_action_plan', 'working_papers', 'organization',
-            'created_by', 'created_at', 'updated_at'
+            'management_action_plan', 'organization',
+            'created_by', 'created_at', 'updated_at', 'recommendations', 'working_papers', 'get_absolute_url'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
     
@@ -103,6 +126,9 @@ class IssueSerializer(BaseAuditSerializer):
                     'actual_remediation_date': _('Actual remediation date cannot be before the deadline')
                 })
         return data
+
+    def get_get_absolute_url(self, obj):
+        return obj.get_absolute_url()
 
 # ─── APPROVAL SERIALIZERS ─────────────────────────────────────────────────────
 class ApprovalSerializer(BaseAuditSerializer):
@@ -170,13 +196,41 @@ class AuditWorkplanDetailSerializer(AuditWorkplanSerializer):
     class Meta(AuditWorkplanSerializer.Meta):
         fields = AuditWorkplanSerializer.Meta.fields + ['engagements', 'approvals']
 
+class ProcedureResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcedureResult
+        fields = '__all__'
+
+class ProcedureSerializer(serializers.ModelSerializer):
+    results = ProcedureResultSerializer(many=True, read_only=True)
+    get_absolute_url = serializers.SerializerMethodField()
+    class Meta:
+        model = Procedure
+        fields = '__all__'
+    def get_get_absolute_url(self, obj):
+        return obj.get_absolute_url()
+
+class ObjectiveSerializer(serializers.ModelSerializer):
+    procedures = ProcedureSerializer(many=True, read_only=True)
+    get_absolute_url = serializers.SerializerMethodField()
+    class Meta:
+        model = Objective
+        fields = '__all__'
+    def get_get_absolute_url(self, obj):
+        return obj.get_absolute_url()
+
 class EngagementDetailSerializer(EngagementSerializer):
     audit_workplan = NestedAuditWorkplanSerializer(read_only=True)
     issues = NestedIssueSerializer(many=True, read_only=True)
     approvals = ApprovalSerializer(many=True, read_only=True)
+    objectives = ObjectiveSerializer(many=True, read_only=True, source='objectives')
+    get_absolute_url = serializers.SerializerMethodField()
     
     class Meta(EngagementSerializer.Meta):
-        fields = EngagementSerializer.Meta.fields + ['issues', 'approvals']
+        fields = EngagementSerializer.Meta.fields + ['issues', 'approvals', 'objectives', 'get_absolute_url']
+
+    def get_get_absolute_url(self, obj):
+        return obj.get_absolute_url()
 
 class IssueDetailSerializer(IssueSerializer):
     engagement = NestedEngagementSerializer(read_only=True)
@@ -184,3 +238,40 @@ class IssueDetailSerializer(IssueSerializer):
     
     class Meta(IssueSerializer.Meta):
         fields = IssueSerializer.Meta.fields + ['approvals']
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'note', 'message', 'notification_type', 'is_read', 'created_at']
+        read_only_fields = ['id', 'user', 'note', 'message', 'notification_type', 'created_at']
+
+class NoteSerializer(serializers.ModelSerializer):
+    notifications = NotificationSerializer(many=True, read_only=True)
+    class Meta:
+        model = Note
+        fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'organization', 'cleared_at', 'closed_at', 'notifications']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request:
+            validated_data['created_by'] = request.user
+            validated_data['updated_by'] = request.user
+            validated_data['organization'] = getattr(request.user, 'organization', None) or getattr(request.user, 'current_organization', None)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if request:
+            validated_data['updated_by'] = request.user
+        return super().update(instance, validated_data)
+
+class IssueRetestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IssueRetest
+        fields = '__all__'
+
+class FollowUpActionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FollowUpAction
+        fields = '__all__'

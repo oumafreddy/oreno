@@ -127,12 +127,12 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
-SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'server@example.com')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@oreno.tech')
+SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'info@oreno.tech')
 
 # Admin settings
 ADMINS = [
-    (os.getenv('ADMIN_NAME', 'Admin'), os.getenv('ADMIN_EMAIL', 'admin@example.com')),
+    (os.getenv('ADMIN_NAME', 'Admin'), os.getenv('ADMIN_EMAIL', 'info@oreno.tech')),
 ]
 MANAGERS = ADMINS
 

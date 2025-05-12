@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.http import JsonResponse
 
 class LoginRequiredMiddleware:
     """
@@ -28,4 +29,25 @@ class LoginRequiredMiddleware:
             return redirect(settings.LOGIN_URL)
         
         # Otherwise, continue processing the request.
+        return self.get_response(request)
+
+class AjaxLoginRequiredMiddleware:
+    """
+    Middleware that returns a JSON 401 for AJAX/htmx/fetch unauthenticated requests,
+    instead of redirecting to the login page. This prevents JSON.parse errors in JS/htmx.
+    Handles:
+      - htmx (HX-Request header)
+      - XMLHttpRequest (x-requested-with)
+      - fetch/axios (Accept: application/json)
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not request.user.is_authenticated:
+            is_htmx = request.headers.get('HX-Request')
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+            wants_json = 'application/json' in request.headers.get('Accept', '')
+            if is_htmx or is_ajax or wants_json:
+                return JsonResponse({'error': 'login_required'}, status=401)
         return self.get_response(request)

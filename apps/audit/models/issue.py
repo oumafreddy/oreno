@@ -9,13 +9,14 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.contenttypes.fields import GenericRelation
+from simple_history.models import HistoricalRecords
 
-from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from .engagement import Engagement
 from core.models.validators import validate_file_extension, validate_file_size
 
 @reversion.register()
-class Issue(OrganizationOwnedModel, AuditableModel):
+class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """
     Audit issue model with FSM approval, rich-text fields, file validators,
     and date checks.
@@ -72,17 +73,13 @@ class Issue(OrganizationOwnedModel, AuditableModel):
         config_name='extends',
         default='Bank reconciliation reperformance',
     )
-    recommendation = CKEditor5Field(
-        _('Recommendation'),
-        config_name='extends',
-        blank=True,
-        null=True,
-    )
-    engagement = models.ForeignKey(
-        Engagement,
+    procedure_result = models.ForeignKey(
+        'ProcedureResult',
         on_delete=models.CASCADE,
         related_name='issues',
-        verbose_name=_("Engagement"),
+        verbose_name=_('Procedure Result'),
+        null=True,
+        blank=True,
     )
 
     SEVERITY_CHOICES = [
@@ -140,13 +137,7 @@ class Issue(OrganizationOwnedModel, AuditableModel):
         blank=True,
         null=True,
     )
-    working_papers = models.FileField(
-        upload_to='working_papers/',
-        blank=True,
-        null=True,
-        validators=[validate_file_extension, validate_file_size],
-        verbose_name=_("Working Papers"),
-    )
+    positive_finding_notes = CKEditor5Field(_('Positive Finding Notes'), config_name='extends', blank=True, null=True)
 
     approvals = GenericRelation(
         'audit.Approval',
@@ -155,6 +146,8 @@ class Issue(OrganizationOwnedModel, AuditableModel):
         related_query_name='issue',
         related_name='approvals',
     )
+
+    history = HistoricalRecords()
 
     class Meta:
         app_label = 'audit'
@@ -168,7 +161,7 @@ class Issue(OrganizationOwnedModel, AuditableModel):
             models.Index(fields=['issue_status']),
             models.Index(fields=['severity_status']),
             models.Index(fields=['remediation_status']),
-            models.Index(fields=['engagement']),
+            models.Index(fields=['procedure_result']),
         ]
         constraints = [
             models.CheckConstraint(

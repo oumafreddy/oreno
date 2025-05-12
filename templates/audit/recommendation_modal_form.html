@@ -1,0 +1,44 @@
+{% load crispy_forms_tags %}
+<div class="modal-header">
+  <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Recommendation</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  {% if issue_pk %}
+    <form method="post" hx-post="{% url 'audit:recommendation-add' issue_pk=issue_pk %}" hx-target="#modal-body" hx-swap="outerHTML">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="alert alert-danger">Cannot add recommendation: Issue not found or not saved. Please save the issue first.</div>
+  {% endif %}
+</div>
+<script>
+(function() {
+  var form = document.getElementById('recommendationForm');
+  if (!form) return;
+  form.addEventListener('htmx:afterRequest', function(event) {
+    try {
+      var detail = event.detail;
+      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+        var data = JSON.parse(detail.xhr.responseText);
+        if (data.form_is_valid && data.html_list) {
+          var container = document.getElementById('recommendation-list-container');
+          if (container) container.innerHTML = data.html_list;
+          var modalEl = document.getElementById('mainModal');
+          if (modalEl && window.bootstrap) {
+            var modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+          }
+        } else if (data.html_form) {
+          document.getElementById('modal-body').innerHTML = data.html_form;
+        }
+      }
+    } catch (e) {}
+  });
+})();
+</script> 

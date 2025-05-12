@@ -6,11 +6,20 @@ from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHol
 from crispy_bootstrap5.bootstrap5 import FloatingField
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
+from django_ckeditor_5.widgets import CKEditor5Widget
 
 from organizations.models import Organization
 from users.models import CustomUser
 
-from .models import AuditWorkplan, Engagement, Issue, Approval
+from .models import AuditWorkplan, Engagement, Issue, Approval, Objective
+from .models.followupaction import FollowUpAction
+from .models.issueretest import IssueRetest
+from .models.note import Note
+from .models.procedure import Procedure
+from .models.procedureresult import ProcedureResult
+from .models.recommendation import Recommendation
+from .models.issue_working_paper import IssueWorkingPaper
+from .models.engagement import Engagement
 
 # ─── BASE FORM CLASS ──────────────────────────────────────────────────────────
 class BaseAuditForm(forms.ModelForm):
@@ -64,7 +73,7 @@ class EngagementForm(BaseAuditForm):
             'code', 'title', 'audit_workplan', 'engagement_type',
             'project_start_date', 'target_end_date', 'assigned_to',
             'executive_summary', 'purpose', 'background', 'scope',
-            'project_objectives', 'conclusion_description', 'conclusion',
+            'conclusion_description', 'conclusion',
             'project_status'
         ]
         widgets = {
@@ -108,7 +117,6 @@ class EngagementForm(BaseAuditForm):
                 'purpose',
                 'background',
                 'scope',
-                'project_objectives',
                 'conclusion_description',
                 'conclusion',
             ),
@@ -125,22 +133,18 @@ class IssueForm(BaseAuditForm):
         fields = [
             'code', 'issue_title', 'issue_description', 'root_cause',
             'risks', 'date_identified', 'issue_owner', 'issue_owner_title',
-            'audit_procedures', 'recommendation', 'engagement',
-            'severity_status', 'issue_status', 'remediation_status',
-            'remediation_deadline_date', 'actual_remediation_date',
-            'management_action_plan', 'working_papers'
+            'audit_procedures', 'procedure_result',
+            'severity_status', 'issue_status',
         ]
         widgets = {
             'date_identified': forms.DateInput(attrs={'type': 'date'}),
-            'remediation_deadline_date': forms.DateInput(attrs={'type': 'date'}),
-            'actual_remediation_date': forms.DateInput(attrs={'type': 'date'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.organization:
-            self.fields['engagement'].queryset = Engagement.objects.filter(
-                organization=self.organization
+            self.fields['procedure_result'].queryset = self.fields['procedure_result'].queryset.filter(
+                procedure__objective__engagement__organization=self.organization
             )
             self.fields['issue_owner'].queryset = CustomUser.objects.filter(
                 organization=self.organization
@@ -154,7 +158,7 @@ class IssueForm(BaseAuditForm):
                     Column(FloatingField('issue_title'), css_class='col-md-6'),
                 ),
                 Row(
-                    Column('engagement', css_class='col-md-6'),
+                    Column('procedure_result', css_class='col-md-6'),
                     Column('date_identified', css_class='col-md-6'),
                 ),
                 Row(
@@ -172,17 +176,6 @@ class IssueForm(BaseAuditForm):
                 'root_cause',
                 'risks',
                 'audit_procedures',
-                'recommendation',
-            ),
-            Fieldset(
-                _('Remediation'),
-                Row(
-                    Column('remediation_status', css_class='col-md-6'),
-                    Column('remediation_deadline_date', css_class='col-md-6'),
-                ),
-                'actual_remediation_date',
-                'management_action_plan',
-                'working_papers',
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
@@ -283,3 +276,250 @@ class IssueFilterForm(forms.Form):
                 Column(Submit('filter', _('Filter'), css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
             )
         )
+
+class EngagementOverviewForm(forms.ModelForm):
+    class Meta:
+        model = Engagement
+        fields = [
+            'title', 'project_start_date', 'target_end_date', 'project_status',
+            'executive_summary', 'scope', 'background', 'assigned_to', 'assigned_by',
+        ]
+        widgets = {
+            'executive_summary': CKEditor5Widget(config_name='extends'),
+            'scope': CKEditor5Widget(config_name='extends'),
+            'background': CKEditor5Widget(config_name='extends'),
+            'project_start_date': forms.DateInput(attrs={'type': 'date'}),
+            'target_end_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        org = kwargs.pop('organization', None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.add_input(Submit('submit', 'Save & Continue'))
+        if org:
+            self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(organization=org)
+            self.fields['assigned_by'].queryset = self.fields['assigned_by'].queryset.filter(organization=org)
+
+class ObjectiveForm(forms.ModelForm):
+    class Meta:
+        model = Objective
+        fields = ['title', 'description', 'order']
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        org = kwargs.pop('organization', None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.add_input(Submit('submit', 'Add Objective'))
+
+# ─── FOLLOW UP ACTION FORM ───────────────────────────────────────────────────
+class FollowUpActionForm(BaseAuditForm):
+    class Meta:
+        model = FollowUpAction
+        fields = [
+            'issue', 'description', 'assigned_to', 'due_date',
+            'status', 'completed_at', 'notes', 'created_by'
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends'),
+            'notes': CKEditor5Widget(config_name='extends'),
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
+            'completed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+    def __init__(self, *args, **kwargs):
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        super().__init__(*args, **kwargs)
+        if self.organization:
+            self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(organization=self.organization)
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Follow Up Action'),
+                'issue',
+                'description',
+                Row(
+                    Column('assigned_to', css_class='col-md-6'),
+                    Column('due_date', css_class='col-md-6'),
+                ),
+                Row(
+                    Column('status', css_class='col-md-6'),
+                    Column('completed_at', css_class='col-md-6'),
+                ),
+                'notes',
+                'created_by',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── ISSUE RETEST FORM ──────────────────────────────────────────────────────
+class IssueRetestForm(BaseAuditForm):
+    class Meta:
+        model = IssueRetest
+        fields = [
+            'issue', 'retest_date', 'retested_by', 'result', 'notes'
+        ]
+        widgets = {
+            'retest_date': forms.DateInput(attrs={'type': 'date'}),
+            'notes': CKEditor5Widget(config_name='extends'),
+        }
+    def __init__(self, *args, **kwargs):
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        super().__init__(*args, **kwargs)
+        if self.organization:
+            self.fields['retested_by'].queryset = self.fields['retested_by'].queryset.filter(organization=self.organization)
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Issue Retest'),
+                'issue',
+                Row(
+                    Column('retest_date', css_class='col-md-6'),
+                    Column('retested_by', css_class='col-md-6'),
+                ),
+                'result',
+                'notes',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── NOTE FORM ──────────────────────────────────────────────────────────────
+class NoteForm(BaseAuditForm):
+    class Meta:
+        model = Note
+        fields = [
+            'note_type', 'status', 'content', 'user', 'assigned_to', 'closed_by',
+            'cleared_at', 'closed_at'
+        ]
+        widgets = {
+            'cleared_at': forms.DateInput(attrs={'type': 'datetime-local'}),
+            'closed_at': forms.DateInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        super().__init__(*args, **kwargs)
+        # Only allow notes for Engagements
+        if hasattr(self, 'instance') and self.instance.pk:
+            content_object = self.instance.content_object
+            if not isinstance(content_object, Engagement):
+                self.fields['content'].disabled = True
+                self.fields['note_type'].disabled = True
+                self.fields['status'].disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Only allow notes for Engagements
+        content_object = getattr(self.instance, 'content_object', None)
+        if content_object and not isinstance(content_object, Engagement):
+            raise forms.ValidationError(_('Notes can only be created for Engagements.'))
+        return cleaned_data
+
+# ─── PROCEDURE FORM ─────────────────────────────────────────────────────────
+class ProcedureForm(BaseAuditForm):
+    class Meta:
+        model = Procedure
+        fields = [
+            'objective', 'title', 'description', 'related_risks', 'order'
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends'),
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.organization:
+            self.fields['objective'].queryset = self.fields['objective'].queryset.filter(engagement__organization=self.organization)
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Procedure'),
+                'objective',
+                'title',
+                'description',
+                'related_risks',
+                'order',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── PROCEDURE RESULT FORM ──────────────────────────────────────────────────
+class ProcedureResultForm(BaseAuditForm):
+    class Meta:
+        model = ProcedureResult
+        fields = [
+            'procedure', 'status', 'notes', 'is_for_the_record', 'order', 'is_positive'
+        ]
+        widgets = {
+            'notes': CKEditor5Widget(config_name='extends'),
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.organization:
+            self.fields['procedure'].queryset = self.fields['procedure'].queryset.filter(objective__engagement__organization=self.organization)
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Procedure Result'),
+                'procedure',
+                'status',
+                'notes',
+                Row(
+                    Column('is_for_the_record', css_class='col-md-6'),
+                    Column('is_positive', css_class='col-md-6'),
+                ),
+                'order',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── RECOMMENDATION FORM ────────────────────────────────────────────────────
+class RecommendationForm(BaseAuditForm):
+    class Meta:
+        model = Recommendation
+        fields = [
+            'issue', 'title', 'description', 'order'
+            # Add any other business fields here as needed
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        super().__init__(*args, **kwargs)
+        if self.organization:
+            self.fields['issue'].queryset = self.fields['issue'].queryset.filter(organization=self.organization)
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Recommendation'),
+                'issue',
+                'title',
+                'description',
+                'order',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── ISSUE WORKING PAPER FORM ───────────────────────────────────────────────
+class IssueWorkingPaperForm(BaseAuditForm):
+    class Meta:
+        model = IssueWorkingPaper
+        fields = ['file', 'description']
+    def __init__(self, *args, **kwargs):
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.add_input(Submit('submit', _('Upload'), css_class='btn-primary'))

@@ -8,13 +8,14 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.contenttypes.fields import GenericRelation
-
-from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from django.apps import apps
+from simple_history.models import HistoricalRecords
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from core.mixins.state import ApprovalStateMixin
 from .workplan import AuditWorkplan
 
 @reversion.register()
-class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
+class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """
     Audit engagement model with FSM state, rich-text fields, and assignments.
     """
@@ -89,12 +90,6 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         blank=True,
         null=True,
     )
-    project_objectives = CKEditor5Field(
-        _('Project Objectives'),
-        config_name='extends',
-        blank=True,
-        null=True,
-    )
     conclusion_description = CKEditor5Field(
         _('Conclusion Description'),
         config_name='extends',
@@ -131,6 +126,7 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
         related_query_name='engagement',
         related_name='approvals',
     )
+    history = HistoricalRecords()
 
     class Meta:
         app_label = 'audit'
@@ -177,3 +173,58 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel):
 
     def __str__(self):
         return f"{self.title} ({self.code})"
+
+    @property
+    def all_issues(self):
+        """
+        Returns all issues linked to this engagement via objectives > procedures > procedure_results.
+        """
+        Issue = apps.get_model('audit', 'Issue')
+        return Issue.objects.filter(
+            procedure_result__procedure__objective__engagement=self
+        )
+
+    @property
+    def all_procedures(self):
+        """
+        Returns all procedures linked to this engagement via objectives.
+        """
+        Procedure = apps.get_model('audit', 'Procedure')
+        return Procedure.objects.filter(objective__engagement=self)
+
+    @property
+    def all_followups(self):
+        """
+        Returns all follow-up actions linked to this engagement via issues > recommendations > followup_actions.
+        """
+        FollowUpAction = apps.get_model('audit', 'FollowUpAction')
+        return FollowUpAction.objects.filter(recommendation__issue__procedure_result__procedure__objective__engagement=self)
+
+    @property
+    def all_retests(self):
+        """
+        Returns all retests linked to this engagement via issues > recommendations > retests.
+        """
+        IssueRetest = apps.get_model('audit', 'IssueRetest')
+        return IssueRetest.objects.filter(recommendation__issue__procedure_result__procedure__objective__engagement=self)
+
+    @property
+    def all_notes(self):
+        """
+        Returns all notes linked to this engagement, its issues, or its procedures (via generic relation).
+        """
+        Note = apps.get_model('audit', 'Note')
+        from django.contrib.contenttypes.models import ContentType
+        engagement_ct = ContentType.objects.get_for_model(self)
+        issue_ct = ContentType.objects.get(app_label='audit', model='issue')
+        procedure_ct = ContentType.objects.get(app_label='audit', model='procedure')
+        # All issues and procedures for this engagement
+        issue_ids = self.all_issues.values_list('id', flat=True)
+        procedure_ids = self.all_procedures.values_list('id', flat=True)
+        return Note.objects.filter(
+            (
+                models.Q(content_type=engagement_ct, object_id=self.pk) |
+                models.Q(content_type=issue_ct, object_id__in=issue_ids) |
+                models.Q(content_type=procedure_ct, object_id__in=procedure_ids)
+            )
+        )

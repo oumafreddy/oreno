@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Procedure: {{ procedure.title }} | Oreno GRC{% endblock %}
+{% block content %}
+<div class="container main-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">{{ procedure.title }} <span class="badge bg-info">{{ procedure.get_status_display }}</span></h1>
+      <div class="text-muted">Objective: {{ procedure.objective }}</div>
+    </div>
+    <div>
+      <a href="{% url 'audit:procedure-edit' procedure.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
+      <button class="btn btn-primary" hx-get="{% url 'audit:procedureresult-modal-add' procedure_pk=procedure.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <i class="bi bi-plus-circle"></i> Add Result
+      </button>
+    </div>
+  </div>
+  <ul class="nav nav-tabs mb-3" id="procedureTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab">Results</button>
+    </li>
+  </ul>
+  <div class="tab-content" id="procedureTabsContent">
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5>Description</h5>
+          <div>{{ procedure.description|safe }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="results" role="tabpanel">
+      {% include 'audit/_procedure_result_list_partial.html' with results=procedure.results.all engagement=procedure.objective.engagement objective=procedure.objective procedure=procedure %}
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="modal-body">
+      <!-- Modal content loaded here via htmx -->
+    </div>
+  </div>
+</div>
+{% endblock %} 

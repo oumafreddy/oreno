@@ -178,10 +178,22 @@
                 {% endif %}
 
                 <ul class="navbar-nav mb-2 mb-lg-0">
-                    <li class="nav-item">
+                    <li class="nav-item position-relative">
                         <a class="nav-link ai-action-btn" href="#" data-bs-toggle="modal" data-bs-target="#aiAssistantModal">
                             <i class="bi bi-robot"></i> AI Assistant
                         </a>
+                    </li>
+                    <li class="nav-item dropdown position-relative">
+                        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell"></i>
+                            <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.7rem; display:none;">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notificationDropdown" style="min-width: 350px; max-width: 400px;">
+                            <li class="dropdown-header bg-light fw-bold py-2 px-3">Notifications</li>
+                            <li><div id="notification-list" style="max-height: 350px; overflow-y: auto;"><!-- AJAX loaded --></div></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center" href="/audit/api/notifications/">View all notifications</a></li>
+                        </ul>
                     </li>
                 </ul>
 
@@ -414,6 +426,190 @@
             return cookieValue;
         }
     });
+    </script>
+
+    <script>
+    // Notification AJAX logic
+    function fetchNotifications() {
+        fetch('/audit/api/notifications/?format=json')
+            .then(response => response.json())
+            .then(data => {
+                let list = document.getElementById('notification-list');
+                let badge = document.getElementById('notification-badge');
+                if (!list || !badge) return;
+                list.innerHTML = '';
+                let unread = 0;
+                if (data.results && data.results.length) {
+                    data.results.forEach(n => {
+                        let readClass = n.is_read ? '' : 'fw-bold';
+                        if (!n.is_read) unread++;
+                        let link = n.note ? `/audit/notes/modal/add/${n.note}/` : '#';
+                        list.innerHTML += `<div class='dropdown-item ${readClass}' style='white-space:normal;'>`
+                            + `<a href='${link}' class='text-decoration-none text-dark'>${n.message}</a>`
+                            + `<br><small class='text-muted'>${new Date(n.created_at).toLocaleString()}</small>`
+                            + (!n.is_read ? ` <button class='btn btn-sm btn-link p-0 ms-2' onclick='markNotificationRead(${n.id}, this)'>Mark as read</button>` : '')
+                            + `</div><hr class='my-1'>`;
+                    });
+                } else {
+                    list.innerHTML = '<div class="dropdown-item text-muted">No notifications.</div>';
+                }
+                badge.textContent = unread;
+                badge.style.display = unread > 0 ? 'inline-block' : 'none';
+            });
+    }
+    function markNotificationRead(id, btn) {
+        fetch(`/audit/api/notifications/${id}/`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({is_read: true})})
+            .then(() => { btn.closest('.dropdown-item').classList.remove('fw-bold'); fetchNotifications(); });
+    }
+    document.addEventListener('DOMContentLoaded', fetchNotifications);
+    document.getElementById('notificationDropdown').addEventListener('show.bs.dropdown', fetchNotifications);
+    </script>
+
+    <!-- GLOBAL MODAL CONTAINER FOR AJAX FORMS -->
+    <div class="modal fade" id="globalModal" tabindex="-1" aria-labelledby="globalModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="globalModalLabel">Loading...</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HTMX CDN for advanced AJAX/modal support -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Enhanced AJAX/htmx Modal Logic for Audit Models -->
+    <script>
+    (function() {
+      // --- htmx Modal Support ---
+      if (window.htmx) {
+        // Listen for htmx requests to show spinner in modal
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+          var modal = document.querySelector('#globalModal .modal-body');
+          if (modal) {
+            modal.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>';
+          }
+        });
+        // On htmx error, show error in modal
+        document.body.addEventListener('htmx:responseError', function(evt) {
+          var modal = document.querySelector('#globalModal .modal-body');
+          if (modal) {
+            modal.innerHTML = '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+          }
+        });
+        // On htmx after swap, show toast if needed
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+          if (evt.detail.xhr && evt.detail.xhr.status === 200 && evt.target.classList.contains('modal-body')) {
+            if (evt.detail.xhr.responseText.includes('form_is_valid')) {
+              showToast('Saved successfully!', 'success');
+              var modal = bootstrap.Modal.getInstance(document.getElementById('globalModal'));
+              if (modal) modal.hide();
+            }
+          }
+        });
+      }
+
+      // --- jQuery AJAX Modal Support (as before) ---
+      $(function() {
+        // Open modal via AJAX or htmx
+        $(document).on('click', '[data-bs-toggle="modal"][data-ajax-url]', function(e) {
+          e.preventDefault();
+          var url = $(this).attr('data-ajax-url');
+          var modal = $('#globalModal');
+          var modalTitle = $(this).data('modal-title') || 'Form';
+          modal.find('.modal-title').text(modalTitle);
+          modal.find('.modal-body').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
+          modal.modal('show');
+          // Prefer htmx if present
+          if (window.htmx) {
+            modal.find('.modal-body').attr({
+              'hx-get': url,
+              'hx-target': '#globalModal .modal-body',
+              'hx-swap': 'innerHTML',
+              'hx-trigger': 'load'
+            });
+            window.htmx.process(modal.find('.modal-body')[0]);
+          } else {
+            $.get(url, function(data) {
+              modal.find('.modal-body').html(data);
+            });
+          }
+        });
+
+        // Submit modal form via AJAX or htmx
+        $(document).on('submit', '#globalModal form', function(e) {
+          if (window.htmx) return; // htmx will handle
+          e.preventDefault();
+          var form = $(this);
+          var modal = $('#globalModal');
+          var url = form.attr('action') || window.location.href;
+          var method = form.attr('method') || 'post';
+          var formData = new FormData(this);
+          $.ajax({
+            url: url,
+            type: method,
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { 'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') },
+            beforeSend: function() {
+              modal.find('.modal-body').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
+            },
+            success: function(data) {
+              if (data.form_is_valid) {
+                if (data.html_list) {
+                  $('.ajax-list-container').html(data.html_list);
+                }
+                if (data.html_detail) {
+                  $('.ajax-detail-container').html(data.html_detail);
+                }
+                modal.modal('hide');
+                showToast('Saved successfully!', 'success');
+              } else if (data.html_form) {
+                modal.find('.modal-body').html(data.html_form);
+              }
+            },
+            error: function(xhr) {
+              modal.find('.modal-body').html('<div class="alert alert-danger">An error occurred. Please try again.</div>');
+            }
+          });
+        });
+
+        // Utility: Show toast
+        window.showToast = function(message, type) {
+          var toastId = 'toast-' + Date.now();
+          var toastHtml = `<div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+              <div class="toast-body">${message}</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+          </div>`;
+          $('#toast-container').append(toastHtml);
+          var toastEl = document.getElementById(toastId);
+          var toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+          toast.show();
+          toastEl.addEventListener('hidden.bs.toast', function() { $(toastEl).remove(); });
+        };
+      });
+
+      // Global htmx error handler for robust AJAX/htmx error handling
+      if (window.htmx) {
+        document.body.addEventListener('htmx:responseError', function(evt) {
+          if (evt.detail && evt.detail.xhr && evt.detail.xhr.status === 401) {
+            alert("Session expired or authentication required. Please log in again.");
+            window.location.href = "/accounts/login/?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+          } else {
+            alert("A network or server error occurred. Please try again or contact support.");
+            console.error('htmx:responseError', evt);
+          }
+        });
+      }
+    })();
     </script>
 
 </body>

@@ -1,0 +1,52 @@
+{% load static %}
+<div class="card">
+  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-folder2-open me-2"></i>Working Papers</span>
+    <nav aria-label="Working Paper navigation">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item"><a class="page-link" href="#overview" data-bs-toggle="tab">Overview</a></li>
+        <li class="page-item"><a class="page-link" href="#recommendations" data-bs-toggle="tab">Recommendations</a></li>
+        <li class="page-item"><a class="page-link" href="#followup" data-bs-toggle="tab">Follow-Up</a></li>
+        <li class="page-item"><a class="page-link" href="#retest" data-bs-toggle="tab">Retest</a></li>
+        <li class="page-item"><a class="page-link" href="#notes" data-bs-toggle="tab">Notes</a></li>
+        <li class="page-item active"><a class="page-link" href="#workingpapers" data-bs-toggle="tab">Working Papers</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="card-body p-0">
+    <div id="workingpapers-list-container">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>File</th>
+            <th>Description</th>
+            <th>Uploaded By</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wp in working_papers %}
+          <tr>
+            <td>
+              <a href="{{ wp.file.url }}" target="_blank">
+                <i class="bi bi-file-earmark-arrow-down"></i> {{ wp.file.name|slice:'working_papers/'|default:wp.file.name }}
+              </a>
+            </td>
+            <td>{{ wp.description|default:'—' }}</td>
+            <td>{{ wp.created_by.get_full_name|default:wp.created_by.email|default:'—' }}</td>
+            <td>{{ wp.uploaded_at|date:'Y-m-d H:i' }}</td>
+            <td>
+              <a href="{{ wp.file.url }}" class="btn btn-sm btn-outline-primary" download><i class="bi bi-download"></i></a>
+              <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'audit:issueworkingpaper-edit' wp.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-danger" hx-get="{% url 'audit:issueworkingpaper-delete' wp.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted">No working papers uploaded for this issue.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div> 

@@ -7,11 +7,13 @@
     <div class="card shadow-sm">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h3 class="mb-0"><i class="bi bi-journal-check me-2"></i>Workplans</h3>
-        <a href="{% url 'audit:workplan-create' %}" class="btn btn-success">New Workplan</a>
+        <button class="btn btn-success" hx-get="{% url 'audit:workplan-create' %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">New Workplan</button>
       </div>
       <div class="card-body">
         <form method="get" class="mb-3">
-          {% crispy filter_form %}
+          {% if filter_form %}
+            {% crispy filter_form %}
+          {% endif %}
         </form>
         {% if messages %}
           {% for message in messages %}
@@ -22,42 +24,53 @@
           {% endfor %}
         {% endif %}
         <div class="p-0">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Fiscal Year</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for workplan in workplans %}
-            <tr>
-              <td>{{ workplan.code }}</td>
-              <td>{{ workplan.name }}</td>
-              <td>{{ workplan.fiscal_year }}</td>
-              <td>
-                <span class="badge {% if workplan.status == 'draft' %}bg-secondary{% elif workplan.status == 'active' %}bg-info{% elif workplan.status == 'closed' %}bg-success{% endif %}">
-                  {{ workplan.get_status_display }}
-                </span>
-              </td>
-              <td>
-                <a href="{% url 'audit:workplan-detail' workplan.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                {% if workplan.can_submit %}
-                  <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-sm btn-warning">Submit</a>
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted">No workplans found.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+          <div id="workplan-list-container">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Fiscal Year</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for workplan in workplans %}
+                <tr>
+                  <td>{{ workplan.code }}</td>
+                  <td>{{ workplan.name }}</td>
+                  <td>{{ workplan.fiscal_year }}</td>
+                  <td>
+                    <span class="badge {% if workplan.status == 'draft' %}bg-secondary{% elif workplan.status == 'active' %}bg-info{% elif workplan.status == 'closed' %}bg-success{% endif %}">
+                      {{ workplan.get_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    <a href="{% url 'audit:workplan-detail' workplan.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                    <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'audit:workplan-update' workplan.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">Edit</button>
+                    {% if workplan.can_submit %}
+                      <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-sm btn-warning">Submit</a>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted">No workplans found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="modal-body">
+      <!-- Modal content loaded here via htmx -->
     </div>
   </div>
 </div>

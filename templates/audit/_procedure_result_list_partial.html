@@ -1,0 +1,41 @@
+<div id="procedure-result-list-container">
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Procedure Results</h5>
+      {% if procedure and procedure.pk %}
+        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedureresult-modal-add' procedure_pk=procedure.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+          <i class="bi bi-plus-circle"></i> Add Result
+        </button>
+      {% else %}
+        <button class="btn btn-primary btn-sm" disabled>
+          <i class="bi bi-plus-circle"></i> Add Result
+        </button>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Status</th>
+            <th>Summary</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for result in results %}
+          <tr>
+            <td><span class="badge bg-info">{{ result.get_status_display }}</span></td>
+            <td>{{ result.summary|truncatechars:60 }}</td>
+            <td>
+              <a href="{% url 'audit:procedureresult-detail' result.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+              <a href="{% url 'audit:procedureresult-edit' result.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center text-muted">No results found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div> 

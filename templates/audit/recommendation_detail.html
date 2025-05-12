@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Recommendation: {{ recommendation.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendation: {{ recommendation.title }}</h3>
+        <a href="{% url 'audit:recommendation-edit' recommendation.pk %}" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#recommendationModal">Edit</a>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ recommendation.title }}</dd>
+          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ recommendation.description|safe }}</dd>
+          <dt class="col-sm-3">Order</dt><dd class="col-sm-9">{{ recommendation.order }}</dd>
+        </dl>
+        <hr>
+        <h5>Follow-up Actions</h5>
+        <ul class="mb-3">
+          {% for action in followupactions %}
+            <li><a href="{% url 'audit:followupaction-detail' action.pk %}">{{ action.title }}</a></li>
+          {% empty %}
+            <li class="text-muted">No follow-up actions linked to this recommendation.</li>
+          {% endfor %}
+        </ul>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:recommendation-list' issue_pk=recommendation.issue.pk %}" class="btn btn-secondary btn-sm">Back</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Recommendation Modal Placeholder -->
+<div class="modal fade" id="recommendationModal" tabindex="-1" aria-labelledby="recommendationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="recommendationModalLabel">Edit Recommendation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- AJAX form will be loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

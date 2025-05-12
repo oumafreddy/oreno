@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Follow-up Action: {{ followupaction.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Follow-up Action: {{ followupaction.title }}</h3>
+        <a href="{% url 'audit:followupaction-edit' followupaction.pk %}" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#followupActionModal">Edit</a>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ followupaction.title }}</dd>
+          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ followupaction.description|safe }}</dd>
+          <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ followupaction.get_status_display }}</dd>
+          <dt class="col-sm-3">Due Date</dt><dd class="col-sm-9">{{ followupaction.due_date }}</dd>
+        </dl>
+        <hr>
+        <h5>Issue Retests</h5>
+        <ul class="mb-3">
+          {% for retest in issueretests %}
+            <li><a href="{% url 'audit:issueretest-detail' retest.pk %}">{{ retest.title }}</a></li>
+          {% empty %}
+            <li class="text-muted">No issue retests linked to this follow-up action.</li>
+          {% endfor %}
+        </ul>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:followupaction-list' recommendation_pk=followupaction.recommendation.pk %}" class="btn btn-secondary btn-sm">Back</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Follow-up Action Modal Placeholder -->
+<div class="modal fade" id="followupActionModal" tabindex="-1" aria-labelledby="followupActionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="followupActionModalLabel">Edit Follow-up Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- AJAX form will be loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

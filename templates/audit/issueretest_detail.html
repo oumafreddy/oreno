@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Issue Retest: {{ issueretest.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h3 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Issue Retest: {{ issueretest.title }}</h3>
+        <a href="{% url 'audit:issueretest-edit' issueretest.pk %}" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#issueRetestModal">Edit</a>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ issueretest.title }}</dd>
+          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ issueretest.description|safe }}</dd>
+          <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ issueretest.get_status_display }}</dd>
+          <dt class="col-sm-3">Retest Date</dt><dd class="col-sm-9">{{ issueretest.retest_date }}</dd>
+        </dl>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <a href="{% url 'audit:issueretest-list' followupaction_pk=issueretest.followup_action.pk %}" class="btn btn-secondary btn-sm">Back</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Issue Retest Modal Placeholder -->
+<div class="modal fade" id="issueRetestModal" tabindex="-1" aria-labelledby="issueRetestModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="issueRetestModalLabel">Edit Issue Retest</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- AJAX form will be loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

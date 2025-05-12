@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Follow-up Action{% endblock %}
+{% block content %}
+<div class="modal-header">
+  <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Follow-up Action</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form method="post" enctype="multipart/form-data" novalidate id="followupActionForm" action="{% if object %}{% url 'audit:followupaction-update' object.pk %}{% else %}{% url 'audit:followupaction-add' issue_pk=issue.pk %}{% endif %}">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+    </div>
+  </form>
+</div>
+{% endblock %} 

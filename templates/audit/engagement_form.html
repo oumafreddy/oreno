@@ -27,7 +27,7 @@
             <strong>Please correct the errors below:</strong>
           </div>
         {% endif %}
-        <form method="post" enctype="multipart/form-data" novalidate>
+        <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:engagement-update' object.pk %}{% else %}{% url 'audit:engagement-create' %}{% endif %}">
           {% csrf_token %}
           {{ form|crispy }}
           <div class="d-flex justify-content-between align-items-center mt-4">

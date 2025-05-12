@@ -1,0 +1,52 @@
+<div class="modal-header">
+  <h5 class="modal-title text-danger">Delete Working Paper</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form method="post" id="workingPaperDeleteForm">
+    {% csrf_token %}
+    <div class="alert alert-danger">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Are you sure you want to delete this working paper?
+    </div>
+    <dl class="row mb-3">
+      <dt class="col-sm-4">File</dt>
+      <dd class="col-sm-8"><a href="{{ object.file.url }}" target="_blank">{{ object.file.name|default:'—' }}</a></dd>
+      <dt class="col-sm-4">Description</dt>
+      <dd class="col-sm-8">{{ object.description|default:'—' }}</dd>
+      <dt class="col-sm-4">Uploaded By</dt>
+      <dd class="col-sm-8">{{ object.created_by.get_full_name|default:object.created_by.email|default:'—' }}</dd>
+      <dt class="col-sm-4">Date</dt>
+      <dd class="col-sm-8">{{ object.uploaded_at|date:'Y-m-d H:i' }}</dd>
+    </dl>
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-danger">Delete</button>
+      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+    </div>
+  </form>
+</div>
+<script>
+(function() {
+  var form = document.getElementById('workingPaperDeleteForm');
+  if (!form) return;
+  form.addEventListener('htmx:afterRequest', function(event) {
+    try {
+      var detail = event.detail;
+      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+        var data = JSON.parse(detail.xhr.responseText);
+        if (data.form_is_valid && data.html_list) {
+          var container = document.getElementById('workingpapers-list-container');
+          if (container) container.innerHTML = data.html_list;
+          var modalEl = document.getElementById('mainModal');
+          if (modalEl && window.bootstrap) {
+            var modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+          }
+        } else if (data.html_form) {
+          document.getElementById('modal-body').innerHTML = data.html_form;
+        }
+      }
+    } catch (e) {}
+  });
+})();
+</script> 

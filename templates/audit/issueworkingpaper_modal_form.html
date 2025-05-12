@@ -1,0 +1,57 @@
+{% load crispy_forms_tags %}
+<div class="modal-header">
+  <h5 class="modal-title">{% if object %}Edit{% else %}Upload{% endif %} Working Paper</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form method="post" enctype="multipart/form-data" novalidate id="workingPaperForm">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-success">
+        <span class="spinner-border spinner-border-sm d-none" id="wp-upload-spinner" role="status" aria-hidden="true"></span>
+        Save
+      </button>
+      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+    </div>
+  </form>
+</div>
+<script>
+(function() {
+  var form = document.getElementById('workingPaperForm');
+  if (!form) return;
+  form.addEventListener('submit', function() {
+    var btn = form.querySelector('button[type="submit"]');
+    var spinner = document.getElementById('wp-upload-spinner');
+    if (btn && spinner) {
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+    }
+  });
+  form.addEventListener('htmx:afterRequest', function(event) {
+    var btn = form.querySelector('button[type="submit"]');
+    var spinner = document.getElementById('wp-upload-spinner');
+    if (btn && spinner) {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+    }
+    try {
+      var detail = event.detail;
+      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+        var data = JSON.parse(detail.xhr.responseText);
+        if (data.form_is_valid && data.html_list) {
+          var container = document.getElementById('workingpapers-list-container');
+          if (container) container.innerHTML = data.html_list;
+          var modalEl = document.getElementById('mainModal');
+          if (modalEl && window.bootstrap) {
+            var modal = window.bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+          }
+        } else if (data.html_form) {
+          document.getElementById('modal-body').innerHTML = data.html_form;
+        }
+      }
+    } catch (e) {}
+  });
+})();
+</script> 

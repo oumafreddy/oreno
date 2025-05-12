@@ -12,7 +12,18 @@ from .views import (
     WorkplanListView, WorkplanDetailView, WorkplanCreateView, WorkplanUpdateView,
     EngagementListView, EngagementDetailView, EngagementCreateView, EngagementUpdateView,
     IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
-    ApprovalCreateView, ApprovalDetailView, AuditDashboardView
+    ApprovalCreateView, ApprovalDetailView, AuditDashboardView,
+    ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
+    ObjectiveModalCreateView, ProcedureListView, ProcedureDetailView, ProcedureCreateView,
+    ProcedureUpdateView, ProcedureModalCreateView, ProcedureResultListView, ProcedureResultDetailView,
+    ProcedureResultCreateView, ProcedureResultUpdateView,
+    FollowUpActionListView, FollowUpActionDetailView, FollowUpActionCreateView, FollowUpActionUpdateView,
+    FollowUpActionModalCreateView, IssueRetestListView, IssueRetestDetailView, IssueRetestCreateView,
+    IssueRetestUpdateView, IssueRetestModalCreateView, NoteCreateView,
+    NotificationListView, NoteListView,
+    RecommendationListView, RecommendationCreateView, RecommendationUpdateView, RecommendationDetailView,
+    IssueWorkingPaperListView, IssueWorkingPaperCreateView, IssueWorkingPaperUpdateView, IssueWorkingPaperDeleteView, IssueWorkingPaperDetailView,
+    IssueWorkingPaperViewSet,
 )
 
 # ─── REST API ROUTERS ────────────────────────────────────────────────────────
@@ -34,6 +45,7 @@ engagement_router.register(r'approvals', views.EngagementApprovalViewSet, basena
 
 issue_router = routers.NestedDefaultRouter(router, r'issues', lookup='issue')
 issue_router.register(r'approvals', views.IssueApprovalViewSet, basename='issue-approval')
+issue_router.register(r'working-papers', IssueWorkingPaperViewSet, basename='issue-working-paper')
 
 # ─── URL PATTERNS ────────────────────────────────────────────────────────────
 app_name = 'audit'
@@ -79,7 +91,7 @@ urlpatterns = [
     #path('api/', include(router.urls)),
     #path('api/', include(workplan_router.urls)),
     #path('api/', include(engagement_router.urls)),
-    #path('api/', include(issue_router.urls)),
+    path('api/', include(issue_router.urls)),
 
 
     # ─── ACTION URLS ────────────────────────────────────────────────────────
@@ -100,6 +112,66 @@ urlpatterns = [
     path('search/', views.search, name='search'),
     path('autocomplete/', views.autocomplete, name='autocomplete'),
     path('validate/', views.validate, name='validate'),
+
+    # Objective URLs
+    path('engagements/<int:engagement_pk>/objectives/', views.ObjectiveListView.as_view(), name='objective-list'),
+    path('objectives/<int:pk>/', views.ObjectiveDetailView.as_view(), name='objective-detail'),
+    path('engagements/<int:engagement_pk>/objectives/add/', views.ObjectiveCreateView.as_view(), name='objective-add'),
+    path('objectives/<int:pk>/edit/', views.ObjectiveUpdateView.as_view(), name='objective-edit'),
+    path('objectives/<int:pk>/update/', views.ObjectiveUpdateView.as_view(), name='objective-update'),
+    path('engagements/<int:engagement_pk>/objectives/modal/add/', views.ObjectiveModalCreateView.as_view(), name='objective-modal-add'),
+    path('objectives/create/', views.ObjectiveModalCreateView.as_view(), name='objective-create'),
+    # Procedure URLs
+    path('objectives/<int:objective_pk>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
+    path('procedures/<int:pk>/', views.ProcedureDetailView.as_view(), name='procedure-detail'),
+    path('objectives/<int:objective_pk>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
+    path('procedures/<int:pk>/edit/', views.ProcedureUpdateView.as_view(), name='procedure-edit'),
+    path('objectives/<int:objective_pk>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
+    # ProcedureResult URLs
+    path('procedures/<int:procedure_pk>/results/', views.ProcedureResultListView.as_view(), name='procedureresult-list'),
+    path('procedureresults/<int:pk>/', views.ProcedureResultDetailView.as_view(), name='procedureresult-detail'),
+    path('procedures/<int:procedure_pk>/results/add/', views.ProcedureResultCreateView.as_view(), name='procedureresult-add'),
+    path('procedureresults/<int:pk>/edit/', views.ProcedureResultUpdateView.as_view(), name='procedureresult-edit'),
+    path('procedures/<int:procedure_pk>/results/modal/add/', views.ProcedureResultModalCreateView.as_view(), name='procedureresult-modal-add'),
+    path('procedures/<int:procedure_pk>/results/modal/<int:pk>/edit/', views.ProcedureResultModalUpdateView.as_view(), name='procedureresult-modal-edit'),
+    # FollowUpAction URLs
+    path('issues/<int:issue_pk>/followups/', views.FollowUpActionListView.as_view(), name='followupaction-list'),
+    path('issues/<int:issue_pk>/followups/add/', views.FollowUpActionCreateView.as_view(), name='followupaction-add'),
+    path('followupactions/<int:pk>/edit/', views.FollowUpActionUpdateView.as_view(), name='followupaction-edit'),
+    path('followupactions/<int:pk>/', views.FollowUpActionDetailView.as_view(), name='followupaction-detail'),
+    path('issues/<int:issue_pk>/followups/modal/add/', views.FollowUpActionModalCreateView.as_view(), name='followupaction-modal-add'),
+    path('issues/<int:issue_pk>/followups/modal/<int:pk>/edit/', views.FollowUpActionModalUpdateView.as_view(), name='followupaction-modal-edit'),
+    # IssueRetest URLs
+    path('issues/<int:issue_pk>/retests/', views.IssueRetestListView.as_view(), name='issueretest-list'),
+    path('issues/<int:issue_pk>/retests/add/', views.IssueRetestCreateView.as_view(), name='issueretest-add'),
+    path('issueretests/<int:pk>/edit/', views.IssueRetestUpdateView.as_view(), name='issueretest-edit'),
+    path('issueretests/<int:pk>/', views.IssueRetestDetailView.as_view(), name='issueretest-detail'),
+    path('issues/<int:issue_pk>/retests/modal/add/', views.IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
+    path('issues/<int:issue_pk>/retests/modal/<int:pk>/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
+    # Note (generic modal)
+    path('notes/modal/add/<int:content_type_id>/<int:object_id>/', views.NoteCreateView.as_view(), name='note-modal-add'),
+    path('notes/modal/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-modal-edit'),
+    path('api/notifications/', NotificationListView.as_view(), name='notification-list'),
+    path('notes/', views.NoteListView.as_view(), name='note-list'),
+    path('notes/<int:pk>/', views.NoteDetailView.as_view(), name='note-detail'),
+    # Recommendation URLs
+    path('issues/<int:issue_pk>/recommendations/', RecommendationListView.as_view(), name='recommendation-list'),
+    path('issues/<int:issue_pk>/recommendations/add/', RecommendationCreateView.as_view(), name='recommendation-add'),
+    path('recommendations/<int:pk>/edit/', RecommendationUpdateView.as_view(), name='recommendation-edit'),
+    path('recommendations/<int:pk>/', RecommendationDetailView.as_view(), name='recommendation-detail'),
+    path('issues/<int:issue_pk>/recommendations/modal/<int:pk>/edit/', views.RecommendationModalUpdateView.as_view(), name='recommendation-modal-edit'),
+    path('htmx/objectives/', views.htmx_objective_list, name='htmx-objective-list'),
+    path('htmx/procedures/', views.htmx_procedure_list, name='htmx-procedure-list'),
+    path('htmx/recommendations/', views.htmx_recommendation_list, name='htmx-recommendation-list'),
+    path('htmx/followupactions/', views.htmx_followupaction_list, name='htmx-followupaction-list'),
+    path('htmx/issueretests/', views.htmx_issueretest_list, name='htmx-issueretest-list'),
+    path('htmx/notes/', views.htmx_note_list, name='htmx-note-list'),
+    # Issue Working Paper URLs
+    path('issues/<int:issue_pk>/working-papers/', IssueWorkingPaperListView.as_view(), name='issueworkingpaper-list'),
+    path('issues/<int:issue_pk>/working-papers/add/', IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-add'),
+    path('working-papers/<int:pk>/edit/', IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-edit'),
+    path('working-papers/<int:pk>/delete/', IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-delete'),
+    path('working-papers/<int:pk>/', IssueWorkingPaperDetailView.as_view(), name='issueworkingpaper-detail'),
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

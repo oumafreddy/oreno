@@ -22,7 +22,7 @@
             <strong>Please correct the errors below:</strong>
           </div>
         {% endif %}
-        <form method="post" enctype="multipart/form-data" novalidate>
+        <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:workplan-update' object.pk %}{% else %}{% url 'audit:workplan-create' %}{% endif %}">
           {% csrf_token %}
           {{ form|crispy }}
           <div class="text-end mt-3">
