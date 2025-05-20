@@ -4,7 +4,10 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" enctype="multipart/form-data" novalidate id="engagementForm" action="{% if object %}{% url 'audit:engagement-update' object.pk %}{% else %}{% url 'audit:engagement-create' %}{% endif %}">
+  <form method="post" enctype="multipart/form-data" novalidate id="engagementForm" 
+        hx-post="{% if object %}{% url 'audit:engagement-update' object.pk %}{% else %}{% url 'audit:engagement-create' %}{% endif %}" 
+        hx-target="#modal-body" 
+        hx-swap="outerHTML">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
@@ -12,4 +15,20 @@
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
     </div>
   </form>
-</div> 
+</div>
+
+<script>
+  // Make sure forms with date inputs are properly formatted
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[type="date"]').forEach(function(input) {
+      // Make sure the format is correct
+      if (input.value) {
+        const dateValue = new Date(input.value);
+        if (!isNaN(dateValue.getTime())) {
+          const formattedDate = dateValue.toISOString().split('T')[0];
+          input.value = formattedDate;
+        }
+      }
+    });
+  });
+</script>

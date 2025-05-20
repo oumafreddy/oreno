@@ -4,7 +4,7 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" enctype="multipart/form-data" novalidate id="workingPaperForm">
+  <form method="post" enctype="multipart/form-data" novalidate id="workingPaperForm" action="{% if object %}{% url 'audit:issueworkingpaper-edit' object.pk %}{% else %}{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}{% endif %}">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">

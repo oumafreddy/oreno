@@ -141,11 +141,42 @@ class IssueForm(BaseAuditForm):
         }
     
     def __init__(self, *args, **kwargs):
+        # Extract specific context parameters for filtering if available
+        procedure_result_pk = kwargs.pop('procedure_result_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
         super().__init__(*args, **kwargs)
+        
         if self.organization:
-            self.fields['procedure_result'].queryset = self.fields['procedure_result'].queryset.filter(
+            # Base filter for organization
+            procedure_result_queryset = self.fields['procedure_result'].queryset.filter(
                 procedure__objective__engagement__organization=self.organization
             )
+            
+            # Apply hierarchical filtering based on provided context
+            if procedure_result_pk:
+                # If specific procedure result is provided
+                procedure_result_queryset = procedure_result_queryset.filter(id=procedure_result_pk)
+            elif procedure_pk:
+                # If specific procedure is provided
+                procedure_result_queryset = procedure_result_queryset.filter(procedure_id=procedure_pk)
+            elif objective_pk:
+                # If specific objective is provided
+                procedure_result_queryset = procedure_result_queryset.filter(procedure__objective_id=objective_pk)
+            elif engagement_pk:
+                # If specific engagement is provided
+                procedure_result_queryset = procedure_result_queryset.filter(procedure__objective__engagement_id=engagement_pk)
+            
+            self.fields['procedure_result'].queryset = procedure_result_queryset
+            
+            # If there's only one option and it matches our context, preselect it and make read-only
+            if procedure_result_pk and procedure_result_queryset.count() == 1:
+                self.fields['procedure_result'].initial = procedure_result_pk
+                self.fields['procedure_result'].widget.attrs['readonly'] = True
+            
+            # Filter issue owners to current organization
             self.fields['issue_owner'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
@@ -330,10 +361,42 @@ class FollowUpActionForm(BaseAuditForm):
             'completed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
     def __init__(self, *args, **kwargs):
+        # Extract specific context parameters for filtering
         self.issue_pk = kwargs.pop('issue_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
         super().__init__(*args, **kwargs)
+        
         if self.organization:
+            # Base filter for organization
+            issue_queryset = self.fields['issue'].queryset.filter(organization=self.organization)
+            
+            # Apply hierarchical filtering based on provided context
+            if self.issue_pk:
+                # If specific issue is provided
+                issue_queryset = issue_queryset.filter(id=self.issue_pk)
+            elif procedure_pk:
+                # If specific procedure is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            elif objective_pk:
+                # If specific objective is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+            elif engagement_pk:
+                # If specific engagement is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
+            
+            self.fields['issue'].queryset = issue_queryset
+            
+            # If there's only one option and it matches our context, preselect it and make read-only
+            if self.issue_pk and issue_queryset.count() == 1:
+                self.fields['issue'].initial = self.issue_pk
+                self.fields['issue'].widget.attrs['readonly'] = True
+            
+            # Filter assigned_to to current organization
             self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(organization=self.organization)
+        
         self.helper.layout = Layout(
             Fieldset(
                 _('Follow Up Action'),
@@ -432,9 +495,31 @@ class ProcedureForm(BaseAuditForm):
             'description': CKEditor5Widget(config_name='extends'),
         }
     def __init__(self, *args, **kwargs):
+        # Extract specific objective_pk for filtering if available
+        objective_pk = kwargs.pop('objective_pk', None)
+        # Extract specific engagement_pk for filtering if available
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
         super().__init__(*args, **kwargs)
+        
+        # Filter objectives to the current organization
         if self.organization:
-            self.fields['objective'].queryset = self.fields['objective'].queryset.filter(engagement__organization=self.organization)
+            objective_queryset = self.fields['objective'].queryset.filter(engagement__organization=self.organization)
+            
+            # Further filter by engagement if specified
+            if engagement_pk:
+                objective_queryset = objective_queryset.filter(engagement_id=engagement_pk)
+            # Further filter by specific objective if this is for a procedure within a specific objective
+            elif objective_pk:
+                objective_queryset = objective_queryset.filter(id=objective_pk)
+                
+            self.fields['objective'].queryset = objective_queryset
+            
+            # If there's only one option and it matches our context, preselect it and make read-only
+            if objective_pk and objective_queryset.count() == 1:
+                self.fields['objective'].initial = objective_pk
+                self.fields['objective'].widget.attrs['readonly'] = True
+                
         self.helper.layout = Layout(
             Fieldset(
                 _('Procedure'),
@@ -461,9 +546,31 @@ class ProcedureResultForm(BaseAuditForm):
             'notes': CKEditor5Widget(config_name='extends'),
         }
     def __init__(self, *args, **kwargs):
+        # Extract specific procedure_pk for filtering if available
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        # Extract specific objective_pk for filtering if available
+        objective_pk = kwargs.pop('objective_pk', None)
+        
         super().__init__(*args, **kwargs)
+        
+        # Filter procedures to the current organization
         if self.organization:
-            self.fields['procedure'].queryset = self.fields['procedure'].queryset.filter(objective__engagement__organization=self.organization)
+            procedure_queryset = self.fields['procedure'].queryset.filter(objective__engagement__organization=self.organization)
+            
+            # Further filter by objective if specified
+            if objective_pk:
+                procedure_queryset = procedure_queryset.filter(objective_id=objective_pk)
+            # Further filter by specific procedure if this is for a result within a specific procedure
+            elif procedure_pk:
+                procedure_queryset = procedure_queryset.filter(id=procedure_pk)
+                
+            self.fields['procedure'].queryset = procedure_queryset
+            
+            # If there's only one option and it matches our context, preselect it and make read-only
+            if procedure_pk and procedure_queryset.count() == 1:
+                self.fields['procedure'].initial = procedure_pk
+                self.fields['procedure'].widget.attrs['readonly'] = True
+        
         self.helper.layout = Layout(
             Fieldset(
                 _('Procedure Result'),
@@ -495,10 +602,38 @@ class RecommendationForm(BaseAuditForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract specific issue_pk for filtering if available
         self.issue_pk = kwargs.pop('issue_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
         super().__init__(*args, **kwargs)
+        
         if self.organization:
-            self.fields['issue'].queryset = self.fields['issue'].queryset.filter(organization=self.organization)
+            # Base filter for organization
+            issue_queryset = self.fields['issue'].queryset.filter(organization=self.organization)
+            
+            # Apply hierarchical filtering based on provided context
+            if self.issue_pk:
+                # If specific issue is provided
+                issue_queryset = issue_queryset.filter(id=self.issue_pk)
+            elif procedure_pk:
+                # If specific procedure is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            elif objective_pk:
+                # If specific objective is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+            elif engagement_pk:
+                # If specific engagement is provided
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
+            
+            self.fields['issue'].queryset = issue_queryset
+            
+            # If there's only one option and it matches our context, preselect it and make read-only
+            if self.issue_pk and issue_queryset.count() == 1:
+                self.fields['issue'].initial = self.issue_pk
+                self.fields['issue'].widget.attrs['readonly'] = True
         self.helper.layout = Layout(
             Fieldset(
                 _('Recommendation'),

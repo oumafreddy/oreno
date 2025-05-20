@@ -11,16 +11,16 @@
     <div>
       <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
       {% if issue.pk %}
-        <button class="btn btn-primary" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-primary" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#globalModal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Recommendation
         </button>
-        <button class="btn btn-success" hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-success" hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}" hx-target="#globalModal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Follow-Up
         </button>
-        <button class="btn btn-warning" hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-warning" hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" hx-target="#globalModal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Retest
         </button>
-        <button class="btn btn-info" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-info" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#globalModal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Note
         </button>
       {% else %}
@@ -76,12 +76,20 @@
       {% include 'audit/_issueretest_list_partial.html' with retests=issue.issueretests.all issue=issue %}
     </div>
     <div class="tab-pane fade" id="notes" role="tabpanel">
-      {% include 'audit/note_list.html' with notes=issue.notes.all content_type_id=content_type_id object_id=object_id %}
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h5 mb-0">Notes</h3>
+        <button class="btn btn-sm btn-primary" 
+                data-bs-toggle="modal" 
+                data-bs-target="#globalModal" 
+                hx-get="{% url 'audit:note-modal-add' content_type_id object_id %}" 
+                hx-target="#globalModal-body">Create Note</button>
+      </div>
+      {% include 'audit/_note_list_tab_partial.html' with notes=issue.notes.all content_type_id=content_type_id object_id=object_id %}
     </div>
     <div class="tab-pane fade" id="workingpapers" role="tabpanel">
       {% include 'audit/issueworkingpaper_list.html' with working_papers=working_papers issue=issue %}
       <div class="mt-3">
-        <button class="btn btn-outline-primary" hx-get="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-outline-primary" hx-get="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" hx-target="#globalModal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-upload"></i> Upload Working Paper
         </button>
       </div>

@@ -1,5 +1,67 @@
 # apps/audit/views.py
 
+# Utility functions to avoid AttributeError with htmx
+def is_htmx_request(request):
+    """Safely check if a request is an HTMX request without AttributeError"""
+    return request.headers and request.headers.get('HX-Request') == 'true'
+
+# Utility function to safely retrieve issue_pk from various sources
+def safe_get_issue_pk(view_instance, raise_error=False):
+    """Safely retrieve issue_pk from various sources including URL params, GET/POST data, or view object.
+    
+    Args:
+        view_instance: The view instance (needs to have request and kwargs)
+        raise_error: Whether to raise ValueError if issue_pk not found (default: False)
+        
+    Returns:
+        The issue_pk value or None if not found and raise_error is False
+    """
+    # Try from URL parameters or request data
+    issue_pk = view_instance.kwargs.get("issue_pk") or \
+               view_instance.request.GET.get("issue_pk") or \
+               view_instance.request.POST.get("issue_pk")
+    
+    # If not found, try to get from the view object
+    if not issue_pk and hasattr(view_instance, 'object') and view_instance.object:
+        if hasattr(view_instance.object, 'issue_id') and view_instance.object.issue_id:
+            return view_instance.object.issue_id
+    
+    # If still not found, try to get the object from the database
+    if not issue_pk and hasattr(view_instance, 'get_object') and hasattr(view_instance, 'kwargs'):
+        try:
+            if hasattr(view_instance.kwargs, 'pk') or 'pk' in view_instance.kwargs:
+                obj = view_instance.get_object()
+                if hasattr(obj, 'issue_id') and obj.issue_id:
+                    return obj.issue_id
+        except Exception:
+            # Silently handle any errors during object retrieval
+            pass
+    
+    # If we need to raise an error and we don't have an issue_pk
+    if not issue_pk and raise_error:
+        raise ValueError("issue_pk is required")
+        
+    return issue_pk
+
+# Add htmx attribute to request objects to ensure backward compatibility
+class RequestWrapper:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        
+    def __call__(self, request):
+        # Add htmx attribute if it doesn't exist
+        if not hasattr(request, 'htmx'):
+            request.htmx = is_htmx_request(request)
+        return self.get_response(request)
+
+# Monkey patch the request object to ensure htmx attribute
+import types
+from django.http.request import HttpRequest
+def _htmx_property(self):
+    return is_htmx_request(self)
+HttpRequest.htmx = property(_htmx_property)
+
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -229,10 +291,71 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
         kwargs['organization'] = self.request.organization
         return kwargs
     
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.GET.get('workplan'):
+            try:
+                workplan_id = int(self.request.GET.get('workplan'))
+                workplan = get_object_or_404(AuditWorkplan, pk=workplan_id, organization=self.request.organization)
+                initial['audit_workplan'] = workplan
+            except (ValueError, TypeError):
+                pass
+        return initial
+    
+    def get_template_names(self):
+        """Return different templates based on request type."""
+        if self.request.headers.get('HX-Request'):
+            return ['audit/engagement_modal_form.html']
+        return [self.template_name]
+        
+    def get(self, request, *args, **kwargs):
+        # Check if this is an HTMX request - if so, we use the modal template via get_template_names()
+        return super().get(request, *args, **kwargs)
+    
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            
+            # Provide JSON response for modal handler
+            return JsonResponse({
+                'success': True,
+                'pk': self.object.pk,
+                'redirect': self.get_success_url(),
+                'message': self.success_message % form.cleaned_data,
+            })
+        
+        return response
+    
+    def form_invalid(self, form):
+        """Handle form validation errors."""
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            from django.template.loader import render_to_string
+            
+            # Render the form with errors
+            html = render_to_string(
+                self.get_template_names()[0],
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            
+            return JsonResponse({
+                'success': False,
+                'html': html,
+            }, status=400)
+        
+        return super().form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
@@ -247,6 +370,59 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+    
+    def get_template_names(self):
+        """Return different templates based on request type."""
+        if self.request.headers.get('HX-Request'):
+            return ['audit/engagement_modal_form.html']
+        return [self.template_name]
+    
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        form.instance.organization = self.request.organization
+        form.instance.last_modified_by = self.request.user
+        response = super().form_valid(form)
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            from django.template.loader import render_to_string
+            
+            # Provide JSON response for modal handler
+            return JsonResponse({
+                'success': True,
+                'pk': self.object.pk,
+                'redirect': self.get_success_url(),
+                'message': self.success_message % form.cleaned_data,
+            })
+        
+        return response
+    
+    def form_invalid(self, form):
+        """Handle form validation errors."""
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            from django.template.loader import render_to_string
+            
+            # Render the form with errors
+            html = render_to_string(
+                self.get_template_names()[0],
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            
+            return JsonResponse({
+                'success': False,
+                'html': html,
+            }, status=400)
+        
+        return super().form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
@@ -1012,6 +1188,8 @@ class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        # Pass the specific objective_pk to the form for context-aware filtering
+        kwargs['objective_pk'] = self.kwargs.get('objective_pk')
         return kwargs
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1447,19 +1625,27 @@ class NoteCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
 
     def get_issue_pk(self):
         issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk') or self.request.POST.get('issue_pk')
-        if not issue_pk:
-            raise ValueError('issue_pk is required for this modal')
         return issue_pk
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        kwargs['issue_pk'] = self.get_issue_pk()
+        # Only pass issue_pk if it exists
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            kwargs['issue_pk'] = issue_pk
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.get_issue_pk()
+        # Add content type and object id to the context for proper rendering
+        context['content_type_id'] = self.kwargs.get('content_type_id')
+        context['object_id'] = self.kwargs.get('object_id')
+        
+        # Add issue_pk only if it exists
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            context['issue_pk'] = issue_pk
         return context
 
     def form_valid(self, form):
@@ -1525,6 +1711,34 @@ class NotificationListView(AuditPermissionMixin, generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user, user__organization=self.request.organization)
+
+class NotificationTemplateView(AuditPermissionMixin, ListView):
+    """A template-based view for displaying notifications in a user-friendly UI"""
+    model = Notification
+    template_name = 'audit/notification_list.html'
+    context_object_name = 'notifications'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        # Get notifications for the current user and mark them as read
+        queryset = Notification.objects.filter(
+            user=self.request.user, 
+            user__organization=self.request.organization
+        ).order_by('-created_at')
+        
+        # Mark all as read (optional, remove if you want to keep unread status)
+        # queryset.update(is_read=True)
+        
+        return queryset
+        
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['unread_count'] = Notification.objects.filter(
+            user=self.request.user,
+            user__organization=self.request.organization,
+            is_read=False
+        ).count()
+        return context
 
 class NoteListView(AuditPermissionMixin, ListView):
     model = Note
@@ -1622,6 +1836,40 @@ class RecommendationCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
 
 class RecommendationUpdateView(RecommendationCreateView, UpdateView):
     success_message = _("Recommendation was updated successfully")
+    
+    def get_issue_pk(self):
+        # Use the safe utility function to get issue_pk from any available source
+        # without raising ValueError if not found
+        return safe_get_issue_pk(self, raise_error=False)
+        
+    def get_form_kwargs(self):
+        kwargs = super(RecommendationCreateView, self).get_form_kwargs()
+        kwargs["organization"] = self.request.organization
+        
+        # Try to get issue_pk, add it to kwargs only if found
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            kwargs["issue_pk"] = issue_pk
+        
+        return kwargs
+        
+    def get_initial(self):
+        initial = super(RecommendationCreateView, self).get_initial()
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            initial["issue"] = issue_pk
+        return initial
+        
+    def form_valid(self, form):
+        # Ensure the organization is set
+        form.instance.organization = self.request.organization
+        
+        # Only set issue_id if we have a valid issue_pk
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            form.instance.issue_id = issue_pk
+            
+        return super().form_valid(form)
 
 class RecommendationDetailView(AuditPermissionMixin, DetailView):
     model = Recommendation

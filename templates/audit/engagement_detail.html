@@ -3,25 +3,36 @@
 {% block title %}Engagement: {{ engagement.title }} | Oreno GRC{% endblock %}
 {% block content %}
 <div class="container main-container">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h3 mb-0">{{ engagement.title }} <span class="badge bg-info">{{ engagement.project_status|capfirst }}</span></h1>
-      <div class="text-muted">Code: {{ engagement.code }}</div>
+  <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-0">{{ engagement.title }}</h1>
+        <div class="text-muted">Code: {{ engagement.code }}</div>
+      </div>
+      <div>
+        <span class="badge bg-info fs-6 me-2">{{ engagement.project_status|capfirst }}</span>
+      </div>
     </div>
-    <div>
-      <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
-      <button class="btn btn-primary" hx-get="{% url 'audit:objective-modal-add' engagement_pk=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+    
+    <div class="d-flex flex-wrap mt-3 gap-2">
+      <a href="{% url 'audit:dashboard' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Audit Dashboard
+      </a>
+      <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+      <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:objective-modal-add' engagement_pk=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
         <i class="bi bi-plus-circle"></i> Add Objective
       </button>
-      <button class="btn btn-success" hx-get="{% url 'audit:issue-create' %}?engagement={{ engagement.pk }}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      <button class="btn btn-success btn-sm" hx-get="{% url 'audit:issue-create' %}?engagement={{ engagement.pk }}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
         <i class="bi bi-flag"></i> Add Issue
       </button>
       {% if content_type_id %}
-      <button class="btn btn-info" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      <button class="btn btn-info btn-sm" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
         <i class="bi bi-sticky"></i> Add Note
       </button>
       {% else %}
-      <button class="btn btn-info" disabled title="Cannot add note: content type not available.">
+      <button class="btn btn-info btn-sm" disabled title="Cannot add note: content type not available.">
         <i class="bi bi-sticky"></i> Add Note
       </button>
       {% endif %}
@@ -94,10 +105,10 @@
       {% endfor %}
     </div>
     <div class="tab-pane fade" id="issues" role="tabpanel">
-      {% include 'audit/issue_list.html' with issues=engagement.all_issues engagement=engagement %}
+      {% include 'audit/_issue_list_tab_partial.html' with issues=engagement.all_issues engagement=engagement %}
     </div>
     <div class="tab-pane fade" id="notes" role="tabpanel">
-      {% include 'audit/note_list.html' with notes=engagement.all_notes content_type_id=content_type_id object_id=engagement.pk %}
+      {% include 'audit/_note_list_tab_partial.html' with notes=engagement.all_notes content_type_id=content_type_id object_id=engagement.pk %}
     </div>
   </div>
 </div>
@@ -109,4 +120,50 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize bootstrap modal
+    var mainModal = document.getElementById('mainModal');
+    
+    // Listen for HTMX events
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+      // Only handle responses for the modal target
+      if (evt.detail.target.id === 'modal-body') {
+        // Force the modal to show when content is loaded
+        var bsModal = new bootstrap.Modal(mainModal);
+        setTimeout(function() {
+          bsModal.show();
+        }, 50);
+      }
+    });
+    
+    // Close modal when the form is successfully submitted
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+      if (evt.detail.successful && evt.detail.target.closest('#modal-body')) {
+        try {
+          if (evt.detail.xhr.getResponseHeader('content-type') && 
+              evt.detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+            var data = JSON.parse(evt.detail.xhr.responseText);
+            if (data && data.form_is_valid) {
+              var bsModal = bootstrap.Modal.getInstance(mainModal);
+              if (bsModal) bsModal.hide();
+              
+              // Refresh the current tab content if needed
+              var activeTab = document.querySelector('.tab-pane.active');
+              if (activeTab && activeTab.id) {
+                if (data.html_list) {
+                  var listContainer = document.getElementById(activeTab.id + '-list-container');
+                  if (listContainer) listContainer.innerHTML = data.html_list;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error handling modal response:', e);
+        }
+      }
+    });
+  });
+</script>
 {% endblock %} 
