@@ -6,11 +6,22 @@
   <div class="col-md-12">
     <div class="card shadow-sm">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h3 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendations</h3>
+        <div class="d-flex align-items-center">
+          {% if issue and issue.pk %}
+            <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-light me-3">
+              <i class="bi bi-arrow-left me-1"></i> Back to Issue
+            </a>
+          {% endif %}
+          <h3 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendations</h3>
+        </div>
         {% if issue and issue.pk %}
-          <button class="btn btn-success" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">New Recommendation</button>
+          <button class="btn btn-success" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+            <i class="bi bi-plus-lg me-1"></i> New Recommendation
+          </button>
         {% else %}
-          <button class="btn btn-success" disabled data-bs-toggle="tooltip" title="Cannot add recommendation: Issue not saved.">New Recommendation</button>
+          <button class="btn btn-success" disabled data-bs-toggle="tooltip" title="Cannot add recommendation: Issue not saved.">
+            <i class="bi bi-plus-lg me-1"></i> New Recommendation
+          </button>
         {% endif %}
       </div>
       <div class="card-body">

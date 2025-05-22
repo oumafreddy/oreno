@@ -6,7 +6,13 @@
     <div class="card shadow-sm">
       <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
         <h3 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Issue Retest: {{ issueretest.title }}</h3>
-        <a href="{% url 'audit:issueretest-edit' issueretest.pk %}" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#issueRetestModal">Edit</a>
+        <button class="btn btn-outline-light btn-sm"
+                hx-get="{% url 'audit:issueretest-edit' issueretest.pk %}"
+                hx-target="#globalModal .modal-body"
+                data-bs-toggle="modal"
+                data-bs-target="#globalModal">
+          Edit
+        </button>
       </div>
       <div class="card-body">
         <dl class="row mb-0">
@@ -24,18 +30,4 @@
     </div>
   </div>
 </div>
-<!-- Issue Retest Modal Placeholder -->
-<div class="modal fade" id="issueRetestModal" tabindex="-1" aria-labelledby="issueRetestModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="issueRetestModalLabel">Edit Issue Retest</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <!-- AJAX form will be loaded here -->
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %} 
+{% endblock %}

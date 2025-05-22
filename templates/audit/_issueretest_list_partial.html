@@ -3,7 +3,7 @@
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Retests</h5>
       {% if issue and issue.pk %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" hx-target="#globalModal .modal-body" data-bs-toggle="modal" data-bs-target="#globalModal">
           <i class="bi bi-plus-circle"></i> Add Retest
         </button>
       {% else %}
@@ -28,7 +28,13 @@
             <td><span class="badge bg-info">{{ retest.get_status_display }}</span></td>
             <td>
               <a href="{% url 'audit:issueretest-detail' retest.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-              <a href="{% url 'audit:issueretest-update' retest.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <button class="btn btn-sm btn-outline-secondary"
+                      hx-get="{% url 'audit:issueretest-update' retest.pk %}"
+                      hx-target="#globalModal .modal-body"
+                      data-bs-toggle="modal"
+                      data-bs-target="#globalModal">
+                Edit
+              </button>
             </td>
           </tr>
           {% empty %}

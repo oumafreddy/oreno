@@ -29,6 +29,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{% static 'img/favicon.ico' %}">
 
+    <!-- Custom CSS -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'css/toast.css' %}" rel="stylesheet">
+
     <!-- Custom Styles -->
     <style>
         /* Color palette */
@@ -261,6 +265,9 @@
         </div>
     </main>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1056"></div>
+
     <!-- FOOTER -->
     <footer>
         <div class="container-fluid">
@@ -484,6 +491,9 @@
 
     <!-- HTMX CDN for advanced AJAX/modal support -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Follow-up Action Handler -->
+    <script src="{% static 'js/followup-action-handler.js' %}" defer></script>
 
     <!-- Enhanced AJAX/htmx Modal Logic for Audit Models -->
     <script>

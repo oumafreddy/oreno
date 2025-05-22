@@ -352,7 +352,7 @@ class FollowUpActionForm(BaseAuditForm):
         model = FollowUpAction
         fields = [
             'issue', 'description', 'assigned_to', 'due_date',
-            'status', 'completed_at', 'notes', 'created_by'
+            'status', 'completed_at', 'notes'
         ]
         widgets = {
             'description': CKEditor5Widget(config_name='extends'),
@@ -360,6 +360,7 @@ class FollowUpActionForm(BaseAuditForm):
             'due_date': forms.DateInput(attrs={'type': 'date'}),
             'completed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
+
     def __init__(self, *args, **kwargs):
         # Extract specific context parameters for filtering
         self.issue_pk = kwargs.pop('issue_pk', None)
@@ -368,6 +369,18 @@ class FollowUpActionForm(BaseAuditForm):
         engagement_pk = kwargs.pop('engagement_pk', None)
         
         super().__init__(*args, **kwargs)
+        
+        # Set initial values if issue_pk is provided
+        if self.issue_pk and not self.instance.pk:  # Only for new instances
+            from .models.issue import Issue
+            try:
+                issue = Issue.objects.get(pk=self.issue_pk, organization=self.organization)
+                self.initial['issue'] = issue
+                # Set default assigned_to to the issue owner if available
+                if issue.issue_owner:
+                    self.initial['assigned_to'] = issue.issue_owner
+            except Issue.DoesNotExist:
+                pass
         
         if self.organization:
             # Base filter for organization
@@ -389,13 +402,17 @@ class FollowUpActionForm(BaseAuditForm):
             
             self.fields['issue'].queryset = issue_queryset
             
-            # If there's only one option and it matches our context, preselect it and make read-only
-            if self.issue_pk and issue_queryset.count() == 1:
-                self.fields['issue'].initial = self.issue_pk
+            # If there's only one option, preselect it and make read-only
+            if issue_queryset.count() == 1:
+                self.fields['issue'].initial = issue_queryset.first()
                 self.fields['issue'].widget.attrs['readonly'] = True
             
             # Filter assigned_to to current organization
             self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(organization=self.organization)
+        
+        # Remove created_by from the form - it will be set in the view
+        if 'created_by' in self.fields:
+            del self.fields['created_by']
         
         self.helper.layout = Layout(
             Fieldset(
@@ -411,7 +428,6 @@ class FollowUpActionForm(BaseAuditForm):
                     Column('completed_at', css_class='col-md-6'),
                 ),
                 'notes',
-                'created_by',
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
@@ -448,6 +464,35 @@ class IssueRetestForm(BaseAuditForm):
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── ISSUE WORKING PAPER FORM ──────────────────────────────────────────────
+class IssueWorkingPaperForm(forms.ModelForm):
+    """Form for uploading working papers to issues."""
+    class Meta:
+        model = IssueWorkingPaper
+        fields = ['file', 'description']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3, 'placeholder': _('Optional description for this working paper.')}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.issue = kwargs.pop('issue', None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Upload Working Paper'),
+                'file',
+                'description',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Upload'), css_class='btn-primary'),
                 css_class='mt-3'
             )
         )

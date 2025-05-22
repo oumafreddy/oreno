@@ -4,7 +4,7 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" id="noteForm" hx-post="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#modal-body" hx-swap="outerHTML">
+  <form method="post" id="noteForm" hx-post="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
@@ -25,13 +25,14 @@
         if (data.form_is_valid && data.html_list) {
           var container = document.getElementById('note-list-container');
           if (container) container.innerHTML = data.html_list;
-          var modalEl = document.getElementById('mainModal');
+          var modalEl = document.getElementById('globalModal');
           if (modalEl && window.bootstrap) {
             var modal = window.bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
           }
         } else if (data.html_form) {
-          document.getElementById('modal-body').innerHTML = data.html_form;
+          var modalBody = document.querySelector('#globalModal .modal-body');
+          if (modalBody) modalBody.innerHTML = data.html_form;
         }
       }
     } catch (e) {}

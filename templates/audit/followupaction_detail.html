@@ -6,7 +6,13 @@
     <div class="card shadow-sm">
       <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
         <h3 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Follow-up Action: {{ followupaction.title }}</h3>
-        <a href="{% url 'audit:followupaction-edit' followupaction.pk %}" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#followupActionModal">Edit</a>
+        <button class="btn btn-outline-light btn-sm"
+                hx-get="{% url 'audit:followupaction-edit' followupaction.pk %}"
+                hx-target="#globalModal .modal-body"
+                data-bs-toggle="modal"
+                data-bs-target="#globalModal">
+          Edit
+        </button>
       </div>
       <div class="card-body">
         <dl class="row mb-0">
@@ -33,18 +39,5 @@
     </div>
   </div>
 </div>
-<!-- Follow-up Action Modal Placeholder -->
-<div class="modal fade" id="followupActionModal" tabindex="-1" aria-labelledby="followupActionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="followupActionModalLabel">Edit Follow-up Action</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <!-- AJAX form will be loaded here -->
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %} 
+
+{% endblock %}

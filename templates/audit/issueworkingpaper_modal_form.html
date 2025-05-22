@@ -4,54 +4,71 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" enctype="multipart/form-data" novalidate id="workingPaperForm" action="{% if object %}{% url 'audit:issueworkingpaper-edit' object.pk %}{% else %}{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}{% endif %}">
+  <form method="post" enctype="multipart/form-data" novalidate id="workingPaperForm" 
+        hx-post="{% if object %}{% url 'audit:issueworkingpaper-edit' object.pk %}{% else %}{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}{% endif %}"
+        hx-target="#globalModal .modal-body"
+        hx-encoding="multipart/form-data"
+        hx-swap="innerHTML">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
-      <button type="submit" class="btn btn-success">
+      <button type="submit" class="btn btn-success" id="submitBtn">
         <span class="spinner-border spinner-border-sm d-none" id="wp-upload-spinner" role="status" aria-hidden="true"></span>
-        Save
+        <span id="submitText">Save</span>
       </button>
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
     </div>
   </form>
 </div>
 <script>
-(function() {
-  var form = document.getElementById('workingPaperForm');
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('workingPaperForm');
   if (!form) return;
-  form.addEventListener('submit', function() {
-    var btn = form.querySelector('button[type="submit"]');
-    var spinner = document.getElementById('wp-upload-spinner');
-    if (btn && spinner) {
-      btn.disabled = true;
+
+  // Handle form submission
+  form.addEventListener('htmx:beforeRequest', function(event) {
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('wp-upload-spinner');
+    const submitText = document.getElementById('submitText');
+    
+    if (submitBtn && spinner && submitText) {
+      submitBtn.disabled = true;
       spinner.classList.remove('d-none');
+      submitText.textContent = 'Saving...';
     }
   });
+
+  // Handle response after form submission
   form.addEventListener('htmx:afterRequest', function(event) {
-    var btn = form.querySelector('button[type="submit"]');
-    var spinner = document.getElementById('wp-upload-spinner');
-    if (btn && spinner) {
-      btn.disabled = false;
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('wp-upload-spinner');
+    const submitText = document.getElementById('submitText');
+    
+    if (submitBtn && spinner && submitText) {
+      submitBtn.disabled = false;
       spinner.classList.add('d-none');
+      submitText.textContent = 'Save';
     }
-    try {
-      var detail = event.detail;
-      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
-        var data = JSON.parse(detail.xhr.responseText);
-        if (data.form_is_valid && data.html_list) {
-          var container = document.getElementById('workingpapers-list-container');
-          if (container) container.innerHTML = data.html_list;
-          var modalEl = document.getElementById('mainModal');
-          if (modalEl && window.bootstrap) {
-            var modal = window.bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+
+    // Handle successful form submission
+    if (event.detail.successful) {
+      try {
+        const data = event.detail.xhr.responseJSON;
+        if (data && data.form_is_valid) {
+          // Close the modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
+          if (modal) modal.hide();
+          
+          // Refresh the working papers list
+          if (data.html_list) {
+            const container = document.getElementById('workingpapers-list-container');
+            if (container) container.innerHTML = data.html_list;
           }
-        } else if (data.html_form) {
-          document.getElementById('modal-body').innerHTML = data.html_form;
         }
+      } catch (e) {
+        console.error('Error processing response:', e);
       }
-    } catch (e) {}
+    }
   });
-})();
-</script> 
+});
+</script>

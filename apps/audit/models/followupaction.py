@@ -53,4 +53,6 @@ class FollowUpAction(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.recommendation} - {self.description[:40]}... ({self.get_status_display()})" 
+        issue_ref = f"{self.issue}" if self.issue else "No Issue"
+        desc = (self.description[:40] + '...') if self.description else 'No description'
+        return f"{issue_ref} - {desc} ({self.get_status_display()})"

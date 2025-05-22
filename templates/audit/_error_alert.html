@@ -1,0 +1,17 @@
+{# Alert component for displaying error messages #}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>
+            {% if title %}<h5 class="alert-heading mb-1">{{ title }}</h5>{% endif %}
+            <p class="mb-0">{{ message|default:"An unexpected error occurred. Please try again later." }}</p>
+            {% if debug and error %}
+                <div class="mt-2 p-2 bg-dark text-light rounded small">
+                    <div><strong>Error:</strong> {{ error }}</div>
+                    {% if error_type %}<div><strong>Type:</strong> {{ error_type }}</div>{% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

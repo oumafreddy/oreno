@@ -1,76 +1,52 @@
 {% load crispy_forms_tags %}
-<div class="modal-header">
-  <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Follow-up Action</h5>
+<div class="modal-header bg-light">
+  <h5 class="modal-title">
+    <i class="bi bi-clipboard2-check me-2"></i>
+    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Follow-Up Action
+  </h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
+
 <div class="modal-body">
-  {% if issue_pk %}
-    <form method="post" id="followupactionForm" 
-          hx-post="{% if object %}{% url 'audit:followupaction-update' object.pk %}{% else %}{% url 'audit:followupaction-modal-add' issue_pk=issue_pk %}{% endif %}" 
-          hx-target="#modal-body" 
-          hx-swap="outerHTML"
-          hx-trigger="submit">
-      {% csrf_token %}
-      {{ form|crispy }}
-      <div class="d-flex justify-content-end mt-4">
-        <button type="submit" class="btn btn-success">Save</button>
-        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+  <form id="followupactionForm" 
+        method="post" 
+        hx-post="{{ request.path }}" 
+        hx-target="#followup-list-container" 
+        hx-swap="outerHTML" 
+        enctype="multipart/form-data" 
+        novalidate
+        data-mode="{% if form.instance.pk %}edit{% else %}add{% endif %}"
+        hx-trigger="submit"
+        hx-indicator="#form-indicator">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        {% for error in form.non_field_errors %}
+          {{ error }}
+        {% endfor %}
       </div>
-    </form>
-  {% else %}
-    <div class="alert alert-danger">Cannot add follow-up: Issue not found or not saved. Please save the issue first.</div>
-  {% endif %}
+    {% endif %}
+    
+    {{ form|crispy }}
+    
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" id="submitButton" class="btn btn-primary">
+        <span class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+        <span class="btn-text">
+          <i class="bi bi-save me-1"></i> {% if form.instance.pk %}Update{% else %}Save{% endif %}
+        </span>
+      </button>
+      <button type="button" class="btn btn-outline-secondary ms-2" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg me-1"></i> Cancel
+      </button>
+    </div>
+  </form>
 </div>
 
-<!-- This script is only used as a fallback; the main modal-handler.js will handle most interactions -->
-<script>
-(function() {
-  // Ensure we have the necessary components
-  if (!document.getElementById('followupactionForm')) return;
-  
-  // Safely add event listener with proper error handling
-  document.getElementById('followupactionForm').addEventListener('htmx:afterRequest', function(event) {
-    try {
-      var detail = event.detail;
-      // Safely check content type to avoid null errors
-      var contentType = detail.xhr.getResponseHeader('content-type') || '';
-      
-      if (contentType.includes('application/json')) {
-        try {
-          var data = JSON.parse(detail.xhr.responseText);
-          
-          // Handle successful form submission
-          if (data.success || data.form_is_valid) {
-            // Update the followup action list if provided
-            if (data.html_list) {
-              var container = document.getElementById('followupaction-list-container');
-              if (container) container.innerHTML = data.html_list;
-            }
-            
-            // Close the modal safely using OrenoModals if available
-            if (window.OrenoModals) {
-              window.OrenoModals.hideModal('mainModal');
-            } else {
-              // Fallback to Bootstrap if OrenoModals not loaded yet
-              var modalEl = document.getElementById('mainModal');
-              if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-                var modal = window.bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-              }
-            }
-            
-            // Refresh the page content if needed
-            if (data.redirect) {
-              window.location.href = data.redirect;
-            }
-          }
-        } catch (jsonError) {
-          console.warn('Error parsing JSON response', jsonError);
-        }
-      }
-    } catch (e) {
-      console.warn('Error handling form response', e);
-    }
-  });
-})();
-</script>
+<div id="form-indicator" class="htmx-indicator" style="display: none;">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>

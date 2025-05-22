@@ -10,7 +10,13 @@
       <div class="text-muted">Linked To: {{ note.content_object }}</div>
     </div>
     <div>
-      <a href="{% url 'audit:note-modal-edit' note.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
+      <button class="btn btn-outline-secondary me-2"
+              hx-get="{% url 'audit:note-modal-edit' note.pk %}"
+              hx-target="#globalModal .modal-body"
+              data-bs-toggle="modal"
+              data-bs-target="#globalModal">
+        <i class="bi bi-pencil"></i> Edit
+      </button>
     </div>
   </div>
   <div class="card mb-4">

@@ -5,7 +5,7 @@
 </div>
 <div class="modal-body">
   {% if issue_pk %}
-    <form method="post" hx-post="{% url 'audit:issueretest-modal-add' issue_pk=issue_pk %}" hx-target="#modal-body" hx-swap="outerHTML">
+    <form id="issueretestForm" method="post" hx-post="{% url 'audit:issueretest-modal-add' issue_pk=issue_pk %}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">
       {% csrf_token %}
       {{ form|crispy }}
       <div class="modal-footer">

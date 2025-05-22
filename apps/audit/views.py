@@ -64,13 +64,26 @@ HttpRequest.htmx = property(_htmx_property)
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse_lazy
+from django.conf import settings
+from django.views.generic import (
+    ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View
+)
+from django.contrib.messages.views import SuccessMessageMixin
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
-from django.db.models import Q
+from django.db import transaction, DatabaseError, NotSupportedError
+from django.db.models import Q, F, Case, When
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_http_methods as require_HTTP_methods
+import logging
+
+logger = logging.getLogger(__name__)
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView,
@@ -82,11 +95,12 @@ from core.mixins import OrganizationMixin, OrganizationPermissionMixin
 from core.decorators import skip_org_check
 from organizations.models import Organization
 
-from .models import AuditWorkplan, Engagement, Issue, Approval, Notification
+from .models import AuditWorkplan, Engagement, Issue, Approval, Notification, IssueWorkingPaper, Note, FollowUpAction, IssueRetest, Objective, Procedure, ProcedureResult
 from .forms import (
     AuditWorkplanForm, EngagementForm, IssueForm,
     ApprovalForm, WorkplanFilterForm, EngagementFilterForm, IssueFilterForm,
-    ProcedureForm, ProcedureResultForm, FollowUpActionForm, IssueRetestForm, NoteForm
+    ProcedureForm, ProcedureResultForm, FollowUpActionForm, IssueRetestForm, NoteForm,
+    IssueWorkingPaperForm
 )
 
 from rest_framework import generics, permissions, viewsets
@@ -1335,15 +1349,75 @@ class FollowUpActionListView(AuditPermissionMixin, ListView):
     template_name = 'audit/followupaction_list.html'
     context_object_name = 'followup_actions'
     paginate_by = 20
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
-        return queryset.filter(issue__procedure_result__procedure__objective__engagement__organization=organization)
+        
+        # Filter by organization
+        queryset = queryset.filter(organization=organization)
+        
+        # Filter by issue if specified
+        issue_pk = self.request.GET.get('issue_pk')
+        if issue_pk:
+            queryset = queryset.filter(issue_id=issue_pk)
+            
+        # Filter by status if specified
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        # Filter by assigned_to if specified
+        assigned_to = self.request.GET.get('assigned_to')
+        if assigned_to:
+            queryset = queryset.filter(assigned_to_id=assigned_to)
+            
+        # Order by due date (ascending, with nulls last)
+        queryset = queryset.order_by(
+            models.F('due_date').asc(nulls_last=True),
+            '-created_at'
+        )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Add filter form data
+        context['status_choices'] = dict(FollowUpAction.STATUS_CHOICES)
+        
+        # Add issue info if filtered by issue
+        issue_pk = self.request.GET.get('issue_pk')
+        if issue_pk:
+            from .models.issue import Issue
+            try:
+                context['issue'] = Issue.objects.get(pk=issue_pk, organization=organization)
+            except Issue.DoesNotExist:
+                pass
+                
+        # Add assigned users for filter
+        context['assigned_users'] = CustomUser.objects.filter(
+            organization=organization,
+            followup_actions_assigned__isnull=False
+        ).distinct()
+        
+        return context
 
 class FollowUpActionDetailView(AuditPermissionMixin, DetailView):
     model = FollowUpAction
     template_name = 'audit/followupaction_detail.html'
     context_object_name = 'followup_action'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(organization=self.request.organization)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_edit'] = self.request.user.has_perm('audit.change_followupaction')
+        context['can_delete'] = self.request.user.has_perm('audit.delete_followupaction')
+        return context
 
 class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = FollowUpAction
@@ -1381,12 +1455,13 @@ class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     def form_valid(self, form):
         form.instance.issue_id = self.get_issue_pk()
         form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user  # Automatically set the creator
         response = super().form_valid(form)
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            recommendations = FollowUpAction.objects.filter(issue_id=self.get_issue_pk(), organization=self.request.organization)
+            followups = FollowUpAction.objects.filter(issue_id=self.get_issue_pk(), organization=self.request.organization)
             from .models.issue import Issue
             html_list = render_to_string("audit/followupaction_list.html", {
-                "followup_actions": recommendations,
+                "followup_actions": followups,
                 "issue": Issue.objects.get(pk=self.get_issue_pk()),
             }, request=self.request)
             return JsonResponse({"form_is_valid": True, "html_list": html_list})
@@ -1401,8 +1476,49 @@ class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     def get_success_url(self):
         return reverse_lazy("audit:followupaction-list", kwargs={"issue_pk": self.get_issue_pk()})
 
-class FollowUpActionUpdateView(FollowUpActionCreateView, UpdateView):
+class FollowUpActionUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = FollowUpAction
+    form_class = FollowUpActionForm
+    template_name = "audit/followupaction_form.html"
     success_message = _("Follow Up Action was updated successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["organization"] = self.request.organization
+        if hasattr(self, 'object') and self.object.issue_id:
+            kwargs["issue_pk"] = self.object.issue_id
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if hasattr(self, 'object') and self.object.issue:
+            context["issue"] = self.object.issue
+            context["issue_pk"] = self.object.issue_id
+        return context
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        response = super().form_valid(form)
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+            from .models.issue import Issue
+            followups = FollowUpAction.objects.filter(issue_id=self.object.issue_id, organization=self.request.organization)
+            html_list = render_to_string("audit/followupaction_list.html", {
+                "followup_actions": followups,
+                "issue": Issue.objects.get(pk=self.object.issue_id),
+            }, request=self.request)
+            return JsonResponse({"form_is_valid": True, "html_list": html_list})
+        return response
+    
+    def form_invalid(self, form):
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
+            return JsonResponse({"form_is_valid": False, "html_form": html_form})
+        return super().form_invalid(form)
+    
+    def get_success_url(self):
+        if hasattr(self, 'object') and self.object.issue_id:
+            return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue_id})
+        return reverse_lazy('audit:followupaction-list')
 
 class FollowUpActionModalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = FollowUpAction
@@ -1410,39 +1526,113 @@ class FollowUpActionModalCreateView(AuditPermissionMixin, SuccessMessageMixin, C
     template_name = 'audit/followupaction_modal_form.html'
     success_message = _('Follow Up Action was created successfully')
 
+    def get_issue_pk(self):
+        """Get the issue_pk from URL kwargs or request parameters."""
+        return self.kwargs.get("issue_pk") or self.request.GET.get("issue_pk")
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
+        kwargs["organization"] = self.request.organization
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            kwargs["issue_pk"] = issue_pk
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.kwargs.get('issue_pk')
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            from .models.issue import Issue
+            try:
+                context["issue"] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                pass
         return context
 
+    def get(self, request, *args, **kwargs):
+        """Handle GET request to display the form."""
+        self.object = None
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        
+        # Add HTMX headers to the response
+        context = self.get_context_data(form=form)
+        if request.headers.get('HX-Request'):
+            return self.render_to_response(context)
+        return super().get(request, *args, **kwargs)
+        
     def form_valid(self, form):
-        issue_pk = self.kwargs.get('issue_pk')
+        """Handle form validation and submission."""
+        issue_pk = self.get_issue_pk()
+        if not issue_pk:
+            form.add_error(None, _("Issue is required for creating a follow-up action."))
+            return self.form_invalid(form)
+            
         form.instance.issue_id = issue_pk
         form.instance.organization = self.request.organization
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            followups = FollowUpAction.objects.filter(issue_id=issue_pk, organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/_followupaction_list_partial.html", {
-                "followups": followups,
-                "issue": Issue.objects.get(pk=issue_pk),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
+        form.instance.created_by = self.request.user
+        
+        try:
+            self.object = form.save()
+            
+            # Handle HTMX request
+            if self.request.headers.get('HX-Request'):
+                from django.template.loader import render_to_string
+                from .models.issue import Issue
+                
+                try:
+                    issue = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+                    followups = FollowUpAction.objects.filter(issue=issue, organization=self.request.organization)
+                    
+                    # Render the follow-up list partial
+                    html = render_to_string(
+                        'audit/_followupaction_list_partial.html',
+                        {
+                            'followups': followups,
+                            'issue': issue,
+                            'request': self.request
+                        }
+                    )
+                    
+                    # Return success response with HTML
+                    return HttpResponse(html)
+                    
+                except Issue.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': _("Error: Related issue not found.")
+                    }, status=400)
+            
+            # For non-HTMX requests, redirect to success URL
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
+            return redirect(self.get_success_url())
+            
+        except Exception as e:
+            if self.request.headers.get('HX-Request'):
+                return JsonResponse({
+                    'success': False,
+                    'message': str(e)
+                }, status=400)
+            raise
 
     def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+            html_form = render_to_string(
+                self.template_name,
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            return JsonResponse({
+                "form_is_valid": False,
+                "html_form": html_form
+            })
         return super().form_invalid(form)
 
     def get_success_url(self):
-        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        issue_pk = self.get_issue_pk()
+        if issue_pk:
+            return reverse_lazy("audit:issue-detail", kwargs={"pk": issue_pk})
+        return reverse_lazy("audit:followupaction-list")
 
 class FollowUpActionModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = FollowUpAction
@@ -1450,36 +1640,62 @@ class FollowUpActionModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, U
     template_name = 'audit/followupaction_modal_form.html'
     success_message = _('Follow Up Action was updated successfully')
 
+    def get_queryset(self):
+        """Limit queryset to objects in the current organization."""
+        return super().get_queryset().filter(organization=self.request.organization)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        if hasattr(self, 'object') and self.object.issue_id:
+            kwargs['issue_pk'] = self.object.issue_id
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.object.issue.pk if self.object.issue_id else None
+        if hasattr(self, 'object') and self.object.issue:
+            context['issue'] = self.object.issue
         return context
 
     def form_valid(self, form):
+        form.instance.organization = self.request.organization
         response = super().form_valid(form)
+        
+        # Handle HTMX/JSON response
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            followups = FollowUpAction.objects.filter(issue_id=self.object.issue_id, organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/_followupaction_list_partial.html", {
-                "followups": followups,
-                "issue": Issue.objects.get(pk=self.object.issue_id),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
+            try:
+                # Return a success response that will close the modal
+                return JsonResponse({
+                    'success': True,
+                    'message': str(self.success_message),
+                    'redirect_url': self.get_success_url()
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': _("Error updating follow-up action: {}".format(str(e)))
+                }, status=400)
+        
         return response
 
     def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+            html_form = render_to_string(
+                self.template_name,
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            return JsonResponse({
+                'success': False,
+                'form_errors': form.errors,
+                'html_form': html_form
+            }, status=400)
         return super().form_invalid(form)
 
     def get_success_url(self):
-        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        if hasattr(self, 'object') and self.object.issue_id:
+            return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue_id})
+        return reverse_lazy('audit:followupaction-list')
 
 # ISSUE RETEST VIEWS
 class IssueRetestListView(AuditPermissionMixin, ListView):
@@ -1984,15 +2200,102 @@ def htmx_recommendation_list(request):
     return JsonResponse({'html': html})
 
 @login_required
-@require_GET
+@require_HTTP_methods(["GET"])
 def htmx_followupaction_list(request):
-    org = request.organization
-    recommendation_id = request.GET.get('recommendation')
-    qs = FollowUpAction.objects.filter(organization=org)
-    if recommendation_id:
-        qs = qs.filter(recommendation_id=recommendation_id)
-    html = render_to_string('audit/_followupaction_list_partial.html', {'followupactions': qs})
-    return JsonResponse({'html': html})
+    """
+    HTMX endpoint to load follow-up actions for an issue or recommendation.
+    Supports both HTMX and regular AJAX requests.
+    """
+    try:
+        # Get organization from the request or user's primary organization
+        org = getattr(request, 'organization', None)
+        if not org and hasattr(request.user, 'organization'):
+            org = request.user.organization
+            
+        if not org:
+            logger.error("Organization not found in request or user profile")
+            raise PermissionDenied("Organization not found. Please ensure you're accessing this from within an organization context.")
+
+        # Get filter parameters
+        issue_id = request.GET.get('issue_id')
+        recommendation_id = request.GET.get('recommendation')
+        
+        # Base queryset with select_related for performance
+        qs = FollowUpAction.objects.filter(organization=org)
+        qs = qs.select_related('issue', 'assigned_to', 'created_by')
+        
+        # Apply filters
+        if issue_id and issue_id.isdigit():
+            qs = qs.filter(issue_id=int(issue_id))
+        if recommendation_id and recommendation_id.isdigit():
+            qs = qs.filter(recommendation_id=int(recommendation_id))
+        
+        # Handle ordering with nulls last for due_date
+        try:
+            # Try with nulls_last if the database supports it
+            qs = qs.order_by(F('due_date').asc(nulls_last=True), '-created_at')
+        except (NotSupportedError, DatabaseError):
+            # Fallback for databases that don't support nulls_last
+            qs = qs.order_by(
+                Case(When(due_date__isnull=True, then=1), default=0),
+                     'due_date',
+                     '-created_at'
+            )
+        
+        context = {
+            'followups': qs,
+            'issue_id': issue_id,
+            'request': request
+        }
+        
+        # If this is an HTMX request, return just the list content
+        if request.headers.get('HX-Request'):
+            html = render_to_string('audit/_followupaction_list_partial.html', context)
+            return HttpResponse(html)
+        
+        # For regular AJAX requests, return JSON
+        return JsonResponse({
+            'success': True,
+            'count': qs.count(),
+            'html': render_to_string('audit/_followupaction_list_partial.html', context)
+        })
+        
+    except Exception as e:
+        error_msg = f"Error in htmx_followupaction_list: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        
+        # Prepare error context
+        error_context = {
+            'error': str(e),
+            'error_type': e.__class__.__name__,
+            'issue_id': request.GET.get('issue_id'),
+            'recommendation_id': request.GET.get('recommendation'),
+            'user': request.user.username if request.user.is_authenticated else 'anonymous'
+        }
+        
+        # Log detailed error context
+        logger.error(f"Error context: {error_context}")
+        
+        # Return appropriate response based on request type
+        if request.headers.get('HX-Request'):
+            error_html = render_to_string('audit/_error_alert.html', {
+                'title': 'Error Loading Follow-up Actions',
+                'message': 'There was an error loading the follow-up actions. Please try again later.',
+                'error': str(e),
+                'error_type': e.__class__.__name__,
+                'debug': getattr(settings, 'DEBUG', False)
+            })
+            return HttpResponse(error_html, status=500)
+            
+        return JsonResponse(
+            {
+                'success': False,
+                'error': 'An error occurred while loading follow-up actions.',
+                'detail': str(e),
+                'error_type': e.__class__.__name__
+            },
+            status=500
+        )
 
 @login_required
 @require_GET
@@ -2061,12 +2364,18 @@ class IssueWorkingPaperCreateView(AuditPermissionMixin, SuccessMessageMixin, Cre
             return JsonResponse({'form_is_valid': True, 'html_list': html_list})
         return response
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not hasattr(self, 'object') or not self.object:
+            context['issue'] = get_object_or_404(Issue, pk=self.kwargs.get('issue_pk'))
+        return context
+
     def form_invalid(self, form):
         if self.request.htmx or self.request.headers.get('HX-Request'):
-            html_form = render_to_string('audit/issueworkingpaper_modal_form.html', {
-                'form': form,
-                'object': None,
-            }, request=self.request)
+            html_form = render_to_string('audit/issueworkingpaper_modal_form.html', 
+                self.get_context_data(form=form, object=None),
+                request=self.request
+            )
             return JsonResponse({'form_is_valid': False, 'html_form': html_form})
         return super().form_invalid(form)
 
