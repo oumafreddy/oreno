@@ -12,6 +12,8 @@ from django.views.defaults import (
     permission_denied,
     bad_request
 )
+from django.views.generic import TemplateView
+from django.urls import path
 
 # Define error handlers for public schema
 handler400 = 'core.views.bad_request'
@@ -19,17 +21,44 @@ handler403 = 'core.views.permission_denied'
 handler404 = 'core.views.page_not_found'
 handler500 = 'core.views.server_error'
 
-def public_home(request):
+class PublicHomeView(TemplateView):
     """Public home page view"""
-    return HttpResponse("Welcome to the public Oreno site!")
+    template_name = 'public/home.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Home - Hashrate Solutions'
+        return context
+
+class PrivacyPolicyView(TemplateView):
+    """Privacy policy page"""
+    template_name = 'public/privacy.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Privacy Policy - Hashrate Solutions'
+        return context
+
+class CookiePolicyView(TemplateView):
+    """Cookie policy page"""
+    template_name = 'public/cookies.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Cookie Policy - Hashrate Solutions'
+        return context
 
 # Define URL patterns for public schema
 urlpatterns = [
     # Public Admin
     path('admin/', admin.site.urls),
     
-    # Public Home and Documentation
-    path('', public_home, name='public-home'),
+    # Public Pages
+    path('', PublicHomeView.as_view(), name='public-home'),
+    path('privacy-policy/', PrivacyPolicyView.as_view(), name='public-privacy'),
+    path('cookie-policy/', CookiePolicyView.as_view(), name='public-cookies'),
+    
+    # Public Documentation
     path('docs/', TemplateView.as_view(
         template_name='public/docs.html'
     ), name='public-docs'),

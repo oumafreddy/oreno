@@ -1,0 +1,290 @@
+{% extends 'public/base.html' %}
+{% load static %}
+
+{% block title %}Enterprise IT Solutions | Hashrate Solutions{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section id="page-top" class="hero">
+    <div class="container hero-flex">
+
+        <div class="hero-content">
+            <h1>Hashrate Solutions</h1>
+            <p class="hero-tagline">Empowering Digital Transformation in Africa & Beyond</p>
+            <div class="cta-buttons">
+                <a href="#contact" class="btn btn-primary">Get Started</a>
+                <a href="#services" class="btn btn-secondary">Our Services</a>
+            </div>
+        </div>
+    </div>
+    <a href="#services" class="scroll-down-arrow" aria-label="Scroll to next section">
+        <i class="fas fa-chevron-down"></i>
+    </a>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Our Services</h2>
+            <p>Comprehensive solutions tailored to your organization's needs</p>
+        </div>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-laptop-code"></i></div>
+                <h3>Web Apps Development</h3>
+                <p>Development of custom web applications using Django, Power Platform, and Airtable.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-chart-bar"></i></div>
+                <h3>Data Analysis & Visualization</h3>
+                <p>Data analysis and visualization with scripting, Power BI, and Tableau.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-briefcase"></i></div>
+                <h3>Techno-functional Consultancy</h3>
+                <p>Consultancy for Microsoft Dynamics NAV & BC product line.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-server"></i></div>
+                <h3>IT Systems Acquisitions, Audits & Reviews</h3>
+                <p>Comprehensive IT systems acquisition, audits, and infrastructure reviews.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>Information Security Programs</h3>
+                <p>Development and management of information security programs.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-sync-alt"></i></div>
+                <h3>Process Digitization & Automation</h3>
+                <p>Digitization and automation using Python, Power Automate, and Power Apps.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3>Udemy CISA Courses</h3>
+                <p>Online CISA preparation courses: <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener">View Course</a></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="section bg-light">
+    <div class="container">
+        <div class="about-grid">
+            <div class="about-content">
+                <h2>About Hashrate Solutions</h2>
+                <p><strong>Hashrate Solutions</strong> is a leading provider of digital transformation, technology, and GRC services across Africa and beyond. Since 2018, we have empowered organizations to unlock their potential with innovative web apps, data analytics, process automation, and secure IT solutions.</p>
+                <ul class="about-highlights">
+                    <li><i class="fas fa-check-circle"></i> 6+ years of proven expertise</li>
+                    <li><i class="fas fa-check-circle"></i> Trusted by enterprises, NGOs, and public sector</li>
+                    <li><i class="fas fa-check-circle"></i> Specialists in Microsoft, Python, Power Platform, and more</li>
+                </ul>
+                <a href="#contact" class="btn btn-primary">Contact Us</a>
+            </div>
+            <div class="about-image">
+                <!-- Image removed as per user request -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Get In Touch</h2>
+            <p>Ready to transform your organization? Reach out to our team and let's build something great together.</p>
+        </div>
+        <div class="contact-grid contact-premium">
+            <div class="contact-info">
+                <h3>Contact Information</h3>
+                <div class="contact-details">
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div><span>Nairobi, Kenya</span></div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-phone"></i></div>
+                        <div><span>+254 711 219 536</span></div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                        <div><span>info@oreno.tech</span></div>
+                    </div>
+                </div>
+                <div class="social-links">
+                    <a href="#" class="social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="social-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+            <div class="contact-form contact-form-premium">
+                <form id="contactForm" method="post" action="#">
+                    <div class="form-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Your Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Your Message</label>
+                        <textarea id="message" name="message" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JavaScript for animations and interactions -->
+<script>
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80, // Adjust for fixed header
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+
+    // Cookie consent
+    document.addEventListener('DOMContentLoaded', function() {
+        const cookieConsent = document.getElementById('cookieConsent');
+        const acceptCookiesBtn = document.getElementById('acceptCookies');
+        
+        // Check if user has already accepted cookies
+        if (!localStorage.getItem('cookiesAccepted')) {
+            setTimeout(() => {
+                cookieConsent.classList.add('show');
+            }, 2000);
+        }
+        
+        // Handle accept cookies button click
+        if (acceptCookiesBtn) {
+            acceptCookiesBtn.addEventListener('click', function() {
+                localStorage.setItem('cookiesAccepted', 'true');
+                cookieConsent.classList.remove('show');
+            });
+        }
+    });
+    
+    // Form submission
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Add form submission logic here
+            alert('Thank you for your message! We will get back to you soon.');
+            this.reset();
+        });
+    }
+    
+    // Add animation on scroll
+    const fadeElements = document.querySelectorAll('.fade-in');
+    
+    const fadeInOnScroll = () => {
+        fadeElements.forEach(element => {
+            const elementTop = element.getBoundingClientRect().top;
+            const windowHeight = window.innerHeight;
+            
+            if (elementTop < windowHeight - 100) {
+                element.style.opacity = '1';
+                element.style.transform = 'translateY(0)';
+            }
+        });
+    };
+    
+    // Initial check
+    fadeInOnScroll();
+    
+    // Check on scroll
+    window.addEventListener('scroll', fadeInOnScroll);
+</script>
+
+<style>
+    /* Additional styles specific to the home page */
+    .hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                    url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        text-align: center;
+        /* padding: 150px 20px; */ /* Padding removed, handled by 100vh and flex centering */
+        position: relative;
+    }
+    
+    .hero h2 {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    
+    .hero p {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+    }
+    
+    .hero .btn {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s, background-color 0.3s ease;
+    }
+    
+    .hero .btn-outline {
+        transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s, background-color 0.3s ease;
+    }
+    
+    /* Show elements when they come into view */
+    .fade-in {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    
+    .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .hero {
+            padding: 100px 20px;
+        }
+        
+        .hero h2 {
+            font-size: 2rem;
+        }
+        
+        .hero p {
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}

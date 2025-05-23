@@ -1,0 +1,223 @@
+# .windsurfrules
+version: 1.0
+project:
+  name: "Oreno GRC v2"
+  description: "Enterprise GRC solution with audit management"
+  standards: ["GIAS 2024", "IPPF", "ISO31000", "COSO ERM"]
+  tech_stack: ["Python 3.11", "Django", "PostgreSQL", "HTMX", "Django REST Framework"]
+
+# Environment Configuration
+environment:
+  python: "3.11"
+  venv: ".venv"
+  requirements: "requirements.txt"
+  settings_module: "config.settings"
+
+# Project Structure
+structure:
+  enforce: true
+  required_dirs:
+    - "apps/"
+    - "config/settings/"
+    - "templates/"
+    - "static/"
+    - "media/"
+  required_files:
+    - "manage.py"
+    - "requirements.txt"
+    - "README.md"
+
+# Code Style
+code_style:
+  python:
+    formatter: "black"
+    line_length: 88
+    indent: 4
+    quotes: "double"
+    docstring_style: "google"
+    type_hints: "required"
+  
+  django:
+    model_meta: "explicit"
+    view_style: "class-based"
+    form_style: "django-crispy-forms"
+    template_language: "django"
+
+# Linting and Quality
+linting:
+  tools:
+    - "flake8"
+    - "mypy"
+    - "bandit"
+    - "isort"
+  rules:
+    max_complexity: 10
+    max_parameters: 5
+    max_methods_per_class: 15
+    max_line_length: 88
+
+# Testing
+testing:
+  framework: "pytest"
+  coverage: 90
+  required_dirs:
+    - "tests/"
+    - "tests/unit/"
+    - "tests/integration/"
+  naming_convention: "test_*.py or *_test.py"
+
+# Security
+security:
+  required:
+    - "django-csp"
+    - "django-cors-headers"
+    - "django-axes"
+  rules:
+    csrf_protection: true
+    secure_cookies: true
+    https_redirect: true
+    security_headers: true
+
+# Database
+database:
+  default: "postgresql"
+  migrations:
+    auto_create: true
+    location: "migrations/"
+    naming: "auto"
+  backup:
+    enabled: true
+    location: "backups/"
+
+# Audit Logging
+audit:
+  enabled: true
+  model: "core.models.AuditLog"
+  events:
+    - "create"
+    - "update"
+    - "delete"
+    - "login"
+    - "logout"
+  retention_days: 365
+
+# API
+api:
+  versioning: "url"
+  documentation: "drf-yasg"
+  pagination:
+    default_limit: 20
+    max_limit: 100
+  throttling:
+    anon: "100/day"
+    user: "1000/day"
+
+# Frontend
+frontend:
+  framework: "htmx"
+  css_framework: "bootstrap5"
+  js_library: "alpinejs"
+  assets:
+    location: "static/"
+    versioning: true
+
+# Deployment
+deployment:
+  environments:
+    - name: "development"
+      settings: "config.settings.development"
+      debug: true
+    - name: "staging"
+      settings: "config.settings.staging"
+      debug: false
+    - name: "production"
+      settings: "config.settings.production"
+      debug: false
+  containerization: "docker"
+  ci_cd: "github-actions"
+
+# Documentation
+documentation:
+  required: true
+  format: "markdown"
+  required_sections:
+    - "setup"
+    - "development"
+    - "deployment"
+    - "api"
+    - "changelog"
+
+# Git
+git:
+  branch_naming: "^(feature|bugfix|hotfix|release)/[a-z0-9-]+$"
+  commit_message: "conventional-commits"
+  protected_branches: ["main", "develop"]
+  pr_required: true
+  required_checks: ["test", "lint"]
+
+# IDE Configuration
+ide:
+  exclude_dirs:
+    - "__pycache__"
+    - "*.pyc"
+    - ".venv"
+    - "node_modules"
+    - ".mypy_cache"
+    - ".pytest_cache"
+  file_watcher:
+    enabled: true
+    exclude: ["*.pyc", "*.swp", "*.swo"]
+
+# Custom Rules
+custom:
+  audit_lifecycle:
+    entities:
+      - "Engagement"
+      - "Objective"
+      - "Procedure"
+      - "ProcedureResult"
+      - "Issue"
+      - "Note"
+    relationships:
+      - "Engagement -> Objective (OneToMany)"
+      - "Objective -> Procedure (OneToMany)"
+      - "Procedure -> ProcedureResult (OneToMany)"
+      - "ProcedureResult -> Issue (OneToMany, optional)"
+  
+  audit_modules:
+    - name: "audit"  # Audit management
+      path: "apps/audit/"
+      purpose: "Audit lifecycle management (workplans, engagements, issues)"
+    - name: "core.audit"  # Audit logging
+      path: "apps/core/models/audit.py"
+      purpose: "System-wide audit logging"
+
+# Validation Rules
+validation:
+  python:
+    - "no-bare-except"
+    - "no-unused-imports"
+    - "no-print-statements"
+  django:
+    - "model-form-required-fields"
+    - "url-namespaces"
+    - "template-tag-spacing"
+
+# Hooks
+hooks:
+  pre_commit:
+    - "black ."
+    - "isort ."
+    - "flake8"
+  pre_push:
+    - "pytest"
+    - "mypy ."
+
+# Ignore Patterns
+ignore:
+  - "**/migrations/*.py"
+  - "**/__pycache__/*"
+  - "**/*.pyc"
+  - "**/node_modules/*"
+  - "**/.venv/*"
+  - "**/.git/*"
