@@ -441,7 +441,17 @@
     // Notification AJAX logic
     function fetchNotifications() {
         fetch('/audit/api/notifications/?format=json')
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is ok (status 200-299)
+                if (!response.ok) {
+                    // If we get a 401/403, just handle it silently without showing errors
+                    if (response.status === 401 || response.status === 403) {
+                        return { results: [] }; // Return empty results for unauthorized/forbidden
+                    }
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
             .then(data => {
                 let list = document.getElementById('notification-list');
                 let badge = document.getElementById('notification-badge');
@@ -464,11 +474,42 @@
                 }
                 badge.textContent = unread;
                 badge.style.display = unread > 0 ? 'inline-block' : 'none';
+            })
+            .catch(error => {
+                // Silently handle errors, don't show "Request Failed" to the user
+                console.log('Error fetching notifications:', error);
+                
+                // Still update UI with empty state
+                let list = document.getElementById('notification-list');
+                let badge = document.getElementById('notification-badge');
+                if (list) list.innerHTML = '<div class="dropdown-item text-muted">No notifications.</div>';
+                if (badge) badge.style.display = 'none';
             });
     }
     function markNotificationRead(id, btn) {
-        fetch(`/audit/api/notifications/${id}/`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({is_read: true})})
-            .then(() => { btn.closest('.dropdown-item').classList.remove('fw-bold'); fetchNotifications(); });
+        fetch(`/audit/api/notifications/${id}/`, {
+            method: 'PATCH', 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            }, 
+            body: JSON.stringify({is_read: true})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(() => { 
+            btn.closest('.dropdown-item').classList.remove('fw-bold'); 
+            fetchNotifications(); 
+        })
+        .catch(error => {
+            console.log('Error marking notification as read:', error);
+            // Still update UI to prevent confusion
+            btn.closest('.dropdown-item').classList.remove('fw-bold');
+        });
     }
     document.addEventListener('DOMContentLoaded', fetchNotifications);
     document.getElementById('notificationDropdown').addEventListener('show.bs.dropdown', fetchNotifications);

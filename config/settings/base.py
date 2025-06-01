@@ -84,7 +84,7 @@ INSTALLED_APPS = [
 
     # Third-party
     'django_tenants', 
-    'debug_toolbar',
+    # 'debug_toolbar',  # Temporarily disabled due to missing templates
     'django_ckeditor_5', 
     'widget_tweaks',
     'reversion',
@@ -196,7 +196,13 @@ MIDDLEWARE = [
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
+    'audit.views.RequestWrapper',  # For HTMX attribute handling
 ]
+
+# Enable debug toolbar in debug mode - temporarily disabled due to missing templates
+# if DEBUG and 'debug_toolbar' in INSTALLED_APPS:
+#    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 # ------------------------------------------------------------------------------
 # URL & WSGI/ASGI

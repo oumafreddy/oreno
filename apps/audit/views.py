@@ -224,10 +224,42 @@ class WorkplanCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was created successfully")
     
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add any additional context needed for CKEditor5 rendering
+        return context
+    
     def form_valid(self, form):
-        form.instance.organization = self.request.organization
-        form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        try:
+            # Set auto fields
+            form.instance.organization = self.request.organization
+            form.instance.created_by = self.request.user
+            
+            # Handle empty CKEditor fields - convert None to empty string
+            if form.cleaned_data.get('objectives') is None:
+                form.instance.objectives = ''
+            if form.cleaned_data.get('description') is None:
+                form.instance.description = ''
+            
+            # Ensure CKEditor content is properly sanitized
+            if form.cleaned_data.get('objectives') == '<p>&nbsp;</p>':
+                form.instance.objectives = ''
+            if form.cleaned_data.get('description') == '<p>&nbsp;</p>':
+                form.instance.description = ''
+                
+            return super().form_valid(form)
+        except Exception as e:
+            # Log the error but present a user-friendly message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating workplan: {str(e)}", exc_info=True)
+            form.add_error(None, _("An error occurred while creating the workplan. Please try again."))
+            return self.form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('audit:workplan-detail', kwargs={'pk': self.object.pk})
@@ -237,6 +269,33 @@ class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     form_class = AuditWorkplanForm
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was updated successfully")
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+    
+    def form_valid(self, form):
+        try:
+            # Handle empty CKEditor fields - convert None to empty string
+            if form.cleaned_data.get('objectives') is None:
+                form.instance.objectives = ''
+            if form.cleaned_data.get('description') is None:
+                form.instance.description = ''
+            
+            # Ensure CKEditor content is properly sanitized
+            if form.cleaned_data.get('objectives') == '<p>&nbsp;</p>':
+                form.instance.objectives = ''
+            if form.cleaned_data.get('description') == '<p>&nbsp;</p>':
+                form.instance.description = ''
+                
+            return super().form_valid(form)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error updating workplan: {str(e)}", exc_info=True)
+            form.add_error(None, _("An error occurred while updating the workplan. Please try again."))
+            return self.form_invalid(form)
     
     def get_success_url(self):
         return reverse_lazy('audit:workplan-detail', kwargs={'pk': self.object.pk})
@@ -1922,11 +1981,16 @@ class NoteModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView)
     def get_success_url(self):
         return reverse_lazy('audit:note-list')
 
-class NotificationListView(AuditPermissionMixin, generics.ListAPIView):
+class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []  # Allow unauthenticated access
+    
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user, user__organization=self.request.organization)
+        # Return empty queryset for unauthenticated users
+        if not self.request.user.is_authenticated:
+            return Notification.objects.none()
+        # Only return notifications for authenticated users
+        return Notification.objects.filter(user=self.request.user, user__organization=getattr(self.request, 'organization', None))
 
 class NotificationTemplateView(AuditPermissionMixin, ListView):
     """A template-based view for displaying notifications in a user-friendly UI"""
@@ -2166,46 +2230,73 @@ def api_recommendations(request):
     data = [{'id': r.pk, 'text': r.title} for r in qs]
     return JsonResponse(data, safe=False)
 
-@login_required
 @require_GET
 def htmx_objective_list(request):
-    org = request.organization
-    engagement_id = request.GET.get('engagement')
-    qs = Objective.objects.filter(engagement__organization=org)
-    if engagement_id:
-        qs = qs.filter(engagement_id=engagement_id)
-    html = render_to_string('audit/_objective_list_partial.html', {'objectives': qs})
-    return JsonResponse({'html': html})
+    # Handle unauthenticated users gracefully
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view objectives.</div>")
+        return JsonResponse({'html': '', 'success': False, 'message': 'Authentication required'}, status=200)
+    
+    try:
+        org = request.organization
+        engagement_id = request.GET.get('engagement')
+        qs = Objective.objects.filter(engagement__organization=org)
+        if engagement_id:
+            qs = qs.filter(engagement_id=engagement_id)
+        html = render_to_string('audit/_objective_list_partial.html', {'objectives': qs})
+        return JsonResponse({'html': html, 'success': True})
+    except Exception as e:
+        logger.error(f"Error in htmx_objective_list: {str(e)}", exc_info=True)
+        return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading objectives.</div>", 'success': False}, status=200)
 
-@login_required
 @require_GET
 def htmx_procedure_list(request):
-    org = request.organization
-    objective_id = request.GET.get('objective')
-    qs = Procedure.objects.filter(objective__engagement__organization=org)
-    if objective_id:
-        qs = qs.filter(objective_id=objective_id)
-    html = render_to_string('audit/_procedure_list_partial.html', {'procedures': qs})
-    return JsonResponse({'html': html})
+    # Handle unauthenticated users gracefully
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view procedures.</div>")
+        return JsonResponse({'html': '', 'success': False, 'message': 'Authentication required'}, status=200)
+    
+    try:
+        org = request.organization
+        objective_id = request.GET.get('objective')
+        qs = Procedure.objects.filter(objective__engagement__organization=org)
+        if objective_id:
+            qs = qs.filter(objective_id=objective_id)
+        html = render_to_string('audit/_procedure_list_partial.html', {'procedures': qs})
+        return JsonResponse({'html': html, 'success': True})
+    except Exception as e:
+        logger.error(f"Error in htmx_procedure_list: {str(e)}", exc_info=True)
+        return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading procedures.</div>", 'success': False}, status=200)
 
-@login_required
 @require_GET
 def htmx_recommendation_list(request):
-    org = request.organization
-    issue_id = request.GET.get('issue')
-    qs = Recommendation.objects.filter(organization=org)
-    if issue_id:
-        qs = qs.filter(issue_id=issue_id)
-    html = render_to_string('audit/_recommendation_list_partial.html', {'recommendations': qs})
-    return JsonResponse({'html': html})
+    # Handle unauthenticated users gracefully
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view recommendations.</div>")
+        return JsonResponse({'html': '', 'success': False, 'message': 'Authentication required'}, status=200)
+    
+    try:
+        org = request.organization
+        issue_id = request.GET.get('issue')
+        qs = Recommendation.objects.filter(organization=org)
+        if issue_id:
+            qs = qs.filter(issue_id=issue_id)
+        html = render_to_string('audit/_recommendation_list_partial.html', {'recommendations': qs})
+        return JsonResponse({'html': html, 'success': True})
+    except Exception as e:
+        logger.error(f"Error in htmx_recommendation_list: {str(e)}", exc_info=True)
+        return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading recommendations.</div>", 'success': False}, status=200)
 
 @login_required
 @require_HTTP_methods(["GET"])
 def htmx_followupaction_list(request):
-    """
-    HTMX endpoint to load follow-up actions for an issue or recommendation.
-    Supports both HTMX and regular AJAX requests.
-    """
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
     try:
         # Get organization from the request or user's primary organization
         org = getattr(request, 'organization', None)
@@ -2297,28 +2388,46 @@ def htmx_followupaction_list(request):
             status=500
         )
 
-@login_required
 @require_GET
 def htmx_issueretest_list(request):
-    org = request.organization
-    recommendation_id = request.GET.get('recommendation')
-    qs = IssueRetest.objects.filter(organization=org)
-    if recommendation_id:
-        qs = qs.filter(recommendation_id=recommendation_id)
-    html = render_to_string('audit/_issueretest_list_partial.html', {'issueretests': qs})
-    return JsonResponse({'html': html})
+    # Handle unauthenticated users gracefully
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view issue retests.</div>")
+        return JsonResponse({'html': '', 'success': False, 'message': 'Authentication required'}, status=200)
+    
+    try:
+        org = request.organization
+        recommendation_id = request.GET.get('recommendation')
+        qs = IssueRetest.objects.filter(organization=org)
+        if recommendation_id:
+            qs = qs.filter(recommendation_id=recommendation_id)
+        html = render_to_string('audit/_issueretest_list_partial.html', {'issueretests': qs})
+        return JsonResponse({'html': html, 'success': True})
+    except Exception as e:
+        logger.error(f"Error in htmx_issueretest_list: {str(e)}", exc_info=True)
+        return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading issue retests.</div>", 'success': False}, status=200)
 
-@login_required
 @require_GET
 def htmx_note_list(request):
-    org = request.organization
-    object_id = request.GET.get('object_id')
-    content_type_id = request.GET.get('content_type_id')
-    qs = Note.objects.filter(organization=org)
-    if object_id and content_type_id:
-        qs = qs.filter(object_id=object_id, content_type_id=content_type_id)
-    html = render_to_string('audit/_note_list_partial.html', {'notes': qs})
-    return JsonResponse({'html': html})
+    # Handle unauthenticated users gracefully
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view notes.</div>")
+        return JsonResponse({'html': '', 'success': False, 'message': 'Authentication required'}, status=200)
+    
+    try:
+        org = request.organization
+        object_id = request.GET.get('object_id')
+        content_type_id = request.GET.get('content_type_id')
+        qs = Note.objects.filter(organization=org)
+        if object_id and content_type_id:
+            qs = qs.filter(object_id=object_id, content_type_id=content_type_id)
+        html = render_to_string('audit/_note_list_partial.html', {'notes': qs})
+        return JsonResponse({'html': html, 'success': True})
+    except Exception as e:
+        logger.error(f"Error in htmx_note_list: {str(e)}", exc_info=True)
+        return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading notes.</div>", 'success': False}, status=200)
 
 class NoteDetailView(AuditPermissionMixin, DetailView):
     model = Note
@@ -2445,6 +2554,8 @@ class IssueWorkingPaperDetailView(AuditPermissionMixin, DetailView):
 
 # ─── API VIEWSET ─────────────────────────────────────────────────────────────
 from rest_framework import mixins
+from rest_framework.response import Response
+from rest_framework import status
 class IssueWorkingPaperViewSet(viewsets.ModelViewSet):
     serializer_class = IssueWorkingPaperSerializer
     permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]

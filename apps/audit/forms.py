@@ -39,10 +39,24 @@ class AuditWorkplanForm(BaseAuditForm):
         fields = ['code', 'name', 'fiscal_year', 'objectives', 'description']
         widgets = {
             'fiscal_year': forms.NumberInput(attrs={'min': 2000, 'max': 2100}),
+            'objectives': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Ensure CKEditor fields are properly configured
+        if 'objectives' in self.fields:
+            self.fields['objectives'].required = False
+            # Initialize with empty string if None to prevent serialization errors
+            if self.initial and 'objectives' in self.initial and self.initial['objectives'] is None:
+                self.initial['objectives'] = ''
+        if 'description' in self.fields:
+            self.fields['description'].required = False
+            # Initialize with empty string if None to prevent serialization errors
+            if self.initial and 'description' in self.initial and self.initial['description'] is None:
+                self.initial['description'] = ''
+            
         self.helper.layout = Layout(
             Fieldset(
                 _('Basic Information'),
