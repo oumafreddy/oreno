@@ -16,23 +16,25 @@
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th>Status</th>
-            <th>Summary</th>
-            <th>Actions</th>
+            <th width="15%">Status</th>
+            <th width="25%">Notes</th>
+            <th width="45%">Procedure</th>
+            <th width="15%">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for result in results %}
           <tr>
             <td><span class="badge bg-info">{{ result.get_status_display }}</span></td>
-            <td>{{ result.summary|truncatechars:60 }}</td>
+            <td>{% if result.notes %}{{ result.notes|striptags|truncatechars:60 }}{% else %}<span class="text-muted">No notes</span>{% endif %}</td>
+            <td>{{ result.procedure.title|truncatechars:60 }}</td>
             <td>
               <a href="{% url 'audit:procedureresult-detail' result.pk %}" class="btn btn-sm btn-outline-primary">View</a>
               <a href="{% url 'audit:procedureresult-edit' result.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="text-center text-muted">No results found.</td></tr>
+          <tr><td colspan="4" class="text-center text-muted">No results found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

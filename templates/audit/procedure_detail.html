@@ -7,6 +7,9 @@
     <div>
       <h1 class="h3 mb-0">{{ procedure.title }} <span class="badge bg-info">{{ procedure.get_status_display }}</span></h1>
       <div class="text-muted">Objective: {{ procedure.objective }}</div>
+      <a href="{% url 'audit:objective-detail' procedure.objective.pk %}" class="btn btn-sm btn-outline-secondary mt-2">
+        <i class="bi bi-arrow-left"></i> Back to Procedures
+      </a>
     </div>
     <div>
       <a href="{% url 'audit:procedure-edit' procedure.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>

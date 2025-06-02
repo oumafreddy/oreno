@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ object.title|default:"New Procedure" }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">
+        {% if object %}Edit Procedure{% else %}Create Procedure{% endif %}
+      </h5>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" id="procedure-form">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="mt-3 d-flex justify-content-end">
+          <a href="{% if object %}{% url 'audit:objective-detail' object.objective.pk %}{% else %}{% url 'audit:objective-detail' view.kwargs.objective_pk %}{% endif %}" class="btn btn-secondary me-2">Cancel</a>
+          <button type="submit" class="btn btn-success">
+            {% if object %}Update{% else %}Create{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

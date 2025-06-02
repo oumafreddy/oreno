@@ -576,6 +576,19 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        
+        # Get engagement context from request parameters if available
+        procedure_result_pk = self.request.GET.get('procedure_result_pk')
+        procedure_pk = self.request.GET.get('procedure_pk')
+        engagement_pk = self.request.GET.get('engagement_pk')
+        
+        if procedure_result_pk:
+            kwargs['procedure_result_pk'] = procedure_result_pk
+        if procedure_pk:
+            kwargs['procedure_pk'] = procedure_pk
+        if engagement_pk:
+            kwargs['engagement_pk'] = engagement_pk
+            
         return kwargs
     
     def form_valid(self, form):
@@ -595,6 +608,12 @@ class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        
+        # If we have a procedure result, get the engagement from it
+        if self.object and self.object.procedure_result:
+            kwargs['engagement_pk'] = self.object.procedure_result.procedure.objective.engagement_id
+            kwargs['procedure_result_pk'] = self.object.procedure_result_id
+        
         return kwargs
     
     def get_success_url(self):

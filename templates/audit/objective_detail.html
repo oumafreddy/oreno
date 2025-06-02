@@ -7,6 +7,9 @@
     <div>
       <h1 class="h3 mb-0">{{ objective.title }} <span class="badge bg-info">{{ objective.get_status_display }}</span></h1>
       <div class="text-muted">Engagement: {{ objective.engagement }}</div>
+      <a href="{% url 'audit:engagement-detail' objective.engagement.pk %}" class="btn btn-sm btn-outline-secondary mt-2">
+        <i class="bi bi-arrow-left"></i> Back to Engagement
+      </a>
     </div>
     <div>
       <a href="{% url 'audit:objective-edit' objective.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
