@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Procedure Result{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h3 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>{% if object %}Edit{% else %}Add{% endif %} Procedure Result</h3>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate id="procedureresultForm">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex justify-content-end mt-4">
+            <button type="submit" class="btn btn-success">Save</button>
+            <a href="{% if object %}{% url 'audit:procedureresult-detail' object.pk %}{% else %}{% url 'audit:procedureresult-list' procedure_pk=procedure.pk %}{% endif %}" class="btn btn-secondary ms-2">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add script for HTMX/modal handling if needed -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Just some basic initialization if needed, but no form submission override
+  console.log('Procedure result form loaded');
+});
+</script>
+{% endblock %}

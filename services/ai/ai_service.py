@@ -30,5 +30,12 @@ def ai_assistant_answer(question: str, user, org) -> str:
     faq_answer = find_faq_answer(question)
     if faq_answer:
         return faq_answer
-    # 2. Otherwise, use LLM for best practice/platform Q&A
+    
+    # Add a special message for unauthenticated users
+    if user is None:
+        # Only answer general questions for unauthenticated users
+        # First check if it's a general question using FAQ
+        return ask_llm(question, user, org, context="This is an unauthenticated user. Only provide general information about GRC best practices or general platform functionality. Do not reference any specific organization data.")
+    
+    # 2. Otherwise, use LLM for best practice/platform Q&A for authenticated users
     return ask_llm(question, user, org)

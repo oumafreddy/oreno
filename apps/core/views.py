@@ -41,12 +41,17 @@ def server_error(request):
     return render(request, 'core/error.html', context, status=500)
 
 class AIAssistantAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Allow both authenticated and unauthenticated users
+    permission_classes = []
+    
     def post(self, request, *args, **kwargs):
         question = request.data.get('question', '').strip()
         if not question:
             return Response({'error': 'No question provided.'}, status=400)
-        user = request.user
+        
+        # Handle both authenticated and unauthenticated users
+        user = request.user if request.user.is_authenticated else None
         org = getattr(request, 'tenant', None) or getattr(request, 'organization', None)
+        
         answer = ai_assistant_answer(question, user, org)
-        return Response({'answer': answer}) 
+        return Response({'answer': answer})

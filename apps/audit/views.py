@@ -397,11 +397,18 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
         if is_htmx or is_ajax:
             from django.http import JsonResponse
             
+            # Get the URL for the engagement list page
+            from django.urls import reverse
+            list_url = reverse('audit:engagement-list')
+            
             # Provide JSON response for modal handler
+            # Include form_is_valid:true and html_redirect to trigger client-side redirect
             return JsonResponse({
                 'success': True,
+                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
                 'pk': self.object.pk,
-                'redirect': self.get_success_url(),
+                'redirect': list_url,  # Always redirect to the engagement list
+                'html_redirect': list_url,  # For compatibility with existing JS
                 'message': self.success_message % form.cleaned_data,
             })
         
@@ -464,11 +471,17 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
             from django.http import JsonResponse
             from django.template.loader import render_to_string
             
+            # Get the URL for the engagement list page
+            from django.urls import reverse
+            list_url = reverse('audit:engagement-list')
+            
             # Provide JSON response for modal handler
             return JsonResponse({
                 'success': True,
+                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
                 'pk': self.object.pk,
-                'redirect': self.get_success_url(),
+                'redirect': list_url,  # Always redirect to the engagement list
+                'html_redirect': list_url,  # For compatibility with existing JS
                 'message': self.success_message % form.cleaned_data,
             })
         
@@ -1161,7 +1174,33 @@ class ObjectiveCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView)
         engagement_pk = self.kwargs.get('engagement_pk')
         form.instance.engagement_id = engagement_pk
         form.instance.organization = self.request.organization
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            from django.urls import reverse
+            
+            # Get the URL for the engagement detail page
+            if engagement_pk:
+                engagement_url = reverse('audit:engagement-detail', kwargs={'pk': engagement_pk})
+            else:
+                engagement_url = reverse('audit:objective-list')
+            
+            # Provide JSON response for modal handler
+            return JsonResponse({
+                'success': True,
+                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
+                'pk': self.object.pk,
+                'redirect': engagement_url,
+                'html_redirect': engagement_url,  # For compatibility with existing JS
+                'message': self.success_message % form.cleaned_data,
+            })
+        
+        return response
 
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
@@ -1273,8 +1312,36 @@ class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
         form.instance.objective_id = objective_pk
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            return JsonResponse({'success': True, 'pk': self.object.pk, 'title': self.object.title})
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import JsonResponse
+            from django.urls import reverse
+            
+            # Get the URL for the objective detail page or engagement detail page
+            if objective_pk:
+                objective = self.object.objective
+                if objective and objective.engagement_id:
+                    redirect_url = reverse('audit:engagement-detail', kwargs={'pk': objective.engagement_id})
+                else:
+                    redirect_url = reverse('audit:objective-detail', kwargs={'pk': objective_pk})
+            else:
+                redirect_url = reverse('audit:procedure-list')
+            
+            # Provide JSON response for modal handler
+            return JsonResponse({
+                'success': True,
+                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
+                'pk': self.object.pk,
+                'title': self.object.title,
+                'redirect': redirect_url,
+                'html_redirect': redirect_url,  # For compatibility with existing JS
+                'message': self.success_message % {'title': self.object.title},
+            })
+        
         return response
 
     def get_success_url(self):
@@ -1286,15 +1353,58 @@ class ProcedureResultListView(AuditPermissionMixin, ListView):
     template_name = 'audit/procedureresult_list.html'
     context_object_name = 'procedure_results'
     paginate_by = 20
+    
     def get_queryset(self):
         queryset = super().get_queryset()
+        procedure_pk = self.kwargs.get('procedure_pk')
         organization = self.request.organization
+        
+        if procedure_pk:
+            queryset = queryset.filter(procedure_id=procedure_pk)
+        
         return queryset.filter(procedure__objective__engagement__organization=organization)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        procedure_pk = self.kwargs.get('procedure_pk')
+        
+        if procedure_pk:
+            # Get the procedure object and add it to the context
+            from .models import Procedure
+            try:
+                context['procedure'] = Procedure.objects.get(pk=procedure_pk)
+            except Procedure.DoesNotExist:
+                context['procedure'] = None
+        else:
+            context['procedure'] = None
+        
+        # Create a basic filter form structure
+        from django import forms
+        from crispy_forms.helper import FormHelper
+        from crispy_forms.layout import Submit
+        
+        class EmptyFilterForm(forms.Form):
+            # Empty form - just to prevent the template error
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.helper = FormHelper()
+                self.helper.form_method = 'get'
+                self.helper.add_input(Submit('submit', 'Filter', css_class='btn-secondary'))
+        
+        context['filter_form'] = EmptyFilterForm()
+            
+        return context
 
 class ProcedureResultDetailView(AuditPermissionMixin, DetailView):
     model = ProcedureResult
     template_name = 'audit/procedureresult_detail.html'
     context_object_name = 'procedure_result'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure procedure is available in the context for the template
+        context['procedure'] = self.object.procedure
+        return context
 
 class ProcedureResultCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = ProcedureResult
@@ -1318,10 +1428,52 @@ class ProcedureResultUpdateView(AuditPermissionMixin, SuccessMessageMixin, Updat
     form_class = ProcedureResultForm
     template_name = 'audit/procedureresult_form.html'
     success_message = _('Procedure Result was updated successfully')
+    
+    def get_template_names(self):
+        """Return different templates based on HTMX request"""
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        if is_htmx:
+            return ['audit/procedureresult_modal_form.html']
+        return [self.template_name]
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure procedure is available in the context for the template
+        context['procedure'] = self.object.procedure
+        return context
+    
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        self.object = form.save()
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import HttpResponse
+            from django.urls import reverse
+            from django.contrib import messages
+            
+            # Add a success message
+            messages.success(self.request, self.success_message)
+            
+            # For HTMX requests, redirect instead of sending JSON with HTML content
+            # This prevents malformed URLs from being included in the response
+            redirect_url = reverse('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+            
+            # Create a response with HX-Redirect header for HTMX
+            response = HttpResponse(status=200)
+            response['HX-Redirect'] = redirect_url
+            return response
+        
+        return super().form_valid(form)
+    
     def get_success_url(self):
         return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
 
