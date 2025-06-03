@@ -14,6 +14,7 @@ from .models.approval import Approval
 from .models import (
     Objective, Procedure, ProcedureResult, Note
 )
+from .models.risk import Risk
 from .models.followupaction import FollowUpAction
 from .models.issueretest import IssueRetest
 from .models.recommendation import Recommendation
@@ -73,7 +74,7 @@ class ProcedureInline(admin.TabularInline):
     model = Procedure
     formset = ProcedureInlineFormSet
     extra = 1
-    fields = ('title', 'description', 'related_risks', 'order')
+    fields = ('title', 'description', 'order')
     ordering = ('order',)
     show_change_link = True
 
@@ -94,6 +95,25 @@ class ObjectiveInline(admin.TabularInline):
     extra = 1
     fields = ('title', 'description', 'order')
     ordering = ('order',)
+    show_change_link = True
+
+
+class RiskInlineFormSet(BaseInlineFormSet):
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        if hasattr(self.instance, 'organization'):
+            obj.organization = self.instance.organization
+        if commit:
+            obj.save()
+        return obj
+
+
+class RiskInline(admin.TabularInline):
+    model = Risk
+    formset = RiskInlineFormSet
+    extra = 1
+    fields = ('title', 'description', 'category', 'likelihood', 'impact')
+    ordering = ('title',)
     show_change_link = True
 
 
@@ -236,36 +256,36 @@ class IssueWorkingPaperAdmin(admin.ModelAdmin):
 
 @admin.register(AuditWorkplan)
 class AuditWorkplanAdmin(reversion.admin.VersionAdmin):
-    list_display   = ("code", "name", "organization", "fiscal_year", "state", "creation_date")
-    list_filter    = ("organization", "fiscal_year", "state")
+    list_display   = ("code", "name", "organization", "fiscal_year", "approval_status", "creation_date")
+    list_filter    = ("organization", "fiscal_year", "approval_status")
     search_fields  = ("code", "name")
     inlines        = [ApprovalInline]
     date_hierarchy = "creation_date"
     
-    # Make state field read-only in the admin form
-    readonly_fields = ("state",)
+    # Make approval_status field read-only in the admin form
+    readonly_fields = ("approval_status",)
     
     # Add state transition actions
     actions = ['submit_for_approval', 'approve', 'reject']
     
     def submit_for_approval(self, request, queryset):
         for workplan in queryset:
-            if workplan.state == 'draft':
-                workplan.submit_for_approval()
+            if workplan.approval_status == 'draft':
+                workplan.approval_status = 'submitted'
                 workplan.save()
     submit_for_approval.short_description = "Submit selected workplans for approval"
     
     def approve(self, request, queryset):
         for workplan in queryset:
-            if workplan.state == 'pending':
-                workplan.approve()
+            if workplan.approval_status == 'submitted':
+                workplan.approval_status = 'approved'
                 workplan.save()
     approve.short_description = "Approve selected workplans"
     
     def reject(self, request, queryset):
         for workplan in queryset:
-            if workplan.state == 'pending':
-                workplan.reject()
+            if workplan.approval_status == 'submitted':
+                workplan.approval_status = 'rejected'
                 workplan.save()
     reject.short_description = "Reject selected workplans"
     
@@ -290,39 +310,39 @@ class AuditWorkplanAdmin(reversion.admin.VersionAdmin):
 @admin.register(Engagement)
 class EngagementAdmin(reversion.admin.VersionAdmin):
     list_display   = (
-        "code", "title", "audit_workplan", "organization",
+        "code", "title", "annual_workplan", "organization",
         "project_status", "assigned_to", "assigned_by",
-        "project_start_date", "target_end_date", "state",
+        "project_start_date", "target_end_date", "approval_status",
     )
-    list_filter    = ("organization", "project_status", "state")
-    search_fields  = ("code", "title", "audit_workplan__code")
+    list_filter    = ("organization", "project_status", "approval_status")
+    search_fields  = ("code", "title", "annual_workplan__code")
     inlines        = [ObjectiveInline, NoteInline]
     date_hierarchy = "project_start_date"
     
-    # Make state field read-only in the admin form
-    readonly_fields = ("state",)
+    # Make approval_status field read-only in the admin form
+    readonly_fields = ("approval_status",)
     
     # Add state transition actions
     actions = ['submit_for_approval', 'approve', 'reject']
     
     def submit_for_approval(self, request, queryset):
         for engagement in queryset:
-            if engagement.state == 'draft':
-                engagement.submit_for_approval()
+            if engagement.approval_status == 'draft':
+                engagement.approval_status = 'submitted'
                 engagement.save()
     submit_for_approval.short_description = "Submit selected engagements for approval"
     
     def approve(self, request, queryset):
         for engagement in queryset:
-            if engagement.state == 'pending':
-                engagement.approve()
+            if engagement.approval_status == 'submitted':
+                engagement.approval_status = 'approved'
                 engagement.save()
     approve.short_description = "Approve selected engagements"
     
     def reject(self, request, queryset):
         for engagement in queryset:
-            if engagement.state == 'pending':
-                engagement.reject()
+            if engagement.approval_status == 'submitted':
+                engagement.approval_status = 'rejected'
                 engagement.save()
     reject.short_description = "Reject selected engagements"
     
@@ -347,10 +367,10 @@ class EngagementAdmin(reversion.admin.VersionAdmin):
 @admin.register(Issue)
 class IssueAdmin(reversion.admin.VersionAdmin):
     list_display   = (
-        "code", "issue_title", "organization", "procedure_result",
-        "issue_status", "severity_status", "remediation_status", "date_identified",
+        "code", "issue_title", "organization",
+        "issue_status", "risk_level", "remediation_status", "date_identified",
     )
-    list_filter    = ("organization", "issue_status", "severity_status", "remediation_status")
+    list_filter    = ("organization", "issue_status", "risk_level", "remediation_status")
     search_fields  = ("code", "issue_title", "procedure_result__id")
     inlines        = [RecommendationInline, IssueWorkingPaperInline]
     date_hierarchy = "date_identified"
@@ -382,28 +402,54 @@ class ApprovalAdmin(admin.ModelAdmin):
 
 
 @admin.register(Objective)
-class ObjectiveAdmin(admin.ModelAdmin):
-    list_display = ('title', 'engagement', 'order')
-    list_filter = ('engagement', 'organization')
-    search_fields = ('title',)
-    inlines = [ProcedureInline]
-    readonly_fields = ("created_by", "created_at", "updated_by", "updated_at", "organization")
+class ObjectiveAdmin(reversion.admin.VersionAdmin):
+    list_display = (
+        "title", "engagement", "assigned_to", 
+        "priority", "status", "estimated_hours",
+        "created_at", "updated_at"
+    )
+    list_filter = ("engagement__organization", "status", "priority", "engagement")
+    search_fields = ("title", "description", "criteria")
+    inlines = [RiskInline]
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+    
+    def save_model(self, request, obj, form, change):
+        # Ensure organization is set from the engagement
+        if obj.engagement and not obj.organization_id:
+            obj.organization = obj.engagement.organization
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Procedure)
-class ProcedureAdmin(admin.ModelAdmin):
-    list_display = ('title', 'objective', 'order')
-    list_filter = ('objective', 'organization')
-    search_fields = ('title',)
+class ProcedureAdmin(reversion.admin.VersionAdmin):
+    list_display = (
+        "title", "risk", "procedure_type", 
+        "sample_size", "planned_date", "test_date"
+    )
+    list_filter = ("risk__organization", "procedure_type", "risk")
+    search_fields = ("title", "description", "control_being_tested", "criteria")
     inlines = [ProcedureResultInline]
-    readonly_fields = ("created_by", "created_at", "updated_by", "updated_at", "organization")
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+    
+    def save_model(self, request, obj, form, change):
+        # Ensure organization is set from the risk
+        if obj.risk and not obj.organization_id:
+            obj.organization = obj.risk.organization
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ProcedureResult)
-class ProcedureResultAdmin(admin.ModelAdmin):
-    list_display = ('procedure', 'status', 'is_for_the_record', 'order')
-    list_filter = ('status', 'is_for_the_record', 'procedure__objective__engagement__organization')
+class ProcedureResultAdmin(reversion.admin.VersionAdmin):
+    list_display = ('procedure', 'status', 'is_for_the_record', 'is_positive', 'order')
+    list_filter = ('status', 'is_for_the_record', 'is_positive', 'procedure__risk__organization')
     search_fields = ('procedure__title', 'notes')
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+    
+    def save_model(self, request, obj, form, change):
+        # Ensure organization is set from the procedure
+        if obj.procedure and not obj.organization_id:
+            obj.organization = obj.procedure.organization
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Note)
@@ -421,6 +467,24 @@ class RecommendationAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description')
     ordering = ('order',)
     readonly_fields = ("created_by", "created_at", "updated_by", "updated_at", "organization")
+
+
+@admin.register(Risk)
+class RiskAdmin(reversion.admin.VersionAdmin):
+    list_display = (
+        "title", "objective", "category", 
+        "status", "inherent_risk_score", "residual_risk_score"
+    )
+    list_filter = ("objective__engagement__organization", "category", "status", "objective")
+    search_fields = ("title", "description")
+    inlines = [ProcedureInline]
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+    
+    def save_model(self, request, obj, form, change):
+        # Ensure organization is set from the objective
+        if obj.objective and not obj.organization_id:
+            obj.organization = obj.objective.organization
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register(Recommendation, RecommendationAdmin)

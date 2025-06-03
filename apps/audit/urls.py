@@ -14,7 +14,8 @@ from .views import (
     IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
     ApprovalCreateView, ApprovalDetailView, AuditDashboardView,
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
-    ObjectiveModalCreateView, ProcedureListView, ProcedureDetailView, ProcedureCreateView,
+    ObjectiveModalCreateView, RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
+    ProcedureListView, ProcedureDetailView, ProcedureCreateView,
     ProcedureUpdateView, ProcedureModalCreateView, ProcedureResultListView, ProcedureResultDetailView,
     ProcedureResultCreateView, ProcedureResultUpdateView,
     FollowUpActionListView, FollowUpActionDetailView, FollowUpActionCreateView, FollowUpActionUpdateView,
@@ -85,6 +86,10 @@ urlpatterns = [
     path('approvals/<int:pk>/', ApprovalDetailView.as_view(), name='approval-detail'),
     path('approvals/<int:pk>/approve/', views.approve_approval, name='approval-approve'),
     path('approvals/<int:pk>/reject/', views.reject_approval, name='approval-reject'),
+    path('approvals/pending/', views.PendingApprovalListView.as_view(), name='approval-pending'),
+    path('approvals/history/', views.ApprovalHistoryListView.as_view(), name='approval-history'),
+    path('approvals/requested/', views.RequestedApprovalsListView.as_view(), name='approval-requested'),
+    path('approvals/<int:pk>/status-update/', views.ApprovalStatusUpdateView.as_view(), name='approval-status-update'),
 
     
     # ─── API URLS ───────────────────────────────────────────────────────────
@@ -121,6 +126,14 @@ urlpatterns = [
     path('objectives/<int:pk>/update/', views.ObjectiveUpdateView.as_view(), name='objective-update'),
     path('engagements/<int:engagement_pk>/objectives/modal/add/', views.ObjectiveModalCreateView.as_view(), name='objective-modal-add'),
     path('objectives/create/', views.ObjectiveModalCreateView.as_view(), name='objective-create'),
+
+    # Risk URLs
+    path('objectives/<int:objective_id>/risks/', RiskListView.as_view(), name='risk-list'),
+    path('risks/<int:pk>/', RiskDetailView.as_view(), name='risk-detail'),
+    path('objectives/<int:objective_id>/risks/add/', RiskCreateView.as_view(), name='risk-add'),
+    path('risks/<int:pk>/edit/', RiskUpdateView.as_view(), name='risk-edit'),
+    path('risks/<int:pk>/delete/', RiskDeleteView.as_view(), name='risk-delete'),
+
     # Procedure URLs
     path('objectives/<int:objective_pk>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
     path('procedures/<int:pk>/', views.ProcedureDetailView.as_view(), name='procedure-detail'),

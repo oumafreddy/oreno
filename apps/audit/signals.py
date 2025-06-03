@@ -96,12 +96,12 @@ def workplan_engagements_changed(sender, instance, action, **kwargs):
                 raise ValueError(_("Cannot add engagement from different organization"))
     
     elif action == 'post_add':
-        # Update engagement states when added to approved workplan
-        if instance.state == APPROVED:
+        # Update engagement approval status when added to approved workplan
+        if instance.approval_status == APPROVED:
             update_related_states.delay(
                 'Engagement',
                 {'pk__in': kwargs['pk_set']},
-                'state',
+                'approval_status',
                 PENDING
             )
 

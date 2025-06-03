@@ -1,4 +1,5 @@
 # apps/audit/views.py
+from django.views.decorators.http import require_http_methods
 
 # Utility functions to avoid AttributeError with htmx
 def is_htmx_request(request):
@@ -79,12 +80,18 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction, DatabaseError, NotSupportedError
 from django.db.models import Q, F, Case, When
 from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.utils.translation import gettext as _
+from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
+from .models import Approval
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_http_methods as require_HTTP_methods
 import logging
 
 logger = logging.getLogger(__name__)
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView,
     TemplateView
@@ -126,6 +133,9 @@ from django.utils.encoding import smart_str
 from .models.objective import Objective
 from .forms import ObjectiveForm
 
+from .models.risk import Risk
+from .forms import RiskForm
+
 from .models.procedure import Procedure
 from .models.procedureresult import ProcedureResult
 from .models.followupaction import FollowUpAction
@@ -140,11 +150,7 @@ from django.db.models import Count
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
-from .models.issue_working_paper import IssueWorkingPaper
-from .forms import IssueWorkingPaperForm
-from .serializers import IssueWorkingPaperSerializer
-
-# ─── MIXINS ──────────────────────────────────────────────────────────────────
+# ─── MIXINS ─────────────────────────────────────────────────────────────────
 class AuditPermissionMixin(OrganizationPermissionMixin):
     """Verify that current user has audit permissions for the organization"""
     
@@ -163,6 +169,302 @@ class AuditPermissionMixin(OrganizationPermissionMixin):
             raise PermissionDenied(_("You don't have permission to access audit data for this organization"))
         
         return super().dispatch(request, *args, **kwargs)
+
+# ─── RISK VIEWS ─────────────────────────────────────────────────────────────────
+class RiskListView(AuditPermissionMixin, LoginRequiredMixin, ListView):
+    model = Risk
+    template_name = 'audit/risk_list.html'
+    context_object_name = 'risks'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        # Filter risks by organization
+        queryset = super().get_queryset().filter(
+            organization=self.request.organization
+        )
+        
+        # Apply filtering from query parameters
+        q = self.request.GET.get('q', '')
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(description__icontains=q)
+            )
+            
+        # Filter by objective if specified
+        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+        if objective_id:
+            queryset = queryset.filter(objective_id=objective_id)
+            
+        # Apply sorting
+        queryset = queryset.order_by('objective__title', 'title')
+            
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add objective to context if filtering by objective
+        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+        if objective_id:
+            context['objective'] = get_object_or_404(
+                Objective, 
+                id=objective_id, 
+                engagement__organization=self.request.organization
+            )
+            
+        # Add filter parameters
+        context['q'] = self.request.GET.get('q', '')
+        
+        return context
+
+
+class RiskDetailView(AuditPermissionMixin, LoginRequiredMixin, DetailView):
+    model = Risk
+    template_name = 'audit/risk_detail.html'
+    context_object_name = 'risk'
+    
+    def get_queryset(self):
+        # Ensure user can only view risks in their organization
+        return super().get_queryset().filter(organization=self.request.organization)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add procedures related to this risk
+        context['procedures'] = self.object.procedure_set.all().order_by('order')
+        
+        # Add the objective for breadcrumb navigation
+        if self.object.objective:
+            context['objective'] = self.object.objective
+            context['engagement'] = self.object.objective.engagement
+        
+        return context
+
+
+class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMixin, CreateView):
+    model = Risk
+    form_class = RiskForm
+    template_name = 'audit/risk_form.html'
+    success_message = _('Risk "%(title)s" was created successfully')
+    
+    def get_template_names(self):
+        # Use modal template for HTMX requests
+        if is_htmx_request(self.request):
+            return ['audit/risk_modal_form.html']
+        return [self.template_name]
+    
+    def get_success_url(self):
+        # Return to objective detail if creating from an objective
+        if self.object.objective:
+            return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        # Default to risk list
+        return reverse_lazy('audit:risk-list')
+    
+    def get_form_kwargs(self):
+        # Add organization and objective_pk to form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        
+        # Add objective_pk if available
+        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+        if objective_id:
+            kwargs['objective_pk'] = objective_id
+            
+        return kwargs
+    
+    def form_valid(self, form):
+        # Set organization 
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        
+        # Save the form
+        response = super().form_valid(form)
+        
+        # Handle HTMX response
+        if is_htmx_request(self.request):
+            # Return JSON response for HTMX
+            if self.object.objective:
+                # If created from objective, refresh the risk list section
+                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
+                html = render_to_string('audit/partials/risk_list.html', {
+                    'risks': risks,
+                    'objective': self.object.objective,
+                }, request=self.request)
+                return JsonResponse({
+                    'success': True,
+                    'html': html,
+                    'message': self.success_message % {'title': self.object.title}
+                })
+            else:
+                # Otherwise redirect
+                return JsonResponse({
+                    'success': True,
+                    'redirect': self.get_success_url(),
+                    'message': self.success_message % {'title': self.object.title}
+                })
+            
+        return response
+    
+    def form_invalid(self, form):
+        if is_htmx_request(self.request):
+            html_form = render_to_string(
+                'audit/risk_modal_form.html',
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            return JsonResponse({'success': False, 'html_form': html_form})
+        return super().form_invalid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add objective to context if creating from an objective
+        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+        if objective_id:
+            context['objective'] = get_object_or_404(
+                Objective, 
+                id=objective_id, 
+                engagement__organization=self.request.organization
+            )
+            
+        return context
+
+
+class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+    model = Risk
+    form_class = RiskForm
+    template_name = 'audit/risk_form.html'
+    success_message = _('Risk "%(title)s" was updated successfully')
+    
+    def get_template_names(self):
+        # Use modal template for HTMX requests
+        if is_htmx_request(self.request):
+            return ['audit/risk_modal_form.html']
+        return [self.template_name]
+    
+    def get_queryset(self):
+        # Ensure user can only update risks in their organization
+        return super().get_queryset().filter(organization=self.request.organization)
+    
+    def get_success_url(self):
+        # Return to the risk detail page
+        return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.pk})
+    
+    def get_form_kwargs(self):
+        # Add organization to form kwargs
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+    
+    def form_valid(self, form):
+        # Update the updated_by field
+        form.instance.updated_by = self.request.user
+        
+        # Save the form
+        response = super().form_valid(form)
+        
+        # Handle HTMX response
+        if is_htmx_request(self.request):
+            # Return JSON response for HTMX
+            if self.object.objective:
+                # If accessed from objective, refresh the risk list section
+                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
+                html = render_to_string('audit/partials/risk_list.html', {
+                    'risks': risks,
+                    'objective': self.object.objective,
+                }, request=self.request)
+                return JsonResponse({
+                    'success': True,
+                    'html': html,
+                    'message': self.success_message % {'title': self.object.title}
+                })
+            else:
+                # Otherwise redirect
+                return JsonResponse({
+                    'success': True,
+                    'redirect': self.get_success_url(),
+                    'message': self.success_message % {'title': self.object.title}
+                })
+            
+        return response
+    
+    def form_invalid(self, form):
+        if is_htmx_request(self.request):
+            html_form = render_to_string(
+                'audit/risk_modal_form.html',
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            return JsonResponse({'success': False, 'html_form': html_form})
+        return super().form_invalid(form)
+
+
+class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Risk
+    template_name = 'audit/risk_confirm_delete.html'
+    
+    def get_template_names(self):
+        # Use modal template for HTMX requests
+        if is_htmx_request(self.request):
+            return ['audit/risk_confirm_delete_modal.html']
+        return [self.template_name]
+    
+    def get_queryset(self):
+        # Ensure user can only delete risks in their organization
+        return super().get_queryset().filter(organization=self.request.organization)
+    
+    def get_success_url(self):
+        # If the risk belongs to an objective, return to that objective
+        if self.object.objective:
+            return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        # Otherwise return to the risk list
+        return reverse_lazy('audit:risk-list')
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        objective = self.object.objective
+        success_url = self.get_success_url()
+        
+        # Store for later use in HTMX response
+        risk_title = self.object.title
+        
+        # Delete the risk
+        self.object.delete()
+        
+        # Success message
+        messages.success(request, _(f'Risk "{risk_title}" was deleted successfully'))
+        
+        # Handle HTMX response
+        if is_htmx_request(request):
+            if objective:
+                # If deleted from objective, refresh the risk list section
+                risks = Risk.objects.filter(objective=objective).order_by('order')
+                html = render_to_string('audit/partials/risk_list.html', {
+                    'risks': risks,
+                    'objective': objective,
+                }, request=request)
+                return JsonResponse({
+                    'success': True,
+                    'html': html,
+                    'message': _(f'Risk "{risk_title}" was deleted successfully')
+                })
+            else:
+                # Otherwise redirect
+                return JsonResponse({
+                    'success': True,
+                    'redirect': success_url,
+                    'message': _(f'Risk "{risk_title}" was deleted successfully')
+                })
+        
+        return HttpResponseRedirect(success_url)
+
+from .models.issue_working_paper import IssueWorkingPaper
+from .forms import IssueWorkingPaperForm
+from .serializers import IssueWorkingPaperSerializer
+
+# ─── MIXINS ──────────────────────────────────────────────────────────────────
+# AuditPermissionMixin moved to the top of the file
 
 # ─── WORKPLAN VIEWS ──────────────────────────────────────────────────────────
 class WorkplanListView(AuditPermissionMixin, ListView):
@@ -184,7 +486,7 @@ class WorkplanListView(AuditPermissionMixin, ListView):
                 queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q))
             status = form.cleaned_data.get('status')
             if status:
-                queryset = queryset.filter(state=status)
+                queryset = queryset.filter(approval_status=status)
             fiscal_year = form.cleaned_data.get('fiscal_year')
             if fiscal_year:
                 queryset = queryset.filter(fiscal_year=fiscal_year)
@@ -311,7 +613,7 @@ class EngagementListView(AuditPermissionMixin, ListView):
         queryset = super().get_queryset()
         organization = self.request.organization
         queryset = queryset.filter(organization=organization).select_related(
-            'audit_workplan', 'assigned_to', 'assigned_by'
+            'annual_workplan', 'assigned_to', 'assigned_by'
         )
         form = EngagementFilterForm(self.request.GET)
         if form.is_valid():
@@ -370,7 +672,7 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
             try:
                 workplan_id = int(self.request.GET.get('workplan'))
                 workplan = get_object_or_404(AuditWorkplan, pk=workplan_id, organization=self.request.organization)
-                initial['audit_workplan'] = workplan
+                initial['annual_workplan'] = workplan
             except (ValueError, TypeError):
                 pass
         return initial
@@ -513,6 +815,225 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
 
+# ─── APPROVAL WORKFLOW VIEWS ────────────────────────────────────────────────
+@login_required
+@permission_required('audit.can_submit_workplan', raise_exception=True)
+def submit_workplan_for_approval(request, pk):
+    """Submit a workplan for approval."""
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.organization)
+    
+    # Check if the workplan is in draft state
+    if workplan.approval_status != 'draft':
+        messages.error(request, _('Workplan must be in draft status to submit for approval.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Update approval status
+    workplan.approval_status = 'submitted'
+    workplan.save()
+    
+    # Create approval record
+    Approval.objects.create(
+        content_type=ContentType.objects.get_for_model(AuditWorkplan),
+        object_id=workplan.pk,
+        requester=request.user,
+        organization=request.organization
+    )
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_workplan_approval_notification
+    except ImportError:
+        from .utils import send_workplan_approval_notification
+    send_workplan_approval_notification(workplan, 'submitted', request)
+    
+    messages.success(request, _('Workplan has been submitted for approval.'))
+    return redirect('audit:workplan-detail', pk=workplan.pk)
+
+@login_required
+@permission_required('audit.can_approve_workplan', raise_exception=True)
+def approve_workplan(request, pk):
+    """Approve a workplan."""
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.organization)
+    
+    # Check if the workplan is in submitted state
+    if workplan.approval_status != 'submitted':
+        messages.error(request, _('Workplan must be submitted for approval before it can be approved.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Update approval status
+    workplan.approval_status = 'approved'
+    workplan.save()
+    
+    # Update approval record
+    approval = Approval.objects.filter(
+        content_type=ContentType.objects.get_for_model(AuditWorkplan),
+        object_id=workplan.pk,
+        status='pending'
+    ).first()
+    
+    if approval:
+        approval.status = 'approved'
+        approval.approver = request.user
+        approval.approved_at = timezone.now()
+        approval.save()
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_workplan_approval_notification
+    except ImportError:
+        from .utils import send_workplan_approval_notification
+    send_workplan_approval_notification(workplan, 'approved', request)
+    
+    messages.success(request, _('Workplan has been approved.'))
+    return redirect('audit:workplan-detail', pk=workplan.pk)
+
+@login_required
+@permission_required('audit.can_approve_workplan', raise_exception=True)
+def reject_workplan(request, pk):
+    """Reject a workplan."""
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.organization)
+    
+    # Check if the workplan is in submitted state
+    if workplan.approval_status != 'submitted':
+        messages.error(request, _('Workplan must be submitted for approval before it can be rejected.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Update approval status
+    workplan.approval_status = 'rejected'
+    workplan.save()
+    
+    # Update approval record
+    approval = Approval.objects.filter(
+        content_type=ContentType.objects.get_for_model(AuditWorkplan),
+        object_id=workplan.pk,
+        status='pending'
+    ).first()
+    
+    if approval:
+        approval.status = 'rejected'
+        approval.approver = request.user
+        approval.approved_at = timezone.now()
+        approval.save()
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_workplan_approval_notification
+    except ImportError:
+        from .utils import send_workplan_approval_notification
+    send_workplan_approval_notification(workplan, 'rejected', request)
+    
+    messages.success(request, _('Workplan has been rejected.'))
+    return redirect('audit:workplan-detail', pk=workplan.pk)
+
+@login_required
+@permission_required('audit.can_submit_engagement', raise_exception=True)
+def submit_engagement_for_approval(request, pk):
+    """Submit an engagement for approval."""
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.organization)
+    
+    # Check if the engagement is in draft state
+    if engagement.approval_status != 'draft':
+        messages.error(request, _('Engagement must be in draft status to submit for approval.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Update approval status
+    engagement.approval_status = 'submitted'
+    engagement.save()
+    
+    # Create approval record
+    Approval.objects.create(
+        content_type=ContentType.objects.get_for_model(Engagement),
+        object_id=engagement.pk,
+        requester=request.user,
+        organization=request.organization
+    )
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_engagement_approval_notification
+    except ImportError:
+        from .utils import send_engagement_approval_notification
+    send_engagement_approval_notification(engagement, 'submitted', request)
+    
+    messages.success(request, _('Engagement has been submitted for approval.'))
+    return redirect('audit:engagement-detail', pk=engagement.pk)
+
+@login_required
+@permission_required('audit.can_approve_engagement', raise_exception=True)
+def approve_engagement(request, pk):
+    """Approve an engagement."""
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.organization)
+    
+    # Check if the engagement is in submitted state
+    if engagement.approval_status != 'submitted':
+        messages.error(request, _('Engagement must be submitted for approval before it can be approved.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Update approval status
+    engagement.approval_status = 'approved'
+    engagement.save()
+    
+    # Update approval record
+    approval = Approval.objects.filter(
+        content_type=ContentType.objects.get_for_model(Engagement),
+        object_id=engagement.pk,
+        status='pending'
+    ).first()
+    
+    if approval:
+        approval.status = 'approved'
+        approval.approver = request.user
+        approval.approved_at = timezone.now()
+        approval.save()
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_engagement_approval_notification
+    except ImportError:
+        from .utils import send_engagement_approval_notification
+    send_engagement_approval_notification(engagement, 'approved', request)
+    
+    messages.success(request, _('Engagement has been approved.'))
+    return redirect('audit:engagement-detail', pk=engagement.pk)
+
+@login_required
+@permission_required('audit.can_approve_engagement', raise_exception=True)
+def reject_engagement(request, pk):
+    """Reject an engagement."""
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.organization)
+    
+    # Check if the engagement is in submitted state
+    if engagement.approval_status != 'submitted':
+        messages.error(request, _('Engagement must be submitted for approval before it can be rejected.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Update approval status
+    engagement.approval_status = 'rejected'
+    engagement.save()
+    
+    # Update approval record
+    approval = Approval.objects.filter(
+        content_type=ContentType.objects.get_for_model(Engagement),
+        object_id=engagement.pk,
+        status='pending'
+    ).first()
+    
+    if approval:
+        approval.status = 'rejected'
+        approval.approver = request.user
+        approval.approved_at = timezone.now()
+        approval.save()
+    
+    # Send email notification
+    try:
+        from apps.audit.utils import send_engagement_approval_notification
+    except ImportError:
+        from .utils import send_engagement_approval_notification
+    send_engagement_approval_notification(engagement, 'rejected', request)
+    
+    messages.success(request, _('Engagement has been rejected.'))
+    return redirect('audit:engagement-detail', pk=engagement.pk)
+
 # ─── ISSUE VIEWS ─────────────────────────────────────────────────────────────
 class IssueListView(AuditPermissionMixin, ListView):
     model = Issue
@@ -614,16 +1135,12 @@ class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
             kwargs['engagement_pk'] = self.object.procedure_result.procedure.objective.engagement_id
             kwargs['procedure_result_pk'] = self.object.procedure_result_id
         
-        return kwargs
-    
-    def get_success_url(self):
-        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.pk})
 
 # ─── APPROVAL VIEWS ──────────────────────────────────────────────────────────
 class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Approval
     form_class = ApprovalForm
-    template_name = 'audit/approval_form.html'
+    template_name = 'audit/approval/modal_form.html'
     success_message = _("Approval request was created successfully")
     
     def get_form_kwargs(self):
@@ -635,14 +1152,32 @@ class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.requester = self.request.user
-        return super().form_valid(form)
+        form.instance.status = 'pending'
+        response = super().form_valid(form)
+        
+        # Send email notification to approver
+        try:
+            from apps.audit.utils import send_approval_notification
+        except ImportError:
+            from .utils import send_approval_notification
+        send_approval_notification(self.object, self.request)
+        
+        # Handle HTMX request
+        if is_htmx_request(self.request):
+            context = {
+                'success': True,
+                'message': self.success_message % form.cleaned_data,
+            }
+            return render(self.request, 'audit/approval/success.html', context)
+        
+        return response
     
     def get_success_url(self):
-        return reverse_lazy('audit:approval_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('audit:approval-detail', kwargs={'pk': self.object.pk})
 
 class ApprovalDetailView(AuditPermissionMixin, DetailView):
     model = Approval
-    template_name = 'audit/approval_detail.html'
+    template_name = 'audit/approval/detail.html'
     context_object_name = 'approval'
     
     def get_context_data(self, **kwargs):
@@ -652,9 +1187,179 @@ class ApprovalDetailView(AuditPermissionMixin, DetailView):
         # Add related data efficiently
         context.update({
             'content_object': approval.content_object,
-            'can_approve': self.request.user.has_perm('audit.can_approve_workplan'),
+            'can_approve': self.request.user == approval.approver,
+            'can_reject': self.request.user == approval.approver,
+            'content_type': ContentType.objects.get_for_model(approval.content_object).model,
+            'organization': approval.organization,
         })
         return context
+
+class PendingApprovalListView(AuditPermissionMixin, ListView):
+    model = Approval
+    template_name = 'audit/approval/pending_list.html'
+    context_object_name = 'approvals'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        # Only show pending approvals assigned to the current user
+        return Approval.objects.filter(
+            organization=self.request.organization,
+            approver=self.request.user,
+            status='pending'
+        ).select_related('requester', 'approver').order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Pending Approvals')
+        context['pending_count'] = self.get_queryset().count()
+        return context
+
+class ApprovalHistoryListView(AuditPermissionMixin, ListView):
+    model = Approval
+    template_name = 'audit/approval/history_list.html'
+    context_object_name = 'approvals'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        # Show approvals that the current user has approved or rejected
+        return Approval.objects.filter(
+            organization=self.request.organization,
+            approver=self.request.user,
+            status__in=['approved', 'rejected']
+        ).select_related('requester', 'approver').order_by('-updated_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Approval History')
+        context['history_count'] = self.get_queryset().count()
+        return context
+
+class RequestedApprovalsListView(AuditPermissionMixin, ListView):
+    model = Approval
+    template_name = 'audit/approval/requested_list.html'
+    context_object_name = 'approvals'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        # Show approvals requested by the current user
+        return Approval.objects.filter(
+            organization=self.request.organization,
+            requester=self.request.user
+        ).select_related('requester', 'approver').order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = _('Requested Approvals')
+        context['requested_count'] = self.get_queryset().count()
+        return context
+
+class ApprovalStatusUpdateView(AuditPermissionMixin, View):
+    """View to handle approval or rejection of an approval request"""
+    
+    @transaction.atomic
+    def post(self, request, pk):
+        approval = get_object_or_404(Approval, pk=pk, organization=request.organization)
+        
+        # Only the assigned approver can approve/reject
+        if request.user != approval.approver:
+            raise PermissionDenied(_('You are not authorized to approve or reject this request'))
+        
+        # Can't update if already approved/rejected
+        if approval.status != 'pending':
+            messages.error(request, _('This approval has already been processed'))
+            return redirect('audit:approval-detail', pk=approval.pk)
+        
+        action = request.POST.get('action')
+        comments = request.POST.get('comments', '')
+        
+        if action == 'approve':
+            approval.status = 'approved'
+            approval.comments = comments
+            approval.save()
+            messages.success(request, _('Approval request has been approved'))
+        elif action == 'reject':
+            approval.status = 'rejected'
+            approval.comments = comments
+            approval.save()
+            messages.success(request, _('Approval request has been rejected'))
+        else:
+            messages.error(request, _('Invalid action'))
+            return redirect('audit:approval-detail', pk=approval.pk)
+        
+        # Send email notification to requester
+        try:
+            from apps.audit.utils import send_approval_status_notification
+        except ImportError:
+            from .utils import send_approval_status_notification
+        send_approval_status_notification(approval, request)
+        
+        # Return appropriate response based on request type
+        if is_htmx_request(request):
+            context = {
+                'success': True,
+                'message': _('Approval status updated successfully'),
+            }
+            return render(request, 'audit/approval/success.html', context)
+        
+        return redirect('audit:approval-pending')
+
+@login_required
+def approve_approval(request, pk):
+    """Function-based view for approval (for backward compatibility)"""
+    approval = get_object_or_404(Approval, pk=pk, organization=request.organization)
+    
+    # Only the assigned approver can approve
+    if request.user != approval.approver:
+        raise PermissionDenied(_('You are not authorized to approve this request'))
+    
+    # Can't approve if already approved/rejected
+    if approval.status != 'pending':
+        messages.error(request, _('This approval has already been processed'))
+        return redirect('audit:approval-detail', pk=approval.pk)
+    
+    with transaction.atomic():
+        approval.status = 'approved'
+        approval.comments = request.POST.get('comments', '')
+        approval.save()
+        
+        # Send email notification to requester
+        try:
+            from apps.audit.utils import send_approval_status_notification
+        except ImportError:
+            from .utils import send_approval_status_notification
+        send_approval_status_notification(approval, request)
+    
+    messages.success(request, _('Approval request has been approved'))
+    return redirect('audit:approval-pending')
+
+@login_required
+def reject_approval(request, pk):
+    """Function-based view for rejection (for backward compatibility)"""
+    approval = get_object_or_404(Approval, pk=pk, organization=request.organization)
+    
+    # Only the assigned approver can reject
+    if request.user != approval.approver:
+        raise PermissionDenied(_('You are not authorized to reject this request'))
+    
+    # Can't reject if already approved/rejected
+    if approval.status != 'pending':
+        messages.error(request, _('This approval has already been processed'))
+        return redirect('audit:approval-detail', pk=approval.pk)
+    
+    with transaction.atomic():
+        approval.status = 'rejected'
+        approval.comments = request.POST.get('comments', '')
+        approval.save()
+        
+        # Send email notification to requester
+        try:
+            from apps.audit.utils import send_approval_status_notification
+        except ImportError:
+            from .utils import send_approval_status_notification
+        send_approval_status_notification(approval, request)
+    
+    messages.success(request, _('Approval request has been rejected'))
+    return redirect('audit:approval-pending')
 
 # ─── DASHBOARD VIEW ──────────────────────────────────────────────────────────
 class AuditDashboardView(LoginRequiredMixin, TemplateView):
@@ -708,7 +1413,7 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['issue_severity_dist'] = dict(Counter(issue_severity_dist)) or {}
         # Workplan completion rates
         workplans = AuditWorkplan.objects.filter(organization=organization)
-        completed_workplans = workplans.filter(state='completed').count()
+        completed_workplans = workplans.filter(approval_status='approved').count()
         context['workplan_completion_rate'] = {'Completed': completed_workplans, 'Total': workplans.count()}
         # Approval status breakdown
         approvals = Approval.objects.filter(organization=organization)
@@ -1100,8 +1805,8 @@ def export_workplans(request):
         qs = qs.filter(fiscal_year=fiscal_year)
     if name:
         qs = qs.filter(name__icontains=name)
-    headers = ['ID', 'Code', 'Name', 'Fiscal Year', 'State', 'Creation Date']
-    rows = [[wp.id, wp.code, wp.name, wp.fiscal_year, wp.state, wp.creation_date] for wp in qs]
+    headers = ['ID', 'Code', 'Name', 'Fiscal Year', 'Approval Status', 'Creation Date']
+    rows = [[wp.id, wp.code, wp.name, wp.fiscal_year, wp.approval_status, wp.creation_date] for wp in qs]
     if export_format == 'xlsx':
         return export_to_xlsx(headers, rows, 'workplans.xlsx')
     response = HttpResponse(content_type='text/csv')
@@ -2462,7 +3167,109 @@ def htmx_recommendation_list(request):
         return JsonResponse({'html': f"<div class='alert alert-danger'>Error loading recommendations.</div>", 'success': False}, status=200)
 
 @login_required
-@require_HTTP_methods(["GET"])
+@require_http_methods(['POST'])
+def submit_workplan(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        workplan = Workplan.objects.get(pk=pk, organization=org)
+        workplan.status = Workplan.STATUS_APPROVED
+        workplan.save()
+        return JsonResponse({'success': True, 'message': 'Workplan submitted successfully'})
+    except Exception as e:
+        logger.error(f"Error in submit_workplan: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error submitting workplan'}, status=500)
+
+@login_required
+@require_http_methods(['POST'])
+def approve_workplan(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        workplan = Workplan.objects.get(pk=pk, organization=org)
+        workplan.status = Workplan.STATUS_APPROVED
+        workplan.save()
+        return JsonResponse({'success': True, 'message': 'Workplan approved successfully'})
+    except Exception as e:
+        logger.error(f"Error in approve_workplan: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error approving workplan'}, status=500)
+
+@login_required
+@require_http_methods(['POST'])
+def reject_workplan(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        workplan = Workplan.objects.get(pk=pk, organization=org)
+        workplan.status = Workplan.STATUS_REJECTED
+        workplan.save()
+        return JsonResponse({'success': True, 'message': 'Workplan rejected successfully'})
+    except Exception as e:
+        logger.error(f"Error in reject_workplan: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error rejecting workplan'}, status=500)
+
+@login_required
+@require_http_methods(['POST'])
+def submit_followupaction(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        followupaction = FollowUpAction.objects.get(pk=pk, organization=org)
+        followupaction.status = FollowUpAction.STATUS_APPROVED
+        followupaction.save()
+        return JsonResponse({'success': True, 'message': 'Follow-up action submitted successfully'})
+    except Exception as e:
+        logger.error(f"Error in submit_followupaction: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error submitting follow-up action'}, status=500)
+
+@login_required
+@require_http_methods(['POST'])
+def approve_followupaction(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        followupaction = FollowUpAction.objects.get(pk=pk, organization=org)
+        followupaction.status = FollowUpAction.STATUS_APPROVED
+        followupaction.save()
+        return JsonResponse({'success': True, 'message': 'Follow-up action approved successfully'})
+    except Exception as e:
+        logger.error(f"Error in approve_followupaction: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error approving follow-up action'}, status=500)
+
+@login_required
+@require_http_methods(['POST'])
+def reject_followupaction(request, pk):
+    if not request.user.is_authenticated:
+        if request.headers.get('HX-Request'):
+            return HttpResponse("<div class='alert alert-info'>Please log in to view follow-up actions.</div>")
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
+    try:
+        org = request.organization
+        followupaction = FollowUpAction.objects.get(pk=pk, organization=org)
+        followupaction.status = FollowUpAction.STATUS_REJECTED
+        followupaction.save()
+        return JsonResponse({'success': True, 'message': 'Follow-up action rejected successfully'})
+    except Exception as e:
+        logger.error(f"Error in reject_followupaction: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': 'Error rejecting follow-up action'}, status=500)
+
+@login_required
+@require_http_methods(['GET'])
 def htmx_followupaction_list(request):
     if not request.user.is_authenticated:
         if request.headers.get('HX-Request'):

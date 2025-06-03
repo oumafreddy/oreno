@@ -1,0 +1,43 @@
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        {% if form.instance.pk %}
+            {% trans "Edit Risk" %}: {{ form.instance.title }}
+        {% else %}
+            {% trans "Add Risk" %}
+            {% if objective %}
+                {% trans "to" %} {{ objective.title }}
+            {% endif %}
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <form id="risk-form" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {{ form|crispy }}
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+    <button type="button" class="btn btn-primary" onclick="submitModalForm('risk-form')">
+        {% if form.instance.pk %}
+            {% trans "Update Risk" %}
+        {% else %}
+            {% trans "Create Risk" %}
+        {% endif %}
+    </button>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any form components that need JS initialization
+        if (typeof initFormComponents === 'function') {
+            initFormComponents();
+        }
+    });
+</script>

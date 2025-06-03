@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        {% trans "Edit Risk" %}: {{ form.instance.title }}
+    {% else %}
+        {% trans "Add Risk" %}
+    {% endif %}
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">{% trans "Audit" %}</a></li>
+        {% if objective %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' pk=objective.engagement.pk %}">{{ objective.engagement.title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'audit:objective-detail' pk=objective.pk %}">{{ objective.title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'audit:risk-list' objective_id=objective.pk %}">{% trans "Risks" %}</a></li>
+        {% elif form.instance.pk %}
+            {% if form.instance.objective %}
+                <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' pk=form.instance.objective.engagement.pk %}">{{ form.instance.objective.engagement.title }}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'audit:objective-detail' pk=form.instance.objective.pk %}">{{ form.instance.objective.title }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:risk-detail' pk=form.instance.pk %}">{{ form.instance.title }}</a></li>
+        {% else %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:risk-list' %}">{% trans "Risks" %}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active" aria-current="page">
+            {% if form.instance.pk %}
+                {% trans "Edit Risk" %}
+            {% else %}
+                {% trans "Add Risk" %}
+            {% endif %}
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>
+                {% if form.instance.pk %}
+                    {% trans "Edit Risk" %}: {{ form.instance.title }}
+                {% else %}
+                    {% trans "Add Risk" %}
+                    {% if objective %}
+                        {% trans "to" %} {{ objective.title }}
+                    {% endif %}
+                {% endif %}
+            </h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.pk %}
+                                    {% trans "Update Risk" %}
+                                {% else %}
+                                    {% trans "Create Risk" %}
+                                {% endif %}
+                            </button>
+                            {% if form.instance.pk %}
+                                <a href="{% url 'audit:risk-detail' pk=form.instance.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                            {% elif objective %}
+                                <a href="{% url 'audit:objective-detail' pk=objective.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                            {% else %}
+                                <a href="{% url 'audit:risk-list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

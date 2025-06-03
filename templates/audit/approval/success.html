@@ -1,0 +1,30 @@
+<!-- Success template for HTMX responses -->
+<div class="alert alert-success" role="alert">
+  <h4 class="alert-heading">Success!</h4>
+  <p>Your approval request has been submitted successfully.</p>
+  <hr>
+  <p class="mb-0">
+    {% if approval.status == 'pending' %}
+      An email notification has been sent to {{ approval.approver.get_full_name|default:approval.approver.email }}.
+    {% else %}
+      The approval has been processed.
+    {% endif %}
+  </p>
+</div>
+
+<script>
+  // Close the modal after success
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      var modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+      if (modal) {
+        modal.hide();
+      }
+      
+      // If we have a redirect URL, navigate to it
+      {% if redirect_url %}
+        window.location.href = "{{ redirect_url }}";
+      {% endif %}
+    }, 1500);
+  });
+</script>

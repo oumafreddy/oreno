@@ -106,18 +106,18 @@ def process_approval_chain(approval_id):
         )
         
         if approval.status == 'approved':
-            # Update object state
-            if hasattr(content_object, 'state'):
-                content_object.state = APPROVED
+            # Update object approval status
+            if hasattr(content_object, 'approval_status'):
+                content_object.approval_status = APPROVED
                 content_object.save()
             
             # Create next approval step if needed
             create_next_approval_step(content_object)
         
         elif approval.status == 'rejected':
-            # Update object state
-            if hasattr(content_object, 'state'):
-                content_object.state = REJECTED
+            # Update object approval status
+            if hasattr(content_object, 'approval_status'):
+                content_object.approval_status = REJECTED
                 content_object.save()
             
             # Notify requester
@@ -159,26 +159,26 @@ def create_next_approval_step(content_object):
 @shared_task
 def bulk_update_workplan_states(workplan_ids, new_state):
     """
-    Update states of multiple workplans asynchronously.
+    Update approval status of multiple workplans asynchronously.
     
     Args:
         workplan_ids (list): List of workplan IDs to update
         new_state (str): New state to set
     """
     with transaction.atomic():
-        AuditWorkplan.objects.filter(pk__in=workplan_ids).update(state=new_state)
+        AuditWorkplan.objects.filter(pk__in=workplan_ids).update(approval_status=new_state)
 
 @shared_task
 def bulk_update_engagement_states(engagement_ids, new_state):
     """
-    Update states of multiple engagements asynchronously.
+    Update approval status of multiple engagements asynchronously.
     
     Args:
         engagement_ids (list): List of engagement IDs to update
         new_state (str): New state to set
     """
     with transaction.atomic():
-        Engagement.objects.filter(pk__in=engagement_ids).update(state=new_state)
+        Engagement.objects.filter(pk__in=engagement_ids).update(approval_status=new_state)
 
 # ─── CLEANUP TASKS ───────────────────────────────────────────────────────────
 @shared_task

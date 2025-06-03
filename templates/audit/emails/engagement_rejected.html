@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Engagement Rejected</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Audit Engagement Rejected</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ requester.get_full_name|default:requester.email }},</p>
+        
+        <p>{{ approver.get_full_name|default:approver.email }} has <span class="status">REJECTED</span> your audit engagement.</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Engagement Title:</strong></td>
+                <td>{{ engagement.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Engagement Type:</strong></td>
+                <td>{{ engagement.get_engagement_type_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td><span class="status">REJECTED</span></td>
+            </tr>
+            <tr>
+                <td><strong>Project Status:</strong></td>
+                <td>{{ engagement.get_project_status_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Rejected By:</strong></td>
+                <td>{{ approver.get_full_name|default:approver.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Rejected On:</strong></td>
+                <td>{{ approval.approved_at }}</td>
+            </tr>
+            {% if approval.comments %}
+            <tr>
+                <td><strong>Reason for Rejection:</strong></td>
+                <td>{{ approval.comments }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p>Please review the feedback, make necessary revisions, and resubmit the engagement. You can access the engagement details by clicking the button below:</p>
+        
+        <a href="{{ engagement_url }}" class="button">Edit Engagement</a>
+        
+        <p>If you have questions about this rejection, please contact {{ approver.get_full_name|default:approver.email }} directly.</p>
+        
+        <p>Thank you,<br>
+        {{ organization.name }} GRC Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from the Oreno GRC system. Please do not reply to this email.</p>
+        <p>{{ organization.name }} &copy; {% now "Y" %}</p>
+    </div>
+</body>
+</html>
