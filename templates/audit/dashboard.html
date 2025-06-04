@@ -47,8 +47,8 @@
             <div class="card text-bg-warning h-100 text-center">
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-pie-chart"></i></div>
-                    <h6 class="card-title">Issue Severities</h6>
-                    <h3><a href="{% url 'audit:issue-list' %}" class="stretched-link text-white text-decoration-none">{{ issue_severity_dist|length }}</a></h3>
+                    <h6 class="card-title">Issue Risk Levels</h6>
+                    <h3><a href="{% url 'audit:issue-list' %}" class="stretched-link text-white text-decoration-none">{{ issue_risk_dist|length }}</a></h3>
                 </div>
             </div>
         </div>
@@ -126,9 +126,9 @@
         </div>
         <div class="col-md-4">
             <div class="card h-100">
-                <div class="card-header bg-light"><strong>Issue Severity Distribution</strong></div>
+                <div class="card-header bg-light"><strong>Issue Risk Levels Distribution</strong></div>
                 <div class="card-body">
-                    <div id="issue-severity-chart" style="height:250px;"></div>
+                    <div id="issue-risk-chart" style="height:250px;"></div>
                 </div>
             </div>
         </div>
@@ -646,10 +646,10 @@
 {% else %}
   <script id="engagement-status-data" type="application/json">{}</script>
 {% endif %}
-{% if issue_severity_dist %}
-  {{ issue_severity_dist|json_script:"issue-severity-data" }}
+{% if issue_risk_dist %}
+  {{ issue_risk_dist|json_script:"issue-risk-data" }}
 {% else %}
-  <script id="issue-severity-data" type="application/json">{}</script>
+  <script id="issue-risk-data" type="application/json">{}</script>
 {% endif %}
 {% if approval_status_dist %}
   {{ approval_status_dist|json_script:"approval-status-data" }}
@@ -684,10 +684,10 @@ Plotly.newPlot('engagement-status-chart', [{
     textinfo: 'label+percent',
     insidetextorientation: 'radial',
 }], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-const issueSeverity = safeParseJSON('issue-severity-data');
-Plotly.newPlot('issue-severity-chart', [{
-    labels: Object.keys(issueSeverity),
-    values: Object.values(issueSeverity),
+const issueRisk = safeParseJSON('issue-risk-data');
+Plotly.newPlot('issue-risk-chart', [{
+    labels: Object.keys(issueRisk),
+    values: Object.values(issueRisk),
     type: 'pie',
     textinfo: 'label+percent',
     insidetextorientation: 'radial',

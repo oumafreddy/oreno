@@ -34,6 +34,8 @@ router.register(r'workplans', views.AuditWorkplanViewSet, basename='workplan')
 router.register(r'engagements', views.EngagementViewSet, basename='engagement')
 router.register(r'issues', views.IssueViewSet, basename='issue')
 router.register(r'approvals', views.ApprovalViewSet, basename='approval')
+router.register(r'risks', views.RiskViewSet, basename='risk')
+router.register(r'objectives', views.ObjectiveViewSet, basename='objective')
 
 # Nested routers for related objects
 workplan_router = routers.NestedDefaultRouter(router, r'workplans', lookup='workplan')
@@ -43,10 +45,24 @@ workplan_router.register(r'approvals', views.WorkplanApprovalViewSet, basename='
 engagement_router = routers.NestedDefaultRouter(router, r'engagements', lookup='engagement')
 engagement_router.register(r'issues', views.EngagementIssueViewSet, basename='engagement-issue')
 engagement_router.register(r'approvals', views.EngagementApprovalViewSet, basename='engagement-approval')
+engagement_router.register(r'risks', views.EngagementRiskViewSet, basename='engagement-risk')
 
 issue_router = routers.NestedDefaultRouter(router, r'issues', lookup='issue')
 issue_router.register(r'approvals', views.IssueApprovalViewSet, basename='issue-approval')
 issue_router.register(r'working-papers', IssueWorkingPaperViewSet, basename='issue-working-paper')
+
+# Create a router for objectives and their risks
+objective_router = routers.NestedDefaultRouter(router, r'objectives', lookup='objective')
+objective_router.register(r'risks', views.ObjectiveRiskViewSet, basename='objective-risk')
+
+# Include all routers in API patterns
+api_patterns = [
+    path('', include(router.urls)),
+    path('', include(workplan_router.urls)),
+    path('', include(engagement_router.urls)),
+    path('', include(issue_router.urls)),
+    path('', include(objective_router.urls)),
+]
 
 # ─── URL PATTERNS ────────────────────────────────────────────────────────────
 app_name = 'audit'

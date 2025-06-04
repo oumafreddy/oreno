@@ -12,19 +12,30 @@
   </p>
 </div>
 
+<!-- Hidden div to store redirect URL for JavaScript -->
+<div id="success-redirect-data" data-redirect-url="{% if redirect_url %}{{ redirect_url }}{% endif %}" style="display: none;"></div>
+
 <script>
   // Close the modal after success
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
-      var modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-      if (modal) {
+      var modalElement = document.querySelector('.modal');
+      if (modalElement) {
+        var modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
         modal.hide();
       }
       
-      // If we have a redirect URL, navigate to it
-      {% if redirect_url %}
-        window.location.href = "{{ redirect_url }}";
-      {% endif %}
+      // Read the redirect URL from the data attribute
+      var redirectDataElement = document.getElementById('success-redirect-data');
+      var redirectUrlValue = null;
+      if (redirectDataElement) {
+        redirectUrlValue = redirectDataElement.getAttribute('data-redirect-url');
+      }
+      
+      // If we have a valid redirect URL, navigate to it
+      if (redirectUrlValue && redirectUrlValue.length > 0) {
+        window.location.href = redirectUrlValue;
+      }
     }, 1500);
   });
 </script>

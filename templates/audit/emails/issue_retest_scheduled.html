@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Retest Scheduled</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status-scheduled {
+            background-color: #6f42c1;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Issue Retest Scheduled</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ recipient.get_full_name|default:recipient.email }},</p>
+        
+        <p>A retest has been scheduled for an issue:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Issue:</strong></td>
+                <td>{{ retest.issue.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>
+                    <span class="status-badge status-scheduled">SCHEDULED</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ retest.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Scheduled By:</strong></td>
+                <td>{{ retest.created_by.get_full_name|default:retest.created_by.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Scheduled Date:</strong></td>
+                <td>{{ retest.created_at }}</td>
+            </tr>
+            {% if retest.planned_date %}
+            <tr>
+                <td><strong>Planned Test Date:</strong></td>
+                <td>{{ retest.planned_date }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><strong>Tester:</strong></td>
+                <td>{{ retest.tester.get_full_name|default:retest.tester.email }}</td>
+            </tr>
+            {% if retest.notes %}
+            <tr>
+                <td><strong>Notes:</strong></td>
+                <td>{{ retest.notes|truncatechars:200 }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p>The tester will conduct the retest on the scheduled date and provide the results.</p>
+        
+        {% if retest_url %}
+        <a href="{{ retest_url }}" class="button">View Retest Details</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

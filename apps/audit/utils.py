@@ -6,6 +6,9 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+import logging
+
+logger = logging.getLogger(__name__)
 
 def is_htmx_request(request):
     """
@@ -368,3 +371,94 @@ def send_engagement_approval_notification(engagement, status, request):
                 context=context,
                 recipient_email=recipient.email
             )
+
+
+def send_risk_status_notification(risk, old_status, new_status, request=None):
+    """Send email when risk status changes."""
+    site_name = getattr(settings, 'SITE_NAME', "Audit Management System")
+    recipients = []
+
+    if risk.created_by and risk.created_by.email:
+        recipients.append(risk.created_by.email)
+
+    if risk.objective and risk.objective.engagement:
+        engagement = risk.objective.engagement
+        if engagement.lead and engagement.lead.email and engagement.lead.email not in recipients:
+            recipients.append(engagement.lead.email)
+
+    if not recipients:
+        return
+
+    subject = _(f'Risk Status Changed: {risk.title}')
+    template = 'audit/emails/risk_status_changed.html'
+
+    context = {
+        'risk': risk,
+        'old_status': old_status,
+        'new_status': new_status,
+        'site_name': site_name,
+        'site_domain': settings.SITE_DOMAIN,
+    }
+
+    for email in recipients:
+        _send_templated_email(subject, template, context, email)
+        logger.info(f"Risk status email sent to {email} for risk {risk.id}")
+
+
+def send_risk_approval_notification(risk, status, request=None):
+    """Send email when risk approval status changes."""
+    site_name = getattr(settings, 'SITE_NAME', "Audit Management System")
+    recipients = []
+    template = ''
+    subject = ''
+
+    if status == 'submitted':
+        if risk.objective and risk.objective.engagement and risk.objective.engagement.lead:
+            recipients.append(risk.objective.engagement.lead.email)
+        if not recipients and risk.organization.approval_group:
+            recipients = list(risk.organization.approval_group.user_set.values_list('email', flat=True))
+        subject = _(f'Risk Assessment Submitted for Approval: {risk.title}')
+        template = 'audit/emails/risk_submitted.html'
+    elif status == 'approved':
+        if risk.created_by and risk.created_by.email:
+            recipients = [risk.created_by.email]
+        subject = _(f'Risk Assessment Approved: {risk.title}')
+        template = 'audit/emails/risk_approved.html'
+    elif status == 'rejected':
+        if risk.created_by and risk.created_by.email:
+            recipients = [risk.created_by.email]
+        subject = _(f'Risk Assessment Needs Revision: {risk.title}')
+        template = 'audit/emails/risk_rejected.html'
+
+    if not recipients:
+        return
+
+    context = {
+        'risk': risk,
+        'status': status,
+        'site_name': site_name,
+        'site_domain': settings.SITE_DOMAIN,
+    }
+
+    for email in recipients:
+        _send_templated_email(subject, template, context, email)
+        logger.info(f"Risk approval email ({status}) sent to {email} for risk {risk.id}")
+
+
+def send_risk_assignment_notification(risk, request=None):
+    """Send email when a risk is assigned to someone."""
+    if not risk.assigned_to or not risk.assigned_to.email:
+        return
+
+    site_name = getattr(settings, 'SITE_NAME', "Audit Management System")
+    subject = _(f'Risk Assigned: {risk.title}')
+    template = 'audit/emails/risk_assigned.html'
+
+    context = {
+        'risk': risk,
+        'site_name': site_name,
+        'site_domain': settings.SITE_DOMAIN,
+    }
+
+    _send_templated_email(subject, template, context, risk.assigned_to.email)
+    logger.info(f"Risk assignment email sent to {risk.assigned_to.email} for risk {risk.id}")

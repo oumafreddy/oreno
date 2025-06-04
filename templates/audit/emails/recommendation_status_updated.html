@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation Status Updated</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #6f42c1;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #6f42c1;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status-not-started {
+            background-color: #6c757d;
+            color: white;
+        }
+        .status-in-progress {
+            background-color: #0dcaf0;
+            color: black;
+        }
+        .status-implemented {
+            background-color: #198754;
+            color: white;
+        }
+        .status-rejected {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Recommendation Status Updated</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ recipient.get_full_name|default:recipient.email }},</p>
+        
+        <p>A recommendation's implementation status has been updated:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Title:</strong></td>
+                <td>{{ recommendation.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Previous Status:</strong></td>
+                <td>{{ old_status_display|upper }}</td>
+            </tr>
+            <tr>
+                <td><strong>New Status:</strong></td>
+                <td>
+                    {% if recommendation.implementation_status == 'not_started' %}
+                        <span class="status-badge status-not-started">NOT STARTED</span>
+                    {% elif recommendation.implementation_status == 'in_progress' %}
+                        <span class="status-badge status-in-progress">IN PROGRESS</span>
+                    {% elif recommendation.implementation_status == 'implemented' %}
+                        <span class="status-badge status-implemented">IMPLEMENTED</span>
+                    {% elif recommendation.implementation_status == 'rejected' %}
+                        <span class="status-badge status-rejected">REJECTED</span>
+                    {% else %}
+                        {{ recommendation.get_implementation_status_display|upper }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ recommendation.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Updated By:</strong></td>
+                <td>{{ recommendation.last_modified_by.get_full_name|default:recommendation.last_modified_by.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Update Date:</strong></td>
+                <td>{{ recommendation.modified_at }}</td>
+            </tr>
+            {% if recommendation.implementation_notes %}
+            <tr>
+                <td><strong>Implementation Notes:</strong></td>
+                <td>{{ recommendation.implementation_notes }}</td>
+            </tr>
+            {% endif %}
+            {% if recommendation.issue %}
+            <tr>
+                <td><strong>Related Issue:</strong></td>
+                <td>{{ recommendation.issue.title }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        {% if recommendation.implementation_status == 'implemented' %}
+        <p>Good news! This recommendation has been fully implemented.</p>
+        {% elif recommendation.implementation_status == 'in_progress' %}
+        <p>Implementation of this recommendation is now in progress.</p>
+        {% elif recommendation.implementation_status == 'rejected' %}
+        <p>This recommendation has been rejected. Please review the implementation notes for details.</p>
+        {% endif %}
+        
+        {% if recommendation_url %}
+        <a href="{{ recommendation_url }}" class="button">View Recommendation Details</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

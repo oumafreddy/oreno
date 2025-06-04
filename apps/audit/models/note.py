@@ -82,16 +82,79 @@ class Note(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         self.save(update_fields=['status', 'closed_by', 'closed_at'])
 
 class Notification(models.Model):
+    # Organization field for multi-tenancy compliance (explicitly defined)
+    organization = models.ForeignKey(
+        'organizations.Organization',
+        on_delete=models.CASCADE,
+        verbose_name=_('organization'),
+        related_name="notification_items",
+        null=False  # Required for organization-level filtering
+    )
+    
+    # Audit trail fields (explicitly defined instead of inherited)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notification_created',
+        verbose_name=_('created by')
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notification_updated',
+        verbose_name=_('updated by')
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('updated at'))
+    
+    # Core notification fields
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     note = models.ForeignKey('Note', on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
     message = models.TextField()
     notification_type = models.CharField(max_length=32, default='note')
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    
     class Meta:
         app_label = 'audit'
         verbose_name = _('Notification')
         verbose_name_plural = _('Notifications')
         ordering = ['-created_at']
+    
     def __str__(self):
-        return f"Notification for {self.user} - {self.message[:40]}..." 
+        return f"Notification for {self.user} - {self.message[:40]}..."
+        
+    @classmethod
+    def create_for_user(cls, user, message, notification_type='note', note=None):
+        """Factory method to create a notification with proper organization assignment"""
+        notification = cls(
+            user=user,
+            message=message,
+            notification_type=notification_type,
+            note=note,
+            organization=user.organization,
+            created_by=user,
+            updated_by=user
+        )
+        notification.save()
+        return notification
+        
+    def save(self, *args, **kwargs):
+        # Ensure organization is set from user if not already provided
+        if not self.organization and self.user and hasattr(self.user, 'organization'):
+            self.organization = self.user.organization
+            
+        if not self.organization:
+            raise ValueError("Notification must have an organization assigned.")
+        
+        # Handle audit trail fields
+        if not self.pk and not self.created_by and self.user:
+            self.created_by = self.user
+        
+        if self.user:
+            self.updated_by = self.user
+            
+        super().save(*args, **kwargs) 

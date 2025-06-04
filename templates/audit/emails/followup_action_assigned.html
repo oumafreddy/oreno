@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Follow-Up Action Assigned to You</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            background-color: #0dcaf0;
+            color: black;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .priority-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .priority-low {
+            background-color: #198754;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Follow-Up Action Assigned to You</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ action.assigned_to.get_full_name|default:action.assigned_to.email }},</p>
+        
+        <p>A follow-up action has been assigned to you:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Action Title:</strong></td>
+                <td>{{ action.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>
+                    <span class="status-badge">{{ action.get_status_display|upper }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Priority:</strong></td>
+                <td>
+                    {% if action.priority == 'high' %}
+                        <span class="priority-badge priority-high">HIGH</span>
+                    {% elif action.priority == 'medium' %}
+                        <span class="priority-badge priority-medium">MEDIUM</span>
+                    {% else %}
+                        <span class="priority-badge priority-low">LOW</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ action.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Assigned By:</strong></td>
+                <td>{{ action.last_modified_by.get_full_name|default:action.last_modified_by.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Assignment Date:</strong></td>
+                <td>{{ action.modified_at }}</td>
+            </tr>
+            {% if action.due_date %}
+            <tr>
+                <td><strong>Due Date:</strong></td>
+                <td>{{ action.due_date }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td>{{ action.description|truncatechars:200 }}</td>
+            </tr>
+            {% if action.issue %}
+            <tr>
+                <td><strong>Related Issue:</strong></td>
+                <td>{{ action.issue.title }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p>Please review this follow-up action and take appropriate action.</p>
+        
+        {% if action_url %}
+        <a href="{{ action_url }}" class="button">View Action Details</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

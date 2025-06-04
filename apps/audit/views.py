@@ -67,6 +67,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
+from rest_framework import permissions
 from django.conf import settings
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View
@@ -123,6 +124,7 @@ from core.permissions import IsTenantMember
 from django.contrib.contenttypes.models import ContentType
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
 from core.mixins.organization import OrganizationScopedQuerysetMixin
+from .mixins import AuditOrganizationScopedMixin, OrganizationScopedApiMixin
 
 import csv
 from django.http import HttpResponse
@@ -135,6 +137,9 @@ from .forms import ObjectiveForm
 
 from .models.risk import Risk
 from .forms import RiskForm
+from .models.engagement import Engagement
+from .models.issue import Issue
+from users.permissions import IsOrgManagerOrReadOnly
 
 from .models.procedure import Procedure
 from .models.procedureresult import ProcedureResult
@@ -151,39 +156,38 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 # ─── MIXINS ─────────────────────────────────────────────────────────────────
-class AuditPermissionMixin(OrganizationPermissionMixin):
-    """Verify that current user has audit permissions for the organization"""
-    
+class AuditPermissionMixin(AuditOrganizationScopedMixin):
+    """
+    Verify that current user has audit permissions for the organization.
+    Inherits from AuditOrganizationScopedMixin to ensure consistent organization scoping.
+    """
     def dispatch(self, request, *args, **kwargs):
+        # Base permission check - user must be authenticated
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-            
-        # Get organization from the view's object or kwargs
-        organization = None
-        if hasattr(self, 'object'):
-            organization = self.object.organization
-        elif 'organization_pk' in kwargs:
-            organization = get_object_or_404(Organization, pk=kwargs['organization_pk'])
         
-        if organization and not request.user.has_audit_access(organization):
-            raise PermissionDenied(_("You don't have permission to access audit data for this organization"))
+        # Check if user has an active organization
+        if not hasattr(request.user, 'active_organization') or not request.user.active_organization:
+            messages.warning(request, _('You need to select an active organization'))
+            return redirect('users:organization-list')
+            
+        # Check if user has the necessary permissions for the active organization
+        # We could implement role-based checks here in the future
         
         return super().dispatch(request, *args, **kwargs)
 
 # ─── RISK VIEWS ─────────────────────────────────────────────────────────────────
-class RiskListView(AuditPermissionMixin, LoginRequiredMixin, ListView):
+class RiskListView(AuditPermissionMixin, ListView):
     model = Risk
     template_name = 'audit/risk_list.html'
     context_object_name = 'risks'
     paginate_by = 20
     
     def get_queryset(self):
-        # Filter risks by organization
-        queryset = super().get_queryset().filter(
-            organization=self.request.organization
-        )
+        # Base queryset already filtered by organization in AuditOrganizationScopedMixin
+        queryset = super().get_queryset()
         
-        # Apply filtering from query parameters
+        # Apply filters based on GET parameters
         q = self.request.GET.get('q', '')
         if q:
             queryset = queryset.filter(
@@ -1057,7 +1061,7 @@ class IssueListView(AuditPermissionMixin, ListView):
                 queryset = queryset.filter(issue_status=status)
             severity = form.cleaned_data.get('severity')
             if severity:
-                queryset = queryset.filter(severity_status=severity)
+                queryset = queryset.filter(risk_level=severity)
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -1409,8 +1413,8 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         overdue_issues = Issue.objects.filter(organization=organization, issue_status__in=['open', 'in_progress'], remediation_deadline_date__lt=today).count()
         context['overdue_issues'] = overdue_issues
         # Issue severity distribution
-        issue_severity_dist = Issue.objects.filter(organization=organization).values_list('severity_status', flat=True)
-        context['issue_severity_dist'] = dict(Counter(issue_severity_dist)) or {}
+        issue_risk_dist = Issue.objects.filter(organization=organization).values_list('risk_level', flat=True)
+        context['issue_risk_dist'] = dict(Counter(issue_risk_dist)) or {}
         # Workplan completion rates
         workplans = AuditWorkplan.objects.filter(organization=organization)
         completed_workplans = workplans.filter(approval_status='approved').count()
@@ -1585,8 +1589,11 @@ class EngagementIssueViewSet(viewsets.ModelViewSet):
 
 class EngagementApprovalViewSet(viewsets.ModelViewSet):
     """API endpoint for engagement approvals."""
-    serializer_class = ApprovalSerializer
     permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
+    
+    def get_serializer_class(self):
+        from .serializers import ApprovalSerializer
+        return ApprovalSerializer
     
     def get_queryset(self):
         engagement_pk = self.kwargs.get('engagement_pk')
@@ -1604,10 +1611,67 @@ class EngagementApprovalViewSet(viewsets.ModelViewSet):
             requester=self.request.user
         )
 
+
+class EngagementRiskViewSet(viewsets.ModelViewSet):
+    """API endpoint for engagement risks."""
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
+    
+    def get_queryset(self):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        return Risk.objects.filter(
+            engagement_id=engagement_pk
+        ).select_related('created_by')
+    
+    def get_serializer_class(self):
+        from .serializers import RiskSerializer, RiskDetailSerializer
+        if self.action == 'retrieve':
+            return RiskDetailSerializer
+        return RiskSerializer
+    
+    def perform_create(self, serializer):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        engagement = get_object_or_404(Engagement, pk=engagement_pk)
+        serializer.save(
+            engagement=engagement,
+            organization=self.request.organization,
+            created_by=self.request.user
+        )
+
+
+class ObjectiveRiskViewSet(viewsets.ModelViewSet):
+    """API endpoint for objective risks."""
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
+    
+    def get_queryset(self):
+        from .models.objective import Objective
+        objective_pk = self.kwargs.get('objective_pk')
+        return Risk.objects.filter(
+            objective__id=objective_pk
+        ).select_related('created_by')
+    
+    def get_serializer_class(self):
+        from .serializers import RiskSerializer, RiskDetailSerializer
+        if self.action == 'retrieve':
+            return RiskDetailSerializer
+        return RiskSerializer
+    
+    def perform_create(self, serializer):
+        from .models.objective import Objective
+        objective_pk = self.kwargs.get('objective_pk')
+        objective = get_object_or_404(Objective, pk=objective_pk)
+        serializer.save(
+            objective=objective,
+            organization=self.request.organization,
+            created_by=self.request.user
+        )
+
 class IssueApprovalViewSet(viewsets.ModelViewSet):
     """API endpoint for issue approvals."""
-    serializer_class = ApprovalSerializer
     permission_classes = [permissions.IsAuthenticated, IsOrgAdmin]
+    
+    def get_serializer_class(self):
+        from .serializers import ApprovalSerializer
+        return ApprovalSerializer
     
     def get_queryset(self):
         issue_pk = self.kwargs.get('issue_pk')
@@ -1854,9 +1918,9 @@ def export_issues(request):
     if name:
         qs = qs.filter(issue_title__icontains=name)
     if severity:
-        qs = qs.filter(severity_status=severity)
-    headers = ['ID', 'Code', 'Title', 'Severity', 'Status', 'Owner', 'Date Identified']
-    rows = [[i.id, i.code, i.issue_title, i.severity_status, i.issue_status, getattr(i.issue_owner, 'email', ''), i.date_identified] for i in qs]
+        qs = qs.filter(risk_level=severity)
+    headers = ['ID', 'Code', 'Title', 'Risk Level', 'Status', 'Owner', 'Date Identified']
+    rows = [[i.id, i.code, i.issue_title, i.risk_level, i.issue_status, getattr(i.issue_owner, 'email', ''), i.date_identified] for i in qs]
     if export_format == 'xlsx':
         return export_to_xlsx(headers, rows, 'issues.xlsx')
     response = HttpResponse(content_type='text/csv')
@@ -3531,20 +3595,108 @@ class IssueWorkingPaperDetailView(AuditPermissionMixin, DetailView):
     context_object_name = 'working_paper'
 
 # ─── API VIEWSET ─────────────────────────────────────────────────────────────
-from rest_framework import mixins
+from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework import status
-class IssueWorkingPaperViewSet(viewsets.ModelViewSet):
-    serializer_class = IssueWorkingPaperSerializer
+from .serializers import (RiskSerializer, RiskDetailSerializer, 
+                         IssueSerializer, ApprovalSerializer,
+                         IssueWorkingPaperSerializer)
+class IssueWorkingPaperViewSet(OrganizationScopedApiMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
+    
+    def get_serializer_class(self):
+        from .serializers import IssueWorkingPaperSerializer
+        return IssueWorkingPaperSerializer
 
     def get_queryset(self):
+        # Get base queryset with organization filtering from mixin
+        qs = super().get_queryset()
+        
+        # Apply additional filters
         issue_pk = self.kwargs.get('issue_pk')
-        qs = IssueWorkingPaper.objects.all()
         if issue_pk:
             qs = qs.filter(issue_id=issue_pk)
-        return qs.filter(organization=self.request.organization)
+            
+        return qs
+        
+# Risk API ViewSet        
+class RiskViewSet(OrganizationScopedApiMixin, viewsets.ModelViewSet):
+    """API ViewSet for managing Risk objects.
+    Provides CRUD operations with proper organization scoping and permission checks.
+    Uses OrganizationScopedApiMixin for consistent organization filtering.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
+    
+    def get_serializer_class(self):
+        from .serializers import RiskSerializer, RiskDetailSerializer
+        if self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
+            return RiskDetailSerializer
+        if self.action == 'list':
+            # Use RiskSerializer for list view
+            return RiskSerializer
+        return RiskSerializer
+    
+    def get_queryset(self):
+        # Get base queryset with organization filtering from mixin
+        qs = super().get_queryset()
+        
+        # Apply additional filters
+        objective_pk = self.request.query_params.get('objective_id')
+        engagement_pk = self.request.query_params.get('engagement_id')
+        
+        # Apply filters if provided
+        if objective_pk:
+            qs = qs.filter(objective_id=objective_pk)
+        if engagement_pk:
+            qs = qs.filter(objective__engagement_id=engagement_pk)
+            
+        # Apply status filter if provided
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+            
+        # Apply category filter if provided
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+            
+        # Order risks by order field, then by title
+        return qs.order_by('order', 'title')
 
+
+class ObjectiveViewSet(OrganizationScopedApiMixin, viewsets.ModelViewSet):
+    """API ViewSet for managing Objective objects.
+    Provides CRUD operations with proper organization scoping and permission checks.
+    Uses OrganizationScopedApiMixin for consistent organization filtering.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsOrgManagerOrReadOnly]
+    
+    def get_serializer_class(self):
+        from .serializers import ObjectiveSerializer
+        if self.action in ['retrieve', 'update', 'partial_update']:
+            # Use ObjectiveDetailSerializer if available
+            try:
+                from .serializers import ObjectiveDetailSerializer
+                return ObjectiveDetailSerializer
+            except ImportError:
+                return ObjectiveSerializer
+        return ObjectiveSerializer
+    
+    def get_queryset(self):
+        from .models.objective import Objective
+        # Get base queryset with organization filtering from mixin
+        qs = super().get_queryset()
+        
+        # Apply additional filters
+        engagement_pk = self.request.query_params.get('engagement_id')
+        
+        # Apply filters if provided
+        if engagement_pk:
+            qs = qs.filter(engagement_id=engagement_pk)
+        
+        # Order objectives by order field, then by title
+        return qs.order_by('order', 'title')
+    
     def perform_create(self, serializer):
         serializer.save(
             organization=self.request.organization,

@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.postgres',  # optional PostgreSQL extensions
+    'django.contrib.sites',  # Required for email absolute URLs
 
     # Third-party
     'django_tenants', 
@@ -196,6 +197,7 @@ MIDDLEWARE = [
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
     'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
     'audit.views.RequestWrapper',  # For HTMX attribute handling
 ]
@@ -546,3 +548,7 @@ CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
 # Absolute site URL for building links in emails, etc.
 SITE_URL = "http://org001.localhost:8000"
+
+# Django Sites framework configuration
+SITE_ID = 1  # Default site ID
+SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'org001.localhost:8000')

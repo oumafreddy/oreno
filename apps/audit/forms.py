@@ -1,6 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHolder
 from crispy_bootstrap5.bootstrap5 import FloatingField
@@ -14,7 +15,7 @@ from users.models import CustomUser
 from .models import AuditWorkplan, Engagement, Issue, Approval, Objective
 from .models.followupaction import FollowUpAction
 from .models.issueretest import IssueRetest
-from .models.note import Note
+from .models.note import Note, Notification
 from .models.procedure import Procedure
 from .models.procedureresult import ProcedureResult
 from .models.recommendation import Recommendation
@@ -32,12 +33,38 @@ class BaseAuditForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
+        
+        # Apply organization filtering to all foreign key fields
+        if self.organization:
+            for field_name, field in self.fields.items():
+                # Filter FK fields by organization
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if hasattr(model, 'organization'):
+                        field.queryset = field.queryset.filter(organization=self.organization)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Ensure all related objects belong to the same organization
+        if self.organization:
+            for field_name, value in cleaned_data.items():
+                if hasattr(value, 'organization') and hasattr(value.organization, 'pk'):
+                    if value.organization.pk != self.organization.pk:
+                        self.add_error(field_name, _('Selected item must belong to your organization'))
+                        
+        # Set organization on the form instance
+        if hasattr(self.instance, 'organization') and self.organization:
+            self.instance.organization = self.organization
+            
+        return cleaned_data
 
 # ─── WORKPLAN FORMS ──────────────────────────────────────────────────────────
 class AuditWorkplanForm(BaseAuditForm):
     class Meta:
         model = AuditWorkplan
-        fields = ['code', 'name', 'fiscal_year', 'objectives', 'description', 'approval_status']
+        fields = ['code', 'name', 'fiscal_year', 'objectives', 'description', 
+                 'approval_status', 'estimated_total_hours', 'priority_ranking']
         widgets = {
             'fiscal_year': forms.NumberInput(attrs={'min': 2000, 'max': 2100}),
             'objectives': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
@@ -69,6 +96,10 @@ class AuditWorkplanForm(BaseAuditForm):
                     Column(FloatingField('fiscal_year'), css_class='col-md-6'),
                     Column('approval_status', css_class='col-md-6'),
                 ),
+                Row(
+                    Column('estimated_total_hours', css_class='col-md-6'),
+                    Column('priority_ranking', css_class='col-md-6'),
+                ),
             ),
             Fieldset(
                 _('Details'),
@@ -88,6 +119,8 @@ class EngagementForm(BaseAuditForm):
         fields = [
             'code', 'title', 'annual_workplan', 'engagement_type',
             'project_start_date', 'target_end_date', 'assigned_to',
+            'estimated_hours', 'criteria',
+            'field_work_start_date', 'field_work_end_date', 'report_issued_date',
             'executive_summary', 'purpose', 'background', 'scope',
             'conclusion_description', 'conclusion',
             'project_status', 'approval_status'
@@ -95,6 +128,15 @@ class EngagementForm(BaseAuditForm):
         widgets = {
             'project_start_date': forms.DateInput(attrs={'type': 'date'}),
             'target_end_date': forms.DateInput(attrs={'type': 'date'}),
+            'field_work_start_date': forms.DateInput(attrs={'type': 'date'}),
+            'field_work_end_date': forms.DateInput(attrs={'type': 'date'}),
+            'report_issued_date': forms.DateInput(attrs={'type': 'date'}),
+            'executive_summary': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'purpose': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'background': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'scope': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'criteria': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'conclusion_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -124,14 +166,24 @@ class EngagementForm(BaseAuditForm):
                 ),
                 Row(
                     Column('assigned_to', css_class='col-md-6'),
+                    Column('estimated_hours', css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Project Status'),
+                Row(
                     Column('project_status', css_class='col-md-6'),
+                    Column('approval_status', css_class='col-md-6'),
                 ),
                 Row(
-                    Column('approval_status', css_class='col-md-6'),
+                    Column('field_work_start_date', css_class='col-md-4'),
+                    Column('field_work_end_date', css_class='col-md-4'),
+                    Column('report_issued_date', css_class='col-md-4'),
                 ),
             ),
             Fieldset(
                 _('Engagement Details'),
+                'criteria',
                 'executive_summary',
                 'purpose',
                 'background',
@@ -151,11 +203,17 @@ class IssueForm(BaseAuditForm):
         model = Issue
         fields = [
             'code', 'issue_title', 'issue_description', 'root_cause',
-            'risks', 'date_identified', 'issue_owner', 'issue_owner_title',
-            'audit_procedures', 'issue_status',
+            'risks', 'date_identified', 'issue_owner', 'secondary_owner',
+            'issue_owner_email', 'issue_owner_title',
+            'audit_procedures', 'issue_status', 'remediation_status',
+            'target_date', 'actual_remediation_date',
+            'procedure', 'impact', 'likelihood', 'risk_level',
+            'issue_type', 'is_repeat_issue', 'prior_issue_reference'
         ]
         widgets = {
             'date_identified': forms.DateInput(attrs={'type': 'date'}),
+            'target_date': forms.DateInput(attrs={'type': 'date'}),
+            'actual_remediation_date': forms.DateInput(attrs={'type': 'date'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -169,35 +227,37 @@ class IssueForm(BaseAuditForm):
         
         if self.organization:
             # Base filter for organization
-            procedure_result_queryset = self.fields['procedure_result'].queryset.filter(
-                procedure__objective__engagement__organization=self.organization
+            procedure_queryset = self.fields['procedure'].queryset.filter(
+                objective__engagement__organization=self.organization
             )
             
             # Apply hierarchical filtering based on provided context
-            if procedure_result_pk:
-                # If specific procedure result is provided
-                procedure_result_queryset = procedure_result_queryset.filter(id=procedure_result_pk)
-            elif procedure_pk:
+            if procedure_pk:
                 # If specific procedure is provided
-                procedure_result_queryset = procedure_result_queryset.filter(procedure_id=procedure_pk)
+                procedure_queryset = procedure_queryset.filter(id=procedure_pk)
             elif objective_pk:
                 # If specific objective is provided
-                procedure_result_queryset = procedure_result_queryset.filter(procedure__objective_id=objective_pk)
+                procedure_queryset = procedure_queryset.filter(objective_id=objective_pk)
             elif engagement_pk:
                 # If specific engagement is provided
-                procedure_result_queryset = procedure_result_queryset.filter(procedure__objective__engagement_id=engagement_pk)
+                procedure_queryset = procedure_queryset.filter(objective__engagement_id=engagement_pk)
             
-            self.fields['procedure_result'].queryset = procedure_result_queryset
+            self.fields['procedure'].queryset = procedure_queryset
             
             # If there's only one option and it matches our context, preselect it and make read-only
-            if procedure_result_pk and procedure_result_queryset.count() == 1:
-                self.fields['procedure_result'].initial = procedure_result_pk
-                self.fields['procedure_result'].widget.attrs['readonly'] = True
+            if procedure_pk and procedure_queryset.count() == 1:
+                self.fields['procedure'].initial = procedure_pk
+                self.fields['procedure'].widget.attrs['readonly'] = True
             
             # Filter issue owners to current organization
             self.fields['issue_owner'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
+            # Filter secondary owners as well
+            if 'secondary_owner' in self.fields:
+                self.fields['secondary_owner'].queryset = CustomUser.objects.filter(
+                    organization=self.organization
+                )
         
         self.helper.layout = Layout(
             Fieldset(
@@ -207,16 +267,25 @@ class IssueForm(BaseAuditForm):
                     Column(FloatingField('issue_title'), css_class='col-md-6'),
                 ),
                 Row(
-                    Column('procedure_result', css_class='col-md-6'),
+                    Column('procedure', css_class='col-md-6'),
                     Column('date_identified', css_class='col-md-6'),
                 ),
                 Row(
-                    Column('issue_owner', css_class='col-md-6'),
-                    Column('issue_owner_title', css_class='col-md-6'),
+                    Column('issue_owner', css_class='col-md-4'),
+                    Column('secondary_owner', css_class='col-md-4'),
+                    Column('issue_owner_email', css_class='col-md-4'),
                 ),
                 Row(
-                    Column('severity_status', css_class='col-md-6'),
+                    Column('issue_type', css_class='col-md-6'),
                     Column('issue_status', css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Risk and Severity Assessment'),
+                Row(
+                    Column('impact', css_class='col-md-4'),
+                    Column('likelihood', css_class='col-md-4'),
+                    Column('risk_level', css_class='col-md-4'),
                 ),
             ),
             Fieldset(
@@ -355,7 +424,8 @@ class ObjectiveForm(BaseAuditForm):
         model = Objective
         fields = [
             'title', 'description', 'priority', 'criteria',
-            'assigned_to', 'status', 'estimated_hours', 'order'
+            'assigned_to', 'status', 'estimated_hours', 'order',
+            'start_date', 'completion_date'
         ]
         widgets = {
             'description': CKEditor5Widget(config_name='extends'),
@@ -406,7 +476,156 @@ class ObjectiveForm(BaseAuditForm):
             )
         )
 
-# ─── RISK FORM ─────────────────────────────────────────────────────────────
+class ProcedureForm(BaseAuditForm):
+    class Meta:
+        model = Procedure
+        fields = [
+            'title', 'risk', 'description', 'procedure_type',
+            'control_being_tested', 'criteria', 'sample_size',
+            'sampling_method', 'planned_date', 'test_date', 'test_status', 
+            'tested_by', 'estimated_hours', 'exceptions_noted', 'exception_details',
+            'reviewed_by', 'review_date', 'result', 'order'
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'control_being_tested': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'criteria': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'result': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'exception_details': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'planned_date': forms.DateInput(attrs={'type': 'date'}),
+            'test_date': forms.DateInput(attrs={'type': 'date'}),
+            'review_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Extract context parameters for proper filtering
+        self.risk_pk = kwargs.pop('risk_pk', None)
+        self.objective_pk = kwargs.pop('objective_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        for field_name in ['description', 'control_being_tested', 'criteria', 'result']:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
+                # Initialize with empty string if None to prevent serialization errors
+                if self.initial and field_name in self.initial and self.initial[field_name] is None:
+                    self.initial[field_name] = ''
+        
+        # Apply context-based filtering
+        if self.organization and 'risk' in self.fields:
+            risk_queryset = self.fields['risk'].queryset.filter(
+                organization=self.organization
+            )
+            
+            # Filter by specific risk or objective if provided
+            if self.risk_pk:
+                risk_queryset = risk_queryset.filter(id=self.risk_pk)
+            elif self.objective_pk:
+                risk_queryset = risk_queryset.filter(objective_id=self.objective_pk)
+                
+            self.fields['risk'].queryset = risk_queryset
+            
+            # If there's only one option, preselect it
+            if self.risk_pk and risk_queryset.count() == 1:
+                self.fields['risk'].initial = self.risk_pk
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Procedure Information'),
+                Row(
+                    Column(FloatingField('title'), css_class='col-md-8'),
+                    Column(FloatingField('order'), css_class='col-md-4'),
+                ),
+                'risk',
+                'description',
+                Row(
+                    Column(FloatingField('procedure_type'), css_class='col-md-6'),
+                    Column(FloatingField('sample_size'), css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Control & Criteria'),
+                'control_being_tested',
+                'criteria',
+            ),
+            Fieldset(
+                _('Execution & Results'),
+                Row(
+                    Column(FloatingField('planned_date'), css_class='col-md-6'),
+                    Column(FloatingField('test_date'), css_class='col-md-6'),
+                ),
+                Row(
+                    Column(FloatingField('test_status'), css_class='col-md-12'),
+                ),
+                'result',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+class ProcedureResultForm(BaseAuditForm):
+    class Meta:
+        model = ProcedureResult
+        fields = [
+            'procedure', 'status', 'notes', 'is_for_the_record',
+            'is_positive', 'order'
+        ]
+        widgets = {
+            'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Extract context parameters for proper filtering
+        self.procedure_pk = kwargs.pop('procedure_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        if 'notes' in self.fields:
+            self.fields['notes'].required = False
+            # Initialize with empty string if None to prevent serialization errors
+            if self.initial and 'notes' in self.initial and self.initial['notes'] is None:
+                self.initial['notes'] = ''
+        
+        # Apply context-based filtering
+        if self.organization and 'procedure' in self.fields:
+            procedure_queryset = self.fields['procedure'].queryset.filter(
+                organization=self.organization
+            )
+            
+            # Filter by specific procedure if provided
+            if self.procedure_pk:
+                procedure_queryset = procedure_queryset.filter(id=self.procedure_pk)
+                
+            self.fields['procedure'].queryset = procedure_queryset
+            
+            # If there's only one option, preselect it
+            if self.procedure_pk and procedure_queryset.count() == 1:
+                self.fields['procedure'].initial = self.procedure_pk
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Procedure Result'),
+                'procedure',
+                Row(
+                    Column(FloatingField('status'), css_class='col-md-4'),
+                    Column(FloatingField('order'), css_class='col-md-4'),
+                    Column(FloatingField('is_for_the_record'), css_class='col-md-2'),
+                    Column(FloatingField('is_positive'), css_class='col-md-2'),
+                ),
+                'notes',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
 class RiskForm(BaseAuditForm):
     class Meta:
         model = Risk
@@ -765,10 +984,28 @@ class IssueWorkingPaperForm(forms.ModelForm):
                 'description',
             ),
             ButtonHolder(
-                Submit('submit', _('Upload'), css_class='btn-primary'),
+                Submit('submit', _('Save'), css_class='btn-primary'),
                 css_class='mt-3'
             )
         )
+        
+    def clean(self):
+        cleaned_data = super().clean()
+        likelihood = cleaned_data.get('likelihood')
+        impact = cleaned_data.get('impact')
+        control_effectiveness = cleaned_data.get('control_effectiveness')
+        
+        # Validate that likelihood and impact are between 1 and 3
+        if likelihood and (likelihood < 1 or likelihood > 3):
+            self.add_error('likelihood', _('Likelihood must be between 1 and 3'))
+            
+        if impact and (impact < 1 or impact > 3):
+            self.add_error('impact', _('Impact must be between 1 and 3'))
+            
+        if control_effectiveness and (control_effectiveness < 1 or control_effectiveness > 3):
+            self.add_error('control_effectiveness', _('Control effectiveness must be between 1 and 3'))
+            
+        return cleaned_data
 
 # ─── NOTE FORM ──────────────────────────────────────────────────────────────
 class NoteForm(BaseAuditForm):
@@ -906,11 +1143,17 @@ class RecommendationForm(BaseAuditForm):
     class Meta:
         model = Recommendation
         fields = [
-            'issue', 'title', 'description', 'order'
-            # Add any other business fields here as needed
+            'issue', 'title', 'description', 'priority', 'order',
+            'implementation_status', 'target_date', 'implementation_date',
+            'management_action_plan', 'effectiveness_evaluation',
+            'effectiveness_rating'
         ]
         widgets = {
-            'description': CKEditor5Widget(config_name='extends'),
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'management_action_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'effectiveness_evaluation': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'target_date': forms.DateInput(attrs={'type': 'date'}),
+            'implementation_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -921,6 +1164,14 @@ class RecommendationForm(BaseAuditForm):
         engagement_pk = kwargs.pop('engagement_pk', None)
         
         super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        for field_name in ['description', 'management_action_plan', 'effectiveness_evaluation']:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
+                # Initialize with empty string if None to prevent serialization errors
+                if self.initial and field_name in self.initial and self.initial[field_name] is None:
+                    self.initial[field_name] = ''
         
         if self.organization:
             # Base filter for organization
@@ -948,11 +1199,30 @@ class RecommendationForm(BaseAuditForm):
                 self.fields['issue'].widget.attrs['readonly'] = True
         self.helper.layout = Layout(
             Fieldset(
-                _('Recommendation'),
+                _('Recommendation Information'),
+                Row(
+                    Column(FloatingField('title'), css_class='col-md-8'),
+                    Column(FloatingField('order'), css_class='col-md-4'),
+                ),
                 'issue',
-                'title',
                 'description',
-                'order',
+            ),
+            Fieldset(
+                _('Priority & Status'),
+                Row(
+                    Column(FloatingField('priority'), css_class='col-md-4'),
+                    Column(FloatingField('implementation_status'), css_class='col-md-4'),
+                    Column(FloatingField('effectiveness_rating'), css_class='col-md-4'),
+                ),
+                Row(
+                    Column(FloatingField('target_date'), css_class='col-md-6'),
+                    Column(FloatingField('implementation_date'), css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Implementation & Evaluation'),
+                'management_action_plan',
+                'effectiveness_evaluation',
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
@@ -970,3 +1240,380 @@ class IssueWorkingPaperForm(BaseAuditForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.add_input(Submit('submit', _('Upload'), css_class='btn-primary'))
+
+# ─── RISK FORM ───────────────────────────────────────────────────────────────
+class RiskForm(BaseAuditForm):
+    """Form for creating and editing Risk objects with organization scoping."""
+    
+    class Meta:
+        model = Risk
+        fields = [
+            'title', 'objective', 'description', 'category', 'status',
+            'likelihood', 'impact', 'risk_appetite', 'risk_tolerance',
+            'control_effectiveness', 'mitigation_plan', 'existing_controls',
+            'assigned_to', 'order'
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'mitigation_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'existing_controls': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Extract context parameters for proper filtering
+        self.objective_pk = kwargs.pop('objective_pk', None)
+        self.engagement_pk = kwargs.pop('engagement_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        for field_name in ['description', 'mitigation_plan', 'control_activities']:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
+                # Initialize with empty string if None to prevent serialization errors
+                if self.initial and field_name in self.initial and self.initial[field_name] is None:
+                    self.initial[field_name] = ''
+        
+        # Apply context-based filtering
+        if self.organization and 'objective' in self.fields:
+            objective_queryset = self.fields['objective'].queryset.filter(
+                organization=self.organization
+            )
+            
+            # Filter by specific objective or engagement if provided
+            if self.objective_pk:
+                objective_queryset = objective_queryset.filter(id=self.objective_pk)
+            elif self.engagement_pk:
+                objective_queryset = objective_queryset.filter(engagement_id=self.engagement_pk)
+                
+            self.fields['objective'].queryset = objective_queryset
+            
+            # If there's only one option, preselect it
+            if self.objective_pk and objective_queryset.count() == 1:
+                self.fields['objective'].initial = self.objective_pk
+        
+        # Filter owner and approver by organization users
+        if self.organization:
+            for field_name in ['owner', 'approver']:
+                if field_name in self.fields:
+                    self.fields[field_name].queryset = self.fields[field_name].queryset.filter(
+                        organization=self.organization
+                    )
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Risk Information'),
+                Row(
+                    Column(FloatingField('title'), css_class='col-md-8'),
+                    Column(FloatingField('category'), css_class='col-md-4'),
+                ),
+                'objective',
+                'description',
+            ),
+            Fieldset(
+                _('Risk Assessment'),
+                Row(
+                    Column(FloatingField('likelihood'), css_class='col-md-4'),
+                    Column(FloatingField('impact'), css_class='col-md-4'),
+                    Column(FloatingField('status'), css_class='col-md-4'),
+                ),
+                Row(
+                    Column(FloatingField('appetite'), css_class='col-md-4'),
+                    Column(FloatingField('tolerance'), css_class='col-md-4'),
+                    Column(FloatingField('control_effectiveness'), css_class='col-md-4'),
+                ),
+            ),
+            Fieldset(
+                _('Risk Response'),
+                'mitigation_plan',
+                'control_activities',
+                Row(
+                    Column(FloatingField('owner'), css_class='col-md-6'),
+                    Column(FloatingField('approver'), css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Additional Information'),
+                'order',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+# ─── FOLLOW-UP ACTION FORM ───────────────────────────────────────────────────────
+class FollowUpActionForm(BaseAuditForm):
+    class Meta:
+        model = FollowUpAction
+        fields = [
+            'issue', 'description', 'assigned_to', 'due_date',
+            'status', 'completed_at', 'completion_evidence'
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'completion_evidence': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
+            'completed_at': forms.DateInput(attrs={'type': 'date'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Extract context parameters for proper filtering
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        for field_name in ['description', 'completion_evidence']:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
+                # Initialize with empty string if None to prevent serialization errors
+                if self.initial and field_name in self.initial and self.initial[field_name] is None:
+                    self.initial[field_name] = ''
+        
+        # Apply context-based filtering
+        if self.organization and 'issue' in self.fields:
+            issue_queryset = self.fields['issue'].queryset.filter(
+                organization=self.organization
+            )
+            
+            # Filter by specific issue if provided
+            if self.issue_pk:
+                issue_queryset = issue_queryset.filter(id=self.issue_pk)
+            elif procedure_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            elif objective_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+            elif engagement_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
+                
+            self.fields['issue'].queryset = issue_queryset
+            
+            # If there's only one option, preselect it
+            if self.issue_pk and issue_queryset.count() == 1:
+                self.fields['issue'].initial = self.issue_pk
+                
+        # Filter assigned_to by organization users
+        if self.organization and 'assigned_to' in self.fields:
+            self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(
+                organizations=self.organization
+            )
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Action Information'),
+                'issue',
+                'description',
+                Row(
+                    Column(FloatingField('assigned_to'), css_class='col-md-6'),
+                    Column(FloatingField('due_date'), css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Status & Completion'),
+                Row(
+                    Column(FloatingField('status'), css_class='col-md-6'),
+                    Column(FloatingField('completed_at'), css_class='col-md-6'),
+                ),
+                'completion_evidence',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── ISSUE RETEST FORM ──────────────────────────────────────────────────────────
+class IssueRetestForm(BaseAuditForm):
+    class Meta:
+        model = IssueRetest
+        fields = [
+            'issue', 'retest_date', 'retested_by', 'result',
+            'test_evidence', 'test_approach', 'notes'
+        ]
+        widgets = {
+            'test_evidence': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'test_approach': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'retest_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Extract context parameters for proper filtering
+        self.issue_pk = kwargs.pop('issue_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        for field_name in ['test_evidence', 'test_approach', 'notes']:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
+                # Initialize with empty string if None to prevent serialization errors
+                if self.initial and field_name in self.initial and self.initial[field_name] is None:
+                    self.initial[field_name] = ''
+        
+        # Apply context-based filtering
+        if self.organization and 'issue' in self.fields:
+            issue_queryset = self.fields['issue'].queryset.filter(
+                organization=self.organization
+            )
+            
+            # Filter by specific issue if provided
+            if self.issue_pk:
+                issue_queryset = issue_queryset.filter(id=self.issue_pk)
+            elif procedure_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            elif objective_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+            elif engagement_pk:
+                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
+                
+            self.fields['issue'].queryset = issue_queryset
+            
+            # If there's only one option, preselect it
+            if self.issue_pk and issue_queryset.count() == 1:
+                self.fields['issue'].initial = self.issue_pk
+                
+        # Filter retested_by by organization users
+        if self.organization and 'retested_by' in self.fields:
+            self.fields['retested_by'].queryset = self.fields['retested_by'].queryset.filter(
+                organizations=self.organization
+            )
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Retest Information'),
+                'issue',
+                Row(
+                    Column(FloatingField('retest_date'), css_class='col-md-6'),
+                    Column(FloatingField('retested_by'), css_class='col-md-6'),
+                ),
+                Row(
+                    Column(FloatingField('result'), css_class='col-md-12'),
+                ),
+                'test_evidence',
+                'test_approach',
+                'notes',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── NOTE FORM ───────────────────────────────────────────────────────────────────
+class NoteForm(BaseAuditForm):
+    class Meta:
+        model = Note
+        fields = [
+            'note_type', 'content', 'status', 'assigned_to',
+            'content_type', 'object_id'
+        ]
+        widgets = {
+            'content': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'content_type': forms.HiddenInput(),
+            'object_id': forms.HiddenInput(),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # Optional context parameters for related object
+        self.related_object = kwargs.pop('related_object', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Ensure CKEditor fields are properly handled
+        if 'content' in self.fields:
+            # Initialize with empty string if None to prevent serialization errors
+            if self.initial and 'content' in self.initial and self.initial['content'] is None:
+                self.initial['content'] = ''
+        
+        # Set content type and object ID if related object is provided
+        if self.related_object and not self.instance.pk:
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_model(self.related_object)
+            self.initial['content_type'] = ct.id
+            self.initial['object_id'] = self.related_object.id
+            
+        # Filter assigned_to users by organization
+        if self.organization and 'assigned_to' in self.fields:
+            self.fields['assigned_to'].queryset = get_user_model().objects.filter(
+                organizations=self.organization
+            )
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Note Details'),
+                Row(
+                    Column('note_type', css_class='col-md-6'),
+                    Column('status', css_class='col-md-6'),
+                ),
+                'content',
+                'assigned_to',
+                'content_type',
+                'object_id',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+# ─── NOTIFICATION FORM ──────────────────────────────────────────────────────────
+class NotificationForm(BaseAuditForm):
+    class Meta:
+        model = Notification
+        fields = ['user', 'note', 'message', 'notification_type', 'is_read']
+        
+    def __init__(self, *args, **kwargs):
+        # Get specific note_pk if available
+        self.note_pk = kwargs.pop('note_pk', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Apply organization filtering
+        if self.organization:
+            # Filter users by organization
+            if 'user' in self.fields:
+                self.fields['user'].queryset = self.fields['user'].queryset.filter(
+                    organizations=self.organization
+                )
+            
+            # Filter notes by organization
+            if 'note' in self.fields:
+                note_queryset = self.fields['note'].queryset.filter(organization=self.organization)
+                
+                if self.note_pk:
+                    note_queryset = note_queryset.filter(id=self.note_pk)
+                    if note_queryset.count() == 1:
+                        self.fields['note'].initial = self.note_pk
+                        
+                self.fields['note'].queryset = note_queryset
+        
+        # Set up form layout
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Notification Details'),
+                Row(
+                    Column(FloatingField('user'), css_class='col-md-6'),
+                    Column(FloatingField('note'), css_class='col-md-6'),
+                ),
+                'message',
+                Row(
+                    Column(FloatingField('notification_type'), css_class='col-md-6'),
+                    Column('is_read', css_class='col-md-6'),
+                ),
+            ),
+            ButtonHolder(
+                Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )

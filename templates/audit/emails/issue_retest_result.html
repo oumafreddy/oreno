@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Retest Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #6f42c1;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #6f42c1;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .result-pass {
+            background-color: #198754;
+            color: white;
+        }
+        .result-fail {
+            background-color: #dc3545;
+            color: white;
+        }
+        .result-inconclusive {
+            background-color: #ffc107;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Issue Retest Results</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ recipient.get_full_name|default:recipient.email }},</p>
+        
+        <p>The retest for the following issue has been completed:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Issue:</strong></td>
+                <td>{{ retest.issue.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Result:</strong></td>
+                <td>
+                    {% if retest.result == 'pass' %}
+                        <span class="result-badge result-pass">PASS</span>
+                    {% elif retest.result == 'fail' %}
+                        <span class="result-badge result-fail">FAIL</span>
+                    {% else %}
+                        <span class="result-badge result-inconclusive">INCONCLUSIVE</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ retest.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Tested By:</strong></td>
+                <td>{{ retest.tester.get_full_name|default:retest.tester.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Test Date:</strong></td>
+                <td>{{ retest.test_date|default:retest.modified_at }}</td>
+            </tr>
+            {% if retest.result_notes %}
+            <tr>
+                <td><strong>Test Notes:</strong></td>
+                <td>{{ retest.result_notes }}</td>
+            </tr>
+            {% endif %}
+            {% if retest.verification_status %}
+            <tr>
+                <td><strong>Verification Status:</strong></td>
+                <td>{{ retest.get_verification_status_display }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        {% if retest.result == 'pass' %}
+        <p>The issue has been successfully resolved. No further action is required.</p>
+        {% elif retest.result == 'fail' %}
+        <p>The issue is still present. Please revisit the remediation actions and consider scheduling another retest after addressing the remaining concerns.</p>
+        {% else %}
+        <p>The test was inconclusive. Please review the test notes for details and determine if additional testing is needed.</p>
+        {% endif %}
+        
+        {% if retest_url %}
+        <a href="{{ retest_url }}" class="button">View Retest Details</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

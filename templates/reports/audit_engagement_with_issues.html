@@ -42,9 +42,9 @@
       <div class="issue-section mb-4">
         <table class="table table-sm">
           <tr><th>Status</th><td>{{ issue.get_issue_status_display }}</td></tr>
-          <tr><th>Severity</th><td>{{ issue.get_severity_status_display }}</td></tr>
+          <tr><th>Risk Level</th><td>{{ issue.get_risk_level_display }}</td></tr>
           <tr><th>Remediation Status</th><td>{{ issue.get_remediation_status_display }}</td></tr>
-          <tr><th>Remediation Deadline</th><td>{{ issue.remediation_deadline_date|default:'-' }}</td></tr>
+          <tr><th>Remediation Deadline</th><td>{{ issue.target_date|default:'-' }}</td></tr>
           <tr><th>Actual Remediation Date</th><td>{{ issue.actual_remediation_date|default:'-' }}</td></tr>
           <tr><th>Code</th><td>{{ issue.code }}</td></tr>
           <tr><th>Title</th><td class="truncate">{{ issue.issue_title }}</td></tr>
