@@ -32,6 +32,8 @@ class OrganizationContextMiddleware:
             re.compile(r'^/audit/login/'),
             re.compile(r'^/audit/logout/'),
             re.compile(r'^/audit/public/'),
+            # Exclude Django admin paths to avoid overriding tenant set by AdminTenantMiddleware
+            re.compile(r'^/admin/'),
             re.compile(r'^/static/'),
             re.compile(r'^/media/'),
         ]

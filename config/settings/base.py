@@ -185,6 +185,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
     'django_tenants.middleware.TenantMainMiddleware',  # Must be first
+    'apps.common.admin_middleware.AdminTenantMiddleware',  # Handle admin tenant issues
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
