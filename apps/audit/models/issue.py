@@ -533,8 +533,8 @@ class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
             raise ValidationError({'prior_issue_reference': _('Prior issue reference is required for repeat issues.')})
 
         # Validate dates are in logical order
-        if self.remediation_deadline_date and self.actual_remediation_date and \
-           self.actual_remediation_date < self.remediation_deadline_date:
+        if self.target_date and self.actual_remediation_date and \
+           self.actual_remediation_date < self.target_date:
             raise ValidationError(_('Actual remediation date cannot be before the deadline.'))
             
         # Validate verification date is after remediation date

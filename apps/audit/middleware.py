@@ -46,8 +46,21 @@ class OrganizationContextMiddleware:
         
         # For authenticated users, set organization context
         if request.user.is_authenticated:
-            # Get the active organization from the user
+            # Get the active organization from the user or from the current tenant
             active_organization = getattr(request.user, 'active_organization', None)
+            
+            # If no active organization but we're on a tenant subdomain, set active org from tenant
+            if not active_organization and hasattr(request, 'tenant'):
+                from organizations.models import Organization
+                try:
+                    # Get organization based on tenant schema name
+                    org = Organization.objects.filter(schema_name=request.tenant.schema_name).first()
+                    if org:
+                        # Set as active organization for the user
+                        request.user.active_organization = org
+                        active_organization = org
+                except Exception as e:
+                    logger.error(f"Error setting active organization from tenant: {e}")
             
             # Set organization context on request for consistent access
             request.organization = active_organization
@@ -56,10 +69,10 @@ class OrganizationContextMiddleware:
             
             # For audit paths, verify organization context is available
             if any(pattern.match(request.path_info) for pattern in self.audit_paths):
-                if not active_organization and not request.is_ajax() and request.method == 'GET':
+                if not active_organization and not request.headers.get('X-Requested-With') == 'XMLHttpRequest' and request.method == 'GET':
                     # Redirect to organization selection if no active organization
                     messages.warning(request, _('Please select an organization to continue'))
-                    return redirect('users:organization-list')
+                    return redirect('organizations:list')
         
         # Process the request normally
         return self.get_response(request)

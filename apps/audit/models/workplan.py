@@ -167,15 +167,15 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
     @property
     def all_procedures(self):
         """
-        Returns all procedures linked to this workplan via engagements > objectives > procedures.
+        Returns all procedures linked to this workplan via engagements > objectives > risks > procedures.
         """
         Procedure = self._meta.apps.get_model('audit', 'Procedure')
-        return Procedure.objects.filter(objective__engagement__audit_workplan=self)
+        return Procedure.objects.filter(risk__objective__engagement__annual_workplan=self)
 
     @property
     def all_issues(self):
         """
-        Returns all issues linked to this workplan via engagements > objectives > procedures > procedure_results > issues.
+        Returns all issues linked to this workplan via engagements > objectives > risks > procedures > issues.
         """
         Issue = self._meta.apps.get_model('audit', 'Issue')
         return Issue.objects.filter(procedure__risk__objective__engagement__annual_workplan=self)

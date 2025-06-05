@@ -149,6 +149,7 @@ urlpatterns = [
     path('objectives/<int:objective_id>/risks/add/', RiskCreateView.as_view(), name='risk-add'),
     path('risks/<int:pk>/edit/', RiskUpdateView.as_view(), name='risk-edit'),
     path('risks/<int:pk>/delete/', RiskDeleteView.as_view(), name='risk-delete'),
+    path('engagements/<int:engagement_pk>/risks/modal/add/', RiskCreateView.as_view(), name='risk-modal-add'),
 
     # Procedure URLs
     path('objectives/<int:objective_pk>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
