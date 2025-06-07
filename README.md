@@ -22,7 +22,7 @@ Oreno is a multi-tenant Governance, Risk, and Compliance (GRC) platform built wi
 
 1. Clone the repository and create a Python 3.11 virtual environment.
 2. Install dependencies from `requirements.txt`.
-3. Create a `.env.oreno` file (see the example in the repo) and update database credentials and the Django secret key.
+3. Copy `.env.validations` to `.env.oreno` and update the values with your real secrets.
 4. Run database migrations:
    ```bash
    python manage.py migrate --settings=config.settings.development
