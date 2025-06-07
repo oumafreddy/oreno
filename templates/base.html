@@ -283,13 +283,13 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
 
     <!-- Nonce for CSP -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-2726c7f26c'">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-{{ csp_nonce }}'">
 
     {% block extra_scripts %}{% endblock %}
 
     <!-- Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXX"></script>
-    <script nonce="2726c7f26c">
+    <script nonce="{{ csp_nonce }}">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());

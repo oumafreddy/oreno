@@ -187,6 +187,7 @@ MIDDLEWARE = [
     'django_tenants.middleware.TenantMainMiddleware',  # Must be first
     'apps.common.admin_middleware.AdminTenantMiddleware',  # Handle admin tenant issues
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.CSPNonceMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -231,6 +232,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'common.context_processors.csp_nonce',
             ],
             # Template caching in production
             'loaders': [
