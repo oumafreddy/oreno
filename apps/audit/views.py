@@ -1402,8 +1402,11 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['engagement_status_dist'] = dict(Counter(engagement_qs.values_list('project_status', flat=True))) or {}
         durations = [(e.target_end_date - e.project_start_date).days for e in engagement_qs if e.target_end_date and e.project_start_date]
         context['avg_engagement_duration'] = sum(durations) / len(durations) if durations else 0
-        owner_workload = engagement_qs.values_list('assigned_to__email', flat=True)
+        # Engagement Owner Workload: count by assigned_to email (or 'Unassigned' if null)
+        owner_workload = [e.assigned_to.email if e.assigned_to else 'Unassigned' for e in engagement_qs]
         context['engagement_owner_workload'] = dict(Counter(owner_workload)) or {}
+        import json
+        context['engagement_owner_workload_debug'] = json.dumps(context['engagement_owner_workload'], indent=2)
         # Issues: filter by procedure__risk__objective__engagement__in=engagement_qs
         issue_qs = Issue.objects.filter(
             organization=organization,
@@ -3598,3 +3601,56 @@ class ObjectiveViewSet(OrganizationScopedApiMixin, viewsets.ModelViewSet):
             organization=self.request.organization,
             created_by=self.request.user
         )
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def api_issue_risk_data(request):
+    org = request.user.organization
+    from .models.issue import Issue
+    from django.db.models import Count
+    risk_qs = Issue.objects.filter(organization=org).values('risk_level').annotate(count=Count('id'))
+    risk_data = {s['risk_level']: s['count'] for s in risk_qs}
+    return JsonResponse(risk_data, safe=False)
+
+@login_required
+def api_approval_status_data(request):
+    org = request.user.organization
+    from .models.approval import Approval
+    from django.db.models import Count
+    status_qs = Approval.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+    status_data = {s['status']: s['count'] for s in status_qs}
+    return JsonResponse(status_data, safe=False)
+
+@login_required
+def api_engagement_status_data(request):
+    org = request.user.organization
+    from .models.engagement import Engagement
+    status_qs = Engagement.objects.filter(organization=org).values('project_status').annotate(count=Count('id'))
+    status_data = {s['project_status']: s['count'] for s in status_qs}
+    return JsonResponse(status_data, safe=False)
+
+@login_required
+def api_engagement_data(request):
+    org = request.user.organization
+    from .models.engagement import Engagement
+    from django.db.models import Count
+    engagement_qs = Engagement.objects.filter(organization=org).values('project_status').annotate(count=Count('id'))
+    engagement_data = {s['project_status']: s['count'] for s in engagement_qs}
+    return JsonResponse(engagement_data, safe=False)
+
+@login_required
+def api_issue_data(request):
+    """API endpoint for issue data used in dashboards."""
+    issues = Issue.objects.filter(organization=request.user.organization)
+    data = {
+        'total': issues.count(),
+        'open': issues.filter(issue_status='open').count(),
+        'in_progress': issues.filter(issue_status='in_progress').count(),
+        'closed': issues.filter(issue_status='closed').count(),
+        'high_risk': issues.filter(risk_level='high').count(),
+        'medium_risk': issues.filter(risk_level='medium').count(),
+        'low_risk': issues.filter(risk_level='low').count(),
+    }
+    return JsonResponse(data)

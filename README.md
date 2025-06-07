@@ -9,6 +9,22 @@ Oreno is a multi-tenant Governance, Risk, and Compliance (GRC) platform built wi
 - **AI Assistant Integration** – `services/ai` provides local LLM integration through Ollama with an optional OpenAI fallback.
 - **Modular Apps** – Business domains such as audit, risk, contracts, and compliance live in their own Django apps under `apps/`.
 
+## Apps Overview
+
+Oreno GRC is built around a set of modular Django apps, each handling a specific domain of governance, risk, and compliance:
+
+- **Audit** – Manages the audit lifecycle, including workplans, engagements, objectives, procedures, issues, and recommendations. It follows the Global Internal Audit Standards (GIAS) 2024, ensuring a risk-based, objective-driven approach.
+- **Risk** – Handles risk management, including risk registers, risk matrices, and key risk indicators (KRIs). It supports risk assessment, monitoring, and mitigation strategies.
+- **Compliance** – Manages compliance frameworks, policy documents, compliance requirements, and obligations. It ensures that organizations meet regulatory and internal policy requirements.
+- **Contracts** – Manages contract types, parties, contracts, and milestones. It supports contract lifecycle management, including drafting, execution, and monitoring.
+- **Document Management** – Handles document requests and document uploads. It provides a secure way to manage and track documents within the organization.
+- **Organizations** – Manages organization settings, subscriptions, and user associations. It supports multi-tenancy by isolating data and settings per organization.
+- **Users** – Provides a custom user model and authentication mechanisms, including OTP-based login flows.
+- **Core** – Contains common abstract models, mixins, and utilities used across the platform.
+- **Admin Module** – Provides administrative functionalities for managing the platform.
+- **Legal** – Handles legal aspects of the organization, including legal documents and compliance.
+- **Reports** – Generates reports and analytics for various aspects of the platform.
+
 ## Repository Structure
 
 - **config/** – Settings modules, WSGI/ASGI config, URL routing, and Celery setup.

@@ -18,7 +18,7 @@
     <form method="get" class="row g-2 align-items-end mb-3" id="period-filter-form">
         <div class="col-auto">
             <label for="year-select" class="form-label mb-0">Year</label>
-            <select id="year-select" name="year" class="form-select" multiple size="1" onchange="this.form.submit()">
+            <select id="year-select" name="year" class="form-select" multiple size="1">
                 <option value="All" {% if filter_all %}selected{% endif %}>All</option>
                 {% for y in available_years %}
                     <option value="{{ y }}" {% if y|stringformat:'s' in selected_years %}selected{% endif %}>{{ y }}</option>
@@ -27,7 +27,7 @@
         </div>
         <div class="col-auto">
             <label for="month-select" class="form-label mb-0">Month</label>
-            <select id="month-select" name="month" class="form-select" multiple size="1" {% if filter_all %}disabled{% endif %} onchange="this.form.submit()">
+            <select id="month-select" name="month" class="form-select" multiple size="1" {% if filter_all %}disabled{% endif %}>
                 {% for m, mname in available_months %}
                     <option value="{{ m }}" {% if m|stringformat:'s' in selected_months %}selected{% endif %}>{{ mname }}</option>
                 {% endfor %}
@@ -180,6 +180,8 @@
                 <div class="card-header bg-light"><strong>Engagement Owner Workload</strong></div>
                 <div class="card-body">
                     <div id="owner-workload-chart" style="height:250px;"></div>
+                    <!-- Debug: Engagement Owner Workload Data (hidden, toggle for troubleshooting) -->
+                    <pre id="engagement-owner-workload-debug" style="display:none; font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px;">{{ engagement_owner_workload_debug }}</pre>
                 </div>
             </div>
         </div>
@@ -643,29 +645,21 @@
     </div>
 </div>
 <!-- JSON data for Plotly charts -->
-{% if engagement_status_dist %}
-  {{ engagement_status_dist|json_script:"engagement-status-data" }}
-{% else %}
-  <script id="engagement-status-data" type="application/json">{}</script>
-{% endif %}
-{% if issue_risk_dist %}
-  {{ issue_risk_dist|json_script:"issue-risk-data" }}
-{% else %}
-  <script id="issue-risk-data" type="application/json">{}</script>
-{% endif %}
-{% if approval_status_dist %}
-  {{ approval_status_dist|json_script:"approval-status-data" }}
-{% else %}
-  <script id="approval-status-data" type="application/json">{}</script>
-{% endif %}
-{% if engagement_owner_workload %}
-  {{ engagement_owner_workload|json_script:"owner-workload-data" }}
-{% else %}
-  <script id="owner-workload-data" type="application/json">{}</script>
-{% endif %}
+{{ engagement_status_dist|json_script:"engagement-status-data" }}
+{{ issue_risk_dist|json_script:"issue-risk-data" }}
+{{ approval_status_dist|json_script:"approval-status-data" }}
+{{ engagement_owner_workload|json_script:"engagement-owner-workload-data" }}
 <!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+function plotOrShowEmpty(containerId, data, layout) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!data || (Array.isArray(data) ? data.length === 0 : Object.keys(data).length === 0)) {
+        container.innerHTML = '<div class="text-muted text-center py-5">No data available</div>';
+    } else {
+        Plotly.newPlot(containerId, layout.data, layout.options);
+    }
+}
 function safeParseJSON(elementId) {
     try {
         const el = document.getElementById(elementId);
@@ -674,49 +668,60 @@ function safeParseJSON(elementId) {
         if (!text) return {};
         return JSON.parse(text);
     } catch (e) {
-        console.error("Failed to parse JSON for", elementId, e);
         return {};
     }
 }
 const engagementStatus = safeParseJSON('engagement-status-data');
-Plotly.newPlot('engagement-status-chart', [{
-    labels: Object.keys(engagementStatus),
-    values: Object.values(engagementStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+plotOrShowEmpty('engagement-status-chart', engagementStatus, {
+    data: [{
+        labels: Object.keys(engagementStatus),
+        values: Object.values(engagementStatus),
+        type: 'pie',
+        textinfo: 'label+percent',
+        insidetextorientation: 'radial',
+    }],
+    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
+});
 const issueRisk = safeParseJSON('issue-risk-data');
-Plotly.newPlot('issue-risk-chart', [{
-    labels: Object.keys(issueRisk),
-    values: Object.values(issueRisk),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
+plotOrShowEmpty('issue-risk-chart', issueRisk, {
+    data: [{
+        labels: Object.keys(issueRisk),
+        values: Object.values(issueRisk),
+        type: 'pie',
+        textinfo: 'label+percent',
+        insidetextorientation: 'radial',
+    }],
+    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
+});
 const approvalStatus = safeParseJSON('approval-status-data');
-Plotly.newPlot('approval-status-chart', [{
-    labels: Object.keys(approvalStatus),
-    values: Object.values(approvalStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-const ownerWorkload = safeParseJSON('owner-workload-data');
-Plotly.newPlot('owner-workload-chart', [{
-    x: Object.keys(ownerWorkload),
-    y: Object.values(ownerWorkload),
-    type: 'bar',
-    marker: { color: '#2563eb' },
-    text: Object.keys(ownerWorkload),
-    hovertemplate: '%{text}: %{y}<extra></extra>',
-    textposition: 'auto',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
+plotOrShowEmpty('approval-status-chart', approvalStatus, {
+    data: [{
+        labels: Object.keys(approvalStatus),
+        values: Object.values(approvalStatus),
+        type: 'pie',
+        textinfo: 'label+percent',
+        insidetextorientation: 'radial',
+    }],
+    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
+});
+const ownerWorkload = safeParseJSON('engagement-owner-workload-data');
+plotOrShowEmpty('owner-workload-chart', ownerWorkload, {
+    data: [{
+        x: Object.keys(ownerWorkload),
+        y: Object.values(ownerWorkload),
+        type: 'bar',
+        marker: { color: '#2563eb' },
+        text: Object.keys(ownerWorkload),
+        hovertemplate: '%{text}: %{y}<extra></extra>',
+        textposition: 'auto',
+    }],
+    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false}
+});
 </script>
 <!-- Add Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
 <!-- Add Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'js/select2.min.js' %}"></script>
 <script>
   $(document).ready(function() {
     $('.engagement-select').select2({
@@ -872,7 +877,21 @@ function openParentSelectModal(type, parentApiUrl, createUrlTemplate) {
   </div>
 </div>
 <!-- Select2 JS for dynamic selects -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="{% static 'js/select2.min.js' %}"></script>
+<link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
 <script>$('.select2').select2();</script>
-{% endblock %} 
+</div>
+<div id="audit-dashboard-vars"
+     data-engagement-url="{% url 'audit:api_engagement_data' %}"
+     data-issue-url="{% url 'audit:api_issue_data' %}">
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/audit_dashboard.js' %}" defer></script>
+{% endblock %}
+<pre style="background:#f8f9fa; color:#333; padding:10px; border:1px solid #eee;">
+Engagement Status Data: {{ engagement_status_dist|safe }}
+Issue Risk Data: {{ issue_risk_dist|safe }}
+Approval Status Data: {{ approval_status_dist|safe }}
+Owner Workload Data: {{ engagement_owner_workload|safe }}
+</pre> 

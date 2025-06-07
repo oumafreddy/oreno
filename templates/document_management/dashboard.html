@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Document Management Dashboard{% endblock %}
 {% block content %}
 <div class="container py-4">
@@ -84,25 +85,13 @@
     </div>
   </div>
 </div>
-<!-- Plotly.js -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-var statusData = JSON.parse('{{ status_chart|escapejs }}');
-var uploadsData = JSON.parse('{{ uploads_chart|escapejs }}');
-// Requests by Status Pie
-Plotly.newPlot('statusChart', [{
-  type: 'pie',
-  labels: Object.keys(statusData),
-  values: Object.values(statusData),
-  textinfo: 'label+percent',
-  hole: .4
-}], {title: 'Requests by Status'});
-// Uploads Over Time Bar
-Plotly.newPlot('uploadsChart', [{
-  type: 'bar',
-  x: Object.keys(uploadsData),
-  y: Object.values(uploadsData),
-  marker: {color: 'rgb(58,200,225)'}
-}], {title: 'Uploads Over Time', xaxis: {title: 'Date'}, yaxis: {title: 'Uploads'}});
-</script>
+<div id="document-management-dashboard-vars"
+     data-status-url="{% url 'document_management:api_status_data' %}"
+     data-uploads-url="{% url 'document_management:api_uploads_data' %}">
+</div>
+{{ status_chart|json_script:"status-chart-data" }}
+{{ uploads_chart|json_script:"uploads-chart-data" }}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/document_management_dashboard.js' %}" defer></script>
 {% endblock %} 

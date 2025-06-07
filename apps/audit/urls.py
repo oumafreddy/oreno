@@ -207,6 +207,11 @@ urlpatterns = [
     path('working-papers/<int:pk>/edit/', IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-edit'),
     path('working-papers/<int:pk>/delete/', IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-delete'),
     path('working-papers/<int:pk>/', IssueWorkingPaperDetailView.as_view(), name='issueworkingpaper-detail'),
+    path('api/engagement-status-data/', views.api_engagement_status_data, name='api_engagement_status_data'),
+    path('api/issue-risk-data/', views.api_issue_risk_data, name='api_issue_risk_data'),
+    path('api/approval-status-data/', views.api_approval_status_data, name='api_approval_status_data'),
+    path('api/engagement-data/', views.api_engagement_data, name='api_engagement_data'),
+    path('api/issue-data/', views.api_issue_data, name='api_issue_data'),
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

@@ -227,34 +227,26 @@ class IssueForm(BaseAuditForm):
         super().__init__(*args, **kwargs)
         
         if self.organization:
-            # Base filter for organization
+            # Base filter for organization (robust chain)
             procedure_queryset = self.fields['procedure'].queryset.filter(
-                objective__engagement__organization=self.organization
+                risk__objective__engagement__organization=self.organization
             )
-            
             # Apply hierarchical filtering based on provided context
             if procedure_pk:
-                # If specific procedure is provided
                 procedure_queryset = procedure_queryset.filter(id=procedure_pk)
             elif objective_pk:
-                # If specific objective is provided
-                procedure_queryset = procedure_queryset.filter(objective_id=objective_pk)
+                procedure_queryset = procedure_queryset.filter(risk__objective_id=objective_pk)
             elif engagement_pk:
-                # If specific engagement is provided
-                procedure_queryset = procedure_queryset.filter(objective__engagement_id=engagement_pk)
-            
+                procedure_queryset = procedure_queryset.filter(risk__objective__engagement_id=engagement_pk)
             self.fields['procedure'].queryset = procedure_queryset
-            
             # If there's only one option and it matches our context, preselect it and make read-only
             if procedure_pk and procedure_queryset.count() == 1:
                 self.fields['procedure'].initial = procedure_pk
                 self.fields['procedure'].widget.attrs['readonly'] = True
-            
             # Filter issue owners to current organization
             self.fields['issue_owner'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
-            # Filter secondary owners as well
             if 'secondary_owner' in self.fields:
                 self.fields['secondary_owner'].queryset = CustomUser.objects.filter(
                     organization=self.organization
@@ -503,13 +495,19 @@ class ProcedureForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.organization = kwargs.pop('organization', None)
-        self.risk_id = kwargs.pop('risk_id', None)
+        risk_pk = kwargs.pop('risk_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
         if self.organization:
-            self.fields['tested_by'].queryset = CustomUser.objects.filter(organizations=self.organization)
-        if self.risk_id:
-            self.initial['risk'] = self.risk_id
+            risk_queryset = self.fields['risk'].queryset.filter(
+                objective__engagement__organization=self.organization
+            )
+            if objective_pk:
+                risk_queryset = risk_queryset.filter(objective_id=objective_pk)
+            elif engagement_pk:
+                risk_queryset = risk_queryset.filter(objective__engagement_id=engagement_pk)
+            self.fields['risk'].queryset = risk_queryset
 
 class ProcedureResultForm(BaseAuditForm):
     class Meta:
@@ -523,35 +521,20 @@ class ProcedureResultForm(BaseAuditForm):
         }
         
     def __init__(self, *args, **kwargs):
-        # Extract context parameters for proper filtering
-        self.procedure_pk = kwargs.pop('procedure_pk', None)
-        
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
-        
-        # Ensure CKEditor fields are properly handled
-        if 'notes' in self.fields:
-            self.fields['notes'].required = False
-            # Initialize with empty string if None to prevent serialization errors
-            if self.initial and 'notes' in self.initial and self.initial['notes'] is None:
-                self.initial['notes'] = ''
-        
-        # Apply context-based filtering
-        if self.organization and 'procedure' in self.fields:
+        if self.organization:
             procedure_queryset = self.fields['procedure'].queryset.filter(
-                organization=self.organization
+                risk__objective__engagement__organization=self.organization
             )
-            
-            # Filter by specific procedure if provided
-            if self.procedure_pk:
-                procedure_queryset = procedure_queryset.filter(id=self.procedure_pk)
-                
+            if objective_pk:
+                procedure_queryset = procedure_queryset.filter(risk__objective_id=objective_pk)
+            elif engagement_pk:
+                procedure_queryset = procedure_queryset.filter(risk__objective__engagement_id=engagement_pk)
             self.fields['procedure'].queryset = procedure_queryset
-            
-            # If there's only one option, preselect it
-            if self.procedure_pk and procedure_queryset.count() == 1:
-                self.fields['procedure'].initial = self.procedure_pk
         
-        # Set up form layout
         self.helper.layout = Layout(
             Fieldset(
                 _('Procedure Result'),
@@ -588,50 +571,17 @@ class RiskForm(BaseAuditForm):
         }
         
     def __init__(self, *args, **kwargs):
-        # Extract context parameters for proper filtering
-        self.objective_pk = kwargs.pop('objective_pk', None)
-        self.engagement_pk = kwargs.pop('engagement_pk', None)
-        
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
-        
-        # Ensure CKEditor fields are properly handled
-        for field_name in ['description', 'mitigation_plan', 'existing_controls']:
-            if field_name in self.fields:
-                self.fields[field_name].required = False
-                # Initialize with empty string if None to prevent serialization errors
-                if self.initial and field_name in self.initial and self.initial[field_name] is None:
-                    self.initial[field_name] = ''
-        
-        # Apply context-based filtering
-        if self.organization and 'objective' in self.fields:
-            # Start with base queryset filtered by organization
-            objective_queryset = Objective.objects.filter(
+        if self.organization:
+            objective_queryset = self.fields['objective'].queryset.filter(
                 engagement__organization=self.organization
             )
-            
-            # Apply hierarchical filtering
-            if self.objective_pk:
-                # If we have a specific objective, only show that one
-                objective_queryset = objective_queryset.filter(id=self.objective_pk)
-                # Make the field read-only since we're in a specific objective context
-                self.fields['objective'].widget.attrs['readonly'] = True
-            elif self.engagement_pk:
-                # If we have an engagement, only show objectives from that engagement
-                objective_queryset = objective_queryset.filter(engagement_id=self.engagement_pk)
-                
+            if engagement_pk:
+                objective_queryset = objective_queryset.filter(engagement_id=engagement_pk)
             self.fields['objective'].queryset = objective_queryset
-            
-            # If there's only one option, preselect it
-            if self.objective_pk and objective_queryset.count() == 1:
-                self.fields['objective'].initial = self.objective_pk
         
-        # Filter assigned_to by organization users
-        if self.organization and 'assigned_to' in self.fields:
-            self.fields['assigned_to'].queryset = CustomUser.objects.filter(
-                organization=self.organization
-            )
-        
-        # Set up form layout
         self.helper.layout = Layout(
             Fieldset(
                 _('Risk Information'),
@@ -686,51 +636,26 @@ class FollowUpActionForm(BaseAuditForm):
         }
         
     def __init__(self, *args, **kwargs):
-        # Extract context parameters for proper filtering
-        self.issue_pk = kwargs.pop('issue_pk', None)
         procedure_pk = kwargs.pop('procedure_pk', None)
         objective_pk = kwargs.pop('objective_pk', None)
         engagement_pk = kwargs.pop('engagement_pk', None)
-        
         super().__init__(*args, **kwargs)
-        
-        # Ensure CKEditor fields are properly handled
-        for field_name in ['description', 'completion_evidence']:
-            if field_name in self.fields:
-                self.fields[field_name].required = False
-                # Initialize with empty string if None to prevent serialization errors
-                if self.initial and field_name in self.initial and self.initial[field_name] is None:
-                    self.initial[field_name] = ''
-        
-        # Apply context-based filtering
-        if self.organization and 'issue' in self.fields:
+        if self.organization:
             issue_queryset = self.fields['issue'].queryset.filter(
-                organization=self.organization
+                procedure__risk__objective__engagement__organization=self.organization
             )
-            
-            # Filter by specific issue if provided
-            if self.issue_pk:
-                issue_queryset = issue_queryset.filter(id=self.issue_pk)
-            elif procedure_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            if procedure_pk:
+                issue_queryset = issue_queryset.filter(procedure_id=procedure_pk)
             elif objective_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+                issue_queryset = issue_queryset.filter(procedure__risk__objective_id=objective_pk)
             elif engagement_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
-                
+                issue_queryset = issue_queryset.filter(procedure__risk__objective__engagement_id=engagement_pk)
             self.fields['issue'].queryset = issue_queryset
             
-            # If there's only one option, preselect it
-            if self.issue_pk and issue_queryset.count() == 1:
-                self.fields['issue'].initial = self.issue_pk
-                
-        # Filter assigned_to by organization users
-        if self.organization and 'assigned_to' in self.fields:
             self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(
                 organization=self.organization
             )
         
-        # Set up form layout
         self.helper.layout = Layout(
             Fieldset(
                 _('Action Information'),
@@ -771,51 +696,26 @@ class IssueRetestForm(BaseAuditForm):
         }
         
     def __init__(self, *args, **kwargs):
-        # Extract context parameters for proper filtering
-        self.issue_pk = kwargs.pop('issue_pk', None)
         procedure_pk = kwargs.pop('procedure_pk', None)
         objective_pk = kwargs.pop('objective_pk', None)
         engagement_pk = kwargs.pop('engagement_pk', None)
-        
         super().__init__(*args, **kwargs)
-        
-        # Ensure CKEditor fields are properly handled
-        for field_name in ['test_evidence', 'test_approach', 'notes']:
-            if field_name in self.fields:
-                self.fields[field_name].required = False
-                # Initialize with empty string if None to prevent serialization errors
-                if self.initial and field_name in self.initial and self.initial[field_name] is None:
-                    self.initial[field_name] = ''
-        
-        # Apply context-based filtering
-        if self.organization and 'issue' in self.fields:
+        if self.organization:
             issue_queryset = self.fields['issue'].queryset.filter(
-                organization=self.organization
+                procedure__risk__objective__engagement__organization=self.organization
             )
-            
-            # Filter by specific issue if provided
-            if self.issue_pk:
-                issue_queryset = issue_queryset.filter(id=self.issue_pk)
-            elif procedure_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure_id=procedure_pk)
+            if procedure_pk:
+                issue_queryset = issue_queryset.filter(procedure_id=procedure_pk)
             elif objective_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective_id=objective_pk)
+                issue_queryset = issue_queryset.filter(procedure__risk__objective_id=objective_pk)
             elif engagement_pk:
-                issue_queryset = issue_queryset.filter(procedure_result__procedure__objective__engagement_id=engagement_pk)
-                
+                issue_queryset = issue_queryset.filter(procedure__risk__objective__engagement_id=engagement_pk)
             self.fields['issue'].queryset = issue_queryset
             
-            # If there's only one option, preselect it
-            if self.issue_pk and issue_queryset.count() == 1:
-                self.fields['issue'].initial = self.issue_pk
-                
-        # Filter retested_by by organization users
-        if self.organization and 'retested_by' in self.fields:
             self.fields['retested_by'].queryset = self.fields['retested_by'].queryset.filter(
                 organization=self.organization
             )
         
-        # Set up form layout
         self.helper.layout = Layout(
             Fieldset(
                 _('Retest Information'),
@@ -978,16 +878,22 @@ class RecommendationForm(BaseAuditForm):
         }
 
     def __init__(self, *args, **kwargs):
-        issue_pk = kwargs.pop('issue_pk', None)
+        procedure_pk = kwargs.pop('procedure_pk', None)
+        objective_pk = kwargs.pop('objective_pk', None)
+        engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
-        
         if self.organization:
-            # Filter issue field to only show issues from this organization
-            self.fields['issue'].queryset = Issue.objects.filter(
-                organization=self.organization
+            issue_queryset = self.fields['issue'].queryset.filter(
+                procedure__risk__objective__engagement__organization=self.organization
             )
+            if procedure_pk:
+                issue_queryset = issue_queryset.filter(procedure_id=procedure_pk)
+            elif objective_pk:
+                issue_queryset = issue_queryset.filter(procedure__risk__objective_id=objective_pk)
+            elif engagement_pk:
+                issue_queryset = issue_queryset.filter(procedure__risk__objective__engagement_id=engagement_pk)
+            self.fields['issue'].queryset = issue_queryset
             
-            # Filter assigned_to and verified_by to only show users from this organization
             self.fields['assigned_to'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
@@ -996,8 +902,8 @@ class RecommendationForm(BaseAuditForm):
             )
             
             # If issue_pk is provided, set it as the initial value
-            if issue_pk:
-                self.fields['issue'].initial = issue_pk
+            if procedure_pk:
+                self.fields['issue'].initial = procedure_pk
                 self.fields['issue'].widget.attrs['readonly'] = True
 
 class IssueWorkingPaperForm(BaseAuditForm):

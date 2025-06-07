@@ -1,3 +1,7 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Risk Dashboard{% endblock %}
+{% block content %}
 <h3><a href="{% url 'risk:risk_list' %}" class="stretched-link text-white text-decoration-none">{{ total_risks }}</a></h3>
 
 <!-- Modal for Risk List -->
@@ -19,4 +23,7 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
+{% endblock %}
+{% block extra_scripts %}
+{% endblock %} 

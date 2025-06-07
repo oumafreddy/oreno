@@ -203,34 +203,6 @@
 <!-- JSON data for Plotly charts -->
 {{ case_status_chart|json_script:"case-status-data" }}
 {{ task_status_chart|json_script:"task-status-data" }}
-<!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-// Case Status Pie Chart
-const caseStatus = JSON.parse(document.getElementById('case-status-data').textContent);
-const caseLabels = Object.keys(caseStatus);
-const caseValues = Object.values(caseStatus);
-Plotly.newPlot('case-status-chart', [{
-    values: caseValues,
-    labels: caseLabels,
-    type: 'pie',
-    marker: { colors: ['#2563eb', '#22c55e', '#6c757d'] },
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Task Status Bar Chart
-const taskStatus = JSON.parse(document.getElementById('task-status-data').textContent);
-const taskLabels = Object.keys(taskStatus);
-const taskValues = Object.values(taskStatus);
-Plotly.newPlot('task-status-chart', [{
-    x: taskLabels,
-    y: taskValues,
-    type: 'bar',
-    marker: { color: ['#22c55e', '#f59e42', '#ef4444'] },
-    text: taskValues.map(String),
-    textposition: 'auto',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
-</script>
 <!-- Modal for Case List -->
 <div class="modal fade" id="caseListModal" tabindex="-1" aria-labelledby="caseListModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -251,4 +223,11 @@ Plotly.newPlot('task-status-chart', [{
     </div>
   </div>
 </div>
+<div id="legal-dashboard-vars"
+     data-case-status-url="{% url 'legal:api_case_status_data' %}"
+     data-task-status-url="{% url 'legal:api_task_status_data' %}">
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/legal_dashboard.js' %}" defer></script>
 {% endblock %} 

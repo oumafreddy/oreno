@@ -469,26 +469,30 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         from collections import Counter
         # Risks by category
         category_dist = risks.values_list('category', flat=True)
-        context['risk_category_dist'] = dict(Counter(category_dist))
         # Risks by status
         status_dist = risks.values_list('status', flat=True)
-        context['risk_status_dist'] = dict(Counter(status_dist))
         # Risks by owner
         owner_dist = risks.values_list('risk_owner', flat=True)
-        context['risk_owner_dist'] = dict(Counter(owner_dist))
         # Risks by register
         register_dist = risks.values_list('risk_register__register_name', flat=True)
-        context['risk_register_dist'] = dict(Counter(register_dist))
         # KRI status breakdown
         kri_status_dist = [kri.get_status() for kri in kris]
-        context['kri_status_dist'] = dict(Counter(kri_status_dist))
         # Control effectiveness
         control_effectiveness_dist = controls.values_list('effectiveness_rating', flat=True)
-        context['control_effectiveness_dist'] = dict(Counter(control_effectiveness_dist))
-        # Risk trend: count by month
+        # Always provide valid structures for charting, even if empty
+        context['risk_category_dist'] = dict(Counter(category_dist)) or {}
+        context['risk_status_dist'] = dict(Counter(status_dist)) or {}
+        context['risk_owner_dist'] = dict(Counter(owner_dist)) or {}
+        context['risk_register_dist'] = dict(Counter(register_dist)) or {}
+        context['kri_status_dist'] = dict(Counter(kri_status_dist)) or {}
+        context['control_effectiveness_dist'] = dict(Counter(control_effectiveness_dist)) or {}
+        # Risk trend: always a list
         from django.db.models.functions import TruncMonth
         risk_trend = risks.annotate(month=TruncMonth('date_identified')).values('month').annotate(count=Count('id')).order_by('month')
-        context['risk_trend'] = [{'month': r['month'].strftime('%Y-%m') if r['month'] else '', 'count': r['count']} for r in risk_trend]
+        context['risk_trend'] = [{'month': r['month'].strftime('%Y-%m') if r['month'] else '', 'count': r['count']} for r in risk_trend] if risk_trend else []
+        # Debug output for troubleshooting
+        import json
+        context['risk_trend_debug'] = json.dumps(context['risk_trend'], indent=2)
         # Summary cards
         context['riskregisters'] = riskregisters
         context['selected_register'] = int(selected_register) if selected_register else None
@@ -524,7 +528,6 @@ def api_heatmap_data(request):
     if selected_register:
         risks = risks.filter(risk_register_id=selected_register)
     matrix = get_active_matrix_config(org)
-    # Prepare heatmap data (impact vs likelihood, colored by risk level)
     z = []
     x = list(range(1, (matrix.impact_levels if matrix else 5)+1))
     y = list(range(1, (matrix.likelihood_levels if matrix else 5)+1))
@@ -541,7 +544,7 @@ def api_heatmap_data(request):
         'type': 'heatmap',
         'colorscale': 'YlOrRd',
         'colorbar': {'title': 'Risk Count'}
-    }]
+    }] if any(any(row) for row in z) else []
     layout = {
         'title': 'Risk Heat Map',
         'xaxis': {'title': 'Impact'},
@@ -559,7 +562,6 @@ def api_assessment_timeline(request):
     if selected_register:
         risks = risks.filter(risk_register_id=selected_register)
     assessments = RiskAssessment.objects.filter(risk__in=risks)
-    # Group by date, show average risk score over time
     timeline = assessments.values('assessment_date').annotate(avg_score=Count('risk_score')).order_by('assessment_date')
     x = [t['assessment_date'] for t in timeline]
     y = [t['avg_score'] for t in timeline]
@@ -569,7 +571,7 @@ def api_assessment_timeline(request):
         'type': 'scatter',
         'mode': 'lines+markers',
         'name': 'Avg Risk Score'
-    }]
+    }] if x and y and any(y) else []
     layout = {
         'title': 'Assessment Timeline',
         'xaxis': {'title': 'Date'},

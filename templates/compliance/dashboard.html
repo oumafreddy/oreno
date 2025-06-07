@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Compliance Dashboard{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
@@ -339,49 +340,10 @@
     <!-- END Compliance Reports Section -->
 </div>
 <!-- JSON data for Plotly charts -->
-{{ obligation_status_chart|json_script:"obligation-status-data" }}
-{{ requirement_jurisdiction_chart|json_script:"requirement-jurisdiction-data" }}
-<!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-// Requirements by Framework Pie Chart
-const frameworkDist = {{ requirement_framework_dist|safe }};
-Plotly.newPlot('framework-dist-chart', [{
-    labels: Object.keys(frameworkDist),
-    values: Object.values(frameworkDist),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Obligation Overdue/On Time Pie Chart
-const overdueData = {{ obligation_overdue_ontime|safe }};
-Plotly.newPlot('obligation-overdue-chart', [{
-    labels: Object.keys(overdueData),
-    values: Object.values(overdueData),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Policy Expiry Distribution Pie Chart
-const policyExpiry = {{ policy_expiry_dist|safe }};
-Plotly.newPlot('policy-expiry-chart', [{
-    labels: Object.keys(policyExpiry),
-    values: Object.values(policyExpiry),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Obligation Owner Workload Bar Chart
-const ownerWorkload = {{ obligation_owner_workload|safe }};
-Plotly.newPlot('owner-workload-chart', [{
-    x: Object.keys(ownerWorkload),
-    y: Object.values(ownerWorkload),
-    type: 'bar',
-    marker: { color: '#2563eb' },
-    text: Object.values(ownerWorkload).map(String),
-    textposition: 'auto',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
-</script>
+{{ requirement_framework_dist|json_script:"requirement-framework-data" }}
+{{ obligation_overdue_ontime|json_script:"obligation-overdue-ontime-data" }}
+{{ policy_expiry_dist|json_script:"policy-expiry-data" }}
+{{ obligation_owner_workload|json_script:"obligation-owner-workload-data" }}
 <!-- Modal for Requirement List -->
 <div class="modal fade" id="requirementListModal" tabindex="-1" aria-labelledby="requirementListModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -402,4 +364,12 @@ Plotly.newPlot('owner-workload-chart', [{
     </div>
   </div>
 </div>
+<div id="compliance-dashboard-vars"
+     data-framework-url="{% url 'compliance:api_framework_data' %}"
+     data-obligation-url="{% url 'compliance:api_obligation_data' %}"
+     data-policy-expiry-url="{% url 'compliance:api_policy_expiry_data' %}">
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/compliance_dashboard.js' %}" defer></script>
 {% endblock %} 
