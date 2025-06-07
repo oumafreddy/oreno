@@ -8,6 +8,7 @@ from crispy_bootstrap5.bootstrap5 import FloatingField
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
 from django_ckeditor_5.widgets import CKEditor5Widget
+from django.core.exceptions import ValidationError
 
 from organizations.models import Organization
 from users.models import CustomUser
@@ -476,96 +477,39 @@ class ObjectiveForm(BaseAuditForm):
             )
         )
 
-class ProcedureForm(BaseAuditForm):
+class ProcedureForm(forms.ModelForm):
     class Meta:
         model = Procedure
         fields = [
-            'title', 'risk', 'description', 'procedure_type',
-            'control_being_tested', 'criteria', 'sample_size',
-            'sampling_method', 'planned_date', 'test_date', 'test_status', 
-            'tested_by', 'estimated_hours', 'exceptions_noted', 'exception_details',
-            'reviewed_by', 'review_date', 'result', 'order'
+            'title', 'description', 'order', 'test_date', 'tested_by',
+            'procedure_type', 'control_being_tested', 'criteria', 'sample_size',
+            'sampling_method', 'planned_date', 'estimated_hours', 'actual_hours',
+            'test_status', 'result', 'result_notes', 'exceptions_noted',
+            'exception_details', 'conclusion', 'impact_assessment',
+            'is_positive_finding', 'control_maturity', 'evidence_list',
+            'evidence', 'additional_evidence', 'reviewed_by', 'review_date',
+            'review_notes', 'order'
         ]
         widgets = {
-            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-            'control_being_tested': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-            'criteria': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-            'result': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-            'exception_details': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-            'planned_date': forms.DateInput(attrs={'type': 'date'}),
-            'test_date': forms.DateInput(attrs={'type': 'date'}),
-            'review_date': forms.DateInput(attrs={'type': 'date'}),
+            'description': CKEditor5Widget(config_name='extends'),
+            'criteria': CKEditor5Widget(config_name='extends'),
+            'control_being_tested': CKEditor5Widget(config_name='extends'),
+            'result_notes': CKEditor5Widget(config_name='extends'),
+            'exception_details': CKEditor5Widget(config_name='extends'),
+            'conclusion': CKEditor5Widget(config_name='extends'),
+            'impact_assessment': CKEditor5Widget(config_name='extends'),
+            'evidence_list': CKEditor5Widget(config_name='extends'),
+            'review_notes': CKEditor5Widget(config_name='extends'),
         }
-        
+
     def __init__(self, *args, **kwargs):
-        # Extract context parameters for proper filtering
-        self.risk_pk = kwargs.pop('risk_pk', None)
-        self.objective_pk = kwargs.pop('objective_pk', None)
-        
+        self.organization = kwargs.pop('organization', None)
+        self.risk_id = kwargs.pop('risk_id', None)
         super().__init__(*args, **kwargs)
-        
-        # Ensure CKEditor fields are properly handled
-        for field_name in ['description', 'control_being_tested', 'criteria', 'result']:
-            if field_name in self.fields:
-                self.fields[field_name].required = False
-                # Initialize with empty string if None to prevent serialization errors
-                if self.initial and field_name in self.initial and self.initial[field_name] is None:
-                    self.initial[field_name] = ''
-        
-        # Apply context-based filtering
-        if self.organization and 'risk' in self.fields:
-            risk_queryset = self.fields['risk'].queryset.filter(
-                organization=self.organization
-            )
-            
-            # Filter by specific risk or objective if provided
-            if self.risk_pk:
-                risk_queryset = risk_queryset.filter(id=self.risk_pk)
-            elif self.objective_pk:
-                risk_queryset = risk_queryset.filter(objective_id=self.objective_pk)
-                
-            self.fields['risk'].queryset = risk_queryset
-            
-            # If there's only one option, preselect it
-            if self.risk_pk and risk_queryset.count() == 1:
-                self.fields['risk'].initial = self.risk_pk
-        
-        # Set up form layout
-        self.helper.layout = Layout(
-            Fieldset(
-                _('Procedure Information'),
-                Row(
-                    Column(FloatingField('title'), css_class='col-md-8'),
-                    Column(FloatingField('order'), css_class='col-md-4'),
-                ),
-                'risk',
-                'description',
-                Row(
-                    Column(FloatingField('procedure_type'), css_class='col-md-6'),
-                    Column(FloatingField('sample_size'), css_class='col-md-6'),
-                ),
-            ),
-            Fieldset(
-                _('Control & Criteria'),
-                'control_being_tested',
-                'criteria',
-            ),
-            Fieldset(
-                _('Execution & Results'),
-                Row(
-                    Column(FloatingField('planned_date'), css_class='col-md-6'),
-                    Column(FloatingField('test_date'), css_class='col-md-6'),
-                ),
-                Row(
-                    Column(FloatingField('test_status'), css_class='col-md-12'),
-                ),
-                'result',
-            ),
-            ButtonHolder(
-                Submit('submit', _('Save'), css_class='btn-primary'),
-                css_class='mt-3'
-            )
-        )
+        if self.organization:
+            self.fields['tested_by'].queryset = CustomUser.objects.filter(organizations=self.organization)
+        if self.risk_id:
+            self.initial['risk'] = self.risk_id
 
 class ProcedureResultForm(BaseAuditForm):
     class Meta:
@@ -783,7 +727,7 @@ class FollowUpActionForm(BaseAuditForm):
         # Filter assigned_to by organization users
         if self.organization and 'assigned_to' in self.fields:
             self.fields['assigned_to'].queryset = self.fields['assigned_to'].queryset.filter(
-                organizations=self.organization
+                organization=self.organization
             )
         
         # Set up form layout
@@ -868,7 +812,7 @@ class IssueRetestForm(BaseAuditForm):
         # Filter retested_by by organization users
         if self.organization and 'retested_by' in self.fields:
             self.fields['retested_by'].queryset = self.fields['retested_by'].queryset.filter(
-                organizations=self.organization
+                organization=self.organization
             )
         
         # Set up form layout
@@ -908,9 +852,7 @@ class NoteForm(BaseAuditForm):
         }
         
     def __init__(self, *args, **kwargs):
-        # Optional context parameters for related object
         self.related_object = kwargs.pop('related_object', None)
-        
         super().__init__(*args, **kwargs)
         
         # Ensure CKEditor fields are properly handled
@@ -929,7 +871,7 @@ class NoteForm(BaseAuditForm):
         # Filter assigned_to users by organization
         if self.organization and 'assigned_to' in self.fields:
             self.fields['assigned_to'].queryset = get_user_model().objects.filter(
-                organizations=self.organization
+                organization=self.organization
             )
         
         # Set up form layout
@@ -951,6 +893,15 @@ class NoteForm(BaseAuditForm):
             )
         )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        content_type_id = cleaned_data.get('content_type')
+        if content_type_id:
+            ct = ContentType.objects.get_for_id(content_type_id)
+            if ct.model != 'engagement':
+                raise ValidationError('Notes can only be attached to Engagements.')
+        return cleaned_data
+
 # ─── NOTIFICATION FORM ──────────────────────────────────────────────────────────
 class NotificationForm(BaseAuditForm):
     class Meta:
@@ -968,7 +919,7 @@ class NotificationForm(BaseAuditForm):
             # Filter users by organization
             if 'user' in self.fields:
                 self.fields['user'].queryset = self.fields['user'].queryset.filter(
-                    organizations=self.organization
+                    organization=self.organization
                 )
             
             # Filter notes by organization

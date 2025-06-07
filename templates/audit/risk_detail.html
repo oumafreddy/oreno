@@ -33,9 +33,18 @@
                 <a href="{% url 'audit:risk-edit' pk=risk.pk %}" class="btn btn-outline-primary">
                     <i class="fas fa-edit"></i> {% trans "Edit" %}
                 </a>
-                <a href="{% url 'audit:risk-delete' pk=risk.pk %}" class="btn btn-outline-danger">
+                <a href="{% url 'audit:risk-delete' pk=risk.pk %}" class="btn btn-outline-danger"
+                   hx-get="{% url 'audit:risk-delete' pk=risk.pk %}"
+                   hx-target="#modal-body"
+                   data-bs-toggle="modal"
+                   data-bs-target="#mainModal">
                     <i class="fas fa-trash"></i> {% trans "Delete" %}
                 </a>
+                {% if objective %}
+                <a href="{% url 'audit:objective-detail' pk=objective.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> {% trans "Back to Objective" %}
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -106,10 +115,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>{% trans "Procedures" %}</h4>
-                    <a href="{% url 'audit:procedure-add' risk_id=risk.pk %}" class="btn btn-sm btn-primary"
-                       hx-get="{% url 'audit:procedure-add' risk_id=risk.pk %}"
-                       hx-target="#modal-dialog"
-                       hx-trigger="click">
+                    <a href="{% url 'audit:procedure-modal-add' risk_id=risk.pk %}" class="btn btn-sm btn-primary"
+                       hx-get="{% url 'audit:procedure-modal-add' risk_id=risk.pk %}"
+                       hx-target="#modal-body"
+                       data-bs-toggle="modal"
+                       data-bs-target="#mainModal">
                         <i class="fas fa-plus"></i> {% trans "Add Procedure" %}
                     </a>
                 </div>

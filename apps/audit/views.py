@@ -230,15 +230,12 @@ class RiskDetailView(AuditPermissionMixin, LoginRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Add procedures related to this risk
-        context['procedures'] = self.object.procedure_set.all().order_by('order')
-        
+        # Use the correct related_name for procedures
+        context['procedures'] = self.object.procedures.all().order_by('order')
         # Add the objective for breadcrumb navigation
         if self.object.objective:
             context['objective'] = self.object.objective
             context['engagement'] = self.object.objective.engagement
-        
         return context
 
 
@@ -286,8 +283,6 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
-        
-        # Store engagement context for success URL if needed
         engagement_pk = self.kwargs.get('engagement_pk')
         if engagement_pk and not form.instance.objective:
             try:
@@ -295,38 +290,30 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
                 form.instance.engagement_context = engagement
             except Engagement.DoesNotExist:
                 pass
-        
-        # Save the form
         response = super().form_valid(form)
-        
-        # Handle HTMX response
-        if is_htmx_request(self.request):
+        if is_htmx_request(self.request) or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             if self.object.objective:
-                # If created from objective, refresh the risk list section
                 risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html = render_to_string('audit/_risk_list_partial.html', {
+                html_list = render_to_string('audit/_risk_list_partial.html', {
                     'risks': risks,
                     'objective': self.object.objective,
                 }, request=self.request)
                 return JsonResponse({
                     'success': True,
-                    'html_list': html,
+                    'html_list': html_list,
                     'message': self.success_message % {'title': self.object.title}
                 })
             else:
-                # For engagement-level creation, redirect to engagement detail
                 engagement_pk = self.kwargs.get('engagement_pk')
                 if engagement_pk:
                     redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
                 else:
                     redirect_url = self.get_success_url()
-                    
                 return JsonResponse({
                     'success': True,
                     'redirect': str(redirect_url),
                     'message': self.success_message % {'title': self.object.title}
                 })
-            
         return response
     
     def form_invalid(self, form):
@@ -451,61 +438,28 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
 class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
     model = Risk
     template_name = 'audit/risk_confirm_delete.html'
-    
+
     def get_template_names(self):
         # Use modal template for HTMX requests
         if is_htmx_request(self.request):
             return ['audit/risk_confirm_delete_modal.html']
         return [self.template_name]
-    
+
     def get_queryset(self):
         # Ensure user can only delete risks in their organization
         return super().get_queryset().filter(organization=self.request.organization)
-    
+
+    def get_form_kwargs(self):
+        # Do NOT pass 'organization' or any extra kwargs
+        return super().get_form_kwargs()
+
     def get_success_url(self):
-        # If the risk belongs to an objective, return to that objective
-        if self.object.objective:
-            return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
-        # Otherwise return to the risk list
+        # Redirect to parent objective detail if available, else engagement, else risk list
+        if self.object.objective_id:
+            return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective_id})
+        elif self.object.objective and self.object.objective.engagement_id:
+            return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.objective.engagement_id})
         return reverse_lazy('audit:risk-list')
-    
-    def delete(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        objective = self.object.objective
-        success_url = self.get_success_url()
-        
-        # Store for later use in HTMX response
-        risk_title = self.object.title
-        
-        # Delete the risk
-        self.object.delete()
-        
-        # Success message
-        messages.success(request, _(f'Risk "{risk_title}" was deleted successfully'))
-        
-        # Handle HTMX response
-        if is_htmx_request(request):
-            if objective:
-                # If deleted from objective, refresh the risk list section
-                risks = Risk.objects.filter(objective=objective).order_by('order')
-                html = render_to_string('audit/_risk_list_partial.html', {
-                    'risks': risks,
-                    'objective': objective,
-                }, request=request)
-                return JsonResponse({
-                    'success': True,
-                    'html': html,
-                    'message': _(f'Risk "{risk_title}" was deleted successfully')
-                })
-            else:
-                # Otherwise redirect
-                return JsonResponse({
-                    'success': True,
-                    'redirect': success_url,
-                    'message': _(f'Risk "{risk_title}" was deleted successfully')
-                })
-        
-        return HttpResponseRedirect(success_url)
 
 from .models.issue_working_paper import IssueWorkingPaper
 from .forms import IssueWorkingPaperForm
@@ -689,6 +643,8 @@ class EngagementDetailView(AuditPermissionMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         engagement = self.object
+        # Aggregate all risks from all objectives under this engagement
+        all_risks = Risk.objects.filter(objective__engagement=engagement)
         context.update({
             'issues': engagement.all_issues.select_related(
                 'issue_owner', 'procedure_result'
@@ -700,6 +656,7 @@ class EngagementDetailView(AuditPermissionMixin, DetailView):
             'can_approve': can_proceed(engagement.approve),
             'can_reject': can_proceed(engagement.reject),
             'content_type_id': ContentType.objects.get_for_model(type(engagement)).pk,
+            'all_risks': all_risks,
         })
         return context
 
@@ -1092,8 +1049,9 @@ class IssueListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
+        # Remove 'procedure_result' from select_related, only use valid fields
         queryset = queryset.filter(organization=organization).select_related(
-            'issue_owner', 'procedure_result'
+            'issue_owner', 'procedure'
         )
         form = IssueFilterForm(self.request.GET)
         if form.is_valid():
@@ -1145,19 +1103,10 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        
-        # Get engagement context from request parameters if available
-        procedure_result_pk = self.request.GET.get('procedure_result_pk')
-        procedure_pk = self.request.GET.get('procedure_pk')
-        engagement_pk = self.request.GET.get('engagement_pk')
-        
-        if procedure_result_pk:
-            kwargs['procedure_result_pk'] = procedure_result_pk
+        # Pre-select parent context if provided
+        procedure_pk = self.request.GET.get('procedure_pk') or self.kwargs.get('procedure_pk')
         if procedure_pk:
             kwargs['procedure_pk'] = procedure_pk
-        if engagement_pk:
-            kwargs['engagement_pk'] = engagement_pk
-            
         return kwargs
     
     def form_valid(self, form):
@@ -1166,7 +1115,10 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.pk})
+        # Redirect to parent procedure or issue list
+        if self.object.procedure:
+            return self.object.procedure.get_absolute_url()
+        return reverse('audit:issue-list')
 
 class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Issue
@@ -1428,107 +1380,64 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         from .models.issue import Issue
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        
-        # Summary counts
-        context['workplan_count'] = AuditWorkplan.objects.filter(organization=organization).count()
-        context['engagement_count'] = Engagement.objects.filter(organization=organization).count()
-        context['issue_count'] = Issue.objects.filter(organization=organization).count()
-        context['approval_count'] = Approval.objects.filter(organization=organization).count()
-        # Recent objects (limit 8)
-        context['recent_workplans'] = AuditWorkplan.objects.filter(organization=organization).order_by('-creation_date')[:8]
-        context['recent_engagements'] = Engagement.objects.filter(organization=organization).order_by('-project_start_date')[:8]
-        context['recent_issues'] = Issue.objects.filter(organization=organization).order_by('-date_identified')[:8]
-        context['pending_approvals'] = Approval.objects.filter(organization=organization, status='pending').order_by('-created_at')[:8]
-        # Org info (if available)
-        org = organization
-        context['org_name'] = getattr(org, 'name', None)
-        context['org_code'] = getattr(org, 'code', None)
-        context['org_logo'] = org.logo.url if getattr(org, 'logo', None) else None
-        context['org_status'] = 'Active' if getattr(org, 'is_active', True) else 'Inactive'
-        # Engagement status distribution
-        engagement_status_dist = Engagement.objects.filter(organization=organization).values_list('project_status', flat=True)
-        context['engagement_status_dist'] = dict(Counter(engagement_status_dist)) or {}
-        # Average engagement duration
-        engagements = Engagement.objects.filter(organization=organization)
-        durations = [(e.target_end_date - e.project_start_date).days for e in engagements if e.target_end_date and e.project_start_date]
+        import calendar
+        # --- Period Filter Logic ---
+        org_created = organization.created_at.date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        from django.db.models import Q
+        period_q = Q()
+        if not filter_all:
+            year_ints = [int(y) for y in selected_years if y.isdigit()]
+            if selected_months:
+                month_ints = [int(m) for m in selected_months if m.isdigit()]
+                period_q &= Q(project_start_date__year__in=year_ints, project_start_date__month__in=month_ints)
+            else:
+                period_q &= Q(project_start_date__year__in=year_ints)
+        engagement_qs = Engagement.objects.filter(organization=organization)
+        if not filter_all:
+            engagement_qs = engagement_qs.filter(period_q)
+        context['engagement_count'] = engagement_qs.count()
+        context['recent_engagements'] = engagement_qs.order_by('-project_start_date')[:8]
+        context['engagement_status_dist'] = dict(Counter(engagement_qs.values_list('project_status', flat=True))) or {}
+        durations = [(e.target_end_date - e.project_start_date).days for e in engagement_qs if e.target_end_date and e.project_start_date]
         context['avg_engagement_duration'] = sum(durations) / len(durations) if durations else 0
-        # Overdue issues
-        today = timezone.now().date()
-        overdue_issues = Issue.objects.filter(organization=organization, issue_status__in=['open', 'in_progress'], target_date__lt=today).count()
-        context['overdue_issues'] = overdue_issues
-        # Issue severity distribution
-        issue_risk_dist = Issue.objects.filter(organization=organization).values_list('risk_level', flat=True)
-        context['issue_risk_dist'] = dict(Counter(issue_risk_dist)) or {}
-        # Workplan completion rates
-        workplans = AuditWorkplan.objects.filter(organization=organization)
-        completed_workplans = workplans.filter(approval_status='approved').count()
-        context['workplan_completion_rate'] = {'Completed': completed_workplans, 'Total': workplans.count()}
-        # Approval status breakdown
-        approvals = Approval.objects.filter(organization=organization)
-        approval_status_dist = approvals.values_list('status', flat=True)
-        context['approval_status_dist'] = dict(Counter(approval_status_dist)) or {}
-        # Owner workload (engagements assigned)
-        owner_workload = engagements.values_list('assigned_to__email', flat=True)
+        owner_workload = engagement_qs.values_list('assigned_to__email', flat=True)
         context['engagement_owner_workload'] = dict(Counter(owner_workload)) or {}
-        # Add engagement_names for dashboard dropdowns
-        context['engagement_names'] = list(Engagement.objects.filter(organization=organization).values_list('title', flat=True).distinct().order_by('title')) or []
-        # Add recent lists and counts for all major audit models
-        context['objective_count'] = Objective.objects.filter(organization=organization).count()
-        context['recent_objectives'] = Objective.objects.filter(organization=organization).order_by('-id')[:8]
-        context['procedure_count'] = Procedure.objects.filter(organization=organization).count()
-        context['recent_procedures'] = Procedure.objects.filter(organization=organization).order_by('-id')[:8]
-        context['recommendation_count'] = Recommendation.objects.filter(organization=organization).count()
-        context['recent_recommendations'] = Recommendation.objects.filter(organization=organization).order_by('-id')[:8]
-        context['procedureresult_count'] = ProcedureResult.objects.filter(organization=organization).count()
-        context['recent_procedureresults'] = ProcedureResult.objects.filter(organization=organization).order_by('-id')[:8]
-        context['followupaction_count'] = FollowUpAction.objects.filter(organization=organization).count()
-        context['recent_followupactions'] = FollowUpAction.objects.filter(organization=organization).order_by('-created_at')[:8]
-        context['issueretest_count'] = IssueRetest.objects.filter(organization=organization).count()
-        context['recent_issueretests'] = IssueRetest.objects.filter(organization=organization).order_by('-retest_date', '-created_at')[:8]
-        context['note_count'] = Note.objects.filter(organization=organization).count()
-        context['recent_notes'] = Note.objects.filter(organization=organization).order_by('-created_at')[:8]
-        # Analytics context for dashboard
-        # 1. Issue Trend (last 12 months)
-        today = timezone.now().date()
-        months = [(today.replace(day=1) - timezone.timedelta(days=30*i)).replace(day=1) for i in range(11, -1, -1)]
-        months = sorted(set(months))
-        issue_trend = defaultdict(int)
-        for m in months:
-            next_month = (m.replace(day=28) + timezone.timedelta(days=4)).replace(day=1)
-            count = Issue.objects.filter(organization=organization, date_identified__gte=m, date_identified__lt=next_month).count()
-            issue_trend[m.strftime('%b %Y')] = count
-        context['issue_trend_data'] = issue_trend
-        # 2. Completion Rates
-        def pct_complete(qs, field='status', complete_value='completed'):
-            total = qs.count()
-            completed = qs.filter(**{field: complete_value}).count()
-            return round(100 * completed / total, 1) if total else 0
-        context['completion_rate_data'] = {
-            'Objectives': pct_complete(Objective.objects.filter(engagement__organization=organization), 'status', 'completed') if hasattr(Objective, 'status') else None,
-            'Procedures': pct_complete(Procedure.objects.filter(objective__engagement__organization=organization), 'status', 'completed') if hasattr(Procedure, 'status') else None,
-            'Recommendations': pct_complete(Recommendation.objects.filter(organization=organization), 'status', 'completed') if hasattr(Recommendation, 'status') else None,
-            'FollowUps': pct_complete(FollowUpAction.objects.filter(organization=organization), 'status', 'completed'),
-        }
-        # 3. User Activity (top creators)
-        user_activity = User.objects.filter(
-            id__in=Issue.objects.filter(organization=organization).values_list('created_by', flat=True)
-        ).annotate(
-            issues=Count('issue_created', filter=Q(issue_created__organization_id=organization.id))
-            # Remove complex relationship annotations temporarily to fix the dashboard
-            # objectives=Count('objective_created', filter=Q(objective_created__engagement__organization_id=organization.id)),
-            # procedures=Count('procedure_created', filter=Q(procedure_created__objective__engagement__organization_id=organization.id)),
-        ).order_by('-issues')[:10]
-        context['user_activity_data'] = [
-            {'user': u.get_full_name() or u.email, 'issues': u.issues, 'objectives': 0, 'procedures': 0}
-            for u in user_activity
-        ]
-        # 4. Audit Activity Heatmap (activity by week/month)
-        heatmap = defaultdict(int)
-        for i in range(0, 12):
-            month = (today.replace(day=1) - timezone.timedelta(days=30*i)).replace(day=1)
-            count = Issue.objects.filter(organization=organization, date_identified__month=month.month, date_identified__year=month.year).count()
-            heatmap[month.strftime('%b %Y')] = count
-        context['audit_heatmap_data'] = heatmap
+        # Issues: filter by procedure__risk__objective__engagement__in=engagement_qs
+        issue_qs = Issue.objects.filter(
+            organization=organization,
+            procedure__risk__objective__engagement__in=engagement_qs
+        )
+        context['issue_count'] = issue_qs.count()
+        context['recent_issues'] = issue_qs.order_by('-date_identified')[:8]
+        context['overdue_issues'] = issue_qs.filter(issue_status__in=['open', 'in_progress'], target_date__lt=today).count()
+        context['issue_risk_dist'] = dict(Counter(issue_qs.values_list('risk_level', flat=True))) or {}
+        # Workplans filtered by period (if engagement_qs is filtered)
+        workplan_ids = engagement_qs.values_list('annual_workplan_id', flat=True).distinct()
+        workplan_qs = AuditWorkplan.objects.filter(organization=organization)
+        if not filter_all:
+            workplan_qs = workplan_qs.filter(id__in=workplan_ids)
+        context['workplan_count'] = workplan_qs.count()
+        context['recent_workplans'] = workplan_qs.order_by('-creation_date')[:8]
+        completed_workplans = workplan_qs.filter(approval_status='approved').count()
+        context['workplan_completion_rate'] = {'Completed': completed_workplans, 'Total': workplan_qs.count()}
+        # Approvals filtered by period
+        approval_qs = Approval.objects.filter(organization=organization)
+        if not filter_all:
+            approval_qs = approval_qs.filter(content_type__model='engagement', object_id__in=engagement_qs.values_list('id', flat=True))
+        context['approval_count'] = approval_qs.count()
+        context['approval_status_dist'] = dict(Counter(approval_qs.values_list('status', flat=True))) or {}
+        context['pending_approvals'] = approval_qs.filter(status='pending').order_by('-created_at')[:8]
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
         return context
 
 class AuditWorkplanViewSet(viewsets.ModelViewSet):
@@ -1992,6 +1901,12 @@ class ObjectiveDetailView(AuditPermissionMixin, DetailView):
     template_name = 'audit/objective_detail.html'
     context_object_name = 'objective'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Use the correct related_name for risks
+        context['risks'] = self.object.audit_risks.all()
+        return context
+
 class ObjectiveCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Objective
     form_class = ObjectiveForm
@@ -2036,6 +1951,7 @@ class ObjectiveCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView)
         return response
 
     def get_success_url(self):
+        # Always redirect to the engagement detail view after creating an objective
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
 
 class ObjectiveUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
@@ -2073,11 +1989,15 @@ class ObjectiveModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
         form.instance.engagement_id = engagement_pk
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            return JsonResponse({'success': True, 'pk': self.object.pk, 'title': self.object.title})
+        if self.request.htmx:
+            return JsonResponse({
+                'success': True,
+                'redirect': reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk}),
+            })
         return response
 
     def get_success_url(self):
+        # Always redirect to the engagement detail view after creating an objective
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
 
 # PROCEDURE VIEWS
@@ -2130,57 +2050,39 @@ class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     form_class = ProcedureForm
     template_name = 'audit/procedure_modal_form.html'
     success_message = _('Procedure %(title)s was created successfully')
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        # Pass the specific objective_pk to the form for context-aware filtering
-        kwargs['objective_pk'] = self.kwargs.get('objective_pk')
+        # Pass the specific risk_id to the form for context-aware filtering
+        kwargs['risk_id'] = self.kwargs.get('risk_id')
         return kwargs
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['objective_pk'] = self.kwargs.get('objective_pk')
+        context['risk_id'] = self.kwargs.get('risk_id')
         return context
+    
     def form_valid(self, form):
-        objective_pk = self.kwargs.get('objective_pk')
-        form.instance.objective_id = objective_pk
+        risk_id = self.kwargs.get('risk_id')
+        form.instance.risk_id = risk_id
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
-        
-        # Handle HTMX or AJAX requests
         is_htmx = self.request.headers.get('HX-Request') == 'true'
         is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
         if is_htmx or is_ajax:
-            from django.http import JsonResponse
-            from django.urls import reverse
-            
-            # Get the URL for the objective detail page or engagement detail page
-            if objective_pk:
-                objective = self.object.objective
-                if objective and objective.engagement_id:
-                    redirect_url = reverse('audit:engagement-detail', kwargs={'pk': objective.engagement_id})
-                else:
-                    redirect_url = reverse('audit:objective-detail', kwargs={'pk': objective_pk})
-            else:
-                redirect_url = reverse('audit:procedure-list')
-            
-            # Provide JSON response for modal handler
-            return JsonResponse({
-                'success': True,
-                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
-                'pk': self.object.pk,
-                'title': self.object.title,
-                'redirect': redirect_url,
-                'html_redirect': redirect_url,  # For compatibility with existing JS
-                'message': self.success_message % {'title': self.object.title},
-            })
-        
+            from django.template.loader import render_to_string
+            procedures = self.model.objects.filter(risk_id=risk_id).order_by('order', 'id')
+            html_list = render_to_string('audit/_procedure_list_partial.html', {
+                'procedures': procedures,
+                'risk': form.instance.risk,
+            }, request=self.request)
+            return JsonResponse({'success': True, 'pk': self.object.pk, 'title': self.object.title, 'html_list': html_list})
         return response
 
     def get_success_url(self):
-        return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk.pk})
 
-# PROCEDURE RESULT VIEWS
 class ProcedureResultListView(AuditPermissionMixin, ListView):
     model = ProcedureResult
     template_name = 'audit/procedureresult_list.html'
@@ -2466,23 +2368,24 @@ class FollowUpActionDetailView(AuditPermissionMixin, DetailView):
 class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = FollowUpAction
     form_class = FollowUpActionForm
-    template_name = "audit/followupaction_form.html"
+    template_name = 'audit/followupaction_form.html'
     success_message = _("Follow Up Action was created successfully")
-
-    def get_issue_pk(self):
-        issue_pk = self.kwargs.get("issue_pk") or self.request.GET.get("issue_pk") or self.request.POST.get("issue_pk")
-        if not issue_pk:
-            raise ValueError("issue_pk is required for this modal")
-        return issue_pk
-
-    def get_initial(self):
-        return {"issue": self.get_issue_pk()}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["organization"] = self.request.organization
-        kwargs["issue_pk"] = self.get_issue_pk()
+        kwargs['organization'] = self.request.organization
+        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        if issue_pk:
+            kwargs['issue_pk'] = issue_pk
         return kwargs
+
+    def get_success_url(self):
+        if self.object.issue:
+            return self.object.issue.get_absolute_url()
+        return reverse('audit:issue-list')
+
+    def get_initial(self):
+        return {"issue": self.get_issue_pk()}
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -2517,13 +2420,10 @@ class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
             return JsonResponse({"form_is_valid": False, "html_form": html_form})
         return super().form_invalid(form)
 
-    def get_success_url(self):
-        return reverse_lazy("audit:followupaction-list", kwargs={"issue_pk": self.get_issue_pk()})
-
 class FollowUpActionUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = FollowUpAction
     form_class = FollowUpActionForm
-    template_name = "audit/followupaction_form.html"
+    template_name = 'audit/followupaction_form.html'
     success_message = _("Follow Up Action was updated successfully")
     
     def get_form_kwargs(self):
@@ -2760,39 +2660,21 @@ class IssueRetestDetailView(AuditPermissionMixin, DetailView):
 class IssueRetestCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = IssueRetest
     form_class = IssueRetestForm
-    template_name = "audit/issueretest_form.html"
+    template_name = 'audit/issueretest_form.html'
     success_message = _("Issue Retest was created successfully")
-
-    def get_initial(self):
-        return {"issue": self.kwargs["issue_pk"]}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["organization"] = self.request.organization
+        kwargs['organization'] = self.request.organization
+        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        if issue_pk:
+            kwargs['issue_pk'] = issue_pk
         return kwargs
 
-    def form_valid(self, form):
-        form.instance.issue_id = self.kwargs["issue_pk"]
-        form.instance.organization = self.request.organization
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            retests = IssueRetest.objects.filter(issue_id=self.kwargs["issue_pk"], organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/issueretest_list.html", {
-                "issue_retests": retests,
-                "issue": Issue.objects.get(pk=self.kwargs["issue_pk"]),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
-    def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
-
     def get_success_url(self):
-        return reverse_lazy("audit:issueretest-list", kwargs={"issue_pk": self.kwargs["issue_pk"]})
+        if self.object.issue:
+            return self.object.issue.get_absolute_url()
+        return reverse('audit:issue-list')
 
 class IssueRetestUpdateView(IssueRetestCreateView, UpdateView):
     success_message = _("Issue Retest was updated successfully")
@@ -3049,55 +2931,19 @@ class RecommendationCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     template_name = "audit/recommendation_form.html"
     success_message = _("Recommendation was created successfully")
 
-    def get_issue_pk(self):
-        issue_pk = self.kwargs.get("issue_pk") or self.request.GET.get("issue_pk") or self.request.POST.get("issue_pk")
-        if not issue_pk:
-            raise ValueError("issue_pk is required for this modal")
-        return issue_pk
-
-    def get_initial(self):
-        return {"issue": self.get_issue_pk()}
-
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["organization"] = self.request.organization
-        kwargs["issue_pk"] = self.get_issue_pk()
+        kwargs['organization'] = self.request.organization
+        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        if issue_pk:
+            kwargs['issue_pk'] = issue_pk
         return kwargs
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from .models.issue import Issue
-        try:
-            issue_pk = self.get_issue_pk()
-            context["issue"] = Issue.objects.get(pk=issue_pk)
-            context["issue_pk"] = issue_pk
-        except Exception:
-            context["issue"] = None
-            context["issue_pk"] = None
-        return context
-
-    def form_valid(self, form):
-        form.instance.issue_id = self.get_issue_pk()
-        form.instance.organization = self.request.organization
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            recommendations = Recommendation.objects.filter(issue_id=self.get_issue_pk(), organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/recommendation_list.html", {
-                "recommendations": recommendations,
-                "issue": Issue.objects.get(pk=self.get_issue_pk()),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
-    def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
-
     def get_success_url(self):
-        return reverse_lazy("audit:recommendation-list", kwargs={"issue_pk": self.get_issue_pk()})
+        # Redirect to parent issue detail
+        if self.object.issue:
+            return self.object.issue.get_absolute_url()
+        return reverse('audit:issue-list')
 
 class RecommendationUpdateView(RecommendationCreateView, UpdateView):
     success_message = _("Recommendation was updated successfully")
@@ -3638,6 +3484,10 @@ class IssueWorkingPaperDeleteView(AuditPermissionMixin, DeleteView):
             }, request=self.request)
             return JsonResponse({'form_is_valid': True, 'html_list': html_list})
         return super().delete(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        # Do NOT pass 'organization' or any extra kwargs
+        return super().get_form_kwargs()
 
 class IssueWorkingPaperDetailView(AuditPermissionMixin, DetailView):
     model = IssueWorkingPaper

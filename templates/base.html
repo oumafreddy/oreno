@@ -298,7 +298,7 @@
     <script src="{% static 'js/main.js' %}" defer></script>
 
     <!-- CKEditor5 -->
-    <script src="{% static 'django_ckeditor_5/app.js' %}"></script>
+    <script type="module" src="{% static 'django_ckeditor_5/app.js' %}"></script>
 
     <!-- AI Assistant Button (fixed at bottom right) -->
     {% if request.user.is_authenticated %}
@@ -451,26 +451,60 @@
             modal.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>';
           }
         });
-        // On htmx error, show error in modal
+
+        // On htmx error, show error in modal with retry option
         document.body.addEventListener('htmx:responseError', function(evt) {
           var modal = document.querySelector('#globalModal .modal-body');
           if (modal) {
-            modal.innerHTML = '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+            modal.innerHTML = `
+              <div class="alert alert-danger">
+                <h5 class="alert-heading">Error</h5>
+                <p>An error occurred while processing your request.</p>
+                <hr>
+                <div class="d-flex justify-content-end">
+                  <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
+                </div>
+              </div>`;
           }
         });
-        // On htmx after swap, show toast if needed
+
+        // On htmx after swap, handle success and update UI
         document.body.addEventListener('htmx:afterSwap', function(evt) {
           if (evt.detail.xhr && evt.detail.xhr.status === 200 && evt.target.classList.contains('modal-body')) {
-            if (evt.detail.xhr.responseText.includes('form_is_valid')) {
-              showToast('Saved successfully!', 'success');
-              var modal = bootstrap.Modal.getInstance(document.getElementById('globalModal'));
-              if (modal) modal.hide();
+            try {
+              var data = JSON.parse(evt.detail.xhr.responseText);
+              if (data.form_is_valid) {
+                // Update any list containers if provided
+                if (data.html_list) {
+                  var listContainer = document.querySelector(data.list_target || '.ajax-list-container');
+                  if (listContainer) listContainer.innerHTML = data.html_list;
+                }
+                // Update detail view if provided
+                if (data.html_detail) {
+                  var detailContainer = document.querySelector(data.detail_target || '.ajax-detail-container');
+                  if (detailContainer) detailContainer.innerHTML = data.html_detail;
+                }
+                // Show success message
+                showToast(data.message || 'Saved successfully!', 'success');
+                // Close modal
+                var modal = bootstrap.Modal.getInstance(document.getElementById('globalModal'));
+                if (modal) modal.hide();
+              } else if (data.html_form) {
+                document.getElementById('modal-body').innerHTML = data.html_form;
+              }
+            } catch (e) {
+              console.error('Error processing response:', e);
             }
           }
         });
+
+        // Add global error handler for network issues
+        document.body.addEventListener('htmx:sendError', function(evt) {
+          showToast('Network error occurred. Please check your connection.', 'danger');
+        });
       }
 
-      // --- jQuery AJAX Modal Support (as before) ---
+      // --- jQuery AJAX Modal Support ---
       $(function() {
         // Open modal via AJAX or htmx
         $(document).on('click', '[data-bs-toggle="modal"][data-ajax-url]', function(e) {
@@ -481,6 +515,7 @@
           modal.find('.modal-title').text(modalTitle);
           modal.find('.modal-body').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
           modal.modal('show');
+
           // Prefer htmx if present
           if (window.htmx) {
             modal.find('.modal-body').attr({
@@ -493,6 +528,16 @@
           } else {
             $.get(url, function(data) {
               modal.find('.modal-body').html(data);
+            }).fail(function() {
+              modal.find('.modal-body').html(`
+                <div class="alert alert-danger">
+                  <h5 class="alert-heading">Error</h5>
+                  <p>Failed to load the form. Please try again.</p>
+                  <hr>
+                  <div class="d-flex justify-content-end">
+                    <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
+                  </div>
+                </div>`);
             });
           }
         });
@@ -506,6 +551,7 @@
           var url = form.attr('action') || window.location.href;
           var method = form.attr('method') || 'post';
           var formData = new FormData(this);
+
           $.ajax({
             url: url,
             type: method,
@@ -525,46 +571,50 @@
                   $('.ajax-detail-container').html(data.html_detail);
                 }
                 modal.modal('hide');
-                showToast('Saved successfully!', 'success');
+                showToast(data.message || 'Saved successfully!', 'success');
               } else if (data.html_form) {
                 modal.find('.modal-body').html(data.html_form);
               }
             },
             error: function(xhr) {
-              modal.find('.modal-body').html('<div class="alert alert-danger">An error occurred. Please try again.</div>');
+              modal.find('.modal-body').html(`
+                <div class="alert alert-danger">
+                  <h5 class="alert-heading">Error</h5>
+                  <p>An error occurred while saving. Please try again.</p>
+                  <hr>
+                  <div class="d-flex justify-content-end">
+                    <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
+                  </div>
+                </div>`);
             }
           });
         });
+      });
 
-        // Utility: Show toast
-        window.showToast = function(message, type) {
-          var toastId = 'toast-' + Date.now();
-          var toastHtml = `<div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      // Enhanced toast function with better styling and auto-dismiss
+      window.showToast = function(message, type = 'success') {
+        var toastId = 'toast-' + Date.now();
+        var toastHtml = `
+          <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-              <div class="toast-body">${message}</div>
+              <div class="toast-body">
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-exclamation-circle' : 'bi-info-circle'} me-2"></i>
+                ${message}
+              </div>
               <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
           </div>`;
-          $('#toast-container').append(toastHtml);
-          var toastEl = document.getElementById(toastId);
-          var toast = new bootstrap.Toast(toastEl, { delay: 3500 });
-          toast.show();
-          toastEl.addEventListener('hidden.bs.toast', function() { $(toastEl).remove(); });
-        };
-      });
-
-      // Global htmx error handler for robust AJAX/htmx error handling
-      if (window.htmx) {
-        document.body.addEventListener('htmx:responseError', function(evt) {
-          if (evt.detail && evt.detail.xhr && evt.detail.xhr.status === 401) {
-            alert("Session expired or authentication required. Please log in again.");
-            window.location.href = "/accounts/login/?next=" + encodeURIComponent(window.location.pathname + window.location.search);
-          } else {
-            alert("A network or server error occurred. Please try again or contact support.");
-            console.error('htmx:responseError', evt);
-          }
+        $('#toast-container').append(toastHtml);
+        var toastEl = document.getElementById(toastId);
+        var toast = new bootstrap.Toast(toastEl, { 
+          delay: 3500,
+          animation: true
         });
-      }
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', function() { 
+          $(toastEl).remove(); 
+        });
+      };
     })();
     </script>
 

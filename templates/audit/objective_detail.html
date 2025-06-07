@@ -13,9 +13,6 @@
     </div>
     <div>
       <a href="{% url 'audit:objective-edit' objective.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
-      <button class="btn btn-primary" hx-get="{% url 'audit:procedure-modal-add' objective_pk=objective.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-        <i class="bi bi-plus-circle"></i> Add Procedure
-      </button>
     </div>
   </div>
   <ul class="nav nav-tabs mb-3" id="objectiveTabs" role="tablist">
@@ -23,7 +20,7 @@
       <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="procedures-tab" data-bs-toggle="tab" data-bs-target="#procedures" type="button" role="tab">Procedures</button>
+      <button class="nav-link" id="risks-tab" data-bs-toggle="tab" data-bs-target="#risks" type="button" role="tab">Risks</button>
     </li>
   </ul>
   <div class="tab-content" id="objectiveTabsContent">
@@ -35,8 +32,8 @@
         </div>
       </div>
     </div>
-    <div class="tab-pane fade" id="procedures" role="tabpanel">
-      {% include 'audit/_procedure_list_partial.html' with procedures=objective.procedures.all engagement=objective.engagement objective=objective %}
+    <div class="tab-pane fade" id="risks" role="tabpanel">
+      {% include 'audit/_risk_list_partial.html' with risks=risks objective=objective %}
     </div>
   </div>
 </div>

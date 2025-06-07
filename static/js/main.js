@@ -119,17 +119,31 @@ function initFormHandling() {
  * Error Handling System
  */
 function initErrorHandling() {
-    // Global error handler
+    // Global error handler with duplicate suppression and dev/prod awareness
+    let lastErrorMsg = '';
+    let lastErrorTime = 0;
+    const ERROR_TOAST_SUPPRESS_MS = 10000; // 10 seconds
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
     window.onerror = function(message, source, lineno, colno, error) {
         console.error('Global error:', { message, source, lineno, colno, error });
-        showToast('Application Error', 'A unexpected error occurred', 'danger');
+        const now = Date.now();
+        const errorMsg = `${message} @ ${source}:${lineno}`;
+        if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
+            showToast('Application Error', 'An unexpected error occurred', 'danger');
+            lastErrorMsg = errorMsg;
+            lastErrorTime = now;
+        }
         return true;
     };
 
-    // Unhandled promise rejections
     window.addEventListener('unhandledrejection', event => {
         console.error('Unhandled rejection:', event.reason);
-        showToast('Request Failed', event.reason.message || 'Action failed', 'danger');
+        if (isDev || (event.reason && event.reason.message !== lastErrorMsg)) {
+            showToast('Request Failed', event.reason && event.reason.message ? event.reason.message : 'Action failed', 'danger');
+            lastErrorMsg = event.reason && event.reason.message ? event.reason.message : '';
+            lastErrorTime = Date.now();
+        }
         event.preventDefault();
     });
 }

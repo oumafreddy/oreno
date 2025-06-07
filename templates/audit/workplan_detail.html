@@ -89,44 +89,31 @@
         </div>
       </div>
     </div>
-    <div class="tab-pane fade" id="objectives" role="tabpanel">
-      {% include 'audit/_objective_list_partial.html' with objectives=workplan.objectives.all workplan=workplan %}
-    </div>
-    <div class="tab-pane fade" id="procedures" role="tabpanel">
-      {% include 'audit/_procedure_list_partial.html' with procedures=workplan.all_procedures workplan=workplan %}
-    </div>
-    <div class="tab-pane fade" id="issues" role="tabpanel">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="h5 text-danger mb-0"><i class="bi bi-exclamation-triangle"></i> Issues</h3>
-        <a href="{% url 'audit:issue-create' %}" class="btn btn-sm btn-danger">New Issue</a>
-      </div>
-      {% include 'audit/_issue_list_tab_partial.html' with issues=workplan.all_issues workplan=workplan %}
-    </div>
-    <div class="tab-pane fade" id="notes" role="tabpanel">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="h5 mb-0">Notes</h3>
-        {% with content_type_id=content_type_id|default:20 object_id=workplan.pk %}
-        {% comment %} Safely handle content_type_id and object_id to avoid NoReverseMatch errors {% endcomment %}
-        {% with content_type_id=content_type_id|default:0 object_id=workplan.pk|default:0 %}
-        <button class="btn btn-sm btn-primary" 
-                data-bs-toggle="modal" 
-                data-bs-target="#globalModal" 
-                {% if content_type_id and object_id %}
-                hx-get="{% url 'audit:note-modal-add' content_type_id object_id %}" 
-                {% else %}
-                hx-get="/audit/notes/modal/add/20/{{ workplan.pk }}/" 
-                {% endif %}
-                hx-target="#globalModal-body">Create Note</button>
-        {% endwith %}
-        {% endwith %}
-      </div>
-      {% with content_type_id=content_type_id|default:20 %}
-      {% include 'audit/_note_list_tab_partial.html' with notes=workplan.all_notes content_type_id=content_type_id object_id=workplan.pk %}
+  </div>
+  <div class="tab-pane fade" id="notes" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="h5 mb-0">Notes</h3>
+      {% with content_type_id=content_type_id|default:20 object_id=workplan.pk %}
+      {% comment %} Safely handle content_type_id and object_id to avoid NoReverseMatch errors {% endcomment %}
+      {% with content_type_id=content_type_id|default:0 object_id=workplan.pk|default:0 %}
+      <button class="btn btn-sm btn-primary" 
+              data-bs-toggle="modal" 
+              data-bs-target="#globalModal" 
+              {% if content_type_id and object_id %}
+              hx-get="{% url 'audit:note-modal-add' content_type_id object_id %}" 
+              {% else %}
+              hx-get="/audit/notes/modal/add/20/{{ workplan.pk }}/" 
+              {% endif %}
+              hx-target="#globalModal-body">Create Note</button>
+      {% endwith %}
       {% endwith %}
     </div>
-    <div class="tab-pane fade" id="approvals" role="tabpanel">
-      {% include 'audit/_approval_list_partial.html' with approvals=workplan.approvals.all workplan=workplan %}
-    </div>
+    {% with content_type_id=content_type_id|default:20 %}
+    {% include 'audit/_note_list_tab_partial.html' with notes=workplan.all_notes content_type_id=content_type_id object_id=workplan.pk %}
+    {% endwith %}
+  </div>
+  <div class="tab-pane fade" id="approvals" role="tabpanel">
+    {% include 'audit/_approval_list_partial.html' with approvals=workplan.approvals.all workplan=workplan %}
   </div>
 </div>
 <!-- Modal -->

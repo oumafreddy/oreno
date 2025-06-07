@@ -14,7 +14,7 @@
       {{ form|crispy }}
       <div class="d-flex justify-content-end mt-4">
         <button type="submit" class="btn btn-success">Save</button>
-        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:issue-detail' issue_pk %}'">Cancel</button>
       </div>
     </form>
   {% else %}

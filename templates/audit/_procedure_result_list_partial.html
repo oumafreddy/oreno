@@ -30,7 +30,13 @@
             <td>{{ result.procedure.title|truncatechars:60 }}</td>
             <td>
               <a href="{% url 'audit:procedureresult-detail' result.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-              <a href="{% url 'audit:procedureresult-edit' result.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <button class="btn btn-sm btn-outline-secondary"
+                      hx-get="{% url 'audit:procedureresult-edit' result.pk %}"
+                      hx-target="#mainModal .modal-body"
+                      data-bs-toggle="modal"
+                      data-bs-target="#mainModal">
+                Edit
+              </button>
             </td>
           </tr>
           {% empty %}

@@ -14,6 +14,38 @@
             <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-danger me-2">Issue List</a>
         </div>
     </div>
+    <!-- Period Filter -->
+    <form method="get" class="row g-2 align-items-end mb-3" id="period-filter-form">
+        <div class="col-auto">
+            <label for="year-select" class="form-label mb-0">Year</label>
+            <select id="year-select" name="year" class="form-select" multiple size="1" onchange="this.form.submit()">
+                <option value="All" {% if filter_all %}selected{% endif %}>All</option>
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if y|stringformat:'s' in selected_years %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label for="month-select" class="form-label mb-0">Month</label>
+            <select id="month-select" name="month" class="form-select" multiple size="1" {% if filter_all %}disabled{% endif %} onchange="this.form.submit()">
+                {% for m, mname in available_months %}
+                    <option value="{{ m }}" {% if m|stringformat:'s' in selected_months %}selected{% endif %}>{{ mname }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary">Apply</button>
+            <a href="?" class="btn btn-outline-secondary ms-2">Reset</a>
+        </div>
+        <div class="col-auto">
+            <span class="text-muted small">Selected: 
+                {% if filter_all %}All Years{% else %}
+                    {{ selected_years|join:', ' }}
+                    {% if selected_months %} ({{ selected_months|join:', ' }}){% endif %}
+                {% endif %}
+            </span>
+        </div>
+    </form>
     <!-- Advanced Analytics Cards (top) -->
     <div class="row mb-4 g-3">
         <div class="col-md-2">
@@ -176,7 +208,7 @@
                     {% for engagement in recent_engagements %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <a href="{% url 'audit:engagement-detail' engagement.pk %}">{{ engagement.title }}</a>
-                            <span class="badge bg-secondary">{{ engagement.get_project_status_display }}</span>
+                            <span class="badge bg-secondary">WP: {{ engagement.audit_workplan.name }}</span>
                         </li>
                     {% empty %}
                         <li class="list-group-item text-muted">No recent engagements.</li>
@@ -500,19 +532,17 @@
             <!-- Additional Recent Lists for Audit Workflow -->
             <div class="col-md-4">
                 <div class="card h-100">
-                    <div class="card-header bg-secondary text-white"><i class="bi bi-list-task me-2"></i>Recent Objectives</div>
+                    <div class="card-header bg-secondary text-white"><i class="bi bi-list-task me-2"></i>Recent Engagements</div>
                     <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
-                        {% for objective in recent_objectives %}
+                        {% for engagement in recent_engagements %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <a href="{% url 'audit:objective-detail' objective.pk %}">{{ objective.title }}</a>
-                                <span class="badge bg-secondary">Eng: {{ objective.engagement.title }}</span>
+                                <a href="{% url 'audit:engagement-detail' engagement.pk %}">{{ engagement.title }}</a>
+                                <span class="badge bg-secondary">WP: {{ engagement.audit_workplan.name }}</span>
                             </li>
                         {% empty %}
-                            <li class="list-group-item text-muted">No recent objectives.</li>
+                            <li class="list-group-item text-muted">No recent engagements.</li>
                         {% endfor %}
                     </ul>
-                    {# <a href="{% url 'audit:objective-create' %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                    <!-- TODO: Add a global objective create view and button when implemented. -->
                 </div>
             </div>
             <div class="col-md-4">
@@ -522,16 +552,12 @@
                         {% for procedure in recent_procedures %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <a href="{% url 'audit:procedure-detail' procedure.pk %}">{{ procedure.title }}</a>
-                                <span class="badge bg-secondary">Obj: {{ procedure.objective.title }}</span>
+                                <span class="badge bg-secondary">Risk: {{ procedure.risk.title }}</span>
                             </li>
                         {% empty %}
                             <li class="list-group-item text-muted">No recent procedures.</li>
                         {% endfor %}
                     </ul>
-                    {# <a href="{% url 'audit:procedure-list' %}" class="btn btn-outline-secondary btn-sm">All Procedures</a> #}
-                    <!-- TODO: Add a global procedures list view and button when implemented. -->
-                    {# <a href="{% url 'audit:procedure-create' %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                    <!-- TODO: Add a global procedure create view and button when implemented. -->
                 </div>
             </div>
             <div class="col-md-4">
@@ -547,10 +573,6 @@
                             <li class="list-group-item text-muted">No recent recommendations.</li>
                         {% endfor %}
                     </ul>
-                    {# <a href="{% url 'audit:recommendation-list' issue_pk=recent_recommendations.0.issue.pk %}" class="btn btn-outline-secondary btn-sm">All Recommendations</a> #}
-                    <!-- TODO: Add a global recommendations list view and button when implemented. -->
-                    {# <a href="{% url 'audit:recommendation-add' issue_pk=recent_recommendations.0.issue.pk %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                    <!-- TODO: Add a global recommendation create view and button when implemented. -->
                 </div>
             </div>
         </div>
@@ -568,12 +590,6 @@
                             <li class="list-group-item text-muted">No recent procedure results.</li>
                         {% endfor %}
                     </ul>
-                    <div class="card-footer text-end">
-                        {# <a href="{% url 'audit:procedureresult-list' %}" class="btn btn-outline-secondary btn-sm">All Results</a> #}
-                        <!-- TODO: Add a global procedure results list view and button when implemented. -->
-                        {# <a href="{% url 'audit:procedureresult-create' %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                        <!-- TODO: Add a global procedure result create view and button when implemented. -->
-                    </div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -589,10 +605,6 @@
                             <li class="list-group-item text-muted">No recent follow-up actions.</li>
                         {% endfor %}
                     </ul>
-                    {# <a href="{% url 'audit:followupaction-list' issue_pk=recent_followupactions.0.recommendation.issue.pk %}" class="btn btn-outline-secondary btn-sm">All Follow-Ups</a> #}
-                    <!-- TODO: Add a global follow-up actions list view and button when implemented. -->
-                    {# <a href="{% url 'audit:followupaction-add' issue_pk=recent_followupactions.0.recommendation.issue.pk %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                    <!-- TODO: Add a global follow-up action create view and button when implemented. -->
                 </div>
             </div>
             <div class="col-md-4">
@@ -608,10 +620,6 @@
                             <li class="list-group-item text-muted">No recent issue retests.</li>
                         {% endfor %}
                     </ul>
-                    {# <a href="{% url 'audit:issueretest-list' issue_pk=recent_issueretests.0.recommendation.issue.pk %}" class="btn btn-outline-secondary btn-sm">All Retests</a> #}
-                    <!-- TODO: Add a global issue retests list view and button when implemented. -->
-                    {# <a href="{% url 'audit:issueretest-add' issue_pk=recent_issueretests.0.recommendation.issue.pk %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                    <!-- TODO: Add a global issue retest create view and button when implemented. -->
                 </div>
             </div>
         </div>
@@ -629,12 +637,6 @@
                             <li class="list-group-item text-muted">No recent notes.</li>
                         {% endfor %}
                     </ul>
-                    <div class="card-footer text-end">
-                        {# <a href="{% url 'audit:note-list' %}" class="btn btn-outline-secondary btn-sm">All Notes</a> #}
-                        <!-- TODO: Add a global notes list view and button when implemented. -->
-                        {# <a href="{% url 'audit:note-modal-add' content_type_id=1 object_id=1 %}" class="btn btn-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#globalModal">Add</a> #}
-                        <!-- TODO: Add a global note create view and button when implemented. -->
-                    </div>
                 </div>
             </div>
         </div>
@@ -759,25 +761,12 @@ function openParentSelectModal(type, parentApiUrl, createUrlTemplate) {
   });
 }
 </script>
-<!-- Recent Objectives List with htmx filter -->
-<form hx-get="{% url 'audit:htmx-objective-list' %}" hx-target="#recentObjectivesList" hx-swap="outerHTML" class="mb-2">
-  <select name="engagement" class="form-select select2">
-    <option value="">All Engagements</option>
-    {% for engagement in engagement_names %}
-      <option value="{{ engagement }}">{{ engagement }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
-</form>
-<div id="recentObjectivesList">
-  {% include 'audit/_objective_list_partial.html' with objectives=recent_objectives %}
-</div>
 <!-- Recent Procedures List with htmx filter -->
 <form hx-get="{% url 'audit:htmx-procedure-list' %}" hx-target="#recentProceduresList" hx-swap="outerHTML" class="mb-2">
-  <select name="objective" class="form-select select2">
-    <option value="">All Objectives</option>
-    {% for objective in recent_objectives %}
-      <option value="{{ objective.pk }}">{{ objective.title }}</option>
+  <select name="risk" class="form-select select2">
+    <option value="">All Risks</option>
+    {% for risk in recent_risks %}
+      <option value="{{ risk.pk }}">{{ risk.title }}</option>
     {% endfor %}
   </select>
   <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>

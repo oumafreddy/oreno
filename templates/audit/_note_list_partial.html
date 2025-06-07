@@ -1,4 +1,11 @@
 {% load limited_html %}
+{% if content_type_id and object_id %}
+  <div class="mb-2 text-end">
+    <button class="btn btn-info btn-sm" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      <i class="bi bi-sticky"></i> Add Note
+    </button>
+  </div>
+{% endif %}
 <div id="note-list-container">
   <ul class="list-group list-group-flush">
     {% for note in notes %}

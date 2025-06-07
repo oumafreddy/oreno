@@ -73,7 +73,7 @@
                             {% if form.instance.pk %}
                                 <a href="{% url 'audit:risk-detail' pk=form.instance.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
                             {% elif objective %}
-                                <a href="{% url 'audit:objective-detail' pk=objective.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                                <a href="{% url 'audit:objective-detail' object.objective.pk %}" class="btn btn-secondary me-2">{% trans "Cancel" %}</a>
                             {% else %}
                                 <a href="{% url 'audit:risk-list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
                             {% endif %}

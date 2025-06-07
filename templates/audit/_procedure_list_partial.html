@@ -2,12 +2,12 @@
   <div class="card shadow-sm mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Procedures</h5>
-      {% if objective and objective.pk %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' objective_pk=objective.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      {% if risk and risk.pk %}
+        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' risk_id=risk.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Procedure
         </button>
-      {% elif procedures and procedures.0 and procedures.0.objective_id %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' objective_pk=procedures.0.objective_id %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      {% elif procedures and procedures.0 and procedures.0.risk_id %}
+        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' risk_id=procedures.0.risk_id %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
           <i class="bi bi-plus-circle"></i> Add Procedure
         </button>
       {% else %}
@@ -38,7 +38,13 @@
             </td>
             <td>
               <a href="{% url 'audit:procedure-detail' procedure.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-              <a href="{% url 'audit:procedure-edit' procedure.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <button class="btn btn-sm btn-outline-secondary"
+                      hx-get="{% url 'audit:procedure-edit' procedure.pk %}"
+                      hx-target="#mainModal .modal-body"
+                      data-bs-toggle="modal"
+                      data-bs-target="#mainModal">
+                Edit
+              </button>
             </td>
           </tr>
           {% empty %}

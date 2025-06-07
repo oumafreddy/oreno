@@ -5,40 +5,88 @@
 </div>
 <div class="modal-body">
   {% if issue_pk %}
-    <form id="issueretestForm" method="post" hx-post="{% url 'audit:issueretest-modal-add' issue_pk=issue_pk %}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">
+    <form id="issueretestForm" method="post" 
+          hx-post="{% url 'audit:issueretest-modal-add' issue_pk=issue_pk %}" 
+          hx-target="#globalModal .modal-body" 
+          hx-swap="innerHTML"
+          hx-indicator="#issueretest-spinner">
       {% csrf_token %}
       {{ form|crispy }}
       <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <div id="issueretest-spinner" class="htmx-indicator">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save me-1"></i>Save
+        </button>
+        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:issue-detail' issue_pk %}'">Cancel</button>
       </div>
     </form>
   {% else %}
-    <div class="alert alert-danger">Cannot add retest: Issue not found or not saved. Please save the issue first.</div>
+    <div class="alert alert-danger">
+      <h5 class="alert-heading">Error</h5>
+      <p>Cannot add retest: Issue not found or not saved. Please save the issue first.</p>
+      <hr>
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
   {% endif %}
 </div>
 <script>
 (function() {
   var form = document.getElementById('issueretestForm');
   if (!form) return;
+
+  // Handle form submission response
   form.addEventListener('htmx:afterRequest', function(event) {
     try {
       var detail = event.detail;
-      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && 
+          detail.xhr.getResponseHeader('content-type').includes('application/json')) {
         var data = JSON.parse(detail.xhr.responseText);
-        if (data.form_is_valid && data.html_list) {
-          var container = document.getElementById('issueretest-list-container');
-          if (container) container.innerHTML = data.html_list;
-          var modalEl = document.getElementById('mainModal');
+        if (data.form_is_valid) {
+          // Update list container if provided
+          if (data.html_list) {
+            var container = document.getElementById('issueretest-list-container');
+            if (container) container.innerHTML = data.html_list;
+          }
+          // Update detail view if provided
+          if (data.html_detail) {
+            var detailContainer = document.getElementById('issueretest-detail-container');
+            if (detailContainer) detailContainer.innerHTML = data.html_detail;
+          }
+          // Close modal
+          var modalEl = document.getElementById('globalModal');
           if (modalEl && window.bootstrap) {
             var modal = window.bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
+          }
+          // Show success message
+          if (window.showToast) {
+            window.showToast(data.message || 'Issue retest saved successfully!', 'success');
           }
         } else if (data.html_form) {
           document.getElementById('modal-body').innerHTML = data.html_form;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error processing response:', e);
+      if (window.showToast) {
+        window.showToast('An error occurred while saving. Please try again.', 'danger');
+      }
+    }
+  });
+
+  // Add form validation
+  form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add('was-validated');
   });
 })();
 </script> 

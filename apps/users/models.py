@@ -219,11 +219,11 @@ class OTP(models.Model):
             self.otp = generate_otp_code()
         super().save(*args, **kwargs)
 
-    def is_expired(self):
+    def has_expired(self):
         return timezone.now() > self.expires_at
 
     def is_valid(self):
-        return not self.is_expired() and self.attempts < self.MAX_ATTEMPTS
+        return not self.has_expired() and self.attempts < self.MAX_ATTEMPTS
 
     def increment_attempts(self):
         self.attempts = F('attempts') + 1

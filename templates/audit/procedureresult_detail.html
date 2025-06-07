@@ -14,7 +14,7 @@
           <div class="alert alert-light border">
             <h5 class="mb-3">Procedure</h5>
             <p class="mb-1"><strong>{{ procedure_result.procedure.title }}</strong></p>
-            <p class="text-muted small mb-0">{{ procedure_result.procedure.objective.engagement.title }}</p>
+            <p class="text-muted small mb-0">{{ procedure_result.procedure.risk.objective.engagement.title }}</p>
           </div>
         </div>
         
@@ -60,6 +60,10 @@
           </div>
         </div>
         <hr>
+        {% if procedure_result.is_positive %}
+        <h5>Positive Finding Notes</h5>
+        <div class="alert alert-success">This procedure result is a positive finding. Document any notes or observations here.</div>
+        {% else %}
         <h5>Issues</h5>
         <ul class="mb-3">
           {% for issue in issues %}
@@ -73,10 +77,8 @@
             <a href="{% url 'audit:issue-create' %}?procedure_result={{ procedure_result.pk }}" class="btn btn-outline-primary btn-sm">Add Issue</a>
             <a href="{% url 'audit:procedure-detail' procedure_result.procedure.pk %}" class="btn btn-secondary btn-sm ms-2"><i class="bi bi-arrow-left me-1"></i>Back to Procedure</a>
           </div>
-          <div>
-            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#noteModal">Add Note</button>
-          </div>
         </div>
+        {% endif %}
       </div>
     </div>
   </div>

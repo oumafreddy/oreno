@@ -30,9 +30,9 @@
               <a href="{% url 'audit:issueretest-detail' retest.pk %}" class="btn btn-sm btn-outline-primary">View</a>
               <button class="btn btn-sm btn-outline-secondary"
                       hx-get="{% url 'audit:issueretest-update' retest.pk %}"
-                      hx-target="#globalModal .modal-body"
+                      hx-target="#mainModal .modal-body"
                       data-bs-toggle="modal"
-                      data-bs-target="#globalModal">
+                      data-bs-target="#mainModal">
                 Edit
               </button>
             </td>

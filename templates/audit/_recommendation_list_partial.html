@@ -28,7 +28,13 @@
             <td><span class="badge bg-info">{{ recommendation.get_status_display }}</span></td>
             <td>
               <a href="{% url 'audit:recommendation-detail' recommendation.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-              <a href="{% url 'audit:recommendation-update' recommendation.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <button class="btn btn-sm btn-outline-secondary"
+                      hx-get="{% url 'audit:recommendation-update' recommendation.pk %}"
+                      hx-target="#mainModal .modal-body"
+                      data-bs-toggle="modal"
+                      data-bs-target="#mainModal">
+                Edit
+              </button>
             </td>
           </tr>
           {% empty %}

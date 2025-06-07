@@ -75,9 +75,6 @@
       <button class="nav-link" id="risks-tab" data-bs-toggle="tab" data-bs-target="#risks" type="button" role="tab">Risks</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="procedures-tab" data-bs-toggle="tab" data-bs-target="#procedures" type="button" role="tab">Procedures</button>
-    </li>
-    <li class="nav-item" role="presentation">
       <button class="nav-link" id="issues-tab" data-bs-toggle="tab" data-bs-target="#issues" type="button" role="tab">Issues</button>
     </li>
     <li class="nav-item" role="presentation">
@@ -105,39 +102,7 @@
       {% include 'audit/_objective_list_partial.html' with objectives=engagement.objectives.all engagement=engagement %}
     </div>
     <div class="tab-pane fade" id="risks" role="tabpanel">
-      {% if engagement.risks.all %}
-        {% include 'audit/_risk_list_partial.html' with risks=engagement.risks.all engagement=engagement %}
-      {% else %}
-        <div class="alert alert-info">
-          <i class="bi bi-info-circle me-2"></i> No risks have been identified for this engagement yet.
-          <button class="btn btn-sm btn-outline-primary ms-3" hx-get="{% url 'audit:risk-modal-add' engagement_pk=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-            <i class="bi bi-plus-circle"></i> Add Risk
-          </button>
-        </div>
-      {% endif %}
-    </div>
-    <div class="tab-pane fade" id="procedures" role="tabpanel">
-      {% include 'audit/_procedure_list_partial.html' with procedures=engagement.all_procedures engagement=engagement %}
-    </div>
-    <div class="tab-pane fade" id="followup" role="tabpanel">
-      {% for issue in engagement.all_issues %}
-        <div class="mb-3">
-          <h6>{{ issue.issue_title }}</h6>
-          {% include 'audit/_followupaction_list_partial.html' with followups=issue.followupactions.all issue=issue %}
-        </div>
-      {% empty %}
-        <div class="alert alert-info">No issues found for this engagement.</div>
-      {% endfor %}
-    </div>
-    <div class="tab-pane fade" id="retest" role="tabpanel">
-      {% for issue in engagement.all_issues %}
-        <div class="mb-3">
-          <h6>{{ issue.issue_title }}</h6>
-          {% include 'audit/_issueretest_list_partial.html' with retests=issue.issueretests.all issue=issue %}
-        </div>
-      {% empty %}
-        <div class="alert alert-info">No issues found for this engagement.</div>
-      {% endfor %}
+      {% include 'audit/_risk_list_partial.html' with risks=all_risks %}
     </div>
     <div class="tab-pane fade" id="issues" role="tabpanel">
       {% include 'audit/_issue_list_tab_partial.html' with issues=engagement.all_issues engagement=engagement %}

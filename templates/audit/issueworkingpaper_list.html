@@ -7,7 +7,8 @@
               hx-get="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" 
               hx-target="#globalModal .modal-body" 
               data-bs-toggle="modal" 
-              data-bs-target="#globalModal">
+              data-bs-target="#globalModal"
+              data-modal-title="Upload Working Paper">
         <i class="bi bi-upload me-1"></i> Upload
       </button>
     </div>
@@ -28,36 +29,82 @@
           {% for wp in working_papers %}
           <tr>
             <td>
-              <a href="{{ wp.file.url }}" target="_blank">
-                <i class="bi bi-file-earmark-arrow-down"></i> {{ wp.file.name|slice:'working_papers/'|default:wp.file.name }}
+              <a href="{{ wp.file.url }}" target="_blank" class="text-decoration-none">
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                <span class="text-primary">{{ wp.file.name|slice:'working_papers/'|default:wp.file.name }}</span>
               </a>
             </td>
             <td>{{ wp.description|default:'—' }}</td>
             <td>{{ wp.created_by.get_full_name|default:wp.created_by.email|default:'—' }}</td>
             <td>{{ wp.uploaded_at|date:'Y-m-d H:i' }}</td>
             <td>
-              <a href="{{ wp.file.url }}" class="btn btn-sm btn-outline-primary" download><i class="bi bi-download"></i></a>
-              <button class="btn btn-sm btn-outline-secondary" 
-                      hx-get="{% url 'audit:issueworkingpaper-edit' wp.pk %}" 
-                      hx-target="#globalModal .modal-body" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" 
-                      hx-get="{% url 'audit:issueworkingpaper-delete' wp.pk %}" 
-                      hx-target="#globalModal .modal-body" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
-                <i class="bi bi-trash"></i>
-              </button>
+              <div class="btn-group btn-group-sm">
+                <a href="{{ wp.file.url }}" class="btn btn-outline-primary" download title="Download">
+                  <i class="bi bi-download"></i>
+                </a>
+                <button class="btn btn-outline-secondary" 
+                        hx-get="{% url 'audit:issueworkingpaper-edit' wp.pk %}" 
+                        hx-target="#globalModal .modal-body" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#globalModal"
+                        data-modal-title="Edit Working Paper"
+                        title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger" 
+                        hx-get="{% url 'audit:issueworkingpaper-delete' wp.pk %}" 
+                        hx-target="#globalModal .modal-body" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#globalModal"
+                        data-modal-title="Delete Working Paper"
+                        title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="text-center text-muted">No working papers uploaded for this issue.</td></tr>
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              <i class="bi bi-folder-x me-2"></i>No working papers uploaded for this issue.
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-</div> 
+</div>
+
+<script>
+(function() {
+  // Add tooltips to action buttons
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+    new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // Handle file download errors
+  document.querySelectorAll('a[download]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var href = this.getAttribute('href');
+      if (!href) {
+        e.preventDefault();
+        if (window.showToast) {
+          window.showToast('File not found or access denied', 'danger');
+        }
+      }
+    });
+  });
+
+  // Add confirmation for delete action
+  document.querySelectorAll('[hx-get*="delete"]').forEach(function(button) {
+    button.addEventListener('click', function(e) {
+      if (!confirm('Are you sure you want to delete this working paper?')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+  });
+})();
+</script> 

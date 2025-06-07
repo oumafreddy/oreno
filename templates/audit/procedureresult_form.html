@@ -14,9 +14,10 @@
         <form method="post" enctype="multipart/form-data" novalidate id="procedureresultForm">
           {% csrf_token %}
           {{ form|crispy }}
+          <div id="procedure-result-prompt" class="alert alert-info mt-3" style="display:none;"></div>
           <div class="d-flex justify-content-end mt-4">
             <button type="submit" class="btn btn-success">Save</button>
-            <a href="{% if object %}{% url 'audit:procedureresult-detail' object.pk %}{% else %}{% url 'audit:procedureresult-list' procedure_pk=procedure.pk %}{% endif %}" class="btn btn-secondary ms-2">Cancel</a>
+            <a href="{% url 'audit:procedure-detail' object.procedure.pk %}" class="btn btn-secondary ms-2">Cancel</a>
           </div>
         </form>
       </div>
@@ -24,11 +25,29 @@
   </div>
 </div>
 
-<!-- Add script for HTMX/modal handling if needed -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Just some basic initialization if needed, but no form submission override
-  console.log('Procedure result form loaded');
+  var resultField = document.getElementById('id_result');
+  var promptDiv = document.getElementById('procedure-result-prompt');
+  if (resultField && promptDiv) {
+    function updatePrompt() {
+      var value = resultField.value;
+      if (value === 'operating_effectively') {
+        promptDiv.style.display = 'block';
+        promptDiv.className = 'alert alert-success mt-3';
+        promptDiv.innerHTML = '<strong>Positive Finding:</strong> Please document any positive findings or best practices identified during this procedure.';
+      } else if (value === 'not_effective' || value === 'partially_effective' || value === 'design_ineffective') {
+        promptDiv.style.display = 'block';
+        promptDiv.className = 'alert alert-warning mt-3';
+        promptDiv.innerHTML = '<strong>Issue Required:</strong> This result indicates a control failure. Please ensure an Issue is created and linked to this procedure after saving.';
+      } else {
+        promptDiv.style.display = 'none';
+        promptDiv.innerHTML = '';
+      }
+    }
+    resultField.addEventListener('change', updatePrompt);
+    updatePrompt();
+  }
 });
 </script>
 {% endblock %}
