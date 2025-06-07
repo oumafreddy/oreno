@@ -11,9 +11,11 @@
   {% else %}
     <div class="alert alert-info">
       <i class="bi bi-info-circle me-2"></i> No objectives have been defined for this engagement yet.
-      <button class="btn btn-sm btn-outline-primary ms-3" hx-get="{% url 'audit:objective-modal-add' engagement_pk=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-        <i class="bi bi-plus-circle"></i> Add Objective
-      </button>
+      {% if engagement and engagement.pk %}
+        <button class="btn btn-sm btn-outline-primary ms-3" hx-get="{% url 'audit:objective-modal-add' engagement_pk=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+          <i class="bi bi-plus-circle"></i> Add Objective
+        </button>
+      {% endif %}
     </div>
   {% endif %}
 </div>

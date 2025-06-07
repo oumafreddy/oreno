@@ -151,12 +151,12 @@ urlpatterns = [
     path('risks/<int:pk>/delete/', RiskDeleteView.as_view(), name='risk-delete'),
     path('engagements/<int:engagement_pk>/risks/modal/add/', RiskCreateView.as_view(), name='risk-modal-add'),
 
-    # Procedure URLs
-    path('objectives/<int:objective_pk>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
+    # Procedure URLs (Updated to follow Risk → Procedure hierarchy)
+    path('risks/<int:risk_id>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
     path('procedures/<int:pk>/', views.ProcedureDetailView.as_view(), name='procedure-detail'),
-    path('objectives/<int:objective_pk>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
+    path('risks/<int:risk_id>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
     path('procedures/<int:pk>/edit/', views.ProcedureUpdateView.as_view(), name='procedure-edit'),
-    path('objectives/<int:objective_pk>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
+    path('risks/<int:risk_id>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
     # ProcedureResult URLs
     path('procedures/<int:procedure_pk>/results/', views.ProcedureResultListView.as_view(), name='procedureresult-list'),
     path('procedureresults/<int:pk>/', views.ProcedureResultDetailView.as_view(), name='procedureresult-detail'),

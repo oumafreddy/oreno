@@ -108,31 +108,29 @@ def risk_pre_save(sender, instance, **kwargs):
 @receiver(post_save, sender=Risk)
 def risk_post_save(sender, instance, created, **kwargs):
     """Handle post-save operations for Risk."""
+    status_changed = False  # Always define this variable for robust logic
+
     if created:
         # Log creation
         user = getattr(instance, 'created_by', None) or getattr(instance, 'last_modified_by', None)
         log_change(instance, 'create', user=user)
-        
         # Notify when a new risk is created
         if instance.objective and instance.objective.engagement:
-            engagement_owner = instance.objective.engagement.engagement_owner
+            engagement_owner = instance.objective.engagement.assigned_to
             if engagement_owner and engagement_owner.email:
                 risk_level = instance.risk_level
-                
                 # Create context for email template
                 context = {
                     'risk': instance,
                     'recipient': engagement_owner,
                     'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                    'risk_url': f"{settings.BASE_URL}/audit/risks/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                    'risk_url': f"{settings.BASE_URL}/audit/risks/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                    'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
                 }
-                
                 # Render HTML email
                 html_message = render_to_string('audit/emails/risk_submitted.html', context)
-                
                 # Plain text fallback
                 plain_message = f"A new {risk_level} risk has been identified in engagement '{instance.objective.engagement.title}'"
-                
                 send_mail(
                     subject=f"New {risk_level} Risk Created: {instance.title}",
                     message=plain_message,
@@ -144,7 +142,6 @@ def risk_post_save(sender, instance, created, **kwargs):
     else:
         # For existing instances, handle status changes
         status_changed = hasattr(instance, '_old_status') and instance._old_status != instance.status
-        
         if status_changed:
             # Log status change
             user = getattr(instance, 'last_modified_by', None)
@@ -154,26 +151,23 @@ def risk_post_save(sender, instance, created, **kwargs):
                 user=user, 
                 message=f"Risk status changed from '{instance._old_status}' to '{instance.status}'"
             )
-    
     # Notify assigned person if applicable
     if instance.assigned_to and instance.assigned_to.email:
         # Notify if risk is newly created or status has changed or newly assigned
         if created or status_changed or (not created and hasattr(instance, '_old_assigned_to') and instance._old_assigned_to != instance.assigned_to):
             status_display = instance.get_status_display() if hasattr(instance, 'get_status_display') else instance.status
             risk_level = instance.risk_level
-            
             subject = f"Risk Assignment: {instance.title} ({status_display})"
             if status_changed and not created:
                 subject = f"Risk Status Change: {instance.title} - {status_display}"
-                
             # Create context for email template
             context = {
                 'risk': instance,
                 'recipient': instance.assigned_to,
                 'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                'risk_url': f"{settings.BASE_URL}/audit/risks/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                'risk_url': f"{settings.BASE_URL}/audit/risks/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
             }
-            
             # Select appropriate template based on status
             template_name = 'audit/emails/risk_assigned.html'
             if status_changed and not created:
@@ -181,13 +175,10 @@ def risk_post_save(sender, instance, created, **kwargs):
                     template_name = 'audit/emails/risk_approved.html'
                 elif instance.status == 'rejected':
                     template_name = 'audit/emails/risk_rejected.html'
-            
             # Render HTML email
             html_message = render_to_string(template_name, context)
-            
             # Plain text fallback
             plain_message = f"{'You have been assigned to' if created or not status_changed else 'Status change for'} the risk '{instance.title}'"
-            
             send_mail(
                 subject=subject,
                 message=plain_message,
@@ -196,7 +187,6 @@ def risk_post_save(sender, instance, created, **kwargs):
                 fail_silently=True,
                 html_message=html_message
             )
-            
             # Create in-app notification
             Notification.objects.create(
                 user=instance.assigned_to,
@@ -261,7 +251,8 @@ def followup_action_post_save(sender, instance, created, **kwargs):
                     'action': instance,
                     'recipient': instance.issue.issue_owner,
                     'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                    'action_url': f"{settings.BASE_URL}/audit/followup-actions/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                    'action_url': f"{settings.BASE_URL}/audit/followup-actions/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                    'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
                 }
                 
                 # Render HTML email
@@ -299,7 +290,8 @@ def followup_action_post_save(sender, instance, created, **kwargs):
                 'action': instance,
                 'recipient': instance.assigned_to,
                 'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                'action_url': f"{settings.BASE_URL}/audit/followup-actions/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                'action_url': f"{settings.BASE_URL}/audit/followup-actions/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
             }
             
             # Render HTML email
@@ -358,7 +350,8 @@ def issue_retest_post_save(sender, instance, created, **kwargs):
                 'issue': instance.issue,
                 'recipient': instance.issue.issue_owner,
                 'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                'retest_url': f"{settings.BASE_URL}/audit/issue-retests/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                'retest_url': f"{settings.BASE_URL}/audit/issue-retests/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
             }
             
             # Render HTML email
@@ -400,7 +393,8 @@ def issue_retest_post_save(sender, instance, created, **kwargs):
                     'recipient': instance.issue.issue_owner,
                     'result_display': result_display,
                     'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                    'retest_url': f"{settings.BASE_URL}/audit/issue-retests/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                    'retest_url': f"{settings.BASE_URL}/audit/issue-retests/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                    'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
                 }
                 
                 # Render HTML email
@@ -461,7 +455,8 @@ def recommendation_post_save(sender, instance, created, **kwargs):
                 'issue': instance.issue,
                 'recipient': instance.issue.issue_owner,
                 'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
             }
             
             # Render HTML email
@@ -511,7 +506,8 @@ def recommendation_post_save(sender, instance, created, **kwargs):
                     'recipient': instance.issue.issue_owner,
                     'old_status_display': instance._old_implementation_status,
                     'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                    'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                    'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                    'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
                 }
                 
                 # Render HTML email
@@ -552,7 +548,8 @@ def recommendation_post_save(sender, instance, created, **kwargs):
                 'priority_display': priority_display,
                 'status_display': status_display,
                 'site_name': settings.SITE_NAME if hasattr(settings, 'SITE_NAME') else 'Audit Management System',
-                'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else ''
+                'recommendation_url': f"{settings.BASE_URL}/audit/recommendations/{instance.id}/" if hasattr(settings, 'BASE_URL') else '',
+                'last_modified_by': getattr(instance, 'last_modified_by', None) or getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None) or 'System',
             }
             
             # Render HTML email

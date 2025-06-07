@@ -108,7 +108,7 @@ from .forms import (
     AuditWorkplanForm, EngagementForm, IssueForm,
     ApprovalForm, WorkplanFilterForm, EngagementFilterForm, IssueFilterForm,
     ProcedureForm, ProcedureResultForm, FollowUpActionForm, IssueRetestForm, NoteForm,
-    IssueWorkingPaperForm
+    RecommendationForm, IssueWorkingPaperForm, ObjectiveForm, RiskForm
 )
 
 from rest_framework import generics, permissions, viewsets
@@ -133,10 +133,8 @@ from openpyxl.utils import get_column_letter
 from django.utils.encoding import smart_str
 
 from .models.objective import Objective
-from .forms import ObjectiveForm
 
 from .models.risk import Risk
-from .forms import RiskForm
 from .models.engagement import Engagement
 from .models.issue import Issue
 from users.permissions import IsOrgManagerOrReadOnly
@@ -147,7 +145,6 @@ from .models.followupaction import FollowUpAction
 from .models.issueretest import IssueRetest
 from .models.note import Note
 from .models.recommendation import Recommendation
-from .forms import RecommendationForm
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -261,11 +258,14 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
         # Return to objective detail if creating from an objective
         if self.object.objective:
             return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        # Default to engagement detail if creating from engagement
+        elif hasattr(self.object, 'engagement_context') and self.object.engagement_context:
+            return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement_context.pk})
         # Default to risk list
         return reverse_lazy('audit:risk-list')
     
     def get_form_kwargs(self):
-        # Add organization and objective_pk to form kwargs
+        # Add organization and context to form kwargs
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         
@@ -274,37 +274,56 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
         if objective_id:
             kwargs['objective_pk'] = objective_id
             
+        # Add engagement_pk if available
+        engagement_pk = self.kwargs.get('engagement_pk')
+        if engagement_pk:
+            kwargs['engagement_pk'] = engagement_pk
+            
         return kwargs
     
     def form_valid(self, form):
-        # Set organization 
+        # Set organization and user fields
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
+        
+        # Store engagement context for success URL if needed
+        engagement_pk = self.kwargs.get('engagement_pk')
+        if engagement_pk and not form.instance.objective:
+            try:
+                engagement = Engagement.objects.get(pk=engagement_pk, organization=self.request.organization)
+                form.instance.engagement_context = engagement
+            except Engagement.DoesNotExist:
+                pass
         
         # Save the form
         response = super().form_valid(form)
         
         # Handle HTMX response
         if is_htmx_request(self.request):
-            # Return JSON response for HTMX
             if self.object.objective:
                 # If created from objective, refresh the risk list section
                 risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html = render_to_string('audit/partials/risk_list.html', {
+                html = render_to_string('audit/_risk_list_partial.html', {
                     'risks': risks,
                     'objective': self.object.objective,
                 }, request=self.request)
                 return JsonResponse({
                     'success': True,
-                    'html': html,
+                    'html_list': html,
                     'message': self.success_message % {'title': self.object.title}
                 })
             else:
-                # Otherwise redirect
+                # For engagement-level creation, redirect to engagement detail
+                engagement_pk = self.kwargs.get('engagement_pk')
+                if engagement_pk:
+                    redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
+                else:
+                    redirect_url = self.get_success_url()
+                    
                 return JsonResponse({
                     'success': True,
-                    'redirect': self.get_success_url(),
+                    'redirect': str(redirect_url),
                     'message': self.success_message % {'title': self.object.title}
                 })
             
@@ -326,11 +345,36 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
         # Add objective to context if creating from an objective
         objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
         if objective_id:
-            context['objective'] = get_object_or_404(
-                Objective, 
-                id=objective_id, 
-                engagement__organization=self.request.organization
-            )
+            try:
+                objective = Objective.objects.get(
+                    id=objective_id, 
+                    engagement__organization=self.request.organization
+                )
+                context['objective'] = objective
+                context['engagement'] = objective.engagement
+            except Objective.DoesNotExist:
+                pass
+        
+        # Add engagement to context if creating from an engagement
+        engagement_pk = self.kwargs.get('engagement_pk')
+        if engagement_pk and 'engagement' not in context:
+            try:
+                engagement = Engagement.objects.get(
+                    pk=engagement_pk,
+                    organization=self.request.organization
+                )
+                context['engagement'] = engagement
+            except Engagement.DoesNotExist:
+                pass
+        
+        # Ensure we always have some context for the template
+        if 'engagement' not in context and 'objective' not in context:
+            # Last resort: try to find an engagement from form data
+            form = context.get('form')
+            if form and hasattr(form, 'cleaned_data') and 'objective' in form.cleaned_data:
+                if form.cleaned_data['objective']:
+                    context['objective'] = form.cleaned_data['objective']
+                    context['engagement'] = form.cleaned_data['objective'].engagement
             
         return context
 
@@ -374,7 +418,7 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
             if self.object.objective:
                 # If accessed from objective, refresh the risk list section
                 risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html = render_to_string('audit/partials/risk_list.html', {
+                html = render_to_string('audit/_risk_list_partial.html', {
                     'risks': risks,
                     'objective': self.object.objective,
                 }, request=self.request)
@@ -444,7 +488,7 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
             if objective:
                 # If deleted from objective, refresh the risk list section
                 risks = Risk.objects.filter(objective=objective).order_by('order')
-                html = render_to_string('audit/partials/risk_list.html', {
+                html = render_to_string('audit/_risk_list_partial.html', {
                     'risks': risks,
                     'objective': objective,
                 }, request=request)
@@ -3183,9 +3227,14 @@ def htmx_objective_list(request):
         org = request.organization
         engagement_id = request.GET.get('engagement')
         qs = Objective.objects.filter(engagement__organization=org)
+        engagement = None
         if engagement_id:
             qs = qs.filter(engagement_id=engagement_id)
-        html = render_to_string('audit/_objective_list_partial.html', {'objectives': qs})
+            engagement = Engagement.objects.filter(pk=engagement_id, organization=org).first()
+        html = render_to_string('audit/_objective_list_partial.html', {
+            'objectives': qs,
+            'engagement': engagement
+        })
         return JsonResponse({'html': html, 'success': True})
     except Exception as e:
         logger.error(f"Error in htmx_objective_list: {str(e)}", exc_info=True)

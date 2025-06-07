@@ -80,7 +80,7 @@
             </tr>
             <tr>
                 <td><strong>Completed By:</strong></td>
-                <td>{{ action.last_modified_by.get_full_name|default:action.last_modified_by.email }}</td>
+                <td>{% if last_modified_by %}{{ last_modified_by.get_full_name|default:last_modified_by.email }}{% else %}System{% endif %}</td>
             </tr>
             <tr>
                 <td><strong>Completion Date:</strong></td>
