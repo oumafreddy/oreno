@@ -4,6 +4,7 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.http import JsonResponse
+import secrets
 
 class LoginRequiredMiddleware:
     """
@@ -51,3 +52,18 @@ class AjaxLoginRequiredMiddleware:
             if is_htmx or is_ajax or wants_json:
                 return JsonResponse({'error': 'login_required'}, status=401)
         return self.get_response(request)
+
+
+class CSPNonceMiddleware:
+    """Attach a CSP nonce to the request and response."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Generate a random nonce for this request
+        nonce = secrets.token_hex(16)
+        request.csp_nonce = nonce
+        response = self.get_response(request)
+        response['Content-Security-Policy'] = f"script-src 'self' 'nonce-{nonce}'"
+        return response
