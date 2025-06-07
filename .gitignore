@@ -28,3 +28,6 @@ media/
 staticfiles/
 
 oreno-backup.git/
+
+# Environment files
+.env.oreno
