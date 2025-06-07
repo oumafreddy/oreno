@@ -449,10 +449,6 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
         # Ensure user can only delete risks in their organization
         return super().get_queryset().filter(organization=self.request.organization)
 
-    def get_form_kwargs(self):
-        # Do NOT pass 'organization' or any extra kwargs
-        return super().get_form_kwargs()
-
     def get_success_url(self):
         # Redirect to parent objective detail if available, else engagement, else risk list
         if self.object.objective_id:
