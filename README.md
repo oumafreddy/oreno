@@ -44,6 +44,13 @@ The repository contains Django test cases. Run them with:
 python manage.py test --settings=config.settings.development
 ```
 
+## Database Dumps
+
+Database dump files for development are not tracked in version control.
+If you need sample dumps, request them from the maintainers and store them
+outside the repository (for example in a sibling `dumps/` directory).
+Update any local scripts to load the dump from that location.
+
 ## Learning More
 
 Explore each app under `apps/` to see how domain logic is implemented. Reviewing tests is a good way to understand expected behavior. The `config/settings` modules show how environments are configured for development or production. To learn about tenant management, inspect the `organizations` app and middleware in `apps/core`.
