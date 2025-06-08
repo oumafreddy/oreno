@@ -180,8 +180,8 @@
                 <div class="card-header bg-light"><strong>Engagement Owner Workload</strong></div>
                 <div class="card-body">
                     <div id="owner-workload-chart" style="height:250px;"></div>
-                    <!-- Debug: Engagement Owner Workload Data (hidden, toggle for troubleshooting) -->
-                    <pre id="engagement-owner-workload-debug" style="display:none; font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px;">{{ engagement_owner_workload_debug }}</pre>
+                    <!-- Debug: Engagement Owner Workload Data (visible for troubleshooting) -->
+                    <pre style="font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px; margin-top:10px;">{{ engagement_owner_workload_debug }}</pre>
                 </div>
             </div>
         </div>
@@ -649,75 +649,7 @@
 {{ issue_risk_dist|json_script:"issue-risk-data" }}
 {{ approval_status_dist|json_script:"approval-status-data" }}
 {{ engagement_owner_workload|json_script:"engagement-owner-workload-data" }}
-<!-- Plotly.js for charts -->
-<script>
-function plotOrShowEmpty(containerId, data, layout) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    if (!data || (Array.isArray(data) ? data.length === 0 : Object.keys(data).length === 0)) {
-        container.innerHTML = '<div class="text-muted text-center py-5">No data available</div>';
-    } else {
-        Plotly.newPlot(containerId, layout.data, layout.options);
-    }
-}
-function safeParseJSON(elementId) {
-    try {
-        const el = document.getElementById(elementId);
-        if (!el) return {};
-        const text = el.textContent.trim();
-        if (!text) return {};
-        return JSON.parse(text);
-    } catch (e) {
-        return {};
-    }
-}
-const engagementStatus = safeParseJSON('engagement-status-data');
-plotOrShowEmpty('engagement-status-chart', engagementStatus, {
-    data: [{
-        labels: Object.keys(engagementStatus),
-        values: Object.values(engagementStatus),
-        type: 'pie',
-        textinfo: 'label+percent',
-        insidetextorientation: 'radial',
-    }],
-    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
-});
-const issueRisk = safeParseJSON('issue-risk-data');
-plotOrShowEmpty('issue-risk-chart', issueRisk, {
-    data: [{
-        labels: Object.keys(issueRisk),
-        values: Object.values(issueRisk),
-        type: 'pie',
-        textinfo: 'label+percent',
-        insidetextorientation: 'radial',
-    }],
-    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
-});
-const approvalStatus = safeParseJSON('approval-status-data');
-plotOrShowEmpty('approval-status-chart', approvalStatus, {
-    data: [{
-        labels: Object.keys(approvalStatus),
-        values: Object.values(approvalStatus),
-        type: 'pie',
-        textinfo: 'label+percent',
-        insidetextorientation: 'radial',
-    }],
-    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
-});
-const ownerWorkload = safeParseJSON('engagement-owner-workload-data');
-plotOrShowEmpty('owner-workload-chart', ownerWorkload, {
-    data: [{
-        x: Object.keys(ownerWorkload),
-        y: Object.values(ownerWorkload),
-        type: 'bar',
-        marker: { color: '#2563eb' },
-        text: Object.keys(ownerWorkload),
-        hovertemplate: '%{text}: %{y}<extra></extra>',
-        textposition: 'auto',
-    }],
-    options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false}
-});
-</script>
+<!-- Remove the inline script that renders charts. Only keep the json_script tags for data. -->
 <!-- Add Select2 CSS -->
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
 <!-- Add Select2 JS -->

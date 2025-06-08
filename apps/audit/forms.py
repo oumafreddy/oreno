@@ -163,6 +163,8 @@ class EngagementForm(BaseAuditForm):
             self.fields['assigned_to'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
+        # Make assigned_to required for better workload data
+        self.fields['assigned_to'].required = True
         
         self.helper.layout = Layout(
             Fieldset(

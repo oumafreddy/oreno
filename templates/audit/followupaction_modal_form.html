@@ -38,7 +38,11 @@
           <i class="bi bi-save me-1"></i> {% if form.instance.pk %}Update{% else %}Save{% endif %}
         </span>
       </button>
-      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:issue-detail' issue_pk %}'">Cancel</button>
+      {% if issue_pk %}
+        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:issue-detail' issue_pk %}'">Cancel</button>
+      {% else %}
+        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>
+      {% endif %}
     </div>
   </form>
 </div>

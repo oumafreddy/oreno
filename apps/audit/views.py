@@ -1467,8 +1467,15 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['engagement_status_dist'] = dict(Counter(engagement_qs.values_list('project_status', flat=True))) or {}
         durations = [(e.target_end_date - e.project_start_date).days for e in engagement_qs if e.target_end_date and e.project_start_date]
         context['avg_engagement_duration'] = sum(durations) / len(durations) if durations else 0
-        # Engagement Owner Workload: count by assigned_to email (or 'Unassigned' if null)
-        owner_workload = [e.assigned_to.email if e.assigned_to else 'Unassigned' for e in engagement_qs]
+        # Engagement Owner Workload: count by assigned_to full name (or email, or 'Unassigned')
+        def owner_label(user):
+            if user:
+                if hasattr(user, 'get_full_name') and user.get_full_name():
+                    return f"{user.get_full_name()} ({user.email})"
+                elif hasattr(user, 'email'):
+                    return user.email
+            return 'Unassigned'
+        owner_workload = [owner_label(e.assigned_to) for e in engagement_qs]
         context['engagement_owner_workload'] = dict(Counter(owner_workload)) or {}
         import json
         context['engagement_owner_workload_debug'] = json.dumps(context['engagement_owner_workload'], indent=2)
@@ -3004,6 +3011,24 @@ class RecommendationCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
         if issue_pk:
             kwargs['issue_pk'] = issue_pk
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        issue = None
+        if issue_pk:
+            try:
+                from .models.issue import Issue
+                issue = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                issue = None
+        context['issue'] = issue
+        return context
+
+    def form_valid(self, form):
+        # Defensive: always set organization before saving
+        form.instance.organization = self.request.organization
+        return super().form_valid(form)
 
     def get_success_url(self):
         # Redirect to parent issue detail
