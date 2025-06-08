@@ -554,3 +554,10 @@ class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         # Verify that accepted risks have proper documentation
         if self.issue_status == 'accepted_risk' and not self.extension_reason:
             raise ValidationError({'extension_reason': _('Risk acceptance reason must be documented.')})
+
+    @property
+    def engagement(self):
+        try:
+            return self.procedure.risk.objective.engagement
+        except AttributeError:
+            return None

@@ -1090,9 +1090,8 @@ class IssueListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         organization = self.request.organization
-        # Remove 'procedure_result' from select_related, only use valid fields
         queryset = queryset.filter(organization=organization).select_related(
-            'issue_owner', 'procedure'
+            'issue_owner', 'procedure__risk__objective__engagement'
         )
         form = IssueFilterForm(self.request.GET)
         if form.is_valid():
