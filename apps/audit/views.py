@@ -1146,13 +1146,31 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         kwargs['organization'] = self.request.organization
         # Pre-select parent context if provided
         procedure_pk = self.request.GET.get('procedure_pk') or self.kwargs.get('procedure_pk')
-        if procedure_pk:
+        # Enhancement: If creating from a ProcedureResult, auto-set the procedure
+        procedure_result_pk = self.request.GET.get('procedure_result') or self.kwargs.get('procedure_result_pk')
+        if procedure_result_pk:
+            try:
+                procedure_result = ProcedureResult.objects.get(pk=procedure_result_pk)
+                kwargs['procedure_pk'] = procedure_result.procedure.pk
+            except ProcedureResult.DoesNotExist:
+                pass  # fallback to normal
+        elif procedure_pk:
             kwargs['procedure_pk'] = procedure_pk
         return kwargs
     
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
+        # Set procedure_result and procedure if present in request
+        procedure_result_pk = self.request.GET.get('procedure_result') or self.kwargs.get('procedure_result_pk')
+        if procedure_result_pk:
+            from .models import ProcedureResult
+            try:
+                pr = ProcedureResult.objects.get(pk=procedure_result_pk)
+                form.instance.procedure_result = pr
+                form.instance.procedure = pr.procedure
+            except ProcedureResult.DoesNotExist:
+                pass
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -1170,12 +1188,15 @@ class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        
-        # If we have a procedure result, get the engagement from it
-        if self.object and self.object.procedure_result:
-            kwargs['engagement_pk'] = self.object.procedure_result.procedure.objective.engagement_id
-            kwargs['procedure_result_pk'] = self.object.procedure_result_id
-        
+        # Defensive: always check for self.object and its attributes
+        try:
+            if getattr(self, 'object', None) and getattr(self.object, 'procedure_result', None):
+                kwargs['engagement_pk'] = self.object.procedure_result.procedure.objective.engagement_id
+                kwargs['procedure_result_pk'] = self.object.procedure_result_id
+        except Exception:
+            # Never break, always return a dict
+            pass
+        return kwargs
 
 # ─── APPROVAL VIEWS ──────────────────────────────────────────────────────────
 class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
@@ -2183,6 +2204,8 @@ class ProcedureResultDetailView(AuditPermissionMixin, DetailView):
         context = super().get_context_data(**kwargs)
         # Ensure procedure is available in the context for the template
         context['procedure'] = self.object.procedure
+        # Add all issues linked to this ProcedureResult
+        context['linked_issues'] = self.object.issues.filter(organization=self.request.organization)
         return context
 
 class ProcedureResultCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):

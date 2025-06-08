@@ -139,21 +139,21 @@
                                     {% for procedure in procedures %}
                                         <tr>
                                             <td><a href="{% url 'audit:procedure-detail' pk=procedure.pk %}">{{ procedure.title }}</a></td>
-                                            <td>{{ procedure.get_status_display }}</td>
+                                            <td class="text-dark fw-bold">{{ procedure.get_status_display }}</td>
                                             <td>
                                                 {% if procedure.result %}
-                                                    <span class="badge bg-{{ procedure.get_result_class }}">{{ procedure.get_result_display }}</span>
+                                                    <span class="badge bg-secondary text-dark fw-bold">{{ procedure.get_result_display }}</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary">{% trans "Not Tested" %}</span>
+                                                    <span class="badge bg-secondary text-dark fw-bold">{% trans "Not Tested" %}</span>
                                                 {% endif %}
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="{% url 'audit:procedure-detail' pk=procedure.pk %}" class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-eye"></i>
+                                                    <a href="{% url 'audit:procedure-detail' pk=procedure.pk %}" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-eye"></i> View
                                                     </a>
-                                                    <a href="{% url 'audit:procedure-edit' pk=procedure.pk %}" class="btn btn-sm btn-outline-secondary">
-                                                        <i class="fas fa-edit"></i>
+                                                    <a href="{% url 'audit:procedure-edit' pk=procedure.pk %}" class="btn btn-sm btn-secondary">
+                                                        <i class="fas fa-edit"></i> Edit
                                                     </a>
                                                 </div>
                                             </td>

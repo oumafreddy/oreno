@@ -159,6 +159,11 @@ class IssueSerializer(BaseAuditSerializer):
     )
     recommendations = RecommendationSerializer(many=True, read_only=True)
     working_papers = IssueWorkingPaperSerializer(many=True, read_only=True, source='issueworkingpaper_set')
+    procedure_result = serializers.PrimaryKeyRelatedField(
+        queryset=ProcedureResult.objects.all(),
+        required=False,
+        allow_null=True
+    )
     get_absolute_url = serializers.SerializerMethodField()
     
     class Meta:
@@ -170,6 +175,7 @@ class IssueSerializer(BaseAuditSerializer):
             'risk_level', 'issue_status', 'remediation_status',
             'target_date', 'actual_remediation_date',
             'management_action_plan', 'organization',
+            'procedure', 'procedure_result',
             'created_by', 'created_at', 'updated_at', 'recommendations', 'working_papers', 'get_absolute_url'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
@@ -416,9 +422,14 @@ class EngagementDetailSerializer(EngagementSerializer):
 class IssueDetailSerializer(IssueSerializer):
     engagement = NestedEngagementSerializer(read_only=True)
     approvals = ApprovalSerializer(many=True, read_only=True)
+    procedure_result = serializers.PrimaryKeyRelatedField(
+        queryset=ProcedureResult.objects.all(),
+        required=False,
+        allow_null=True
+    )
     
     class Meta(IssueSerializer.Meta):
-        fields = IssueSerializer.Meta.fields + ['approvals']
+        fields = IssueSerializer.Meta.fields + ['approvals', 'procedure_result']
 
 class NotificationSerializer(BaseAuditSerializer):
     user = serializers.PrimaryKeyRelatedField(

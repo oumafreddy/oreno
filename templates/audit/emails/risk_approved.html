@@ -95,9 +95,9 @@
             <tr>
                 <td><strong>Risk Level:</strong></td>
                 <td>
-                    {% if risk.level == 'high' %}
+                    {% if risk.risk_level|stringformat:"s"|lower == 'high' %}
                         <span class="risk-level risk-high">HIGH</span>
-                    {% elif risk.level == 'medium' %}
+                    {% elif risk.risk_level|stringformat:"s"|lower == 'medium' %}
                         <span class="risk-level risk-medium">MEDIUM</span>
                     {% else %}
                         <span class="risk-level risk-low">LOW</span>

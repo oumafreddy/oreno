@@ -11,6 +11,7 @@ from .risk import Risk
 from django_ckeditor_5.fields import CKEditor5Field
 from simple_history.models import HistoricalRecords
 from django.utils import timezone
+from django.urls import reverse
 
 @reversion.register()
 class Procedure(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -370,3 +371,7 @@ class Procedure(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
             return _('Exceptions: {}').format(self.exceptions_noted)
             
         return self.get_result_display()
+
+    def get_absolute_url(self):
+        """Return the absolute URL for the procedure detail view."""
+        return reverse('audit:procedure-detail', kwargs={'pk': self.pk})

@@ -105,6 +105,17 @@
       {% endif %}
     </div>
   </div>
+  {% if issue.procedure_result %}
+  <div class="alert alert-info mb-4">
+    <strong>Linked Procedure Result:</strong>
+    <a href="{% url 'audit:procedureresult-detail' issue.procedure_result.pk %}">
+      Procedure Result #{{ issue.procedure_result.pk }}
+    </a>
+    {% if issue.procedure_result.procedure %}
+      (Procedure: <a href="{% url 'audit:procedure-detail' issue.procedure_result.procedure.pk %}">{{ issue.procedure_result.procedure.title }}</a>)
+    {% endif %}
+  </div>
+  {% endif %}
   <ul class="nav nav-tabs mb-3" id="issueTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>

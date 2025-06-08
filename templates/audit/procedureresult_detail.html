@@ -66,7 +66,7 @@
         {% else %}
         <h5>Issues</h5>
         <ul class="mb-3">
-          {% for issue in issues %}
+          {% for issue in linked_issues %}
             <li><a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a></li>
           {% empty %}
             <li class="text-muted">No issues linked to this result.</li>

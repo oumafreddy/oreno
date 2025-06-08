@@ -22,6 +22,11 @@
             <strong>Please correct the errors below:</strong>
           </div>
         {% endif %}
+        {% if form.procedure_result_summary %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-link-45deg"></i> {{ form.procedure_result_summary }}
+          </div>
+        {% endif %}
         <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}">
           {% csrf_token %}
           {{ form|crispy }}

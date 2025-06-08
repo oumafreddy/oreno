@@ -17,6 +17,7 @@ from simple_history.models import HistoricalRecords
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from .engagement import Engagement
 from .procedure import Procedure
+from .procedureresult import ProcedureResult
 from core.models.validators import validate_file_extension, validate_file_size
 
 @reversion.register()
@@ -95,6 +96,14 @@ class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         null=True,
         blank=True,
         help_text=_('The audit procedure that identified this issue')
+    )
+    procedure_result = models.ForeignKey(
+        ProcedureResult,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issues',
+        help_text=_('The procedure result that led to this issue (if applicable)')
     )
     
     # GIAS 2024 Issue Classification Fields
