@@ -246,124 +246,154 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
     success_message = _('Risk "%(title)s" was created successfully')
     
     def get_template_names(self):
-        # Use modal template for HTMX requests
-        if is_htmx_request(self.request):
-            return ['audit/risk_modal_form.html']
-        return [self.template_name]
+        try:
+            # Use modal template for HTMX requests
+            if is_htmx_request(self.request):
+                return ['audit/risk_modal_form.html']
+            return [self.template_name]
+        except Exception as e:
+            logger.error(f"Error in get_template_names: {str(e)}", exc_info=True)
+            raise
     
     def get_success_url(self):
-        # Return to objective detail if creating from an objective
-        if self.object.objective:
-            return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
-        # Default to engagement detail if creating from engagement
-        elif hasattr(self.object, 'engagement_context') and self.object.engagement_context:
-            return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement_context.pk})
-        # Default to risk list
-        return reverse_lazy('audit:risk-list')
+        try:
+            # Return to objective detail if creating from an objective
+            if self.object.objective:
+                return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+            # Default to engagement detail if creating from engagement
+            elif hasattr(self.object, 'engagement_context') and self.object.engagement_context:
+                return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement_context.pk})
+            # Default to risk list
+            return reverse_lazy('audit:risk-list')
+        except Exception as e:
+            logger.error(f"Error in get_success_url: {str(e)}", exc_info=True)
+            raise
     
     def get_form_kwargs(self):
-        # Add organization and context to form kwargs
-        kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
-        
-        # Add objective_pk if available
-        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
-        if objective_id:
-            kwargs['objective_pk'] = objective_id
+        try:
+            # Add organization and context to form kwargs
+            kwargs = super().get_form_kwargs()
+            kwargs['organization'] = self.request.organization
             
-        # Add engagement_pk if available
-        engagement_pk = self.kwargs.get('engagement_pk')
-        if engagement_pk:
-            kwargs['engagement_pk'] = engagement_pk
-            
-        return kwargs
+            # Add objective_pk if available
+            objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+            if objective_id:
+                kwargs['objective_pk'] = objective_id
+                
+            # Add engagement_pk if available
+            engagement_pk = self.kwargs.get('engagement_pk')
+            if engagement_pk:
+                kwargs['engagement_pk'] = engagement_pk
+                
+            return kwargs
+        except Exception as e:
+            logger.error(f"Error in get_form_kwargs: {str(e)}", exc_info=True)
+            raise
     
     def form_valid(self, form):
-        # Set organization and user fields
-        form.instance.organization = self.request.organization
-        form.instance.created_by = self.request.user
-        form.instance.updated_by = self.request.user
-        engagement_pk = self.kwargs.get('engagement_pk')
-        if engagement_pk and not form.instance.objective:
-            try:
-                engagement = Engagement.objects.get(pk=engagement_pk, organization=self.request.organization)
-                form.instance.engagement_context = engagement
-            except Engagement.DoesNotExist:
-                pass
-        response = super().form_valid(form)
-        if is_htmx_request(self.request) or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            if self.object.objective:
-                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html_list = render_to_string('audit/_risk_list_partial.html', {
-                    'risks': risks,
-                    'objective': self.object.objective,
-                }, request=self.request)
-                return JsonResponse({
-                    'success': True,
-                    'html_list': html_list,
-                    'message': self.success_message % {'title': self.object.title}
-                })
-            else:
-                engagement_pk = self.kwargs.get('engagement_pk')
-                if engagement_pk:
-                    redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
+        try:
+            # Set organization and user fields
+            form.instance.organization = self.request.organization
+            form.instance.created_by = self.request.user
+            form.instance.updated_by = self.request.user
+            
+            engagement_pk = self.kwargs.get('engagement_pk')
+            if engagement_pk and not form.instance.objective:
+                try:
+                    engagement = Engagement.objects.get(pk=engagement_pk, organization=self.request.organization)
+                    form.instance.engagement_context = engagement
+                except Engagement.DoesNotExist:
+                    logger.warning(f"Engagement with pk {engagement_pk} not found for organization {self.request.organization}")
+                except Exception as e:
+                    logger.error(f"Error setting engagement context: {str(e)}", exc_info=True)
+            
+            response = super().form_valid(form)
+            
+            if is_htmx_request(self.request) or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                if self.object.objective:
+                    risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
+                    html_list = render_to_string('audit/_risk_list_partial.html', {
+                        'risks': risks,
+                        'objective': self.object.objective,
+                    }, request=self.request)
+                    return JsonResponse({
+                        'success': True,
+                        'html_list': html_list,
+                        'message': self.success_message % {'title': self.object.title}
+                    })
                 else:
-                    redirect_url = self.get_success_url()
-                return JsonResponse({
-                    'success': True,
-                    'redirect': str(redirect_url),
-                    'message': self.success_message % {'title': self.object.title}
-                })
-        return response
+                    engagement_pk = self.kwargs.get('engagement_pk')
+                    if engagement_pk:
+                        redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
+                    else:
+                        redirect_url = self.get_success_url()
+                    return JsonResponse({
+                        'success': True,
+                        'redirect': str(redirect_url),
+                        'message': self.success_message % {'title': self.object.title}
+                    })
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in form_valid: {str(e)}", exc_info=True)
+            return self.form_invalid(form)
+        except DatabaseError as e:
+            logger.error(f"Database error in form_valid: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in form_valid: {str(e)}", exc_info=True)
+            raise
     
     def form_invalid(self, form):
-        if is_htmx_request(self.request):
-            html_form = render_to_string(
-                'audit/risk_modal_form.html',
-                self.get_context_data(form=form),
-                request=self.request
-            )
-            return JsonResponse({'success': False, 'html_form': html_form})
-        return super().form_invalid(form)
+        try:
+            if is_htmx_request(self.request):
+                html_form = render_to_string(
+                    'audit/risk_modal_form.html',
+                    self.get_context_data(form=form),
+                    request=self.request
+                )
+                return JsonResponse({'success': False, 'html_form': html_form})
+            return super().form_invalid(form)
+        except Exception as e:
+            logger.error(f"Error in form_invalid: {str(e)}", exc_info=True)
+            raise
     
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Add objective to context if creating from an objective
-        objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
-        if objective_id:
-            try:
-                objective = Objective.objects.get(
-                    id=objective_id, 
-                    engagement__organization=self.request.organization
-                )
-                context['objective'] = objective
-                context['engagement'] = objective.engagement
-            except Objective.DoesNotExist:
-                pass
-        
-        # Add engagement to context if creating from an engagement
-        engagement_pk = self.kwargs.get('engagement_pk')
-        if engagement_pk and 'engagement' not in context:
-            try:
-                engagement = Engagement.objects.get(
-                    pk=engagement_pk,
-                    organization=self.request.organization
-                )
-                context['engagement'] = engagement
-            except Engagement.DoesNotExist:
-                pass
-        
-        # Ensure we always have some context for the template
-        if 'engagement' not in context and 'objective' not in context:
-            # Last resort: try to find an engagement from form data
-            form = context.get('form')
-            if form and hasattr(form, 'cleaned_data') and 'objective' in form.cleaned_data:
-                if form.cleaned_data['objective']:
-                    context['objective'] = form.cleaned_data['objective']
-                    context['engagement'] = form.cleaned_data['objective'].engagement
+        try:
+            context = super().get_context_data(**kwargs)
             
-        return context
+            # Add objective to context if creating from an objective
+            objective_id = self.request.GET.get('objective_id') or self.kwargs.get('objective_id')
+            if objective_id:
+                try:
+                    objective = Objective.objects.get(
+                        id=objective_id, 
+                        engagement__organization=self.request.organization
+                    )
+                    context['objective'] = objective
+                    context['engagement'] = objective.engagement
+                except Objective.DoesNotExist:
+                    logger.warning(f"Objective with id {objective_id} not found for organization {self.request.organization}")
+                except Exception as e:
+                    logger.error(f"Error getting objective context: {str(e)}", exc_info=True)
+            
+            # Add engagement to context if creating from an engagement
+            engagement_pk = self.kwargs.get('engagement_pk')
+            if engagement_pk and 'engagement' not in context:
+                try:
+                    engagement = Engagement.objects.get(
+                        pk=engagement_pk,
+                        organization=self.request.organization
+                    )
+                    context['engagement'] = engagement
+                except Engagement.DoesNotExist:
+                    logger.warning(f"Engagement with pk {engagement_pk} not found for organization {self.request.organization}")
+                except Exception as e:
+                    logger.error(f"Error getting engagement context: {str(e)}", exc_info=True)
+            
+            return context
+        except Exception as e:
+            logger.error(f"Error in get_context_data: {str(e)}", exc_info=True)
+            raise
 
 
 class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMixin, UpdateView):

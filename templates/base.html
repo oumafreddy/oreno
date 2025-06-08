@@ -638,18 +638,5 @@
       window.RISK_SELECTED_REGISTER = window.RISK_SELECTED_REGISTER || '';
     </script>
     <script src="{% static 'js/ai_assistant.js' %}" defer></script>
-
-    <button id="ai-assistant-button" class="btn btn-primary">Ask AI Assistant</button>
-    <div id="ai-assistant-popup" class="popup">
-        {% if user.is_authenticated %}
-        <form id="ai-assistant-form">
-            <input type="text" id="ai-assistant-input" placeholder="Ask a question...">
-            <button type="submit">Ask</button>
-        </form>
-        <div id="ai-assistant-response"></div>
-        {% else %}
-        <div class="p-3 text-center">Log into your account in order to use the AI assistant.</div>
-        {% endif %}
-    </div>
 </body>
 </html>

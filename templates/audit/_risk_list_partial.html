@@ -60,7 +60,9 @@
         <div class="mt-3">
             <a href="{% url 'audit:risk-add' objective_id=objective.id %}" class="btn btn-primary" 
                hx-get="{% url 'audit:risk-add' objective_id=objective.id %}"
-               hx-target="#modal-dialog" 
+               hx-target="#modal-body" 
+               data-bs-toggle="modal" 
+               data-bs-target="#mainModal" 
                hx-trigger="click">
                 <i class="fas fa-plus"></i> {% trans "Add Risk" %}
             </a>

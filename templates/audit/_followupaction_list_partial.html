@@ -10,10 +10,10 @@
             {% if issue_id %}
                 <button class="btn btn-sm btn-primary" 
                         hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}" 
-                        hx-target="#globalModal .modal-content"
+                        hx-target="#modal-body"
                         hx-swap="innerHTML"
                         data-bs-toggle="modal" 
-                        data-bs-target="#globalModal"
+                        data-bs-target="#mainModal"
                         data-bs-tooltip="tooltip"
                         title="{% trans 'Add a new follow-up action' %}">
                     <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up" %}
@@ -116,7 +116,7 @@
                                     <div class="btn-group btn-group-sm" role="group">
                                         <button class="btn btn-outline-primary"
                                                 hx-get="{% url 'audit:followupaction-edit' pk=followup.pk %}"
-                                                hx-target="#mainModal .modal-content"
+                                                hx-target="#modal-body"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#mainModal">
                                             <i class="bi bi-pencil"></i>
@@ -153,10 +153,10 @@
                 {% if issue_id %}
                     <button class="btn btn-primary"
                             hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}"
-                            hx-target="#globalModal .modal-content"
+                            hx-target="#modal-body"
                             hx-swap="innerHTML"
                             data-bs-toggle="modal"
-                            data-bs-target="#globalModal">
+                            data-bs-target="#mainModal">
                         <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up Action" %}
                     </button>
                 {% endif %}

@@ -40,7 +40,7 @@
               <a href="{% url 'audit:procedure-detail' procedure.pk %}" class="btn btn-sm btn-outline-primary">View</a>
               <button class="btn btn-sm btn-outline-secondary"
                       hx-get="{% url 'audit:procedure-edit' procedure.pk %}"
-                      hx-target="#mainModal .modal-body"
+                      hx-target="#modal-body"
                       data-bs-toggle="modal"
                       data-bs-target="#mainModal">
                 Edit

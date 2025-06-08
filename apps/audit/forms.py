@@ -469,7 +469,7 @@ class ObjectiveForm(BaseAuditForm):
             )
         )
 
-class ProcedureForm(forms.ModelForm):
+class ProcedureForm(BaseAuditForm):
     class Meta:
         model = Procedure
         fields = [
@@ -480,22 +480,23 @@ class ProcedureForm(forms.ModelForm):
             'exception_details', 'conclusion', 'impact_assessment',
             'is_positive_finding', 'control_maturity', 'evidence_list',
             'evidence', 'additional_evidence', 'reviewed_by', 'review_date',
-            'review_notes', 'order'
+            'review_notes', 'order', 'risk'
         ]
         widgets = {
-            'description': CKEditor5Widget(config_name='extends'),
-            'criteria': CKEditor5Widget(config_name='extends'),
-            'control_being_tested': CKEditor5Widget(config_name='extends'),
-            'result_notes': CKEditor5Widget(config_name='extends'),
-            'exception_details': CKEditor5Widget(config_name='extends'),
-            'conclusion': CKEditor5Widget(config_name='extends'),
-            'impact_assessment': CKEditor5Widget(config_name='extends'),
-            'evidence_list': CKEditor5Widget(config_name='extends'),
-            'review_notes': CKEditor5Widget(config_name='extends'),
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'result_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'exception_details': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'conclusion': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'impact_assessment': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'evidence_list': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'review_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'test_date': forms.DateInput(attrs={'type': 'date'}),
+            'planned_date': forms.DateInput(attrs={'type': 'date'}),
+            'review_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
-        risk_pk = kwargs.pop('risk_pk', None)
+        risk_pk = kwargs.pop('risk_id', None)
         objective_pk = kwargs.pop('objective_pk', None)
         engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
@@ -508,6 +509,15 @@ class ProcedureForm(forms.ModelForm):
             elif engagement_pk:
                 risk_queryset = risk_queryset.filter(objective__engagement_id=engagement_pk)
             self.fields['risk'].queryset = risk_queryset
+        # If creating from a risk, set it as the initial value and restrict queryset to just that risk
+        if risk_pk:
+            try:
+                from .models.risk import Risk
+                risk = Risk.objects.get(pk=risk_pk)
+                self.fields['risk'].initial = risk_pk
+                self.fields['risk'].queryset = self.fields['risk'].queryset.filter(pk=risk_pk)
+            except Exception:
+                pass
 
 class ProcedureResultForm(BaseAuditForm):
     class Meta:
@@ -581,7 +591,15 @@ class RiskForm(BaseAuditForm):
             if engagement_pk:
                 objective_queryset = objective_queryset.filter(engagement_id=engagement_pk)
             self.fields['objective'].queryset = objective_queryset
-        
+        # If creating from an objective, set it as the initial value and restrict queryset to its engagement
+        if objective_pk:
+            try:
+                from .models.objective import Objective
+                objective = Objective.objects.get(pk=objective_pk)
+                self.fields['objective'].initial = objective_pk
+                self.fields['objective'].queryset = self.fields['objective'].queryset.filter(engagement=objective.engagement)
+            except Exception:
+                pass
         self.helper.layout = Layout(
             Fieldset(
                 _('Risk Information'),
