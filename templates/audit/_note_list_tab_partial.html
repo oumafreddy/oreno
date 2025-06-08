@@ -40,7 +40,7 @@
       <tr>
         <td>
           <div class="note-content mb-1">{{ note.content|safe }}</div>
-          <small class="text-muted">Created: {{ note.created_at|date:'M d, Y' }} by {{ note.created_by.get_full_name }}</small>
+          <small class="text-muted">Created: {{ note.created_at|date:'M d, Y' }} by {% if note.created_by %}{{ note.created_by.get_full_name }}{% else %}-{% endif %}</small>
         </td>
         <td>
           {% if note.content_object %}

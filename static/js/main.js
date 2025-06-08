@@ -294,6 +294,32 @@ document.addEventListener('ajax:error', (event) => {
     showToast('Error', error.message || 'Action failed', 'danger');
 });
 
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    try {
+        const contentType = event.detail.xhr.getResponseHeader('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = JSON.parse(event.detail.xhr.responseText);
+            if (data.success) {
+                // Close modal and clean overlays
+                if (typeof window.cleanupModalOverlays === 'function') {
+                    setTimeout(window.cleanupModalOverlays, 350);
+                }
+                // Update risk list or other DOM elements
+                if (data.html_list && document.getElementById('risk-list-container')) {
+                    document.getElementById('risk-list-container').innerHTML = data.html_list;
+                }
+                if (data.html && document.getElementById('risk-list-container')) {
+                    document.getElementById('risk-list-container').innerHTML = data.html;
+                }
+                // Show toast if message present
+                if (data.message && typeof showToast === 'function') {
+                    showToast('Success', data.message, 'success');
+                }
+            }
+        }
+    } catch (e) {}
+});
+
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {

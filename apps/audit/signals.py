@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.db import transaction
 
 from core.mixins.state import DRAFT, PENDING, APPROVED, REJECTED
 from .models import AuditWorkplan, Engagement, Issue, Approval
@@ -131,26 +132,21 @@ def risk_post_save(sender, instance, created, **kwargs):
                 html_message = render_to_string('audit/emails/risk_submitted.html', context)
                 # Plain text fallback
                 plain_message = f"A new {risk_level} risk has been identified in engagement '{instance.objective.engagement.title}'"
-                send_mail(
+                transaction.on_commit(lambda: send_mail(
                     subject=f"New {risk_level} Risk Created: {instance.title}",
                     message=plain_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[engagement_owner.email],
                     fail_silently=True,
                     html_message=html_message
-                )
+                ))
     else:
         # For existing instances, handle status changes
         status_changed = hasattr(instance, '_old_status') and instance._old_status != instance.status
         if status_changed:
             # Log status change
             user = getattr(instance, 'last_modified_by', None)
-            log_change(
-                instance, 
-                'update', 
-                user=user, 
-                message=f"Risk status changed from '{instance._old_status}' to '{instance.status}'"
-            )
+            log_change(instance, 'update', user=user)
     # Notify assigned person if applicable
     if instance.assigned_to and instance.assigned_to.email:
         # Notify if risk is newly created or status has changed or newly assigned
@@ -179,14 +175,14 @@ def risk_post_save(sender, instance, created, **kwargs):
             html_message = render_to_string(template_name, context)
             # Plain text fallback
             plain_message = f"{'You have been assigned to' if created or not status_changed else 'Status change for'} the risk '{instance.title}'"
-            send_mail(
+            transaction.on_commit(lambda: send_mail(
                 subject=subject,
                 message=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[instance.assigned_to.email],
                 fail_silently=True,
                 html_message=html_message
-            )
+            ))
             # Create in-app notification
             Notification.objects.create(
                 user=instance.assigned_to,
@@ -237,12 +233,7 @@ def followup_action_post_save(sender, instance, created, **kwargs):
         if status_changed:
             # Log status change
             user = getattr(instance, 'last_modified_by', None)
-            log_change(
-                instance, 
-                'update', 
-                user=user, 
-                message=f"Follow-up action status changed from '{instance._old_status}' to '{instance.status}'"
-            )
+            log_change(instance, 'update', user=user)
             
             # If status changed to completed, notify the issue owner
             if instance.status == 'completed' and instance.issue and instance.issue.issue_owner:
@@ -375,12 +366,7 @@ def issue_retest_post_save(sender, instance, created, **kwargs):
         if result_changed:
             # Log result change
             user = getattr(instance, 'last_modified_by', None)
-            log_change(
-                instance, 
-                'update', 
-                user=user, 
-                message=f"Issue retest result changed from '{instance._old_result}' to '{instance.result}'"
-            )
+            log_change(instance, 'update', user=user)
             
             # Notify issue owner of test results
             if instance.issue and instance.issue.issue_owner and instance.issue.issue_owner.email:
@@ -489,12 +475,7 @@ def recommendation_post_save(sender, instance, created, **kwargs):
         if status_changed:
             # Log status change
             user = getattr(instance, 'last_modified_by', None)
-            log_change(
-                instance, 
-                'update', 
-                user=user, 
-                message=f"Recommendation implementation status changed from '{instance._old_implementation_status}' to '{instance.implementation_status}'"
-            )
+            log_change(instance, 'update', user=user)
             
             # Notify issue owner of status change
             if instance.issue and instance.issue.issue_owner and instance.issue.issue_owner.email:

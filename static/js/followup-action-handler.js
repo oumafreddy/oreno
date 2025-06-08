@@ -114,7 +114,9 @@ class FollowUpActionHandler {
                 document.getElementById('globalModal')
             );
             if (modal) modal.hide();
-
+            if (typeof window.cleanupModalOverlays === 'function') {
+                setTimeout(window.cleanupModalOverlays, 350);
+            }
             // Refresh the follow-up list
             const issueId = form.querySelector('[name="issue"]')?.value;
             if (issueId) {

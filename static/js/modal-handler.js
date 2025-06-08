@@ -14,6 +14,7 @@
         setupModalHandling();
         setupBootstrapModals();
         initializeDynamicContentObserver();
+        cleanupModalOverlays();
     });
 
     /**
@@ -282,18 +283,20 @@
      * Get or create a Bootstrap modal instance
      */
     function getOrCreateModalInstance(modalElement) {
-        // Check if instance already exists
         if (modalInstances.has(modalElement)) {
             return modalInstances.get(modalElement);
         }
-        
-        // Create new instance
         let instance;
         try {
             if (window.bootstrap && window.bootstrap.Modal) {
                 instance = new bootstrap.Modal(modalElement);
+                // Patch hide to cleanup overlays
+                const origHide = instance.hide.bind(instance);
+                instance.hide = function() {
+                    origHide();
+                    setTimeout(cleanupModalOverlays, 350); // after animation
+                };
             } else {
-                // Fallback for when Bootstrap JS isn't loaded
                 instance = {
                     show: function() {
                         modalElement.classList.add('show');
@@ -302,16 +305,14 @@
                     hide: function() {
                         modalElement.classList.remove('show');
                         modalElement.style.display = 'none';
+                        cleanupModalOverlays();
                     }
                 };
             }
-            
-            // Store instance
             modalInstances.set(modalElement, instance);
             return instance;
         } catch (error) {
             console.error('Error creating modal instance:', error);
-            // Return a simple fallback implementation
             return {
                 show: function() {
                     modalElement.classList.add('show');
@@ -320,9 +321,17 @@
                 hide: function() {
                     modalElement.classList.remove('show');
                     modalElement.style.display = 'none';
+                    cleanupModalOverlays();
                 }
             };
         }
+    }
+    
+    // Utility to clean up modal overlays and body class
+    function cleanupModalOverlays() {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style = '';
     }
     
     // Public API

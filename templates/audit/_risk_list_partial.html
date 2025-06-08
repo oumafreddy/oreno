@@ -24,7 +24,7 @@
                             <td>{% if risk.objective %}{{ risk.objective.title }}{% else %}-{% endif %}</td>
                             <td><span class="badge bg-{{ risk.get_risk_level_class }}">{{ risk.get_risk_level_display }}</span></td>
                             <td>{{ risk.get_status_display }}</td>
-                            <td>{{ risk.assigned_to.get_full_name|default:risk.assigned_to.username }}</td>
+                            <td>{% if risk.assigned_to %}{{ risk.assigned_to.get_full_name|default:risk.assigned_to.username }}{% else %}-{% endif %}</td>
                             <td>
                                 <div class="d-flex flex-row gap-2 align-items-center">
                                     <a href="{% url 'audit:risk-detail' pk=risk.pk %}" class="btn btn-outline-primary btn-sm" title="View">

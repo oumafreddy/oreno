@@ -296,7 +296,6 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
             form.instance.organization = self.request.organization
             form.instance.created_by = self.request.user
             form.instance.updated_by = self.request.user
-            
             engagement_pk = self.kwargs.get('engagement_pk')
             if engagement_pk and not form.instance.objective:
                 try:
@@ -306,10 +305,26 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
                     logger.warning(f"Engagement with pk {engagement_pk} not found for organization {self.request.organization}")
                 except Exception as e:
                     logger.error(f"Error setting engagement context: {str(e)}", exc_info=True)
-            
             response = super().form_valid(form)
-            
-            if is_htmx_request(self.request) or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # --- HTMX: Return HTML partial, not JSON ---
+            if is_htmx_request(self.request):
+                if self.object.objective:
+                    risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
+                    html_list = render_to_string('audit/_risk_list_partial.html', {
+                        'risks': risks,
+                        'objective': self.object.objective,
+                    }, request=self.request)
+                    return HttpResponse(html_list)
+                else:
+                    engagement_pk = self.kwargs.get('engagement_pk')
+                    if engagement_pk:
+                        redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
+                    else:
+                        redirect_url = self.get_success_url()
+                    # Return a simple redirect script for HTMX
+                    return HttpResponse(f'<script>window.location.href="{redirect_url}";</script>')
+            # --- AJAX: Return JSON ---
+            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 if self.object.objective:
                     risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
                     html_list = render_to_string('audit/_risk_list_partial.html', {
@@ -420,20 +435,27 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
         # Add organization to form kwargs
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        # Filter objectives by the engagement of the current risk
+        risk = self.get_object()
+        if risk and risk.objective and risk.objective.engagement_id:
+            kwargs['engagement_pk'] = risk.objective.engagement_id
         return kwargs
     
     def form_valid(self, form):
-        # Update the updated_by field
         form.instance.updated_by = self.request.user
-        
-        # Save the form
         response = super().form_valid(form)
-        
-        # Handle HTMX response
         if is_htmx_request(self.request):
-            # Return JSON response for HTMX
             if self.object.objective:
-                # If accessed from objective, refresh the risk list section
+                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
+                html = render_to_string('audit/_risk_list_partial.html', {
+                    'risks': risks,
+                    'objective': self.object.objective,
+                }, request=self.request)
+                return HttpResponse(html)
+            else:
+                return HttpResponse(f'<script>window.location.href="{self.get_success_url()}";</script>')
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            if self.object.objective:
                 risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
                 html = render_to_string('audit/_risk_list_partial.html', {
                     'risks': risks,
@@ -445,13 +467,11 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
                     'message': self.success_message % {'title': self.object.title}
                 })
             else:
-                # Otherwise redirect
                 return JsonResponse({
                     'success': True,
                     'redirect': self.get_success_url(),
                     'message': self.success_message % {'title': self.object.title}
                 })
-            
         return response
     
     def form_invalid(self, form):
@@ -729,19 +749,14 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
         
         if is_htmx or is_ajax:
             from django.http import JsonResponse
-            
-            # Get the URL for the engagement list page
             from django.urls import reverse
-            list_url = reverse('audit:engagement-list')
-            
-            # Provide JSON response for modal handler
-            # Include form_is_valid:true and html_redirect to trigger client-side redirect
+            detail_url = reverse('audit:engagement-detail', kwargs={'pk': self.object.pk})
             return JsonResponse({
                 'success': True,
                 'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
                 'pk': self.object.pk,
-                'redirect': list_url,  # Always redirect to the engagement list
-                'html_redirect': list_url,  # For compatibility with existing JS
+                'redirect': detail_url,  # Redirect to the engagement detail view
+                'html_redirect': detail_url,  # For compatibility with existing JS
                 'message': self.success_message % form.cleaned_data,
             })
         
@@ -877,7 +892,7 @@ def submit_workplan_for_approval(request, pk):
         from .utils import send_workplan_approval_notification
     send_workplan_approval_notification(workplan, 'submitted', request)
     
-    messages.success(request, _('Workplan has been submitted for approval.'))
+    messages.success(request, _('Workplan has been submitted for approval.'), extra_tags='audit')
     return redirect('audit:workplan-detail', pk=workplan.pk)
 
 @login_required
@@ -915,7 +930,7 @@ def approve_workplan(request, pk):
         from .utils import send_workplan_approval_notification
     send_workplan_approval_notification(workplan, 'approved', request)
     
-    messages.success(request, _('Workplan has been approved.'))
+    messages.success(request, _('Workplan has been approved.'), extra_tags='audit')
     return redirect('audit:workplan-detail', pk=workplan.pk)
 
 @login_required
@@ -953,7 +968,7 @@ def reject_workplan(request, pk):
         from .utils import send_workplan_approval_notification
     send_workplan_approval_notification(workplan, 'rejected', request)
     
-    messages.success(request, _('Workplan has been rejected.'))
+    messages.success(request, _('Workplan has been rejected.'), extra_tags='audit')
     return redirect('audit:workplan-detail', pk=workplan.pk)
 
 @login_required
@@ -986,7 +1001,7 @@ def submit_engagement_for_approval(request, pk):
         from .utils import send_engagement_approval_notification
     send_engagement_approval_notification(engagement, 'submitted', request)
     
-    messages.success(request, _('Engagement has been submitted for approval.'))
+    messages.success(request, _('Engagement has been submitted for approval.'), extra_tags='audit')
     return redirect('audit:engagement-detail', pk=engagement.pk)
 
 @login_required
@@ -1024,7 +1039,7 @@ def approve_engagement(request, pk):
         from .utils import send_engagement_approval_notification
     send_engagement_approval_notification(engagement, 'approved', request)
     
-    messages.success(request, _('Engagement has been approved.'))
+    messages.success(request, _('Engagement has been approved.'), extra_tags='audit')
     return redirect('audit:engagement-detail', pk=engagement.pk)
 
 @login_required
@@ -1062,7 +1077,7 @@ def reject_engagement(request, pk):
         from .utils import send_engagement_approval_notification
     send_engagement_approval_notification(engagement, 'rejected', request)
     
-    messages.success(request, _('Engagement has been rejected.'))
+    messages.success(request, _('Engagement has been rejected.'), extra_tags='audit')
     return redirect('audit:engagement-detail', pk=engagement.pk)
 
 # ─── ISSUE VIEWS ─────────────────────────────────────────────────────────────

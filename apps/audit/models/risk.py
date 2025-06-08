@@ -261,20 +261,17 @@ class Risk(SoftDeletionModel):
         # Auto-calculate inherent risk score if not explicitly set
         if not self.pk or not self.inherent_risk_score:
             self.inherent_risk_score = self.likelihood * self.impact
-            
         # Set residual risk score based on control effectiveness
-        # Formula: Inherent Risk / Control Effectiveness (with minimum of 1)
         calculated_residual = max(1, round(self.inherent_risk_score / self.control_effectiveness))
         if not self.residual_risk_score or self.residual_risk_score > self.inherent_risk_score:
             self.residual_risk_score = min(calculated_residual, self.inherent_risk_score)
-        
-        # Update status based on risk scores and tolerance
-        if self.status == 'identified' and self.inherent_risk_score:
-            self.status = 'assessed'
-            
-        if self.residual_risk_score <= self.risk_tolerance and self.status == 'assessed':
-            self.status = 'mitigated'
-            
+        # Only auto-advance status if this is a new risk or status is not set by user
+        if not self.pk:
+            if self.status == 'identified' and self.inherent_risk_score:
+                self.status = 'assessed'
+            if self.residual_risk_score <= self.risk_tolerance and self.status == 'assessed':
+                self.status = 'mitigated'
+        # If updating, do not override status if set by user
         with reversion.create_revision():
             if hasattr(self, 'last_modified_by') and self.last_modified_by:
                 reversion.set_user(self.last_modified_by)

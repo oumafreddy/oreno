@@ -77,7 +77,7 @@
                             <strong>{% trans "Assigned To" %}:</strong>
                         </div>
                         <div class="col-md-9">
-                            {{ risk.assigned_to.get_full_name|default:risk.assigned_to.username }}
+                            {% if risk.assigned_to %}{{ risk.assigned_to.get_full_name|default:risk.assigned_to.username }}{% else %}-{% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -85,7 +85,7 @@
                             <strong>{% trans "Created" %}:</strong>
                         </div>
                         <div class="col-md-9">
-                            {{ risk.created }} {% trans "by" %} {{ risk.created_by.get_full_name|default:risk.created_by.username }}
+                            {{ risk.created }} {% trans "by" %} {% if risk.created_by %}{{ risk.created_by.get_full_name|default:risk.created_by.username }}{% else %}-{% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -93,7 +93,7 @@
                             <strong>{% trans "Updated" %}:</strong>
                         </div>
                         <div class="col-md-9">
-                            {{ risk.updated }} {% trans "by" %} {{ risk.updated_by.get_full_name|default:risk.updated_by.username }}
+                            {{ risk.updated }} {% trans "by" %} {% if risk.updated_by %}{{ risk.updated_by.get_full_name|default:risk.updated_by.username }}{% else %}-{% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">

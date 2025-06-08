@@ -220,6 +220,21 @@
         </div>
     </nav>
 
+    {# Robust message filtering by context #}
+    {% if messages %}
+      <div id="messages">
+        {% for message in messages %}
+          {# Show if tag matches context, or if no context is set, or if on a dashboard #}
+          {% if not message_context or message_context in message.tags or message_context == 'all' %}
+            <div class="alert alert-{{ message.level_tag }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">

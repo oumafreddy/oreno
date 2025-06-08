@@ -47,6 +47,9 @@
                             const bsModal = bootstrap.Modal.getInstance(modal);
                             if (bsModal) {
                                 bsModal.hide();
+                                if (typeof window.cleanupModalOverlays === 'function') {
+                                    setTimeout(window.cleanupModalOverlays, 350);
+                                }
                             }
                         }
                         
