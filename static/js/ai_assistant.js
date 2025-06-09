@@ -3,8 +3,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiButton = document.getElementById('ai-assistant-button');
     const aiPopup = document.getElementById('ai-assistant-popup');
     const form = document.getElementById('ai-assistant-form');
-    const input = document.getElementById('ai-assistant-input');
-    const response = document.getElementById('ai-assistant-response');
+    const questionInput = document.getElementById('ai-question');
+    const answerDiv = document.getElementById('ai-answer');
+    const answerText = document.getElementById('ai-answer-text');
+    const loadingDiv = document.getElementById('ai-loading');
+    const askBtn = document.getElementById('ai-ask-btn');
 
     function getCookie(name) {
         let cookieValue = null;
@@ -28,27 +31,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Only attach form logic if the form exists (i.e., user is authenticated)
-    if (form && input && response) {
+    if (form && questionInput && answerDiv && answerText && loadingDiv && askBtn) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            response.textContent = 'Thinking...';
-            fetch('/services/ai/ask/', {
+            const question = questionInput.value.trim();
+            if (!question) return;
+            answerDiv.style.display = 'none';
+            answerText.textContent = '';
+            loadingDiv.style.display = 'block';
+            askBtn.disabled = true;
+
+            fetch('/api/ai/ask/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: JSON.stringify({ question: input.value })
+                body: JSON.stringify({ question })
             })
-            .then(res => {
-                if (!res.ok) throw new Error('Network response was not ok');
-                return res.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                response.textContent = data.response;
+                loadingDiv.style.display = 'none';
+                askBtn.disabled = false;
+                if (data.answer) {
+                    answerText.textContent = data.answer;
+                    answerDiv.style.display = 'block';
+                } else if (data.error) {
+                    answerText.textContent = data.error;
+                    answerDiv.style.display = 'block';
+                } else {
+                    answerText.textContent = 'Sorry, no answer was returned.';
+                    answerDiv.style.display = 'block';
+                }
             })
             .catch(() => {
-                response.textContent = 'Sorry, something went wrong.';
+                loadingDiv.style.display = 'none';
+                askBtn.disabled = false;
+                answerText.textContent = 'Sorry, there was a problem contacting the AI assistant.';
+                answerDiv.style.display = 'block';
             });
         });
     }

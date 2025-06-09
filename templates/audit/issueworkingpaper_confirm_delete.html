@@ -3,10 +3,7 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" id="workingPaperDeleteForm"
-        hx-post="{% url 'audit:issueworkingpaper-delete' object.pk %}"
-        hx-target="#globalModal .modal-body"
-        hx-swap="innerHTML">
+  <form method="post" hx-post="{% url 'audit:issueworkingpaper-modal-delete' issue_pk=object.issue.pk pk=object.pk %}" hx-target="#globalModal .modal-content" hx-swap="innerHTML">
     {% csrf_token %}
     <div class="alert alert-danger">
       <i class="bi bi-exclamation-triangle me-2"></i>
@@ -31,55 +28,4 @@
     </div>
   </form>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('workingPaperDeleteForm');
-  if (!form) return;
-
-  // Handle form submission
-  form.addEventListener('htmx:beforeRequest', function() {
-    const deleteBtn = document.getElementById('deleteBtn');
-    const spinner = document.getElementById('delete-spinner');
-    const deleteText = document.getElementById('deleteText');
-    
-    if (deleteBtn && spinner && deleteText) {
-      deleteBtn.disabled = true;
-      spinner.classList.remove('d-none');
-      deleteText.textContent = 'Deleting...';
-    }
-  });
-
-  // Handle response after form submission
-  form.addEventListener('htmx:afterRequest', function(event) {
-    const deleteBtn = document.getElementById('deleteBtn');
-    const spinner = document.getElementById('delete-spinner');
-    const deleteText = document.getElementById('deleteText');
-    
-    if (deleteBtn && spinner && deleteText) {
-      deleteBtn.disabled = false;
-      spinner.classList.add('d-none');
-      deleteText.textContent = 'Delete';
-    }
-
-    // Handle successful deletion
-    if (event.detail.successful) {
-      try {
-        const data = event.detail.xhr.responseJSON;
-        if (data && data.form_is_valid) {
-          // Close the modal
-          const modal = bootstrap.Modal.getInstance(document.getElementById('mainModal'));
-          if (modal) modal.hide();
-          
-          // Refresh the working papers list
-          if (data.html_list) {
-            const container = document.getElementById('workingpapers-list-container');
-            if (container) container.innerHTML = data.html_list;
-          }
-        }
-      } catch (e) {
-        console.error('Error processing response:', e);
-      }
-    }
-  });
-});
-</script>
+<script src="{% static 'js/issueworkingpaper_confirm_delete.js' %}" nonce="{{ request.csp_nonce }}"></script>

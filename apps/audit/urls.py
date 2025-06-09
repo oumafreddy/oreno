@@ -171,13 +171,13 @@ urlpatterns = [
     path('followupactions/<int:pk>/', views.FollowUpActionDetailView.as_view(), name='followupaction-detail'),
     path('issues/<int:issue_pk>/followups/modal/add/', views.FollowUpActionModalCreateView.as_view(), name='followupaction-modal-add'),
     path('issues/<int:issue_pk>/followups/modal/<int:pk>/edit/', views.FollowUpActionModalUpdateView.as_view(), name='followupaction-modal-edit'),
+    path('followupactions/<int:pk>/delete/', views.FollowUpActionDeleteView.as_view(), name='followupaction-delete'),
+    path('followupactions/<int:pk>/update/', views.FollowUpActionUpdateView.as_view(), name='followupaction-update'),
     # IssueRetest URLs
     path('issues/<int:issue_pk>/retests/', views.IssueRetestListView.as_view(), name='issueretest-list'),
-    path('issues/<int:issue_pk>/retests/add/', views.IssueRetestCreateView.as_view(), name='issueretest-add'),
-    path('issueretests/<int:pk>/edit/', views.IssueRetestUpdateView.as_view(), name='issueretest-edit'),
-    path('issueretests/<int:pk>/', views.IssueRetestDetailView.as_view(), name='issueretest-detail'),
     path('issues/<int:issue_pk>/retests/modal/add/', views.IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
-    path('issues/<int:issue_pk>/retests/modal/<int:pk>/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
+    path('issues/<int:issue_pk>/retests/<int:pk>/modal/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
+    path('issues/<int:issue_pk>/retests/<int:pk>/modal/delete/', views.IssueRetestDeleteView.as_view(), name='issueretest-modal-delete'),
     # Note (generic modal)
     path('notes/modal/add/<int:content_type_id>/<int:object_id>/', views.NoteCreateView.as_view(), name='note-modal-add'),
     path('notes/modal/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-modal-edit'),
@@ -201,17 +201,18 @@ urlpatterns = [
     path('htmx/followupactions/', views.htmx_followupaction_list, name='htmx-followupaction-list'),
     path('htmx/issueretests/', views.htmx_issueretest_list, name='htmx-issueretest-list'),
     path('htmx/notes/', views.htmx_note_list, name='htmx-note-list'),
-    # Issue Working Paper URLs
-    path('issues/<int:issue_pk>/working-papers/', IssueWorkingPaperListView.as_view(), name='issueworkingpaper-list'),
-    path('issues/<int:issue_pk>/working-papers/add/', IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-add'),
-    path('working-papers/<int:pk>/edit/', IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-edit'),
-    path('working-papers/<int:pk>/delete/', IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-delete'),
+    # Working Paper URLs
+    path('issues/<int:issue_pk>/working-papers/', views.IssueWorkingPaperListView.as_view(), name='issueworkingpaper-list'),
+    path('issues/<int:issue_pk>/working-papers/modal/add/', IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-modal-add'),
+    path('issues/<int:issue_pk>/working-papers/<int:pk>/edit/', views.IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-modal-edit'),
+    path('issues/<int:issue_pk>/working-papers/<int:pk>/delete/', views.IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-modal-delete'),
     path('working-papers/<int:pk>/', IssueWorkingPaperDetailView.as_view(), name='issueworkingpaper-detail'),
     path('api/engagement-status-data/', views.api_engagement_status_data, name='api_engagement_status_data'),
     path('api/issue-risk-data/', views.api_issue_risk_data, name='api_issue_risk_data'),
     path('api/approval-status-data/', views.api_approval_status_data, name='api_approval_status_data'),
     path('api/engagement-data/', views.api_engagement_data, name='api_engagement_data'),
     path('api/issue-data/', views.api_issue_data, name='api_issue_data'),
+    path('issues/<int:issue_pk>/retests/modal/add/', IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

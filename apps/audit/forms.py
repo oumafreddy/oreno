@@ -38,10 +38,16 @@ class BaseAuditForm(forms.ModelForm):
         for key in context_keys:
             kwargs.pop(key, None)
         self.organization = kwargs.pop('organization', None)
+        self.issue_pk = kwargs.pop('issue_pk', None)
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
+        
+        # Hide issue field if issue_pk is provided
+        if self.issue_pk and 'issue' in self.fields:
+            self.fields['issue'].widget = forms.HiddenInput()
+            self.fields['issue'].initial = self.issue_pk
         
         # Apply organization filtering to all foreign key fields
         if self.organization:
@@ -50,6 +56,14 @@ class BaseAuditForm(forms.ModelForm):
                 if hasattr(field, 'queryset') and field.queryset is not None:
                     model = field.queryset.model
                     if hasattr(model, 'organization'):
+                        field.queryset = field.queryset.filter(organization=self.organization)
+        # Apply organization filtering to all user-related foreign key fields
+        if self.organization:
+            for field_name, field in self.fields.items():
+                # Filter FK fields by organization for user fields
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if model.__name__ in ['CustomUser', 'User']:
                         field.queryset = field.queryset.filter(organization=self.organization)
     
     def clean(self):
@@ -71,6 +85,16 @@ class BaseAuditForm(forms.ModelForm):
         if pr and not cleaned_data.get('procedure'):
             cleaned_data['procedure'] = pr.procedure
             self.instance.procedure = pr.procedure
+            
+        # Set issue if issue_pk was provided
+        if self.issue_pk and 'issue' in cleaned_data:
+            try:
+                from .models import Issue
+                issue = Issue.objects.get(pk=self.issue_pk, organization=self.organization)
+                cleaned_data['issue'] = issue
+                self.instance.issue = issue
+            except Issue.DoesNotExist:
+                self.add_error('issue', _('Invalid issue selected'))
         
         return cleaned_data
 
@@ -610,6 +634,11 @@ class ProcedureForm(BaseAuditForm):
             elif engagement_pk:
                 risk_queryset = risk_queryset.filter(objective__engagement_id=engagement_pk)
             self.fields['risk'].queryset = risk_queryset
+            # Filter tested_by and reviewed_by fields by organization
+            if 'tested_by' in self.fields:
+                self.fields['tested_by'].queryset = CustomUser.objects.filter(organization=self.organization)
+            if 'reviewed_by' in self.fields:
+                self.fields['reviewed_by'].queryset = CustomUser.objects.filter(organization=self.organization)
         # If creating from a risk, set it as the initial value and restrict queryset to just that risk
         if risk_pk:
             try:
@@ -825,11 +854,15 @@ class IssueRetestForm(BaseAuditForm):
     class Meta:
         model = IssueRetest
         fields = [
-            'issue', 'retest_date', 'retested_by', 'result',
-            'test_evidence', 'notes'
+            'issue', 'scheduled_date', 'retest_date', 'retested_by', 'result',
+            'test_approach', 'test_evidence', 'notes', 'verification_status',
+            'reviewer', 'review_date'
         ]
         widgets = {
+            'scheduled_date': forms.DateInput(attrs={'type': 'date'}),
             'retest_date': forms.DateInput(attrs={'type': 'date'}),
+            'review_date': forms.DateInput(attrs={'type': 'date'}),
+            'test_approach': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'test_evidence': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
         }
@@ -841,6 +874,9 @@ class IssueRetestForm(BaseAuditForm):
         # Filter users by organization
         if self.organization:
             self.fields['retested_by'].queryset = CustomUser.objects.filter(
+                organization=self.organization
+            )
+            self.fields['reviewer'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
         
@@ -858,15 +894,27 @@ class IssueRetestForm(BaseAuditForm):
             Fieldset(
                 _('Retest Information'),
                 Row(
+                    Column('scheduled_date', css_class='col-md-6'),
                     Column('retest_date', css_class='col-md-6'),
-                    Column('retested_by', css_class='col-md-6'),
                 ),
-                'result',
+                Row(
+                    Column('retested_by', css_class='col-md-6'),
+                    Column('result', css_class='col-md-6'),
+                ),
+                'verification_status',
             ),
             Fieldset(
                 _('Testing Details'),
+                'test_approach',
                 'test_evidence',
                 'notes',
+            ),
+            Fieldset(
+                _('Review Information'),
+                Row(
+                    Column('reviewer', css_class='col-md-6'),
+                    Column('review_date', css_class='col-md-6'),
+                ),
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
@@ -885,7 +933,26 @@ class IssueRetestForm(BaseAuditForm):
         elif result == 'fail':
             if not cleaned_data.get('notes'):
                 self.add_error('notes', _('Notes are required for failed retests'))
-                
+        
+        # Validate dates
+        scheduled_date = cleaned_data.get('scheduled_date')
+        retest_date = cleaned_data.get('retest_date')
+        review_date = cleaned_data.get('review_date')
+        
+        if retest_date and scheduled_date and retest_date < scheduled_date:
+            self.add_error('retest_date', _('Retest date cannot be before scheduled date'))
+            
+        if review_date and retest_date and review_date < retest_date:
+            self.add_error('review_date', _('Review date cannot be before retest date'))
+            
+        # Validate verification status
+        verification_status = cleaned_data.get('verification_status')
+        if verification_status == 'completed' and not retest_date:
+            self.add_error('retest_date', _('Retest date is required for completed retests'))
+            
+        if verification_status == 'completed' and not result:
+            self.add_error('result', _('Result is required for completed retests'))
+            
         return cleaned_data
 
 # ─── NOTE FORM ───────────────────────────────────────────────────────────────────
@@ -1017,82 +1084,69 @@ class RecommendationForm(BaseAuditForm):
             'effectiveness_rating'
         ]
         widgets = {
-            'target_date': forms.DateInput(attrs={'type': 'date'}),
-            'revised_date': forms.DateInput(attrs={'type': 'date'}),
-            'implementation_date': forms.DateInput(attrs={'type': 'date'}),
-            'verification_date': forms.DateInput(attrs={'type': 'date'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'cost_benefit_analysis': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'management_action_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'effectiveness_evaluation': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'target_date': forms.DateInput(attrs={'type': 'date'}),
+            'revised_date': forms.DateInput(attrs={'type': 'date'}),
+            'implementation_date': forms.DateInput(attrs={'type': 'date'}),
+            'verification_date': forms.DateInput(attrs={'type': 'date'}),
         }
     
     def __init__(self, *args, **kwargs):
-        issue_pk = kwargs.pop('issue_pk', None)
         super().__init__(*args, **kwargs)
-        
-        # Filter users by organization
         if self.organization:
-            self.fields['assigned_to'].queryset = CustomUser.objects.filter(
-                organization=self.organization
-            )
-            self.fields['verified_by'].queryset = CustomUser.objects.filter(
-                organization=self.organization
-            )
-        
-        # Handle issue linking
-        if issue_pk:
-            try:
-                issue = Issue.objects.get(pk=issue_pk)
-                self.fields['issue'].initial = issue.pk
-                self.fields['issue'].widget = forms.HiddenInput()
-            except Issue.DoesNotExist:
-                pass
-        
-        # Set up form layout
+            self.fields['assigned_to'].queryset = CustomUser.objects.filter(organization=self.organization)
+            self.fields['verified_by'].queryset = CustomUser.objects.filter(organization=self.organization)
+            if 'issue' in self.fields:
+                self.fields['issue'].queryset = Issue.objects.filter(organization=self.organization)
         self.helper.layout = Layout(
             Fieldset(
                 _('Basic Information'),
                 Row(
-                    Column(FloatingField('title'), css_class='col-md-12'),
+                    Column('title', css_class='col-md-12'),
                 ),
-                'description',
                 Row(
+                    Column('description', css_class='col-md-12'),
+                ),
+                Row(
+                    Column('issue', css_class='col-md-6'),
                     Column('priority', css_class='col-md-6'),
-                    Column('order', css_class='col-md-6'),
                 ),
             ),
             Fieldset(
                 _('Implementation Details'),
                 Row(
                     Column('assigned_to', css_class='col-md-6'),
-                    Column('implementation_status', css_class='col-md-6'),
+                    Column('estimated_hours', css_class='col-md-6'),
+                ),
+                Row(
+                    Column('estimated_cost', css_class='col-md-6'),
+                    Column('order', css_class='col-md-6'),
+                ),
+                Row(
+                    Column('implementation_status', css_class='col-md-12'),
                 ),
                 Row(
                     Column('target_date', css_class='col-md-6'),
                     Column('revised_date', css_class='col-md-6'),
                 ),
                 Row(
-                    Column('estimated_hours', css_class='col-md-6'),
-                    Column('estimated_cost', css_class='col-md-6'),
-                ),
-                'management_action_plan',
-            ),
-            Fieldset(
-                _('Cost-Benefit Analysis'),
-                'cost_benefit_analysis',
-            ),
-            Fieldset(
-                _('Verification'),
-                Row(
+                    Column('implementation_date', css_class='col-md-6'),
                     Column('verification_date', css_class='col-md-6'),
-                    Column('verified_by', css_class='col-md-6'),
                 ),
+                Row(
+                    Column('verified_by', css_class='col-md-12'),
+                ),
+            ),
+            Fieldset(
+                _('Additional Information'),
+                'cost_benefit_analysis',
+                'management_action_plan',
                 'effectiveness_evaluation',
                 'effectiveness_rating',
-            ),
-            Fieldset(
-                _('Extension Details'),
                 'extension_reason',
             ),
             ButtonHolder(
@@ -1100,43 +1154,9 @@ class RecommendationForm(BaseAuditForm):
                 css_class='mt-3'
             )
         )
-
+    
     def clean(self):
         cleaned_data = super().clean()
-        
-        # Validate dates
-        target_date = cleaned_data.get('target_date')
-        revised_date = cleaned_data.get('revised_date')
-        implementation_date = cleaned_data.get('implementation_date')
-        verification_date = cleaned_data.get('verification_date')
-        
-        if revised_date and target_date and revised_date < target_date:
-            self.add_error('revised_date', _('Revised date cannot be before original target date'))
-            
-        if implementation_date and target_date and implementation_date < target_date:
-            self.add_error('implementation_date', _('Implementation date cannot be before target date'))
-            
-        if verification_date and implementation_date and verification_date < implementation_date:
-            self.add_error('verification_date', _('Verification date cannot be before implementation date'))
-            
-        # Validate required fields based on status
-        implementation_status = cleaned_data.get('implementation_status')
-        if implementation_status == 'in_progress':
-            if not cleaned_data.get('management_action_plan'):
-                self.add_error('management_action_plan', _('Management action plan is required for in-progress recommendations'))
-                
-        if implementation_status == 'implemented':
-            if not cleaned_data.get('implementation_date'):
-                self.add_error('implementation_date', _('Implementation date is required for implemented recommendations'))
-                
-        if implementation_status == 'verified':
-            if not cleaned_data.get('verification_date'):
-                self.add_error('verification_date', _('Verification date is required for verified recommendations'))
-            if not cleaned_data.get('verified_by'):
-                self.add_error('verified_by', _('Verifier is required for verified recommendations'))
-            if not cleaned_data.get('effectiveness_evaluation'):
-                self.add_error('effectiveness_evaluation', _('Effectiveness evaluation is required for verified recommendations'))
-                
         return cleaned_data
 
 class IssueWorkingPaperForm(BaseAuditForm):

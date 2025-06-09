@@ -129,7 +129,10 @@ function initErrorHandling() {
         console.error('Global error:', { message, source, lineno, colno, error });
         const now = Date.now();
         const errorMsg = `${message} @ ${source}:${lineno}`;
-        if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
+        // Suppress toasts for CSP errors and known script redeclaration errors
+        const isCSP = message && message.toString().includes('Content Security Policy');
+        const isScriptRedeclare = message && message.toString().includes('redeclaration of let');
+        if (!isCSP && !isScriptRedeclare && (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS))) {
             showToast('Application Error', 'An unexpected error occurred', 'danger');
             lastErrorMsg = errorMsg;
             lastErrorTime = now;
@@ -310,6 +313,13 @@ document.body.addEventListener('htmx:afterRequest', function(event) {
                 }
                 if (data.html && document.getElementById('risk-list-container')) {
                     document.getElementById('risk-list-container').innerHTML = data.html;
+                }
+                // Update procedure list if present
+                if (data.html_list && document.getElementById('procedure-list-container')) {
+                    document.getElementById('procedure-list-container').innerHTML = data.html_list;
+                }
+                if (data.html && document.getElementById('procedure-list-container')) {
+                    document.getElementById('procedure-list-container').innerHTML = data.html;
                 }
                 // Show toast if message present
                 if (data.message && typeof showToast === 'function') {

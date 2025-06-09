@@ -151,15 +151,8 @@
     <div class="tab-pane fade" id="recommendations" role="tabpanel">
       {% include 'audit/_recommendation_list_partial.html' with recommendations=issue.recommendations.all engagement=engagement issue=issue %}
     </div>
-    <div class="tab-pane fade" id="followup" role="tabpanel" hx-get="{% url 'audit:htmx-followupaction-list' %}?issue_id={{ issue.id }}" hx-trigger="load, refreshFollowupList from:body" hx-target="#followup-list-container" hx-swap="innerHTML">
-      <div id="followup-list-container">
-        <div class="text-center p-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2">Loading follow-up actions...</p>
-        </div>
-      </div>
+    <div class="tab-pane fade" id="followup" role="tabpanel">
+      {% include 'audit/_followupaction_list_partial.html' with followups=issue.followup_actions.all issue=issue %}
     </div>
     <div class="tab-pane fade" id="retest" role="tabpanel">
       {% include 'audit/_issueretest_list_partial.html' with retests=issue.issueretests.all issue=issue %}

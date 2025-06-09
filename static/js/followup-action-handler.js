@@ -3,206 +3,139 @@
  * Handles form submission, validation, and modal interactions for follow-up actions
  */
 
-class FollowUpActionHandler {
-    constructor() {
-        this.initEventListeners();
-        this.initDatePickers();
-    }
-
-    initEventListeners() {
-        // Handle form submission
-        document.addEventListener('submit', (e) => {
-            const form = e.target.closest('#followupactionForm');
-            if (!form) return;
-
-            this.handleFormSubmit(form, e);
-        });
-
-        // Handle modal close
-        const modal = document.getElementById('followupActionModal') || document.getElementById('globalModal');
-        if (modal) {
-            modal.addEventListener('hidden.bs.modal', () => this.handleModalClose(modal));
+(function() {
+    if (window.FollowUpActionHandler) return;
+    class FollowUpActionHandler {
+        constructor() {
+            this.initializeEventListeners();
         }
 
-        // Handle HTMX after request
-        document.body.addEventListener('htmx:afterRequest', (evt) => this.handleHtmxAfterRequest(evt));
-    }
+        initializeEventListeners() {
+            // Handle form submission
+            document.addEventListener('submit', (e) => {
+                const form = e.target.closest('.followup-action-form');
+                if (form) {
+                    e.preventDefault();
+                    this.handleFormSubmit(form);
+                }
+            });
 
-    handleFormSubmit(form, event) {
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-            const spinner = submitButton.querySelector('.spinner-border') || document.createElement('span');
-            const btnText = submitButton.querySelector('.btn-text');
-            
-            if (!spinner.classList.contains('spinner-border')) {
-                spinner.className = 'spinner-border spinner-border-sm me-1';
-                spinner.setAttribute('role', 'status');
-                spinner.setAttribute('aria-hidden', 'true');
-                submitButton.insertBefore(spinner, btnText);
-            }
-            spinner.classList.remove('d-none');
-            
-            if (btnText) {
-                const originalText = btnText.textContent.trim();
-                btnText.textContent = 'Saving...';
-                btnText.dataset.originalText = originalText;
-            }
+            // Handle modal events
+            document.addEventListener('show.bs.modal', (e) => {
+                if (e.target.id === 'globalModal') {
+                    this.handleModalShow(e.target);
+                }
+            });
+
+            document.addEventListener('hidden.bs.modal', (e) => {
+                if (e.target.id === 'globalModal') {
+                    this.handleModalHidden(e.target);
+                }
+            });
         }
-    }
 
-    handleModalClose(modal) {
-        // Skip if this is an HTMX request
-        if (window.htmx && window.htmx.find) return;
-        
-        const form = modal.querySelector('form');
-        if (form) {
-            // Only reset if not submitted
-            if (form.dataset.submitted !== 'true') {
-                form.reset();
-                // Clear validation errors
-                form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            } else {
-                // Reset flag for next submission
-                form.dataset.submitted = 'false';
+        handleFormSubmit(form) {
+            // Prevent double submission
+            if (form.dataset.submitted === 'true') {
+                return;
             }
-            
-            // Reset submit button
+
+            // Show loading state
             const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = false;
-                const btnText = submitButton.querySelector('.btn-text');
-                if (btnText && btnText.dataset.originalText) {
-                    btnText.textContent = btnText.dataset.originalText;
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
+            // Submit form via HTMX
+            htmx.trigger(form, 'submit');
+        }
+
+        handleModalShow(modal) {
+            // Initialize any form-specific behaviors
+            const form = modal.querySelector('.followup-action-form');
+            if (form) {
+                // Reset form state
+                form.dataset.submitted = 'false';
+                
+                // Initialize any form plugins
+                if (typeof CKEDITOR !== 'undefined') {
+                    CKEDITOR.replaceAll('django_ckeditor_5');
                 }
             }
         }
-        
-        // Clear dynamic modal content after animation completes
-        if (modal.id === 'globalModal') {
+
+        handleModalHidden(modal) {
+            // Clean up any form-specific behaviors
+            const form = modal.querySelector('.followup-action-form');
+            if (form) {
+                // Reset form state
+                form.dataset.submitted = 'false';
+                
+                // Clean up any form plugins
+                if (typeof CKEDITOR !== 'undefined') {
+                    CKEDITOR.instances.forEach(instance => {
+                        if (instance.element.closest('#globalModal')) {
+                            instance.destroy();
+                        }
+                    });
+                }
+            }
+        }
+
+        handleSuccessfulSubmission(form) {
+            // Mark as submitted to prevent reset
+            form.dataset.submitted = 'true';
+            
+            // Show success message
+            this.showToast('Follow-up action saved successfully!', 'success');
+            
+            // Close modal after a short delay
             setTimeout(() => {
-                const modalContent = modal.querySelector('.modal-content');
-                if (modalContent) modalContent.innerHTML = '';
+                const modal = bootstrap.Modal.getInstance(document.getElementById('globalModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Refresh the follow-up list
+                const issueId = form.querySelector('[name="issue"]')?.value;
+                if (issueId) {
+                    htmx.trigger('body', 'refreshFollowupList');
+                }
             }, 300);
         }
-    }
 
-    handleHtmxAfterRequest(evt) {
-        const form = evt.detail.elt?.closest('form');
-        if (!form || form.id !== 'followupactionForm') return;
-
-        // Handle successful submission
-        if (evt.detail.successful) {
-            this.handleSuccessfulSubmission(form);
-        } else {
-            this.handleFailedSubmission(evt.detail.xhr);
-        }
-    }
-
-    handleSuccessfulSubmission(form) {
-        // Mark as submitted to prevent reset
-        form.dataset.submitted = 'true';
-        
-        // Show success message
-        this.showToast('Follow-up action saved successfully!', 'success');
-        
-        // Close modal after a short delay
-        setTimeout(() => {
-            const modal = bootstrap.Modal.getInstance(
-                document.getElementById('followupActionModal') || 
-                document.getElementById('globalModal')
-            );
-            if (modal) modal.hide();
-            if (typeof window.cleanupModalOverlays === 'function') {
-                setTimeout(window.cleanupModalOverlays, 350);
-            }
-            // Refresh the follow-up list
-            const issueId = form.querySelector('[name="issue"]')?.value;
-            if (issueId) {
-                htmx.ajax('GET', `/audit/followupaction/list/?issue_id=${issueId}`, {
-                    target: '#followup-list-container',
-                    swap: 'innerHTML'
-                });
-            }
-        }, 300);
-    }
-
-    handleFailedSubmission(xhr) {
-        try {
-            const response = JSON.parse(xhr.responseText);
-            let errorMessage = 'An error occurred while saving the follow-up action.';
+        showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
             
-            if (response.errors) {
-                errorMessage = Object.values(response.errors).join(' ');
-            } else if (response.message) {
-                errorMessage = response.message;
-            }
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
             
-            this.showToast(errorMessage, 'danger');
-        } catch (e) {
-            console.error('Error parsing error response:', e);
-            this.showToast('An unexpected error occurred. Please try again.', 'danger');
-        }
-    }
-
-    initDatePickers() {
-        // Initialize date pickers if available
-        if (typeof flatpickr !== 'undefined') {
-            flatpickr("input[type='date']", {
-                dateFormat: "Y-m-d",
-                allowInput: true,
-                defaultDate: 'today'
+            const container = document.getElementById('toast-container') || document.body;
+            container.appendChild(toast);
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
             });
         }
     }
+    window.FollowUpActionHandler = FollowUpActionHandler;
+})();
 
-    showToast(message, type = 'success') {
-        const toastContainer = document.getElementById('toast-container') || this.createToastContainer();
-        
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `toast show bg-${type} text-white mb-2`;
-        toast.role = 'alert';
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        // Add toast content
-        toast.innerHTML = `
-            <div class="toast-header bg-${type} text-white">
-                <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        `;
-        
-        // Add to container
-        toastContainer.appendChild(toast);
-        
-        // Auto-remove after delay
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 150);
-        }, 5000);
-        
-        // Initialize Bootstrap toast
-        const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
-        bsToast.show();
-    }
-    
-    createToastContainer() {
-        const container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'position-fixed bottom-0 end-0 p-3';
-        container.style.zIndex = '1100';
-        document.body.appendChild(container);
-        return container;
-    }
-}
-
-// Initialize the handler when the DOM is fully loaded
+// Initialize the handler when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new FollowUpActionHandler();
+    window.followUpActionHandler = new FollowUpActionHandler();
 });

@@ -288,20 +288,20 @@
 
     <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
     <!-- Core Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="{% static 'js/select2.min.js' %}"></script>
-    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'js/htmx.min.js' %}"></script>
-    <script src="{% static 'js/main.js' %}"></script>
-    <script src="{% static 'js/modal-handler.js' %}"></script>
-    <script src="{% static 'js/modal-context.js' %}"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/modal-handler.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/modal-context.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token }}">
 
     <!-- Nonce for CSP -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-{{ csp_nonce }}'">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-inline' https://code.jquery.com https://cdn.plot.ly">
 
     {% block extra_scripts %}{% endblock %}
 
@@ -352,72 +352,8 @@
       </div>
     </div>
 
-    <script nonce="{{ request.csp_nonce }}">
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('ai-assistant-form');
-        const questionInput = document.getElementById('ai-question');
-        const answerDiv = document.getElementById('ai-answer');
-        const answerText = document.getElementById('ai-answer-text');
-        const loadingDiv = document.getElementById('ai-loading');
-        const askBtn = document.getElementById('ai-ask-btn');
-
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const question = questionInput.value.trim();
-            if (!question) return;
-            answerDiv.style.display = 'none';
-            answerText.textContent = '';
-            loadingDiv.style.display = 'block';
-            askBtn.disabled = true;
-
-            fetch('/api/ai/ask/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({ question })
-            })
-            .then(response => response.json())
-            .then(data => {
-                loadingDiv.style.display = 'none';
-                askBtn.disabled = false;
-                if (data.answer) {
-                    answerText.textContent = data.answer;
-                    answerDiv.style.display = 'block';
-                } else if (data.error) {
-                    answerText.textContent = data.error;
-                    answerDiv.style.display = 'block';
-                } else {
-                    answerText.textContent = 'Sorry, no answer was returned.';
-                    answerDiv.style.display = 'block';
-                }
-            })
-            .catch(() => {
-                loadingDiv.style.display = 'none';
-                askBtn.disabled = false;
-                answerText.textContent = 'Sorry, there was a problem contacting the AI assistant.';
-                answerDiv.style.display = 'block';
-            });
-        });
-
-        // Helper to get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-    });
-    </script>
+    <!-- Removed inline <script> for AI Assistant modal. Now loaded from static/js/ai_assistant.js with nonce. -->
+    <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
     <script>
     // Notification functionality has been removed

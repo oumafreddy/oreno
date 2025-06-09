@@ -819,7 +819,7 @@ function openParentSelectModal(type, parentApiUrl, createUrlTemplate) {
 </div>
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'js/audit_dashboard.js' %}" defer></script>
+<script src="{% static 'js/audit_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 {% endblock %}
 <pre style="background:#f8f9fa; color:#333; padding:10px; border:1px solid #eee;">
 Engagement Status Data: {{ engagement_status_dist|safe }}

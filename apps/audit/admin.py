@@ -55,7 +55,19 @@ class OrganizationScopedModelAdmin(admin.ModelAdmin):
         """
         Filter foreign key fields to only show objects from the user's organization
         """
-        if db_field.name in ['organization']:
+        # User fields: filter by active organization
+        user_model_names = ['CustomUser', 'User']
+        if db_field.remote_field and db_field.remote_field.model.__name__ in user_model_names:
+            if hasattr(request.user, 'active_organization') and request.user.active_organization:
+                kwargs['queryset'] = db_field.remote_field.model.objects.filter(
+                    organization=request.user.active_organization
+                )
+            else:
+                user_orgs = request.user.organizations.all() if hasattr(request.user, 'organizations') else []
+                if user_orgs:
+                    kwargs['queryset'] = db_field.remote_field.model.objects.filter(organization__in=user_orgs)
+        # Organization fields
+        elif db_field.name in ['organization']:
             if hasattr(request.user, 'active_organization') and request.user.active_organization:
                 kwargs['queryset'] = db_field.related_model.objects.filter(
                     id=request.user.active_organization.id
@@ -64,9 +76,8 @@ class OrganizationScopedModelAdmin(admin.ModelAdmin):
                 user_orgs = request.user.organizations.all() if hasattr(request.user, 'organizations') else []
                 if user_orgs:
                     kwargs['queryset'] = db_field.related_model.objects.filter(id__in=[org.id for org in user_orgs])
-                    
+        # Any other FK to a model with organization field
         elif hasattr(db_field.related_model, 'organization'):
-            # For any other foreign key to a model that has an organization field
             if hasattr(request.user, 'active_organization') and request.user.active_organization:
                 kwargs['queryset'] = db_field.related_model.objects.filter(
                     organization=request.user.active_organization
@@ -75,7 +86,6 @@ class OrganizationScopedModelAdmin(admin.ModelAdmin):
                 user_orgs = request.user.organizations.all() if hasattr(request.user, 'organizations') else []
                 if user_orgs:
                     kwargs['queryset'] = db_field.related_model.objects.filter(organization__in=user_orgs)
-                    
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     def save_model(self, request, obj, form, change):

@@ -146,77 +146,7 @@
 </section>
 
 <!-- JavaScript for animations and interactions -->
-<script>
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            if (targetId === '#') return;
-            
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                window.scrollTo({
-                    top: targetElement.offsetTop - 80, // Adjust for fixed header
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
-
-    // Cookie consent
-    document.addEventListener('DOMContentLoaded', function() {
-        const cookieConsent = document.getElementById('cookieConsent');
-        const acceptCookiesBtn = document.getElementById('acceptCookies');
-        
-        // Check if user has already accepted cookies
-        if (!localStorage.getItem('cookiesAccepted')) {
-            setTimeout(() => {
-                cookieConsent.classList.add('show');
-            }, 2000);
-        }
-        
-        // Handle accept cookies button click
-        if (acceptCookiesBtn) {
-            acceptCookiesBtn.addEventListener('click', function() {
-                localStorage.setItem('cookiesAccepted', 'true');
-                cookieConsent.classList.remove('show');
-            });
-        }
-    });
-    
-    // Form submission
-    const contactForm = document.getElementById('contactForm');
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Add form submission logic here
-            alert('Thank you for your message! We will get back to you soon.');
-            this.reset();
-        });
-    }
-    
-    // Add animation on scroll
-    const fadeElements = document.querySelectorAll('.fade-in');
-    
-    const fadeInOnScroll = () => {
-        fadeElements.forEach(element => {
-            const elementTop = element.getBoundingClientRect().top;
-            const windowHeight = window.innerHeight;
-            
-            if (elementTop < windowHeight - 100) {
-                element.style.opacity = '1';
-                element.style.transform = 'translateY(0)';
-            }
-        });
-    };
-    
-    // Initial check
-    fadeInOnScroll();
-    
-    // Check on scroll
-    window.addEventListener('scroll', fadeInOnScroll);
-</script>
+<script src="{% static 'js/public_home.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
 <style>
     /* Additional styles specific to the home page */

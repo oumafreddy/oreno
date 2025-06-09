@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',  # JWT authentication
     'django_scopes',
     'rest_framework_simplejwt.token_blacklist',
+    'django_csp',  # Content Security Policy
     # Note: django-tenants is loaded in tenants.py
 
     # Local apps
@@ -203,6 +204,32 @@ MIDDLEWARE = [
     'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
     'audit.views.RequestWrapper',  # For HTMX attribute handling
 ]
+
+# Content Security Policy
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com")
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",
+    "'unsafe-eval'",
+    "https://cdn.jsdelivr.net",
+    "https://code.jquery.com",
+    "https://unpkg.com",
+    "https://cdn.plot.ly",
+    "https://www.googletagmanager.com",
+    "https://cdnjs.cloudflare.com"
+)
+CSP_IMG_SRC = ("'self'", "data:", "https:")
+CSP_FONT_SRC = ("'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com")
+CSP_CONNECT_SRC = ("'self'", "https://api.example.com")
+CSP_MEDIA_SRC = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_FRAME_SRC = ("'self'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'self'",)
+CSP_BLOCK_ALL_MIXED_CONTENT = True
+CSP_INCLUDE_NONCE_IN = ['script-src']
 
 # Enable debug toolbar in debug mode - temporarily disabled due to missing templates
 # if DEBUG and 'debug_toolbar' in INSTALLED_APPS:

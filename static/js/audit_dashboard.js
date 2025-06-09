@@ -10,4 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.AUDIT_ISSUE_URL = varsEl.getAttribute('data-issue-url');
     }
     // Add more audit dashboard logic here as needed
+
+    const dashboardCards = document.querySelectorAll('.dashboard-card');
+    dashboardCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('shadow-lg');
+        });
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('shadow-lg');
+        });
+    });
 }); 

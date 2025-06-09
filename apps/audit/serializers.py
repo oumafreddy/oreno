@@ -18,6 +18,22 @@ ProcedureSerializer = None
 class BaseAuditSerializer(serializers.ModelSerializer):
     """Base serializer with common functionality for all audit serializers"""
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Enforce organization filtering for all user-related fields
+        request = self.context.get('request', None)
+        organization = None
+        if request and hasattr(request.user, 'organization') and request.user.organization:
+            organization = request.user.organization
+        elif request and hasattr(request.user, 'active_organization') and request.user.active_organization:
+            organization = request.user.active_organization
+        if organization:
+            for field_name, field in self.fields.items():
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = getattr(field.queryset, 'model', None)
+                    if model and model.__name__ in ['CustomUser', 'User']:
+                        field.queryset = field.queryset.filter(organization=organization)
+
     def validate_organization(self, value):
         request = self.context.get("request")
         if request and request.user and not request.user.has_audit_access_to_organization(value):

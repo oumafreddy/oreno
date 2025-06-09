@@ -1,4 +1,5 @@
 {% load crispy_forms_tags %}
+{% load static %}
 <div class="modal-header">
   <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Note</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -9,33 +10,8 @@
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-primary">Save</button>
-      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:engagement-detail' engagement_pk %}'">Cancel</button>
+      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" id="note-cancel-btn" data-engagement-url="{% url 'audit:engagement-detail' engagement_pk %}">Cancel</button>
     </div>
   </form>
 </div>
-<script>
-(function() {
-  var form = document.getElementById('noteForm');
-  if (!form) return;
-  form.addEventListener('htmx:afterRequest', function(event) {
-    try {
-      var detail = event.detail;
-      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
-        var data = JSON.parse(detail.xhr.responseText);
-        if (data.form_is_valid && data.html_list) {
-          var container = document.getElementById('note-list-container');
-          if (container) container.innerHTML = data.html_list;
-          var modalEl = document.getElementById('globalModal');
-          if (modalEl && window.bootstrap) {
-            var modal = window.bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-          }
-        } else if (data.html_form) {
-          var modalBody = document.querySelector('#globalModal .modal-body');
-          if (modalBody) modalBody.innerHTML = data.html_form;
-        }
-      }
-    } catch (e) {}
-  });
-})();
-</script> 
+<script src="{% static 'js/note_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script> 

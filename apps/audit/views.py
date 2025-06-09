@@ -1,5 +1,12 @@
 # apps/audit/views.py
 from django.views.decorators.http import require_http_methods
+from django.urls import reverse, reverse_lazy
+from django.core.exceptions import ValidationError
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from . import models
+from users.models import CustomUser
+from .models.workplan import AuditWorkplan
+
 
 # Utility functions to avoid AttributeError with htmx
 def is_htmx_request(request):
@@ -1150,6 +1157,7 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         if procedure_result_pk:
             try:
                 procedure_result = ProcedureResult.objects.get(pk=procedure_result_pk)
+                kwargs['procedure_result_pk'] = procedure_result_pk  # Pass the procedure_result_pk to the form
                 kwargs['procedure_pk'] = procedure_result.procedure.pk
             except ProcedureResult.DoesNotExist:
                 pass  # fallback to normal
@@ -1173,9 +1181,11 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         return super().form_valid(form)
     
     def get_success_url(self):
-        # Redirect to parent procedure or issue list
-        if self.object.procedure:
-            return self.object.procedure.get_absolute_url()
+        # Redirect to parent procedure result or issue list
+        if self.object.procedure_result:
+            return reverse('audit:procedureresult-detail', kwargs={'pk': self.object.procedure_result.pk})
+        elif self.object.procedure:
+            return reverse('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
         return reverse('audit:issue-list')
 
 class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
@@ -2443,54 +2453,48 @@ class FollowUpActionCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     form_class = FollowUpActionForm
     template_name = 'audit/followupaction_form.html'
     success_message = _("Follow Up Action was created successfully")
-
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
         if issue_pk:
             kwargs['issue_pk'] = issue_pk
         return kwargs
-
+    
     def get_success_url(self):
+        # Redirect to parent issue detail
         if self.object.issue:
-            return self.object.issue.get_absolute_url()
-        return reverse('audit:issue-list')
-
+            return reverse('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        return reverse('audit:followupaction-list')
+    
     def get_initial(self):
-        return {"issue": self.get_issue_pk()}
-
+        initial = super().get_initial()
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
+        if issue_pk:
+            initial['issue'] = issue_pk
+        return initial
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from .models.issue import Issue
-        try:
-            issue_pk = self.get_issue_pk()
-            context["issue"] = Issue.objects.get(pk=issue_pk)
-            context["issue_pk"] = issue_pk
-        except Exception:
-            context["issue"] = None
-            context["issue_pk"] = None
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
+        if issue_pk:
+            try:
+                context['issue'] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                messages.error(self.request, _('Invalid issue selected'))
         return context
-
+    
     def form_valid(self, form):
-        form.instance.issue_id = self.get_issue_pk()
+        # Defensive: always set organization before saving
         form.instance.organization = self.request.organization
-        form.instance.created_by = self.request.user  # Automatically set the creator
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            followups = FollowUpAction.objects.filter(issue_id=self.get_issue_pk(), organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/followupaction_list.html", {
-                "followup_actions": followups,
-                "issue": Issue.objects.get(pk=self.get_issue_pk()),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
+        return super().form_valid(form)
+    
     def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
+        messages.error(self.request, _('Please correct the errors below.'))
         return super().form_invalid(form)
 
 class FollowUpActionUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
@@ -2714,6 +2718,67 @@ class FollowUpActionModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, U
             return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue_id})
         return reverse_lazy('audit:followupaction-list')
 
+class FollowUpActionDeleteView(AuditPermissionMixin, DeleteView):
+    model = FollowUpAction
+    template_name = 'audit/followupaction_confirm_delete.html'
+    success_message = _('Follow-up action was deleted successfully')
+
+    def get_queryset(self):
+        """Limit queryset to objects in the current organization."""
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_success_url(self):
+        """Return to the issue detail page after deletion."""
+        if hasattr(self, 'object') and self.object.issue_id:
+            return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue_id})
+        return reverse_lazy('audit:followupaction-list')
+
+    def delete(self, request, *args, **kwargs):
+        """Handle the deletion and return appropriate response."""
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+        
+        # Store issue_id before deletion for HTMX response
+        issue_id = self.object.issue_id if self.object.issue else None
+        
+        # Perform deletion
+        self.object.delete()
+        
+        # Handle HTMX/JSON response
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.headers.get("HX-Request") == "true":
+            try:
+                if issue_id:
+                    # Get updated follow-up list for the issue
+                    from .models.issue import Issue
+                    issue = Issue.objects.get(pk=issue_id, organization=request.organization)
+                    followups = FollowUpAction.objects.filter(issue=issue, organization=request.organization)
+                    
+                    # Render the follow-up list partial
+                    html = render_to_string(
+                        'audit/_followupaction_list_partial.html',
+                        {
+                            'followups': followups,
+                            'issue': issue,
+                            'request': request
+                        }
+                    )
+                    
+                    return HttpResponse(html)
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': str(self.success_message),
+                    'redirect_url': success_url
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': _("Error deleting follow-up action: {}".format(str(e)))
+                }, status=400)
+        
+        messages.success(request, self.success_message)
+        return HttpResponseRedirect(success_url)
+
 # ISSUE RETEST VIEWS
 class IssueRetestListView(AuditPermissionMixin, ListView):
     model = IssueRetest
@@ -2735,19 +2800,49 @@ class IssueRetestCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateVie
     form_class = IssueRetestForm
     template_name = 'audit/issueretest_form.html'
     success_message = _("Issue Retest was created successfully")
-
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
         if issue_pk:
             kwargs['issue_pk'] = issue_pk
         return kwargs
-
+    
     def get_success_url(self):
+        # Redirect to parent issue detail
         if self.object.issue:
-            return self.object.issue.get_absolute_url()
-        return reverse('audit:issue-list')
+            return reverse('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        return reverse('audit:issueretest-list')
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
+        if issue_pk:
+            initial['issue'] = issue_pk
+        return initial
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
+        if issue_pk:
+            try:
+                context['issue'] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                messages.error(self.request, _('Invalid issue selected'))
+        return context
+    
+    def form_valid(self, form):
+        # Defensive: always set organization before saving
+        form.instance.organization = self.request.organization
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        messages.error(self.request, _('Please correct the errors below.'))
+        return super().form_invalid(form)
 
 class IssueRetestUpdateView(IssueRetestCreateView, UpdateView):
     success_message = _("Issue Retest was updated successfully")
@@ -2761,6 +2856,7 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        kwargs['issue_pk'] = self.kwargs.get('issue_pk')
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -2773,13 +2869,23 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
         form.instance.issue_id = issue_pk
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
+        
         if self.request.htmx or self.request.headers.get('HX-Request') == 'true':
             from django.template.loader import render_to_string
             from django.http import JsonResponse
+            try:
+                issue_obj = Issue.objects.get(pk=issue_pk)
+            except Issue.DoesNotExist:
+                issue_obj = None
             html = render_to_string('audit/_issueretest_list_partial.html', {
-                'issue_retests': IssueRetest.objects.filter(issue_id=issue_pk)
+                'retests': IssueRetest.objects.filter(issue_id=issue_pk),
+                'issue': issue_obj
             }, request=self.request)
-            return JsonResponse({'success': True, 'html': html})
+            return JsonResponse({
+                'form_is_valid': True,
+                'html_list': html,
+                'message': self.success_message
+            })
         return response
 
     def form_invalid(self, form):
@@ -2787,7 +2893,10 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
             from django.template.loader import render_to_string
             from django.http import JsonResponse
             html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
-            return JsonResponse({'success': False, 'html': html}, status=400)
+            return JsonResponse({
+                'form_is_valid': False,
+                'html_form': html
+            }, status=400)
         return super().form_invalid(form)
 
     def get_success_url(self):
@@ -2802,11 +2911,15 @@ class IssueRetestModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Upda
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        kwargs['issue_pk'] = self.object.issue.pk if self.object.issue_id else None
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.object.issue.pk if self.object.issue_id else None
+        if self.object.issue_id:
+            context['issue'] = self.object.issue
+        else:
+            context['issue'] = None
         return context
 
     def form_valid(self, form):
@@ -2815,9 +2928,14 @@ class IssueRetestModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Upda
             from django.template.loader import render_to_string
             from django.http import JsonResponse
             html = render_to_string('audit/_issueretest_list_partial.html', {
-                'issue_retests': IssueRetest.objects.filter(issue_id=self.object.issue_id)
+                'retests': IssueRetest.objects.filter(issue_id=self.object.issue_id),
+                'issue': self.object.issue
             }, request=self.request)
-            return JsonResponse({'success': True, 'html': html})
+            return JsonResponse({
+                'form_is_valid': True,
+                'html_list': html,
+                'message': self.success_message
+            })
         return response
 
     def form_invalid(self, form):
@@ -2825,7 +2943,10 @@ class IssueRetestModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Upda
             from django.template.loader import render_to_string
             from django.http import JsonResponse
             html = render_to_string(self.template_name, self.get_context_data(form=form), request=self.request)
-            return JsonResponse({'success': False, 'html': html}, status=400)
+            return JsonResponse({
+                'form_is_valid': False,
+                'html_form': html
+            }, status=400)
         return super().form_invalid(form)
 
     def get_success_url(self):
@@ -3003,75 +3124,47 @@ class RecommendationCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     form_class = RecommendationForm
     template_name = "audit/recommendation_form.html"
     success_message = _("Recommendation was created successfully")
-
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
+        issue_pk = safe_get_issue_pk(self)
         if issue_pk:
             kwargs['issue_pk'] = issue_pk
         return kwargs
-
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        issue_pk = self.request.GET.get('issue_pk') or self.kwargs.get('issue_pk')
-        issue = None
+        # Get issue_pk from URL or request data
+        issue_pk = self.kwargs.get('issue_pk') or self.request.GET.get('issue_pk')
         if issue_pk:
             try:
-                from .models.issue import Issue
-                issue = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+                context['issue'] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
             except Issue.DoesNotExist:
-                issue = None
-        context['issue'] = issue
+                messages.error(self.request, _('Invalid issue selected'))
         return context
-
+    
     def form_valid(self, form):
         # Defensive: always set organization before saving
         form.instance.organization = self.request.organization
         return super().form_valid(form)
-
+    
     def get_success_url(self):
-        # Redirect to parent issue detail
         if self.object.issue:
-            return self.object.issue.get_absolute_url()
-        return reverse('audit:issue-list')
+            return reverse('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        return reverse('audit:recommendation-list')
 
 class RecommendationUpdateView(RecommendationCreateView, UpdateView):
     success_message = _("Recommendation was updated successfully")
-    
-    def get_issue_pk(self):
-        # Use the safe utility function to get issue_pk from any available source
-        # without raising ValueError if not found
-        return safe_get_issue_pk(self, raise_error=False)
-        
     def get_form_kwargs(self):
-        kwargs = super(RecommendationCreateView, self).get_form_kwargs()
-        kwargs["organization"] = self.request.organization
-        
-        # Try to get issue_pk, add it to kwargs only if found
-        issue_pk = self.get_issue_pk()
-        if issue_pk:
-            kwargs["issue_pk"] = issue_pk
-        
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        # Do NOT set 'issue_pk' for edit
         return kwargs
-        
-    def get_initial(self):
-        initial = super(RecommendationCreateView, self).get_initial()
-        issue_pk = self.get_issue_pk()
-        if issue_pk:
-            initial["issue"] = issue_pk
-        return initial
-        
-    def form_valid(self, form):
-        # Ensure the organization is set
-        form.instance.organization = self.request.organization
-        
-        # Only set issue_id if we have a valid issue_pk
-        issue_pk = self.get_issue_pk()
-        if issue_pk:
-            form.instance.issue_id = issue_pk
-            
-        return super().form_valid(form)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['issue'] = self.object.issue  # Ensure 'issue' is always available for the modal
+        return context
 
 class RecommendationDetailView(AuditPermissionMixin, DetailView):
     model = Recommendation
@@ -3083,37 +3176,15 @@ class RecommendationModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, U
     form_class = RecommendationForm
     template_name = 'audit/recommendation_modal_form.html'
     success_message = _('Recommendation was updated successfully')
-
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        # Do NOT set 'issue_pk' for edit
         return kwargs
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.object.issue.pk if self.object.issue_id else None
+        context['issue'] = self.object.issue  # Ensure 'issue' is always available for the modal
         return context
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            recommendations = Recommendation.objects.filter(issue_id=self.object.issue_id, organization=self.request.organization)
-            from .models.issue import Issue
-            html_list = render_to_string("audit/_recommendation_list_partial.html", {
-                "recommendations": recommendations,
-                "issue": Issue.objects.get(pk=self.object.issue_id),
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
-    def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
 
 @login_required
 def api_engagements(request):
@@ -3226,8 +3297,8 @@ def submit_workplan(request, pk):
         return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
     try:
         org = request.organization
-        workplan = Workplan.objects.get(pk=pk, organization=org)
-        workplan.status = Workplan.STATUS_APPROVED
+        workplan = AuditWorkplan.objects.get(pk=pk, organization=org)
+        workplan.status = AuditWorkplan.STATUS_APPROVED
         workplan.save()
         return JsonResponse({'success': True, 'message': 'Workplan submitted successfully'})
     except Exception as e:
@@ -3243,8 +3314,8 @@ def approve_workplan(request, pk):
         return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
     try:
         org = request.organization
-        workplan = Workplan.objects.get(pk=pk, organization=org)
-        workplan.status = Workplan.STATUS_APPROVED
+        workplan = AuditWorkplan.objects.get(pk=pk, organization=org)
+        workplan.status = AuditWorkplan.STATUS_APPROVED
         workplan.save()
         return JsonResponse({'success': True, 'message': 'Workplan approved successfully'})
     except Exception as e:
@@ -3260,8 +3331,8 @@ def reject_workplan(request, pk):
         return JsonResponse({'success': False, 'message': 'Authentication required'}, status=200)
     try:
         org = request.organization
-        workplan = Workplan.objects.get(pk=pk, organization=org)
-        workplan.status = Workplan.STATUS_REJECTED
+        workplan = AuditWorkplan.objects.get(pk=pk, organization=org)
+        workplan.status = AuditWorkplan.STATUS_REJECTED
         workplan.save()
         return JsonResponse({'success': True, 'message': 'Workplan rejected successfully'})
     except Exception as e:
@@ -3492,6 +3563,7 @@ class IssueWorkingPaperCreateView(AuditPermissionMixin, SuccessMessageMixin, Cre
         return [self.template_name]
 
     def form_valid(self, form):
+        form.instance.organization = self.request.organization  # Robust fix for IntegrityError
         response = super().form_valid(form)
         if self.request.htmx or self.request.headers.get('HX-Request'):
             working_papers = IssueWorkingPaper.objects.filter(issue=self.object.issue)
@@ -3746,3 +3818,33 @@ def api_issue_data(request):
         'low_risk': issues.filter(risk_level='low').count(),
     }
     return JsonResponse(data)
+
+class IssueRetestDeleteView(AuditPermissionMixin, DeleteView):
+    model = IssueRetest
+    template_name = 'audit/issueretest_confirm_delete.html'
+
+    def get_template_names(self):
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            return ['audit/issueretest_confirm_delete.html']
+        return [self.template_name]
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        issue = self.object.issue
+        self.object.delete()
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import JsonResponse
+            retests = IssueRetest.objects.filter(issue=issue)
+            html_list = render_to_string('audit/_issueretest_list_partial.html', {
+                'retests': retests,
+                'issue': issue,
+            }, request=self.request)
+            return JsonResponse({'form_is_valid': True, 'html_list': html_list})
+        return super().delete(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        return super().get_form_kwargs()
+
+    def get_success_url(self):
+        return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
