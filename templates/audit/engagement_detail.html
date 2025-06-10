@@ -54,7 +54,7 @@
         <i class="bi bi-flag"></i> Add Issue
       </button>
       {% if content_type_id %}
-      <button class="btn btn-info btn-sm" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=engagement.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
+      <button class="btn btn-info btn-sm" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=engagement.pk %}" hx-target="#mainModal .modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
         <i class="bi bi-sticky"></i> Add Note
       </button>
       {% else %}

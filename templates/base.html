@@ -8,9 +8,10 @@
     <meta name="description" content="{% block meta_description %}GRC Management Platform{% endblock %}">
     <meta name="author" content="Oreno GRC Team">
     <meta name="robots" content="index, follow">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     
     <!-- AI/SEO Structured Data -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" nonce="{{ request.csp_nonce }}">
     {
         "@context": "https://schema.org",
         "@type": "Organization",
@@ -33,8 +34,19 @@
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <link href="{% static 'css/toast.css' %}" rel="stylesheet">
 
+    <!-- Core JavaScript - Load in correct order -->
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js" nonce="{{ request.csp_nonce }}"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/note_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+
     <!-- Custom Styles -->
-    <style>
+    <style nonce="{{ request.csp_nonce }}">
         /* Color palette */
         :root {
           --clr-primary:   #2563eb;
@@ -115,7 +127,7 @@
         footer {
           background-color: var(--clr-footer);
           color: var(--clr-text-light);
-          padding: 0.75rem 0; /* reduced vertical padding */
+          padding: 0.75rem 0;
           font-size: 0.875rem;
         }
         footer h5 {
@@ -147,7 +159,7 @@
           font-size: 0.8rem;
           margin-top: 0.25rem;
         }
-      </style>
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -187,7 +199,6 @@
                             <i class="bi bi-robot"></i> AI Assistant
                         </a>
                     </li>
-
                 </ul>
 
                 <!-- User Dropdown -->
@@ -237,357 +248,59 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <div class="container">
-            {% if form and form.errors %}
-                <div class="alert alert-danger">
-                    <ul>
-                        {% for field in form %}
-                            {% for error in field.errors %}
-                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-                            {% endfor %}
-                        {% endfor %}
-                        {% for error in form.non_field_errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
-
-            {% block content %}{% endblock %}
-        </div>
+        {% block content %}{% endblock %}
     </main>
 
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1056"></div>
-
-    <!-- FOOTER -->
-    <footer>
-        <div class="container-fluid">
-        <div class="row text-center text-md-start gy-3">
-            <div class="col-md-4">
-            <h5>Oreno GRC</h5>
-            <p class="mb-0">Governance, Risk &amp; Compliance Platform</p>
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-dark text-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>Oreno GRC</h5>
+                    <p class="mb-0">Enterprise-grade Governance, Risk, and Compliance Management Platform</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="/about/">About</a></li>
+                        <li><a href="/contact/">Contact</a></li>
+                        <li><a href="/help/">Help</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Connect</h5>
+                    <div class="social-icons">
+                        <a href="#"><i class="bi bi-linkedin"></i></a>
+                        <a href="#"><i class="bi bi-twitter"></i></a>
+                        <a href="#"><i class="bi bi-github"></i></a>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-2">
-            <h5>Legal</h5>
-            <ul class="list-unstyled mb-0">
-                <li><a href="#">Privacy</a></li>
-                <li><a href="#">Terms</a></li>
-            </ul>
+            <hr>
+            <div class="footer-bottom">
+                <p class="mb-0">&copy; {% now "Y" %} Oreno GRC. All rights reserved.</p>
             </div>
-            <div class="col-md-6 social-icons text-md-end">
-            <a href="#"><i class="bi bi-github"></i></a>
-            <a href="#"><i class="bi bi-linkedin"></i></a>
-            <a href="#"><i class="bi bi-twitter"></i></a>
-            </div>
-        </div>
-        <hr>
-        <div class="footer-bottom">&copy; 2025 Oreno GRC. All rights reserved.</div>
         </div>
     </footer>
 
-    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-    <!-- Core Scripts -->
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/modal-handler.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/modal-context.js' %}" nonce="{{ request.csp_nonce }}"></script>
-
-    <!-- CSRF Token -->
-    <meta name="csrf-token" content="{{ csrf_token }}">
-
-    <!-- Nonce for CSP -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-{{ csp_nonce }}' 'unsafe-inline' https://code.jquery.com https://cdn.plot.ly">
-
-    {% block extra_scripts %}{% endblock %}
-
-    <!-- AI Assistant Button (fixed at bottom right) -->
-    {% if request.user.is_authenticated %}
-    <button type="button" class="btn btn-primary rounded-circle shadow"
-            style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1050;"
-            data-bs-toggle="modal" data-bs-target="#aiAssistantModal"
-            data-bs-toggle="tooltip" data-bs-placement="left" title="Ask Oreno AI Assistant about GRC best practices or platform features!">
-        <i class="bi bi-robot"></i>
-    </button>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-            new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    });
-    </script>
-    {% endif %}
-
-    <!-- AI Assistant Modal -->
-    <div class="modal fade" id="aiAssistantModal" tabindex="-1" aria-labelledby="aiAssistantModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-bottom modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="aiAssistantModalLabel">Oreno AI Assistant</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form id="ai-assistant-form" autocomplete="off">
-              <div class="mb-3">
-                <label for="ai-question" class="form-label">Ask a question about Oreno GRC or GRC best practices:</label>
-                <textarea class="form-control" id="ai-question" rows="2" required></textarea>
-              </div>
-              <button type="submit" class="btn btn-primary w-100" id="ai-ask-btn">Ask</button>
-            </form>
-            <div id="ai-answer" class="mt-3" style="display:none;">
-              <div class="fw-bold mb-1">AI Answer:</div>
-              <div id="ai-answer-text"></div>
-            </div>
-            <div id="ai-loading" class="text-center mt-3" style="display:none;">
-              <div class="spinner-border text-primary" role="status"></div>
-              <div>Thinking...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Removed inline <script> for AI Assistant modal. Now loaded from static/js/ai_assistant.js with nonce. -->
-    <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
-
-    <script>
-    // Notification functionality has been removed
-    </script>
-
-    <!-- GLOBAL MODAL CONTAINER FOR AJAX FORMS -->
-    <div class="modal fade" id="globalModal" tabindex="-1" aria-labelledby="globalModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="globalModalLabel">Loading...</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Follow-up Action Handler -->
-    <script src="{% static 'js/followup-action-handler.js' %}" defer></script>
-
-    <!-- Enhanced AJAX/htmx Modal Logic for Audit Models -->
-    <script>
-    (function() {
-      // --- htmx Modal Support ---
-      if (window.htmx) {
-        // Listen for htmx requests to show spinner in modal
-        document.body.addEventListener('htmx:beforeRequest', function(evt) {
-          var modal = document.querySelector('#globalModal .modal-body');
-          if (modal) {
-            modal.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>';
-          }
-        });
-
-        // On htmx error, show error in modal with retry option
-        document.body.addEventListener('htmx:responseError', function(evt) {
-          var modal = document.querySelector('#globalModal .modal-body');
-          if (modal) {
-            modal.innerHTML = `
-              <div class="alert alert-danger">
-                <h5 class="alert-heading">Error</h5>
-                <p>An error occurred while processing your request.</p>
-                <hr>
-                <div class="d-flex justify-content-end">
-                  <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
-                </div>
-              </div>`;
-          }
-        });
-
-        // On htmx after swap, handle success and update UI
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-          if (evt.detail.xhr && evt.detail.xhr.status === 200 && evt.target.classList.contains('modal-body')) {
-            try {
-              var data = JSON.parse(evt.detail.xhr.responseText);
-              if (data.form_is_valid) {
-                // Update any list containers if provided
-                if (data.html_list) {
-                  var listContainer = document.querySelector(data.list_target || '.ajax-list-container');
-                  if (listContainer) listContainer.innerHTML = data.html_list;
-                }
-                // Update detail view if provided
-                if (data.html_detail) {
-                  var detailContainer = document.querySelector(data.detail_target || '.ajax-detail-container');
-                  if (detailContainer) detailContainer.innerHTML = data.html_detail;
-                }
-                // Show success message
-                showToast(data.message || 'Saved successfully!', 'success');
-                // Close modal
-                var modal = bootstrap.Modal.getInstance(document.getElementById('globalModal'));
-                if (modal) modal.hide();
-              } else if (data.html_form) {
-                document.getElementById('modal-body').innerHTML = data.html_form;
-              }
-            } catch (e) {
-              console.error('Error processing response:', e);
-            }
-          }
-        });
-
-        // Add global error handler for network issues
-        document.body.addEventListener('htmx:sendError', function(evt) {
-          showToast('Network error occurred. Please check your connection.', 'danger');
-        });
-      }
-
-      // --- jQuery AJAX Modal Support ---
-      $(function() {
-        // Open modal via AJAX or htmx
-        $(document).on('click', '[data-bs-toggle="modal"][data-ajax-url]', function(e) {
-          e.preventDefault();
-          var url = $(this).attr('data-ajax-url');
-          var modal = $('#globalModal');
-          var modalTitle = $(this).data('modal-title') || 'Form';
-          modal.find('.modal-title').text(modalTitle);
-          modal.find('.modal-body').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
-          modal.modal('show');
-
-          // Prefer htmx if present
-          if (window.htmx) {
-            modal.find('.modal-body').attr({
-              'hx-get': url,
-              'hx-target': '#globalModal .modal-body',
-              'hx-swap': 'innerHTML',
-              'hx-trigger': 'load'
-            });
-            window.htmx.process(modal.find('.modal-body')[0]);
-          } else {
-            $.get(url, function(data) {
-              modal.find('.modal-body').html(data);
-            }).fail(function() {
-              modal.find('.modal-body').html(`
-                <div class="alert alert-danger">
-                  <h5 class="alert-heading">Error</h5>
-                  <p>Failed to load the form. Please try again.</p>
-                  <hr>
-                  <div class="d-flex justify-content-end">
-                    <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
-                  </div>
-                </div>`);
-            });
-          }
-        });
-
-        // Submit modal form via AJAX or htmx
-        $(document).on('submit', '#globalModal form', function(e) {
-          if (window.htmx) return; // htmx will handle
-          e.preventDefault();
-          var form = $(this);
-          var modal = $('#globalModal');
-          var url = form.attr('action') || window.location.href;
-          var method = form.attr('method') || 'post';
-          var formData = new FormData(this);
-
-          $.ajax({
-            url: url,
-            type: method,
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: { 'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') },
-            beforeSend: function() {
-              modal.find('.modal-body').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
-            },
-            success: function(data) {
-              if (data.form_is_valid) {
-                if (data.html_list) {
-                  $('.ajax-list-container').html(data.html_list);
-                }
-                if (data.html_detail) {
-                  $('.ajax-detail-container').html(data.html_detail);
-                }
-                modal.modal('hide');
-                showToast(data.message || 'Saved successfully!', 'success');
-              } else if (data.html_form) {
-                modal.find('.modal-body').html(data.html_form);
-              }
-            },
-            error: function(xhr) {
-              modal.find('.modal-body').html(`
-                <div class="alert alert-danger">
-                  <h5 class="alert-heading">Error</h5>
-                  <p>An error occurred while saving. Please try again.</p>
-                  <hr>
-                  <div class="d-flex justify-content-end">
-                    <button class="btn btn-outline-danger" onclick="window.location.reload()">Retry</button>
-                  </div>
-                </div>`);
-            }
-          });
-        });
-      });
-
-      // Enhanced toast function with better styling and auto-dismiss
-      window.showToast = function(message, type = 'success') {
-        var toastId = 'toast-' + Date.now();
-        var toastHtml = `
-          <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-              <div class="toast-body">
-                <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-exclamation-circle' : 'bi-info-circle'} me-2"></i>
-                ${message}
-              </div>
-              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-          </div>`;
-        $('#toast-container').append(toastHtml);
-        var toastEl = document.getElementById(toastId);
-        var toast = new bootstrap.Toast(toastEl, { 
-          delay: 3500,
-          animation: true
-        });
-        toast.show();
-        toastEl.addEventListener('hidden.bs.toast', function() { 
-          $(toastEl).remove(); 
-        });
-      };
-    })();
-    </script>
-
-    <!-- Form Submission Handler -->
-    <script src="{% static 'js/form-submission.js' %}"></script>
-
-    <!-- Main Modal for HTMX content -->
+    <!-- Global Modal -->
     <div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div id="modal-body">
-                    <!-- HTMX content will be loaded here -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mainModalLabel">Loading...</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Modal content will be loaded here -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Global Modal (alias for compatibility) -->
-    <div class="modal fade" id="globalModal" tabindex="-1" aria-labelledby="globalModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div id="globalModal-body">
-                    <!-- HTMX content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
-    <script src="{% static 'js/dashboard_charts.js' %}" defer></script>
-    <!-- Safe defaults for dashboard AJAX URLs (robust, future-proof) -->
-    <script>
-      window.RISK_API_HEATMAP_URL = window.RISK_API_HEATMAP_URL || null;
-      window.RISK_API_ASSESSMENT_TIMELINE_URL = window.RISK_API_ASSESSMENT_TIMELINE_URL || null;
-      window.RISK_SELECTED_REGISTER = window.RISK_SELECTED_REGISTER || '';
-    </script>
-    <script src="{% static 'js/ai_assistant.js' %}" defer></script>
+    {% block extra_body %}{% endblock %}
 </body>
 </html>

@@ -649,20 +649,12 @@
 {{ issue_risk_dist|json_script:"issue-risk-data" }}
 {{ approval_status_dist|json_script:"approval-status-data" }}
 {{ engagement_owner_workload|json_script:"engagement-owner-workload-data" }}
-<!-- Remove the inline script that renders charts. Only keep the json_script tags for data. -->
-<!-- Add Select2 CSS -->
+<!-- Add Plotly CDN before dashboard_charts.js for CSP compliance and chart rendering -->
+<script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
-<!-- Add Select2 JS -->
 <script src="{% static 'js/select2.min.js' %}"></script>
-<script>
-  $(document).ready(function() {
-    $('.engagement-select').select2({
-      width: '100%',
-      placeholder: 'Type or select...',
-      allowClear: true
-    });
-  });
-</script>
+<script src="{% static 'js/dashboard_charts.js' %}" nonce="{{ request.csp_nonce }}"></script>
+<script src="{% static 'js/audit_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <!-- Dynamic Parent Selection Modal (reusable) -->
 <div class="modal fade" id="parentSelectModal" tabindex="-1" aria-labelledby="parentSelectModalLabel" aria-hidden="true">
   <div class="modal-dialog">

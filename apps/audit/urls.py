@@ -213,6 +213,7 @@ urlpatterns = [
     path('api/engagement-data/', views.api_engagement_data, name='api_engagement_data'),
     path('api/issue-data/', views.api_issue_data, name='api_issue_data'),
     path('issues/<int:issue_pk>/retests/modal/add/', IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
+    path('notes/add/', NoteCreateView.as_view(), name='note-add'),
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

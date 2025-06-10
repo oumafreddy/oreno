@@ -56,9 +56,9 @@
             <li>
               <button class="dropdown-item d-flex align-items-center"
                       hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" 
-                      hx-target="#globalModal .modal-body" 
+                      hx-target="#mainModal .modal-body" 
                       data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
+                      data-bs-target="#mainModal">
                 <i class="bi bi-sticky text-info me-2"></i> Add Note
               </button>
             </li>
@@ -95,7 +95,7 @@
           </button>
           <button class="btn btn-sm btn-outline-info d-flex align-items-center"
                   hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" 
-                  hx-target="#globalModal .modal-body" 
+                  hx-target="#mainModal .modal-body" 
                   data-bs-toggle="tooltip" 
                   title="Add Note"
                   data-bs-placement="bottom">

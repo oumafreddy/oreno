@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.successful && evt.detail.target.closest('#modal-body')) {
       try {
-        if (evt.detail.xhr.getResponseHeader('content-type') && 
-            evt.detail.xhr.getResponseHeader('content-type').includes('application/json')) {
+        var contentType = evt.detail.xhr.getResponseHeader('content-type') || '';
+        if (contentType.includes('application/json')) {
           var data = JSON.parse(evt.detail.xhr.responseText);
           if (data && data.form_is_valid) {
             var bsModal = bootstrap.Modal.getInstance(mainModal);
@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
         }
+        // If not JSON, do nothing: HTMX will swap in the HTML form
       } catch (e) {
         console.error('Error handling modal response:', e);
       }

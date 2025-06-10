@@ -2982,6 +2982,30 @@ class NoteCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         issue_pk = self.get_issue_pk()
         if issue_pk:
             context['issue_pk'] = issue_pk
+        
+        # Robustly resolve engagement_pk for cancel/back button
+        engagement_pk = None
+        object_id = self.kwargs.get('object_id')
+        content_type_id = self.kwargs.get('content_type_id')
+        if object_id and content_type_id:
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_id(content_type_id)
+            model_class = ct.model_class()
+            try:
+                obj = model_class.objects.get(pk=object_id)
+                # Try to resolve engagement from the object
+                if hasattr(obj, 'engagement_id') and obj.engagement_id:
+                    engagement_pk = obj.engagement_id
+                elif hasattr(obj, 'engagement') and obj.engagement:
+                    engagement_pk = obj.engagement.pk
+                elif hasattr(obj, 'objective') and obj.objective and hasattr(obj.objective, 'engagement_id'):
+                    engagement_pk = obj.objective.engagement_id
+                elif hasattr(obj, 'procedure') and obj.procedure and hasattr(obj.procedure, 'objective') and obj.procedure.objective and hasattr(obj.procedure.objective, 'engagement_id'):
+                    engagement_pk = obj.procedure.objective.engagement_id
+                # Add more logic as needed for other models
+            except Exception:
+                pass
+        context['engagement_pk'] = engagement_pk
         return context
 
     def form_valid(self, form):
