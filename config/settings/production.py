@@ -57,11 +57,10 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
         'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'SOCKET_CONNECT_TIMEOUT': 5,
-            'SOCKET_TIMEOUT': 5,
-            'RETRY_ON_TIMEOUT': True,
-            'MAX_CONNECTIONS': 1000,
+            'socket_connect_timeout': 5,
+            'socket_timeout': 5,
+            'retry_on_timeout': True,
+            'max_connections': 1000,
         },
         'KEY_PREFIX': 'oreno',
     }
@@ -173,11 +172,10 @@ CACHES['sessions'] = {
     'BACKEND': 'django.core.cache.backends.redis.RedisCache',
     'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/2'),
     'OPTIONS': {
-        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        'SOCKET_CONNECT_TIMEOUT': 5,
-        'SOCKET_TIMEOUT': 5,
-        'RETRY_ON_TIMEOUT': True,
-        'MAX_CONNECTIONS': 1000,
+        'socket_connect_timeout': 5,
+        'socket_timeout': 5,
+        'retry_on_timeout': True,
+        'max_connections': 1000,
     },
     'KEY_PREFIX': 'sessions',
 }

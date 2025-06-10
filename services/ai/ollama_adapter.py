@@ -11,8 +11,13 @@ from .ollama_config import (
 logger = logging.getLogger('services.ai.ollama_adapter')
 
 SAFE_SYSTEM_PROMPT = (
-    "You are Oreno GRC's AI assistant. Never reveal or speculate about other organizations, users, or private data. "
+    "You are Oreno GRC's AI assistant specializing in Governance, Risk, and Compliance (GRC). "
+    "GRC refers specifically to an organization's approach to Governance (leadership and organizational structures), "
+    "Risk management (identifying, assessing, and mitigating risks), and Compliance (adhering to laws, regulations, and standards). "
+    "Never reveal or speculate about other organizations, users, or private data. "
     "Only answer questions about the current user's organization, the Oreno GRC platform, or general GRC best practices. "
+    "Always focus your answers on the Governance, Risk, and Compliance domain. "
+    "If unsure, prefer to discuss general GRC principles rather than hallucinate specifics. "
     "If a question asks about other organizations, users, or anything you cannot answer securely, reply: 'Sorry, I can't provide that information.'"
 )
 
@@ -34,10 +39,21 @@ def ask_ollama(prompt: str, user, org, context: str = None) -> str:
     if not is_safe_prompt(prompt):
         return "Sorry, I can't provide that information."
     
+    # Add GRC-specific context to every prompt to help the model stay on topic
+    grc_context = (
+        "GRC stands for Governance, Risk, and Compliance.\n"
+        "- Governance refers to the management and leadership structures and processes that ensure an organization meets its objectives.\n"
+        "- Risk management involves identifying, assessing, and mitigating risks to the organization.\n"
+        "- Compliance means ensuring the organization adheres to all relevant laws, regulations, and standards.\n\n"
+    )
+    
+    # Combine the GRC context with the user's prompt
+    enhanced_prompt = grc_context + "Question: " + prompt
+    
     # Prepare messages
     messages = [
         {"role": "system", "content": SAFE_SYSTEM_PROMPT},
-        {"role": "user", "content": prompt},
+        {"role": "user", "content": enhanced_prompt},
     ]
     
     if context:

@@ -1,4 +1,6 @@
 import os
+from .ollama_adapter import ask_ollama
+# Keep OpenAI as a fallback
 from .llm_adapter import ask_llm
 
 # Example FAQ knowledge base (could be loaded from a file or DB)
@@ -26,7 +28,6 @@ def find_faq_answer(question: str) -> str:
     return None
 
 def ai_assistant_answer(question: str, user, org) -> str:
-    # 1. Try FAQ/RAG first
     faq_answer = find_faq_answer(question)
     if faq_answer:
         return faq_answer
@@ -34,8 +35,18 @@ def ai_assistant_answer(question: str, user, org) -> str:
     # Add a special message for unauthenticated users
     if user is None:
         # Only answer general questions for unauthenticated users
-        # First check if it's a general question using FAQ
-        return ask_llm(question, user, org, context="This is an unauthenticated user. Only provide general information about GRC best practices or general platform functionality. Do not reference any specific organization data.")
+        context = "This is an unauthenticated user. Only provide general information about GRC best practices or general platform functionality. Do not reference any specific organization data."
+        try:
+            return ask_ollama(question, user, org, context=context)
+        except Exception as e:
+            import logging
+            logging.getLogger('services.ai.ai_service').error(f"Ollama error: {e}, falling back to OpenAI")
+            return ask_llm(question, user, org, context=context)
     
-    # 2. Otherwise, use LLM for best practice/platform Q&A for authenticated users
-    return ask_llm(question, user, org)
+    # 2. Use Ollama for best practice/platform Q&A with OpenAI fallback
+    try:
+        return ask_ollama(question, user, org)
+    except Exception as e:
+        import logging
+        logging.getLogger('services.ai.ai_service').error(f"Ollama error: {e}, falling back to OpenAI")
+        return ask_llm(question, user, org)

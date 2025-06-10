@@ -7,7 +7,7 @@ from django.conf import settings
 
 # Ollama API settings
 OLLAMA_BASE_URL = getattr(settings, 'OLLAMA_BASE_URL', os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'))
-OLLAMA_MODEL = getattr(settings, 'OLLAMA_MODEL', os.getenv('OLLAMA_MODEL', 'llama3'))
+OLLAMA_MODEL = getattr(settings, 'OLLAMA_MODEL', os.getenv('OLLAMA_MODEL', 'tinyllama'))
 
 # LLM Provider settings
 LLM_PROVIDER = getattr(settings, 'LLM_PROVIDER', os.getenv('LLM_PROVIDER', 'ollama')).lower()
@@ -19,7 +19,7 @@ ENABLE_OPENAI_FALLBACK = getattr(
 
 # Model configuration
 DEFAULT_MAX_TOKENS = int(getattr(settings, 'OLLAMA_MAX_TOKENS', os.getenv('OLLAMA_MAX_TOKENS', 512)))
-DEFAULT_TEMPERATURE = float(getattr(settings, 'OLLAMA_TEMPERATURE', os.getenv('OLLAMA_TEMPERATURE', 0.3)))
+DEFAULT_TEMPERATURE = float(getattr(settings, 'OLLAMA_TEMPERATURE', os.getenv('OLLAMA_TEMPERATURE', 0.1)))
 
 # Available Ollama models (add more as needed)
 AVAILABLE_MODELS = [
