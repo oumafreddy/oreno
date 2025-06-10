@@ -11,16 +11,16 @@ table.table-sm th, table.table-sm td {
 <p>Filters: Overdue Only: {{ filters.overdue|yesno:"Yes,No" }}</p>
 <table class="table table-sm">
   <tr>
-    <th>Code</th><th>Title</th><th>Status</th><th>Severity</th><th>Owner</th><th>Remediation Deadline</th><th>Actual Remediation</th>
+    <th>Code</th><th>Title</th><th>Status</th><th>Risk Level</th><th>Owner</th><th>Remediation Deadline</th><th>Actual Remediation</th>
   </tr>
   {% for issue in issues %}
     <tr>
       <td>{{ issue.code }}</td>
       <td>{{ issue.issue_title }}</td>
       <td>{{ issue.get_issue_status_display }}</td>
-      <td>{{ issue.get_severity_status_display }}</td>
+      <td>{{ issue.get_risk_level_display }}</td>
       <td>{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td>
-      <td>{{ issue.remediation_deadline_date|default:'-' }}</td>
+      <td>{{ issue.target_date|default:'-' }}</td>
       <td>{{ issue.actual_remediation_date|default:'-' }}</td>
     </tr>
   {% endfor %}

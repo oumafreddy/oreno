@@ -14,7 +14,8 @@ from .views import (
     IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
     ApprovalCreateView, ApprovalDetailView, AuditDashboardView,
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
-    ObjectiveModalCreateView, ProcedureListView, ProcedureDetailView, ProcedureCreateView,
+    ObjectiveModalCreateView, RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
+    ProcedureListView, ProcedureDetailView, ProcedureCreateView,
     ProcedureUpdateView, ProcedureModalCreateView, ProcedureResultListView, ProcedureResultDetailView,
     ProcedureResultCreateView, ProcedureResultUpdateView,
     FollowUpActionListView, FollowUpActionDetailView, FollowUpActionCreateView, FollowUpActionUpdateView,
@@ -33,6 +34,8 @@ router.register(r'workplans', views.AuditWorkplanViewSet, basename='workplan')
 router.register(r'engagements', views.EngagementViewSet, basename='engagement')
 router.register(r'issues', views.IssueViewSet, basename='issue')
 router.register(r'approvals', views.ApprovalViewSet, basename='approval')
+router.register(r'risks', views.RiskViewSet, basename='risk')
+router.register(r'objectives', views.ObjectiveViewSet, basename='objective')
 
 # Nested routers for related objects
 workplan_router = routers.NestedDefaultRouter(router, r'workplans', lookup='workplan')
@@ -42,10 +45,24 @@ workplan_router.register(r'approvals', views.WorkplanApprovalViewSet, basename='
 engagement_router = routers.NestedDefaultRouter(router, r'engagements', lookup='engagement')
 engagement_router.register(r'issues', views.EngagementIssueViewSet, basename='engagement-issue')
 engagement_router.register(r'approvals', views.EngagementApprovalViewSet, basename='engagement-approval')
+engagement_router.register(r'risks', views.EngagementRiskViewSet, basename='engagement-risk')
 
 issue_router = routers.NestedDefaultRouter(router, r'issues', lookup='issue')
 issue_router.register(r'approvals', views.IssueApprovalViewSet, basename='issue-approval')
 issue_router.register(r'working-papers', IssueWorkingPaperViewSet, basename='issue-working-paper')
+
+# Create a router for objectives and their risks
+objective_router = routers.NestedDefaultRouter(router, r'objectives', lookup='objective')
+objective_router.register(r'risks', views.ObjectiveRiskViewSet, basename='objective-risk')
+
+# Include all routers in API patterns
+api_patterns = [
+    path('', include(router.urls)),
+    path('', include(workplan_router.urls)),
+    path('', include(engagement_router.urls)),
+    path('', include(issue_router.urls)),
+    path('', include(objective_router.urls)),
+]
 
 # ─── URL PATTERNS ────────────────────────────────────────────────────────────
 app_name = 'audit'
@@ -85,6 +102,10 @@ urlpatterns = [
     path('approvals/<int:pk>/', ApprovalDetailView.as_view(), name='approval-detail'),
     path('approvals/<int:pk>/approve/', views.approve_approval, name='approval-approve'),
     path('approvals/<int:pk>/reject/', views.reject_approval, name='approval-reject'),
+    path('approvals/pending/', views.PendingApprovalListView.as_view(), name='approval-pending'),
+    path('approvals/history/', views.ApprovalHistoryListView.as_view(), name='approval-history'),
+    path('approvals/requested/', views.RequestedApprovalsListView.as_view(), name='approval-requested'),
+    path('approvals/<int:pk>/status-update/', views.ApprovalStatusUpdateView.as_view(), name='approval-status-update'),
 
     
     # ─── API URLS ───────────────────────────────────────────────────────────
@@ -121,12 +142,21 @@ urlpatterns = [
     path('objectives/<int:pk>/update/', views.ObjectiveUpdateView.as_view(), name='objective-update'),
     path('engagements/<int:engagement_pk>/objectives/modal/add/', views.ObjectiveModalCreateView.as_view(), name='objective-modal-add'),
     path('objectives/create/', views.ObjectiveModalCreateView.as_view(), name='objective-create'),
-    # Procedure URLs
-    path('objectives/<int:objective_pk>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
+
+    # Risk URLs
+    path('objectives/<int:objective_id>/risks/', RiskListView.as_view(), name='risk-list'),
+    path('risks/<int:pk>/', RiskDetailView.as_view(), name='risk-detail'),
+    path('objectives/<int:objective_id>/risks/add/', RiskCreateView.as_view(), name='risk-add'),
+    path('risks/<int:pk>/edit/', RiskUpdateView.as_view(), name='risk-edit'),
+    path('risks/<int:pk>/delete/', RiskDeleteView.as_view(), name='risk-delete'),
+    path('engagements/<int:engagement_pk>/risks/modal/add/', RiskCreateView.as_view(), name='risk-modal-add'),
+
+    # Procedure URLs (Updated to follow Risk → Procedure hierarchy)
+    path('risks/<int:risk_id>/procedures/', views.ProcedureListView.as_view(), name='procedure-list'),
     path('procedures/<int:pk>/', views.ProcedureDetailView.as_view(), name='procedure-detail'),
-    path('objectives/<int:objective_pk>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
+    path('risks/<int:risk_id>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
     path('procedures/<int:pk>/edit/', views.ProcedureUpdateView.as_view(), name='procedure-edit'),
-    path('objectives/<int:objective_pk>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
+    path('risks/<int:risk_id>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
     # ProcedureResult URLs
     path('procedures/<int:procedure_pk>/results/', views.ProcedureResultListView.as_view(), name='procedureresult-list'),
     path('procedureresults/<int:pk>/', views.ProcedureResultDetailView.as_view(), name='procedureresult-detail'),
@@ -141,13 +171,13 @@ urlpatterns = [
     path('followupactions/<int:pk>/', views.FollowUpActionDetailView.as_view(), name='followupaction-detail'),
     path('issues/<int:issue_pk>/followups/modal/add/', views.FollowUpActionModalCreateView.as_view(), name='followupaction-modal-add'),
     path('issues/<int:issue_pk>/followups/modal/<int:pk>/edit/', views.FollowUpActionModalUpdateView.as_view(), name='followupaction-modal-edit'),
+    path('followupactions/<int:pk>/delete/', views.FollowUpActionDeleteView.as_view(), name='followupaction-delete'),
+    path('followupactions/<int:pk>/update/', views.FollowUpActionUpdateView.as_view(), name='followupaction-update'),
     # IssueRetest URLs
     path('issues/<int:issue_pk>/retests/', views.IssueRetestListView.as_view(), name='issueretest-list'),
-    path('issues/<int:issue_pk>/retests/add/', views.IssueRetestCreateView.as_view(), name='issueretest-add'),
-    path('issueretests/<int:pk>/edit/', views.IssueRetestUpdateView.as_view(), name='issueretest-edit'),
-    path('issueretests/<int:pk>/', views.IssueRetestDetailView.as_view(), name='issueretest-detail'),
     path('issues/<int:issue_pk>/retests/modal/add/', views.IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
-    path('issues/<int:issue_pk>/retests/modal/<int:pk>/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
+    path('issues/<int:issue_pk>/retests/<int:pk>/modal/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
+    path('issues/<int:issue_pk>/retests/<int:pk>/modal/delete/', views.IssueRetestDeleteView.as_view(), name='issueretest-modal-delete'),
     # Note (generic modal)
     path('notes/modal/add/<int:content_type_id>/<int:object_id>/', views.NoteCreateView.as_view(), name='note-modal-add'),
     path('notes/modal/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-modal-edit'),
@@ -171,12 +201,19 @@ urlpatterns = [
     path('htmx/followupactions/', views.htmx_followupaction_list, name='htmx-followupaction-list'),
     path('htmx/issueretests/', views.htmx_issueretest_list, name='htmx-issueretest-list'),
     path('htmx/notes/', views.htmx_note_list, name='htmx-note-list'),
-    # Issue Working Paper URLs
-    path('issues/<int:issue_pk>/working-papers/', IssueWorkingPaperListView.as_view(), name='issueworkingpaper-list'),
-    path('issues/<int:issue_pk>/working-papers/add/', IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-add'),
-    path('working-papers/<int:pk>/edit/', IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-edit'),
-    path('working-papers/<int:pk>/delete/', IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-delete'),
+    # Working Paper URLs
+    path('issues/<int:issue_pk>/working-papers/', views.IssueWorkingPaperListView.as_view(), name='issueworkingpaper-list'),
+    path('issues/<int:issue_pk>/working-papers/modal/add/', IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-modal-add'),
+    path('issues/<int:issue_pk>/working-papers/<int:pk>/edit/', views.IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-modal-edit'),
+    path('issues/<int:issue_pk>/working-papers/<int:pk>/delete/', views.IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-modal-delete'),
     path('working-papers/<int:pk>/', IssueWorkingPaperDetailView.as_view(), name='issueworkingpaper-detail'),
+    path('api/engagement-status-data/', views.api_engagement_status_data, name='api_engagement_status_data'),
+    path('api/issue-risk-data/', views.api_issue_risk_data, name='api_issue_risk_data'),
+    path('api/approval-status-data/', views.api_approval_status_data, name='api_approval_status_data'),
+    path('api/engagement-data/', views.api_engagement_data, name='api_engagement_data'),
+    path('api/issue-data/', views.api_issue_data, name='api_issue_data'),
+    path('issues/<int:issue_pk>/retests/modal/add/', IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
+    path('notes/add/', NoteCreateView.as_view(), name='note-add'),
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

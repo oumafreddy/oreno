@@ -336,13 +336,13 @@ def engagement_summary_pdf(request):
 def issue_register_pdf(request):
     org = request.tenant
     status = request.GET.get('status')
-    severity = request.GET.get('severity')
+    severity = request.GET.get('severity')  # risk_level param
     engagement_name = request.GET.get('engagement_name')
     issues = Issue.objects.filter(organization=org)
     if status:
         issues = issues.filter(issue_status=status)
     if severity:
-        issues = issues.filter(severity_status=severity)
+        issues = issues.filter(risk_level=severity)
     if engagement_name:
         # Try exact match first, then icontains
         if Engagement.objects.filter(organization=org, title=engagement_name).exists():
@@ -368,7 +368,7 @@ def issue_followup_pdf(request):
     if overdue == '1':
         from django.utils import timezone
         today = timezone.now().date()
-        issues = issues.filter(remediation_deadline_date__lt=today, issue_status__in=['open', 'in_progress'])
+        issues = issues.filter(target_date__lt=today, issue_status__in=['open', 'in_progress'])
     html_string = render_to_string('reports/audit_issue_followup.html', {
         'organization': org,
         'issues': issues,

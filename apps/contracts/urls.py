@@ -48,6 +48,12 @@ urlpatterns = [
     path('milestones/<int:pk>/', views.ContractMilestoneDetailView.as_view(), name='contractmilestone-detail'),
     path('milestones/<int:pk>/edit/', views.ContractMilestoneUpdateView.as_view(), name='contractmilestone-edit'),
     path('milestones/<int:pk>/delete/', views.ContractMilestoneDeleteView.as_view(), name='contractmilestone-delete'),
+
+    path('api/status-data/', views.api_status_data, name='api_status_data'),
+    path('api/type-data/', views.api_type_data, name='api_type_data'),
+    path('api/party-data/', views.api_party_data, name='api_party_data'),
+    path('api/milestone-type-data/', views.api_milestone_type_data, name='api_milestone_type_data'),
+    path('api/expiry-data/', views.api_expiry_data, name='api_expiry_data'),
 ]
 
 # API router for contracts endpoints

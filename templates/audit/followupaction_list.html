@@ -7,7 +7,7 @@
     <div class="card shadow-sm">
       <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
         <h3 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Follow-up Actions</h3>
-        <a href="{% url 'audit:followupaction-add' recommendation_pk=recommendation.pk %}" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#followupActionModal">New Follow-up Action</a>
+        <a href="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#globalModal">New Follow-up Action</a>
       </div>
       <div class="card-body">
         <form method="get" class="mb-3">

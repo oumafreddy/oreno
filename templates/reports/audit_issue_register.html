@@ -17,20 +17,20 @@ table.table-sm th, table.table-sm td {
     {% endfor %}
   </select>
 </form>
-<p>Filters: Status: {{ filters.status|default:'All' }}, Severity: {{ filters.severity|default:'All' }}, Engagement: {{ filters.engagement_name|default:'All' }}</p>
+<p>Filters: Status: {{ filters.status|default:'All' }}, Risk Level: {{ filters.severity|default:'All' }}, Engagement: {{ filters.engagement_name|default:'All' }}</p>
 <table class="table table-sm">
   <tr>
-    <th>Code</th><th>Title</th><th>Status</th><th>Severity</th><th>Owner</th><th>Date Identified</th><th>Remediation Deadline</th>
+    <th>Code</th><th>Title</th><th>Status</th><th>Risk Level</th><th>Owner</th><th>Date Identified</th><th>Remediation Deadline</th>
   </tr>
   {% for issue in issues %}
     <tr>
       <td>{{ issue.code }}</td>
       <td>{{ issue.issue_title }}</td>
       <td>{{ issue.get_issue_status_display }}</td>
-      <td>{{ issue.get_severity_status_display }}</td>
+      <td>{{ issue.get_risk_level_display }}</td>
       <td>{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td>
       <td>{{ issue.date_identified }}</td>
-      <td>{{ issue.remediation_deadline_date|default:'-' }}</td>
+      <td>{{ issue.target_date|default:'-' }}</td>
     </tr>
   {% endfor %}
 </table>

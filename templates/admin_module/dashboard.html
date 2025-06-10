@@ -149,25 +149,7 @@
         </div>
     </div>
 </div>
-<!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-const roleDist = JSON.parse("{{ role_distribution|escapejs }}");
-const roleData = {
-    values: roleDist.map(x => x.count),
-    labels: roleDist.map(x => x.role),
-    type: 'pie',
-    marker: {
-        colors: ['#2563eb', '#f59e42', '#6c757d']
-    },
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-};
-const roleLayout = {
-    height: 300,
-    margin: { t: 0, b: 0, l: 0, r: 0 },
-    showlegend: true
-};
-Plotly.newPlot('role-pie-chart', [roleData], roleLayout);
-</script>
+{{ role_distribution|json_script:"role-distribution-data" }}
+{% endblock %}
+{% block extra_scripts %}
 {% endblock %} 

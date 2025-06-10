@@ -1,0 +1,124 @@
+{% load crispy_forms_tags %}
+{% load i18n %}
+
+<div class="modal-header">
+  <h5 class="modal-title">
+    {% if form.instance.pk %}
+      {% trans "Edit Risk" %}: {{ form.instance.title }}
+    {% else %}
+      {% trans "Add Risk" %}
+      {% if objective %}
+        {% trans "to" %} {{ objective.title }}
+      {% elif engagement %}
+        {% trans "to" %} {{ engagement.title }}
+      {% endif %}
+    {% endif %}
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ field|capfirst }}: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" novalidate id="riskForm"
+        hx-post="{% if form.instance.pk %}{% url 'audit:risk-edit' form.instance.pk %}{% elif objective %}{% url 'audit:risk-add' objective_id=objective.id %}{% elif engagement and engagement.id %}{% url 'audit:risk-modal-add' engagement_pk=engagement.id %}{% else %}#{% endif %}"
+        hx-target="#modal-body"
+        hx-swap="outerHTML"
+        hx-trigger="submit">
+    {% csrf_token %}
+    
+    <!-- Hidden fields for context -->
+    {% if objective %}
+      <input type="hidden" name="objective" value="{{ objective.id }}">
+    {% endif %}
+    {% if engagement and not objective %}
+      <input type="hidden" name="engagement_pk" value="{{ engagement.id }}">
+    {% endif %}
+    
+    {% crispy form %}
+    
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-success me-2">
+        <i class="bi bi-check-circle"></i> {% trans "Save" %}
+      </button>
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:objective-detail' objective.id %}'">
+        <i class="bi bi-x-circle"></i> {% trans "Cancel" %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+  // Ensure the form exists before adding event listeners
+  const formElement = document.getElementById('riskForm');
+  if (!formElement) {
+    console.warn('Risk form not found');
+    return;
+  }
+
+  // Handle HTMX form submission
+  formElement.addEventListener('htmx:afterRequest', function(event) {
+    try {
+      const detail = event.detail;
+      const xhr = detail.xhr;
+      const contentType = xhr.getResponseHeader('content-type') || '';
+      
+      if (contentType.includes('application/json')) {
+        const data = JSON.parse(xhr.responseText);
+        
+        if (data.success) {
+          // Close the modal
+          const modalEl = document.getElementById('mainModal');
+          if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+            modal.hide();
+          }
+          
+          // Update the risk list if provided
+          if (data.html_list) {
+            const container = document.getElementById('risk-list-container');
+            if (container) {
+              container.innerHTML = data.html_list;
+            }
+          }
+          
+          // Show success message
+          if (data.message) {
+            // You can implement your preferred notification system here
+            console.log('Success:', data.message);
+          }
+          
+          // Redirect if provided
+          if (data.redirect) {
+            window.location.href = data.redirect;
+          }
+        } else if (data.html_form) {
+          // Replace the modal content with the form containing errors
+          const modalBody = document.getElementById('modal-body');
+          if (modalBody) {
+            modalBody.innerHTML = data.html_form;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error handling risk form response:', e);
+    }
+  });
+
+  // Handle form submission errors
+  formElement.addEventListener('htmx:responseError', function(event) {
+    console.error('Form submission error:', event.detail);
+  });
+})();
+</script>

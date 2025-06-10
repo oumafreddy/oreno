@@ -1,3 +1,4 @@
+{% load static %}
 {% load crispy_forms_tags %}
 <div class="modal-header">
   <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Engagement</h5>
@@ -17,18 +18,4 @@
   </form>
 </div>
 
-<script>
-  // Make sure forms with date inputs are properly formatted
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input[type="date"]').forEach(function(input) {
-      // Make sure the format is correct
-      if (input.value) {
-        const dateValue = new Date(input.value);
-        if (!isNaN(dateValue.getTime())) {
-          const formattedDate = dateValue.toISOString().split('T')[0];
-          input.value = formattedDate;
-        }
-      }
-    });
-  });
-</script>
+<script src="{% static 'js/engagement_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>

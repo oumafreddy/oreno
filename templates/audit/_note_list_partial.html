@@ -1,15 +1,47 @@
 {% load limited_html %}
-<div id="note-list-container">
-  <ul class="list-group list-group-flush">
-    {% for note in notes %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <a href="{% url 'audit:note-detail' note.pk %}">{{ note.get_note_type_display }}</a>
-        <span class="ms-3">{{ note.content|limited_html|truncatechars:60|safe }}</span>
-        <a href="{% url 'audit:note-modal-edit' note.pk %}" class="btn btn-sm btn-outline-secondary ms-2">Edit</a>
-        <span class="badge bg-secondary">Status: {{ note.get_status_display }}</span>
-      </li>
-    {% empty %}
-      <li class="list-group-item text-muted">No notes found.</li>
-    {% endfor %}
-  </ul>
+{% load static %}
+
+<div id="note-list-container" class="note-list-container" hx-trigger="refresh from:body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Notes</h5>
+        <button class="btn btn-primary btn-sm" 
+                hx-get="{% url 'audit:note-add' %}"
+                hx-target="#mainModal .modal-body"
+                data-bs-toggle="modal"
+                data-bs-target="#mainModal">
+            <i class="bi bi-plus-circle me-1"></i>Add Note
+        </button>
+    </div>
+
+    {% if notes %}
+        <div class="list-group">
+            {% for note in notes %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ note.get_note_type_display }}</h6>
+                            <p class="mb-1">{{ note.content|safe|truncatewords:50 }}</p>
+                            <small class="text-muted">
+                                By {{ note.created_by.get_full_name|default:note.created_by.username }} 
+                                on {{ note.created_at|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary btn-sm"
+                                    hx-get="{% url 'audit:note-edit' pk=note.pk %}"
+                                    hx-target="#mainModal .modal-body"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#mainModal">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>No notes have been added yet.
+        </div>
+    {% endif %}
 </div> 

@@ -21,7 +21,7 @@ class OrganizationModelTest(TestCase):
 
     def test_get_absolute_url(self):
         # Ensure the URL returns correctly
-        self.assertEqual(self.organization.get_absolute_url(), reverse('organization_detail', args=[self.organization.id]))
+        self.assertEqual(self.organization.get_absolute_url(), reverse('organizations:detail', args=[self.organization.id]))
 
     def test_get_employees_empty(self):
         # Initially no users are associated

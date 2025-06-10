@@ -1,4 +1,5 @@
 # apps/audit/models/workplan.py
+# Updated for GIAS 2024 compliance
 
 import reversion
 from datetime import date
@@ -6,6 +7,7 @@ from django.db import models
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
 from django.contrib.contenttypes.fields import GenericRelation
 from simple_history.models import HistoricalRecords
@@ -16,8 +18,8 @@ from core.mixins.state import ApprovalStateMixin
 @reversion.register()
 class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """
-    Audit workplan model with FSM-driven approval state, rich-text objectives,
-    description, and tenant isolation.
+    Annual Audit Workplan model with FSM-driven approval state, rich-text objectives,
+    description, and tenant isolation. Enhanced for GIAS 2024 compliance.
     """
     code = models.CharField(
         max_length=8,
@@ -32,8 +34,45 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
         help_text=_("Name of the audit workplan."),
     )
     fiscal_year = models.PositiveIntegerField(
-        verbose_name=_("Fiscal Year"),
-        help_text=_("Fiscal year to which the workplan applies."),
+        verbose_name=_('Fiscal Year'),
+        help_text=_('Fiscal year to which the workplan applies.'),
+    )
+    estimated_total_hours = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_('Estimated Total Hours'),
+        help_text=_('Estimated total audit hours for the entire workplan.'),
+    )
+    priority_ranking = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name=_('Priority Ranking'),
+        help_text=_('Priority ranking of this workplan (1 = highest)'),
+    )
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', _('Draft')),
+        ('submitted', _('Submitted')),
+        ('approved', _('Approved')),
+        ('rejected', _('Rejected')),
+    ]
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='draft',
+        verbose_name=_('Approval Status'),
+        help_text=_('Current approval status of the workplan'),
+    )
+    approved_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_('Approved Date'),
+        help_text=_('Date when this workplan was approved.'),
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_workplans',
+        verbose_name=_('Approved By'),
     )
     objectives = CKEditor5Field(
         'Objectives',
@@ -69,13 +108,15 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
 
     class Meta:
         app_label = 'audit'
-        verbose_name = _("Audit Workplan")
-        verbose_name_plural = _("Audit Workplans")
+        verbose_name = _("Annual Workplan")
+        verbose_name_plural = _("Annual Workplans")
         ordering = ['-creation_date', 'name']
         unique_together = (('organization', 'code'),)
         indexes = [
             models.Index(fields=['organization', 'code'], name='wp_org_code_idx'),
             models.Index(fields=['name'], name='wp_name_idx'),
+            models.Index(fields=['fiscal_year'], name='wp_fiscal_year_idx'),
+            models.Index(fields=['approval_status'], name='wp_approval_status_idx'),
         ]
         constraints = [
             models.CheckConstraint(
@@ -106,7 +147,14 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
             if hasattr(self, 'last_modified_by') and self.last_modified_by:
                 reversion.set_user(self.last_modified_by)
             # record the FSM field state
-            reversion.set_comment(f"Saved workplan '{self.code}' (State: {self.state})")
+            reversion.set_comment(f"Saved workplan '{self.code}' (Approval Status: {self.approval_status})")
+            
+            # Update approval fields if status changes to approved
+            if self.approval_status == 'approved' and not self.approved_date:
+                self.approved_date = date.today()
+                if hasattr(self, 'last_modified_by') and self.last_modified_by:
+                    self.approved_by = self.last_modified_by
+                    
             super().save(*args, **kwargs)
 
     def get_approvers(self):
@@ -119,18 +167,18 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
     @property
     def all_procedures(self):
         """
-        Returns all procedures linked to this workplan via engagements > objectives > procedures.
+        Returns all procedures linked to this workplan via engagements > objectives > risks > procedures.
         """
         Procedure = self._meta.apps.get_model('audit', 'Procedure')
-        return Procedure.objects.filter(objective__engagement__audit_workplan=self)
+        return Procedure.objects.filter(risk__objective__engagement__annual_workplan=self)
 
     @property
     def all_issues(self):
         """
-        Returns all issues linked to this workplan via engagements > objectives > procedures > procedure_results > issues.
+        Returns all issues linked to this workplan via engagements > objectives > risks > procedures > issues.
         """
         Issue = self._meta.apps.get_model('audit', 'Issue')
-        return Issue.objects.filter(procedure_result__procedure__objective__engagement__audit_workplan=self)
+        return Issue.objects.filter(procedure__risk__objective__engagement__annual_workplan=self)
 
     @property
     def all_notes(self):

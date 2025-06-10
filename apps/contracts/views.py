@@ -10,6 +10,10 @@ import json
 from django.db.models import Count
 from django.db.models.functions import ExtractYear
 from django.db.models import Q
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta
 
 # --- Dashboard View ---
 class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
@@ -29,24 +33,24 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         context['recent_contracts'] = Contract.objects.filter(organization=org).order_by('-start_date')[:8]
         # Contract status distribution
         status_dist = Contract.objects.filter(organization=org).values_list('status', flat=True)
-        context['contract_status_dist'] = dict(Counter(status_dist))
+        context['contract_status_dist'] = dict(Counter(status_dist)) or {}
         # Contract type distribution
         type_dist = Contract.objects.filter(organization=org).values_list('contract_type__name', flat=True)
-        context['contract_type_dist'] = dict(Counter(type_dist))
+        context['contract_type_dist'] = dict(Counter(type_dist)) or {}
         # Milestone type distribution
         milestone_type_dist = ContractMilestone.objects.filter(organization=org).values_list('milestone_type', flat=True)
-        context['milestone_type_dist'] = dict(Counter(milestone_type_dist))
+        context['milestone_type_dist'] = dict(Counter(milestone_type_dist)) or {}
         # Milestone status distribution (using is_completed)
         milestone_status_dist = ContractMilestone.objects.filter(organization=org).values_list('is_completed', flat=True)
         status_map = {True: 'Completed', False: 'Pending'}
         milestone_status_dist = [status_map.get(val, 'Unknown') for val in milestone_status_dist]
-        context['milestone_status_dist'] = dict(Counter(milestone_status_dist))
+        context['milestone_status_dist'] = dict(Counter(milestone_status_dist)) or {}
         # Contracts by party (top 10)
         party_dist = Party.objects.filter(contracts__organization=org).annotate(num_contracts=Count('contracts', filter=Q(contracts__organization=org))).order_by('-num_contracts').distinct()[:10]
-        context['contract_party_dist'] = {p.name: p.num_contracts for p in party_dist}
+        context['contract_party_dist'] = dict(Counter()) or {}
         # Contract expiry distribution (by year)
         expiry_dist = Contract.objects.filter(organization=org).annotate(expiry_year=ExtractYear('end_date')).values('expiry_year').annotate(count=Count('id')).order_by('expiry_year')
-        context['contract_expiry_dist'] = {str(e['expiry_year']): e['count'] for e in expiry_dist if e['expiry_year']}
+        context['contract_expiry_dist'] = dict(Counter()) or {}
         return context
 
 # --- ContractType Views ---
@@ -321,3 +325,83 @@ class ContractMilestoneDeleteView(OrganizationPermissionMixin, LoginRequiredMixi
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def get_queryset(self):
         return ContractMilestone.objects.filter(organization=self.request.user.organization)
+
+@login_required
+def api_status_data(request):
+    org = request.user.organization
+    from .models import Contract
+    from django.db.models import Count
+    status_qs = Contract.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+    status_data = {s['status']: s['count'] for s in status_qs}
+    return JsonResponse(status_data, safe=False)
+
+@login_required
+def api_type_data(request):
+    org = request.user.organization
+    from .models import Contract
+    from django.db.models import Count
+    type_qs = Contract.objects.filter(organization=org).values('contract_type').annotate(count=Count('id'))
+    type_data = {s['contract_type']: s['count'] for s in type_qs}
+    return JsonResponse(type_data, safe=False)
+
+@login_required
+def api_party_data(request):
+    org = request.user.organization
+    from .models import Party
+    from django.db.models import Count
+    party_qs = Party.objects.filter(organization=org).values('party_type').annotate(count=Count('id'))
+    party_data = {s['party_type']: s['count'] for s in party_qs}
+    return JsonResponse(party_data, safe=False)
+
+@login_required
+def api_milestone_type_data(request):
+    """API endpoint for milestone type data used in dashboards."""
+    milestones = ContractMilestone.objects.filter(
+        contract__organization=request.user.organization
+    )
+    
+    data = {
+        'total': milestones.count(),
+        'completed': milestones.filter(is_completed=True).count(),
+        'pending': milestones.filter(is_completed=False).count(),
+        'overdue': milestones.filter(is_completed=False, due_date__lt=timezone.now().date()).count(),
+        'upcoming': milestones.filter(is_completed=False, due_date__gte=timezone.now().date()).count(),
+    }
+    return JsonResponse(data)
+
+@login_required
+def api_expiry_data(request):
+    """API endpoint for contract expiry data used in dashboards."""
+    contracts = Contract.objects.filter(organization=request.user.organization)
+    today = timezone.now().date()
+    
+    data = {
+        'total': contracts.count(),
+        'expired': contracts.filter(end_date__lt=today).count(),
+        'expiring_30_days': contracts.filter(
+            end_date__gte=today,
+            end_date__lte=today + timedelta(days=30)
+        ).count(),
+        'expiring_90_days': contracts.filter(
+            end_date__gt=today + timedelta(days=30),
+            end_date__lte=today + timedelta(days=90)
+        ).count(),
+        'valid': contracts.filter(end_date__gt=today + timedelta(days=90)).count(),
+    }
+    return JsonResponse(data)
+
+@login_required
+def api_milestone_status_data(request):
+    """API endpoint for milestone status data used in dashboards."""
+    milestones = ContractMilestone.objects.filter(
+        contract__organization=request.user.organization
+    )
+    
+    data = {
+        'total': milestones.count(),
+        'completed': milestones.filter(is_completed=True).count(),
+        'pending': milestones.filter(is_completed=False).count(),
+        'overdue': milestones.filter(is_completed=False, due_date__lt=timezone.now().date()).count(),
+        'upcoming': milestones.filter(is_completed=False, due_date__gte=timezone.now().date()).count(),
+    }
+    return JsonResponse(data)

@@ -10,6 +10,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 
 # CaseType Views
 class CaseTypeListView(OrganizationPermissionMixin, ListView):
@@ -351,14 +353,24 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
         context['recent_documents'] = LegalDocument.objects.filter(organization=org).order_by('-id')[:2]
         context['recent_tasks'] = LegalTask.objects.filter(organization=org).order_by('-id')[:2]
         # Chart data for Plotly
-        context['case_status_chart'] = {
-            'Open': context['open_cases'],
-            'Closed': context['closed_cases'],
-            'Archived': context['archived_cases'],
-        }
-        context['task_status_chart'] = {
-            'Completed': context['completed_tasks'],
-            'Pending': context['pending_tasks'],
-            'Overdue': context['overdue_tasks'],
-        }
+        context['case_status_chart'] = context.get('case_status_chart', {'Open': 0, 'Closed': 0, 'Archived': 0})
+        context['task_status_chart'] = context.get('task_status_chart', {'Completed': 0, 'Pending': 0, 'Overdue': 0})
         return context 
+
+@login_required
+def api_case_status_data(request):
+    org = request.user.organization
+    from .models import LegalCase
+    from django.db.models import Count
+    status_qs = LegalCase.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+    status_data = {s['status']: s['count'] for s in status_qs}
+    return JsonResponse(status_data, safe=False)
+
+@login_required
+def api_task_status_data(request):
+    org = request.user.organization
+    from .models import LegalTask
+    from django.db.models import Count
+    task_qs = LegalTask.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+    task_data = {s['status']: s['count'] for s in task_qs}
+    return JsonResponse(task_data, safe=False) 

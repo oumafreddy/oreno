@@ -27,4 +27,6 @@ router.register(r'documents', views.DocumentViewSet, basename='document-api')
 
 urlpatterns += [
     path('api/', include(router.urls)),
+    path('api/status-data/', views.api_status_data, name='api_status_data'),
+    path('api/uploads-data/', views.api_uploads_data, name='api_uploads_data'),
 ]

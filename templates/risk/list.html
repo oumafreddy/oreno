@@ -151,6 +151,8 @@
                 <div class="card-header bg-light"><strong>Risk Trend (Risks Identified per Month)</strong></div>
                 <div class="card-body">
                     <div id="risk-trend-chart" style="height:250px;"></div>
+                    <!-- Debug: Risk Trend Data (hidden, toggle for troubleshooting) -->
+                    <pre id="risk-trend-debug" style="display:none; font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px;">{{ risk_trend_debug }}</pre>
                 </div>
             </div>
         </div>
@@ -219,6 +221,8 @@
                 <div class="card-header bg-light"><strong>Risk Heat Map</strong></div>
                 <div class="card-body">
                     <div id="risk-heatmap" style="height:400px;"></div>
+                    <!-- Debug: Risk Heatmap Data (hidden, toggle for troubleshooting) -->
+                    <pre id="risk-heatmap-debug" style="display:none; font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px;"></pre>
                 </div>
             </div>
         </div>
@@ -280,6 +284,8 @@
                 <div class="card-header bg-light"><strong>Assessment Timeline</strong></div>
                 <div class="card-body">
                     <div id="assessment-timeline" style="height:250px;"></div>
+                    <!-- Debug: Assessment Timeline Data (hidden, toggle for troubleshooting) -->
+                    <pre id="assessment-timeline-debug" style="display:none; font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px;"></pre>
                 </div>
             </div>
         </div>
@@ -494,89 +500,11 @@
 {{ risk_trend|json_script:"risk-trend-data" }}
 
 <!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-// Heatmap AJAX placeholder
-fetch('{% url "risk:api_heatmap_data" %}?register={{ selected_register|default:"" }}')
-    .then(response => response.json())
-    .then(data => {
-        Plotly.newPlot('risk-heatmap', data.data, data.layout);
-    });
-// Assessment Timeline AJAX placeholder
-fetch('{% url "risk:api_assessment_timeline" %}?register={{ selected_register|default:"" }}')
-    .then(response => response.json())
-    .then(data => {
-        Plotly.newPlot('assessment-timeline', data.data, data.layout);
-    });
-// Register selector auto-submit
-const regSelect = document.getElementById('register-select');
-if (regSelect) {
-    regSelect.addEventListener('change', function() {
-        this.form.submit();
-    });
-}
-// Risk Category Pie Chart
-const riskCategory = JSON.parse(document.getElementById('risk-category-data').textContent);
-Plotly.newPlot('risk-category-chart', [{
-    labels: Object.keys(riskCategory),
-    values: Object.values(riskCategory),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Risk Status Pie Chart
-const riskStatus = JSON.parse(document.getElementById('risk-status-data').textContent);
-Plotly.newPlot('risk-status-chart', [{
-    labels: Object.keys(riskStatus),
-    values: Object.values(riskStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Risk Owner Pie Chart
-const riskOwner = JSON.parse(document.getElementById('risk-owner-data').textContent);
-Plotly.newPlot('risk-owner-chart', [{
-    labels: Object.keys(riskOwner),
-    values: Object.values(riskOwner),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Risk Register Pie Chart
-const riskRegister = JSON.parse(document.getElementById('risk-register-data').textContent);
-Plotly.newPlot('risk-register-chart', [{
-    labels: Object.keys(riskRegister),
-    values: Object.values(riskRegister),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// KRI Status Pie Chart
-const kriStatus = JSON.parse(document.getElementById('kri-status-data').textContent);
-Plotly.newPlot('kri-status-chart', [{
-    labels: Object.keys(kriStatus),
-    values: Object.values(kriStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Control Effectiveness Pie Chart
-const controlEffectiveness = JSON.parse(document.getElementById('control-effectiveness-data').textContent);
-Plotly.newPlot('control-effectiveness-chart', [{
-    labels: Object.keys(controlEffectiveness),
-    values: Object.values(controlEffectiveness),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Risk Trend Line Chart
-const riskTrend = JSON.parse(document.getElementById('risk-trend-data').textContent);
-Plotly.newPlot('risk-trend-chart', [{
-    x: riskTrend.map(r => r.month),
-    y: riskTrend.map(r => r.count),
-    type: 'scatter',
-    mode: 'lines+markers',
-    name: 'Risks Identified'
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
-</script>
+<script src="https://cdn.plot.ly/plotly-2.27.1.min.js"></script>
+<script src="{% static 'js/risk_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
+<div id="risk-dashboard-vars"
+     data-heatmap-url="{% url 'risk:api_heatmap_data' %}"
+     data-assessment-timeline-url="{% url 'risk:api_assessment_timeline' %}"
+     data-selected-register="{{ selected_register|default:'' }}">
+</div>
 {% endblock %} 

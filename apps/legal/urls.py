@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'legal'
@@ -54,4 +54,8 @@ urlpatterns = [
     path('archives/<int:pk>/delete/', views.LegalArchiveDeleteView.as_view(), name='legalarchive_delete'),
 
     path('', views.LegalDashboardView.as_view(), name='dashboard'),
+
+    # path('api/', include(router.urls)),
+    path('api/case-status-data/', views.api_case_status_data, name='api_case_status_data'),
+    path('api/task-status-data/', views.api_task_status_data, name='api_task_status_data'),
 ] 

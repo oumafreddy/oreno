@@ -6,9 +6,9 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-0">{{ procedure.title }} <span class="badge bg-info">{{ procedure.get_status_display }}</span></h1>
-      <div class="text-muted">Objective: {{ procedure.objective }}</div>
-      <a href="{% url 'audit:objective-detail' procedure.objective.pk %}" class="btn btn-sm btn-outline-secondary mt-2">
-        <i class="bi bi-arrow-left"></i> Back to Procedures
+      <div class="text-muted">Risk: {{ procedure.risk }}</div>
+      <a href="{% url 'audit:risk-detail' procedure.risk.pk %}" class="btn btn-sm btn-outline-secondary mt-2">
+        <i class="bi bi-arrow-left"></i> Back to Risk
       </a>
     </div>
     <div>
@@ -36,7 +36,7 @@
       </div>
     </div>
     <div class="tab-pane fade" id="results" role="tabpanel">
-      {% include 'audit/_procedure_result_list_partial.html' with results=procedure.results.all engagement=procedure.objective.engagement objective=procedure.objective procedure=procedure %}
+      {% include 'audit/_procedure_result_list_partial.html' with results=procedure.results.all engagement=procedure.risk.engagement objective=procedure.risk procedure=procedure %}
     </div>
   </div>
 </div>

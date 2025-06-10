@@ -25,11 +25,7 @@ class AdminDashboardView(OrgAdminRequiredMixin, TemplateView):
         context['org_status'] = 'Active' if org.is_active else 'Inactive'
         context['subscription_plan'] = getattr(org.settings, 'subscription_plan', 'N/A')
         # For pie chart
-        context['role_distribution'] = [
-            {'role': 'Admin', 'count': context['admin_count']},
-            {'role': 'Manager', 'count': context['manager_count']},
-            {'role': 'Staff', 'count': context['staff_count']},
-        ]
+        context['role_distribution'] = context.get('role_distribution', [])
         return context
 
 class AdminUserListView(OrgAdminRequiredMixin, ListView):

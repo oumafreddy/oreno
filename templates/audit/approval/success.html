@@ -1,0 +1,18 @@
+<!-- Success template for HTMX responses -->
+<div class="alert alert-success" role="alert">
+  <h4 class="alert-heading">Success!</h4>
+  <p>Your approval request has been submitted successfully.</p>
+  <hr>
+  <p class="mb-0">
+    {% if approval.status == 'pending' %}
+      An email notification has been sent to {{ approval.approver.get_full_name|default:approval.approver.email }}.
+    {% else %}
+      The approval has been processed.
+    {% endif %}
+  </p>
+</div>
+
+<!-- Hidden div to store redirect URL for JavaScript -->
+<div id="success-redirect-data" data-redirect-url="{% if redirect_url %}{{ redirect_url }}{% endif %}" style="display: none;"></div>
+
+<script src="{% static 'js/approval_success.js' %}" nonce="{{ request.csp_nonce }}"></script>

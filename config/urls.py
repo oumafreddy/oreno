@@ -90,6 +90,9 @@ urlpatterns = [
 
     # Service Info Page
     path('service-info/', TemplateView.as_view(template_name='service_info.html'), name='service_info'),
+
+    # AI Assistant API
+    path('services/ai/', include('services.ai.urls')),
 ]
 
 # Debug-specific URL patterns

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation Assigned to You</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            background-color: #0dcaf0;
+            color: black;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .priority-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .priority-low {
+            background-color: #198754;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Recommendation Assigned to You</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ recommendation.assigned_to.get_full_name|default:recommendation.assigned_to.email }},</p>
+        
+        <p>A recommendation has been assigned to you for implementation:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Title:</strong></td>
+                <td>{{ recommendation.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>
+                    <span class="status-badge">{{ recommendation.get_implementation_status_display|upper }}</span>
+                </td>
+            </tr>
+            {% if recommendation.priority %}
+            <tr>
+                <td><strong>Priority:</strong></td>
+                <td>
+                    {% if recommendation.priority == 'high' %}
+                        <span class="priority-badge priority-high">HIGH</span>
+                    {% elif recommendation.priority == 'medium' %}
+                        <span class="priority-badge priority-medium">MEDIUM</span>
+                    {% else %}
+                        <span class="priority-badge priority-low">LOW</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ recommendation.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Assigned By:</strong></td>
+                <td>{% if last_modified_by %}{{ last_modified_by.get_full_name|default:last_modified_by.email }}{% else %}System{% endif %}</td>
+            </tr>
+            <tr>
+                <td><strong>Assignment Date:</strong></td>
+                <td>{{ recommendation.modified_at }}</td>
+            </tr>
+            {% if recommendation.target_date %}
+            <tr>
+                <td><strong>Target Date:</strong></td>
+                <td>{{ recommendation.target_date }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td>{{ recommendation.description|truncatechars:200 }}</td>
+            </tr>
+            {% if recommendation.issue %}
+            <tr>
+                <td><strong>Related Issue:</strong></td>
+                <td>{{ recommendation.issue.title }}</td>
+            </tr>
+            {% endif %}
+            {% if recommendation.risk %}
+            <tr>
+                <td><strong>Related Risk:</strong></td>
+                <td>{{ recommendation.risk.title }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p>Please review this recommendation and begin implementation planning.</p>
+        
+        {% if recommendation_url %}
+        <a href="{{ recommendation_url }}" class="button">View Recommendation Details</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

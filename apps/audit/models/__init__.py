@@ -10,6 +10,7 @@ from .followupaction import FollowUpAction
 from .issueretest import IssueRetest
 from .recommendation import Recommendation
 from .issue_working_paper import IssueWorkingPaper
+from .risk import Risk
 
 __all__ = [
     'AuditWorkplan',
@@ -25,4 +26,5 @@ __all__ = [
     'IssueRetest',
     'Recommendation',
     'IssueWorkingPaper',
+    'Risk',
 ]

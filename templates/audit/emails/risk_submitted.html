@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Assessment Submitted for Approval</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .risk-level {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .risk-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .risk-medium {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .risk-low {
+            background-color: #ffc107;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Risk Assessment Submitted for Approval</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ recipient.get_full_name|default:recipient.email }},</p>
+        
+        <p>A risk assessment has been submitted for your approval:</p>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Risk Title:</strong></td>
+                <td>{{ risk.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Risk Level:</strong></td>
+                <td>
+                    {% if risk.risk_level|stringformat:"s"|lower == 'high' %}
+                        <span class="risk-level risk-high">HIGH</span>
+                    {% elif risk.risk_level|stringformat:"s"|lower == 'medium' %}
+                        <span class="risk-level risk-medium">MEDIUM</span>
+                    {% else %}
+                        <span class="risk-level risk-low">LOW</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ risk.organization.name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Submitted By:</strong></td>
+                <td>{{ risk.created_by.get_full_name|default:risk.created_by.email }}</td>
+            </tr>
+            <tr>
+                <td><strong>Submission Date:</strong></td>
+                <td>{{ risk.created_at }}</td>
+            </tr>
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td>{{ risk.description|truncatechars:200 }}</td>
+            </tr>
+        </table>
+        
+        <p>Please review this risk assessment and take appropriate action by clicking the button below:</p>
+        
+        {% if risk_url %}
+        <a href="{{ risk_url }}" class="button">Review Risk Assessment</a>
+        {% endif %}
+        
+        <p>Thank you,<br>
+        {{ site_name }}</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}.</p>
+        <p>Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

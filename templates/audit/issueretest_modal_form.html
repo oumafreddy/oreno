@@ -1,44 +1,30 @@
+{% load static %}
 {% load crispy_forms_tags %}
 <div class="modal-header">
-  <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Issue Retest</h5>
+  <h5 class="modal-title">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Retest</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  {% if issue_pk %}
-    <form id="issueretestForm" method="post" hx-post="{% url 'audit:issueretest-modal-add' issue_pk=issue_pk %}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">
+  {% if issue and issue.pk %}
+    <form id="issueretestForm" method="post"
+          hx-post="{% if form.instance.pk %}{% url 'audit:issueretest-modal-edit' issue_pk=issue.pk pk=form.instance.pk %}{% else %}{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}{% endif %}"
+          hx-target="#globalModal .modal-content"
+          hx-swap="innerHTML"
+          enctype="multipart/form-data">
       {% csrf_token %}
       {{ form|crispy }}
       <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Save</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary">
+          <span id="retest-upload-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          <span id="submitText">Save</span>
+        </button>
       </div>
     </form>
   {% else %}
-    <div class="alert alert-danger">Cannot add retest: Issue not found or not saved. Please save the issue first.</div>
+    <div class="alert alert-danger">
+      Cannot add retest: Issue not found or not saved. Please save the issue first.
+    </div>
   {% endif %}
 </div>
-<script>
-(function() {
-  var form = document.getElementById('issueretestForm');
-  if (!form) return;
-  form.addEventListener('htmx:afterRequest', function(event) {
-    try {
-      var detail = event.detail;
-      if (detail && detail.xhr && detail.xhr.getResponseHeader('content-type') && detail.xhr.getResponseHeader('content-type').includes('application/json')) {
-        var data = JSON.parse(detail.xhr.responseText);
-        if (data.form_is_valid && data.html_list) {
-          var container = document.getElementById('issueretest-list-container');
-          if (container) container.innerHTML = data.html_list;
-          var modalEl = document.getElementById('mainModal');
-          if (modalEl && window.bootstrap) {
-            var modal = window.bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-          }
-        } else if (data.html_form) {
-          document.getElementById('modal-body').innerHTML = data.html_form;
-        }
-      }
-    } catch (e) {}
-  });
-})();
-</script> 
+<script src="{% static 'js/issueretest_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script> 

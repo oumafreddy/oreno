@@ -25,7 +25,7 @@
           <td>{{ issue.code }}</td>
           <td>
             <a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a>
-            <div class="small text-muted">{{ issue.severity_status|default:'-' }}</div>
+            <div class="small text-muted">{{ issue.risk_level|default:'-' }}</div>
           </td>
           <td>
             {% if issue.issue_owner %}

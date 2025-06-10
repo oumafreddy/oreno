@@ -32,7 +32,7 @@ def send_welcome_email(user_id, email, username):
 @shared_task
 def cleanup_old_otps(user_id):
     """
-    Clean up expired OTP records that are older than 24 hours.
+    Clean up old unverified OTP records that are older than 24 hours.
     """
     expiration_time = datetime.now() - timedelta(hours=24)
     OTP.objects.filter(

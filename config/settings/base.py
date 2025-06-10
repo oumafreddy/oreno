@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.postgres',  # optional PostgreSQL extensions
+    'django.contrib.sites',  # Required for email absolute URLs
 
     # Third-party
     'django_tenants', 
@@ -95,6 +96,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',  # JWT authentication
     'django_scopes',
     'rest_framework_simplejwt.token_blacklist',
+    'django_csp',  # Content Security Policy
     # Note: django-tenants is loaded in tenants.py
 
     # Local apps
@@ -184,7 +186,9 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 # ------------------------------------------------------------------------------
 MIDDLEWARE = [
     'django_tenants.middleware.TenantMainMiddleware',  # Must be first
+    'apps.common.admin_middleware.AdminTenantMiddleware',  # Handle admin tenant issues
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.CSPNonceMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -196,9 +200,54 @@ MIDDLEWARE = [
     'common.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
     'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
     'audit.views.RequestWrapper',  # For HTMX attribute handling
 ]
+
+# Content Security Policy
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://cdn.ckeditor.com",
+    "https://unpkg.com"
+)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",
+    "'unsafe-eval'",
+    "https://cdn.jsdelivr.net",
+    "https://code.jquery.com",
+    "https://unpkg.com",
+    "https://cdn.plot.ly",
+    "https://www.googletagmanager.com",
+    "https://cdnjs.cloudflare.com",
+    "https://cdn.ckeditor.com",
+    "https://org001.localhost:8000",
+    "https://org001.localhost",
+    "http://org001.localhost:8000",
+    "http://org001.localhost"
+)
+CSP_IMG_SRC = ("'self'", "data:", "https:")
+CSP_FONT_SRC = (
+    "'self'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://cdn.ckeditor.com",
+    "https://unpkg.com"
+)
+CSP_CONNECT_SRC = ("'self'", "https://api.example.com")
+CSP_MEDIA_SRC = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_FRAME_SRC = ("'self'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'self'",)
+CSP_BLOCK_ALL_MIXED_CONTENT = True
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
 
 # Enable debug toolbar in debug mode - temporarily disabled due to missing templates
 # if DEBUG and 'debug_toolbar' in INSTALLED_APPS:
@@ -228,6 +277,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'common.context_processors.csp_nonce',
             ],
             # Template caching in production
             'loaders': [
@@ -304,11 +354,46 @@ USE_TZ = True
 # Static & Media files
 # ------------------------------------------------------------------------------
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Static files finders
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# CKEditor settings
+CKEDITOR_UPLOAD_PATH = 'uploads/'
+CKEDITOR_IMAGE_BACKEND = 'pillow'
+CKEDITOR_CONFIGS = {
+    'extends': {
+        'skin': 'moono-lisa',
+        'toolbar_Basic': [
+            ['Source', '-', 'Bold', 'Italic']
+        ],
+        'toolbar_Full': [
+            ['Styles', 'Format', 'Bold', 'Italic', 'Underline', 'Strike', 'SpellChecker', 'Undo', 'Redo'],
+            ['Link', 'Unlink', 'Anchor'],
+            ['Image', 'Flash', 'Table', 'HorizontalRule'],
+            ['TextColor', 'BGColor'],
+            ['Smiley', 'SpecialChar'], ['Source'],
+        ],
+        'toolbar': 'Full',
+        'height': 291,
+        'width': '100%',
+        'filebrowserWindowWidth': 940,
+        'filebrowserWindowHeight': 725,
+    }
+}
+
+# CKEditor static files
+CKEDITOR_BASEPATH = '/static/django_ckeditor_5/'
 
 # ------------------------------------------------------------------------------
 # Security headers
@@ -317,7 +402,7 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 3600))
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true','1','yes')
@@ -363,19 +448,17 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.handlers.WatchedFileHandler',
             'formatter': 'verbose',
-            'filename': LOG_DIR / 'django.log',
-            'maxBytes': 5*1024*1024,
-            'backupCount': 5,
+            'filename': str(LOG_DIR / 'django.log'),
+            'encoding': 'utf-8',
         },
         'error_file': {
             'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.handlers.WatchedFileHandler',
             'formatter': 'verbose',
-            'filename': LOG_DIR / 'error.log',
-            'maxBytes': 5*1024*1024,
-            'backupCount': 5,
+            'filename': str(LOG_DIR / 'error.log'),
+            'encoding': 'utf-8',
         },
     },
     'loggers': {
@@ -546,3 +629,7 @@ CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
 # Absolute site URL for building links in emails, etc.
 SITE_URL = "http://org001.localhost:8000"
+
+# Django Sites framework configuration
+SITE_ID = 1  # Default site ID
+SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'org001.localhost:8000')

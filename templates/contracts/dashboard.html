@@ -330,66 +330,6 @@
 {{ milestone_type_dist|json_script:"milestone-type-data" }}
 {{ milestone_status_dist|json_script:"milestone-status-data" }}
 {{ contract_expiry_dist|json_script:"contract-expiry-data" }}
-<!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-// Contract Status Pie Chart
-const contractStatus = JSON.parse(document.getElementById('contract-status-data').textContent);
-Plotly.newPlot('contract-status-chart', [{
-    labels: Object.keys(contractStatus),
-    values: Object.values(contractStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Contract Type Pie Chart
-const contractType = JSON.parse(document.getElementById('contract-type-data').textContent);
-Plotly.newPlot('contract-type-chart', [{
-    labels: Object.keys(contractType),
-    values: Object.values(contractType),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Contract Party Bar Chart
-const contractParty = JSON.parse(document.getElementById('contract-party-data').textContent);
-Plotly.newPlot('contract-party-chart', [{
-    x: Object.keys(contractParty),
-    y: Object.values(contractParty),
-    type: 'bar',
-    marker: { color: '#2563eb' },
-    text: Object.values(contractParty).map(String),
-    textposition: 'auto',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
-// Milestone Type Pie Chart
-const milestoneType = JSON.parse(document.getElementById('milestone-type-data').textContent);
-Plotly.newPlot('milestone-type-chart', [{
-    labels: Object.keys(milestoneType),
-    values: Object.values(milestoneType),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Milestone Status Pie Chart
-const milestoneStatus = JSON.parse(document.getElementById('milestone-status-data').textContent);
-Plotly.newPlot('milestone-status-chart', [{
-    labels: Object.keys(milestoneStatus),
-    values: Object.values(milestoneStatus),
-    type: 'pie',
-    textinfo: 'label+percent',
-    insidetextorientation: 'radial',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true});
-// Contract Expiry Bar Chart
-const contractExpiry = JSON.parse(document.getElementById('contract-expiry-data').textContent);
-Plotly.newPlot('contract-expiry-chart', [{
-    x: Object.keys(contractExpiry),
-    y: Object.values(contractExpiry),
-    type: 'bar',
-    marker: { color: '#f59e42' },
-    text: Object.values(contractExpiry).map(String),
-    textposition: 'auto',
-}], {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: false});
-</script>
 <!-- Modal for Contract List -->
 <div class="modal fade" id="contractListModal" tabindex="-1" aria-labelledby="contractListModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -410,4 +350,15 @@ Plotly.newPlot('contract-expiry-chart', [{
     </div>
   </div>
 </div>
+<div id="contracts-dashboard-vars"
+     data-status-url="{% url 'contracts:api_status_data' %}"
+     data-type-url="{% url 'contracts:api_type_data' %}"
+     data-party-url="{% url 'contracts:api_party_data' %}"
+     data-milestone-type-url="{% url 'contracts:api_milestone_type_data' %}"
+     data-milestone-status-url="{% url 'contracts:api_milestone_type_data' %}"
+     data-expiry-url="{% url 'contracts:api_expiry_data' %}">
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'js/contracts_dashboard.js' %}" defer></script>
 {% endblock %} 

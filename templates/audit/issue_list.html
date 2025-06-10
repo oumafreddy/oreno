@@ -47,15 +47,19 @@
                   <td>{{ issue.code }}</td>
                   <td>{{ issue.issue_title }}</td>
                   <td>
-                    {% if issue.procedure_result and issue.procedure_result.procedure and issue.procedure_result.procedure.objective and issue.procedure_result.procedure.objective.engagement %}
-                      <a href="{% url 'audit:engagement-detail' issue.procedure_result.procedure.objective.engagement.pk %}">
-                        {{ issue.procedure_result.procedure.objective.engagement.title }}
-                      </a>
+                    {% if issue.engagement %}
+                      {{ issue.engagement.code }} - {{ issue.engagement.title }}
                     {% else %}
-                      <span class="text-muted">N/A</span>
+                      N/A
                     {% endif %}
                   </td>
-                  <td>{{ issue.issue_owner }}</td>
+                  <td>
+                    {% if issue.issue_owner %}
+                      {{ issue.issue_owner.get_full_name|default:issue.issue_owner.email }}
+                    {% else %}
+                      None
+                    {% endif %}
+                  </td>
                   <td>
                     <span class="badge {% if issue.issue_status == 'open' %}bg-info{% elif issue.issue_status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
                       {{ issue.get_issue_status_display }}

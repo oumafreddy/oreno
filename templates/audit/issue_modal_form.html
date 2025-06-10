@@ -1,11 +1,12 @@
 {% load crispy_forms_tags %}
+{% load static %}
 <div class="modal-header">
   <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Issue</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
   <form method="post" enctype="multipart/form-data" novalidate id="issueForm"
-        hx-post="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% if procedure_result_pk %}{% url 'audit:issue-modal-add' procedure_result_pk=procedure_result_pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}{% endif %}"
+        hx-post="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% if risk_pk %}{% url 'audit:issue-modal-add' risk_pk=risk_pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}{% endif %}"
         hx-target="#modal-body"
         hx-swap="outerHTML"
         hx-trigger="submit">
@@ -18,55 +19,4 @@
   </form>
 </div>
 
-<!-- This script is only used as a fallback; the main modal-handler.js will handle most interactions -->
-<script>
-(function() {
-  // Ensure we have the necessary components
-  if (!document.getElementById('issueForm')) return;
-  
-  // Safely add event listener with proper error handling
-  document.getElementById('issueForm').addEventListener('htmx:afterRequest', function(event) {
-    try {
-      var detail = event.detail;
-      // Safely check content type to avoid null errors
-      var contentType = detail.xhr.getResponseHeader('content-type') || '';
-      
-      if (contentType.includes('application/json')) {
-        try {
-          var data = JSON.parse(detail.xhr.responseText);
-          
-          // Handle successful form submission
-          if (data.success || data.form_is_valid) {
-            // Update the issue list if provided
-            if (data.html_list) {
-              var container = document.getElementById('issue-list-container');
-              if (container) container.innerHTML = data.html_list;
-            }
-            
-            // Close the modal safely using OrenoModals if available
-            if (window.OrenoModals) {
-              window.OrenoModals.hideModal('mainModal');
-            } else {
-              // Fallback to Bootstrap if OrenoModals not loaded yet
-              var modalEl = document.getElementById('mainModal');
-              if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-                var modal = window.bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-              }
-            }
-            
-            // Refresh the page content if needed
-            if (data.redirect) {
-              window.location.href = data.redirect;
-            }
-          }
-        } catch (jsonError) {
-          console.warn('Error parsing JSON response', jsonError);
-        }
-      }
-    } catch (e) {
-      console.warn('Error handling form response', e);
-    }
-  });
-})();
-</script>
+<script src="{% static 'js/issue_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>

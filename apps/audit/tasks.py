@@ -7,12 +7,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.conf import settings
 
-from .models import AuditWorkplan, Engagement, Issue, Approval
+from .models import AuditWorkplan, Engagement, Issue, Approval, Risk, Objective
 from core.mixins.state import PENDING, APPROVED, REJECTED
 from .models.note import Note
 from .models.issue_working_paper import IssueWorkingPaper
 from core.models.validators import validate_file_virus
 from core.signals import log_change
+from .email_utils import send_risk_status_notification, send_risk_assignment_notification, send_risk_approval_notification
 
 # ─── NOTIFICATION TASKS ──────────────────────────────────────────────────────
 @shared_task
@@ -106,18 +107,18 @@ def process_approval_chain(approval_id):
         )
         
         if approval.status == 'approved':
-            # Update object state
-            if hasattr(content_object, 'state'):
-                content_object.state = APPROVED
+            # Update object approval status
+            if hasattr(content_object, 'approval_status'):
+                content_object.approval_status = APPROVED
                 content_object.save()
             
             # Create next approval step if needed
             create_next_approval_step(content_object)
         
         elif approval.status == 'rejected':
-            # Update object state
-            if hasattr(content_object, 'state'):
-                content_object.state = REJECTED
+            # Update object approval status
+            if hasattr(content_object, 'approval_status'):
+                content_object.approval_status = REJECTED
                 content_object.save()
             
             # Notify requester
@@ -159,26 +160,138 @@ def create_next_approval_step(content_object):
 @shared_task
 def bulk_update_workplan_states(workplan_ids, new_state):
     """
-    Update states of multiple workplans asynchronously.
+    Update approval status of multiple workplans asynchronously.
     
     Args:
         workplan_ids (list): List of workplan IDs to update
         new_state (str): New state to set
     """
     with transaction.atomic():
-        AuditWorkplan.objects.filter(pk__in=workplan_ids).update(state=new_state)
+        AuditWorkplan.objects.filter(pk__in=workplan_ids).update(approval_status=new_state)
 
 @shared_task
 def bulk_update_engagement_states(engagement_ids, new_state):
     """
-    Update states of multiple engagements asynchronously.
+    Update approval status of multiple engagements asynchronously.
     
     Args:
         engagement_ids (list): List of engagement IDs to update
         new_state (str): New state to set
     """
     with transaction.atomic():
-        Engagement.objects.filter(pk__in=engagement_ids).update(state=new_state)
+        Engagement.objects.filter(pk__in=engagement_ids).update(approval_status=new_state)
+
+# ─── RISK MANAGEMENT TASKS ───────────────────────────────────────────────────
+@shared_task
+def recalculate_risk_scores(risk_ids):
+    """
+    Recalculate risk scores for multiple risks asynchronously.
+    This is used after control effectiveness changes or when updating multiple risks.
+    
+    Args:
+        risk_ids (list): List of risk IDs to recalculate scores for
+    """
+    with transaction.atomic():
+        risks = Risk.objects.filter(id__in=risk_ids)
+        
+        for risk in risks:
+            # Log original values for audit trail
+            old_inherent = risk.inherent_risk_score
+            old_residual = risk.residual_risk_score
+            old_status = risk.status
+            
+            # Use save() method which contains the calculation logic
+            risk.save()
+            
+            # Log changes if scores changed
+            if (old_inherent != risk.inherent_risk_score or 
+                old_residual != risk.residual_risk_score or 
+                old_status != risk.status):
+                log_change(
+                    risk, 
+                    'update',
+                    changes={
+                        'inherent_risk_score': (old_inherent, risk.inherent_risk_score),
+                        'residual_risk_score': (old_residual, risk.residual_risk_score),
+                        'status': (old_status, risk.status)
+                    }
+                )
+                
+                # Send notification if status changed
+                if old_status != risk.status:
+                    send_risk_status_notification(risk, old_status, risk.status)
+
+@shared_task
+def process_risk_approval(risk_id, approval_status, approver_id=None):
+    """
+    Process risk approval asynchronously.
+    Updates risk status and sends notifications based on approval outcome.
+    
+    Args:
+        risk_id (int): ID of the risk to process
+        approval_status (str): New approval status (approved/rejected)
+        approver_id (int): ID of the user who approved/rejected
+    """
+    try:
+        risk = Risk.objects.get(pk=risk_id)
+        
+        # Update the risk based on approval status
+        if approval_status == APPROVED:
+            if risk.status == 'assessed':
+                risk.status = 'mitigated'
+            
+            # Send approval notification
+            send_risk_approval_notification(risk, 'approved')
+            
+        elif approval_status == REJECTED:
+            # Send rejection notification
+            send_risk_approval_notification(risk, 'rejected')
+        
+        # Save the risk with updated status
+        risk.save()
+        
+        # Log the approval action
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        if approver_id:
+            try:
+                approver = User.objects.get(pk=approver_id)
+                log_change(risk, 'update', 
+                           changes={'approval_status': approval_status},
+                           user=approver)
+            except User.DoesNotExist:
+                log_change(risk, 'update', 
+                           changes={'approval_status': approval_status})
+    
+    except Risk.DoesNotExist:
+        pass
+
+@shared_task
+def bulk_update_risk_states(risk_ids, new_state):
+    """
+    Update status of multiple risks asynchronously.
+    
+    Args:
+        risk_ids (list): List of risk IDs to update
+        new_state (str): New state to set
+    """
+    valid_states = ['identified', 'assessed', 'mitigated', 'accepted', 'transferred', 'closed']
+    
+    if new_state not in valid_states:
+        return
+    
+    with transaction.atomic():
+        risks = Risk.objects.filter(pk__in=risk_ids)
+        for risk in risks:
+            old_state = risk.status
+            risk.status = new_state
+            risk.save()
+            
+            # Send notification about status change
+            if old_state != new_state:
+                send_risk_status_notification(risk, old_state, new_state)
+
 
 # ─── CLEANUP TASKS ───────────────────────────────────────────────────────────
 @shared_task

@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load static %}
 
 <div class="card shadow-sm mb-4" id="followup-list-container">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -8,20 +9,20 @@
         </h5>
         <div>
             {% if issue_id %}
-                <button class="btn btn-sm btn-primary" 
-                        hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}" 
-                        hx-target="#globalModal .modal-content"
+                <button class="btn btn-sm btn-primary"
+                        hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}"
+                        hx-target="#modal-body"
                         hx-swap="innerHTML"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#globalModal"
+                        data-bs-toggle="modal"
+                        data-bs-target="#mainModal"
                         data-bs-tooltip="tooltip"
                         title="{% trans 'Add a new follow-up action' %}">
                     <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up" %}
                 </button>
             {% else %}
-                <button class="btn btn-sm btn-primary" 
-                        disabled 
-                        data-bs-toggle="tooltip" 
+                <button class="btn btn-sm btn-primary"
+                        disabled
+                        data-bs-toggle="tooltip"
                         title="{% trans 'Cannot add follow-up: Issue not saved yet' %}">
                     <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up" %}
                 </button>
@@ -30,116 +31,47 @@
     </div>
     <div class="card-body p-0">
         {% if followups %}
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>{% trans "Description" %}</th>
-                            <th>{% trans "Status" %}</th>
-                            <th>{% trans "Assigned To" %}</th>
-                            <th>{% trans "Due Date" %}</th>
-                            <th class="text-end">{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for followup in followups %}
-                            <tr class="{% if followup.is_overdue %}table-danger{% endif %}">
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0 me-2">
-                                            <i class="bi bi-arrow-return-right text-muted"></i>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <div class="fw-medium">
-                                                {{ followup.description|striptags|truncatechars:60|default:"No description" }}
-                                            </div>
-                                            <small class="text-muted">
-                                                {% blocktrans with time_ago=followup.created_at|timesince created_by=followup.created_by.get_full_name|default:followup.created_by.username|default:"System" %}
-                                                    Created {{ time_ago }} ago by {{ created_by }}
-                                                {% endblocktrans %}
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {% with status_class=followup.status|default:'pending' %}
-                                        <span class="badge bg-{% if status_class == 'completed' %}success{% elif status_class == 'in_progress' %}primary{% else %}warning{% endif %}">
-                                            {{ followup.get_status_display|default:"Pending" }}
-                                        </span>
-                                    {% endwith %}
-                                </td>
-                                <td>
-                                    {% if followup.assigned_to %}
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar avatar-xs me-2">
-                                                <span class="avatar-text bg-primary text-white">
-                                                    {{ followup.assigned_to.get_initials|default:"??" }}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <div class="fw-medium">
-                                                    {{ followup.assigned_to.get_full_name|default:followup.assigned_to.email|default:"Unknown" }}
-                                                </div>
-                                                {% if followup.assigned_to.email %}
-                                                    <small class="text-muted">{{ followup.assigned_to.email }}</small>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <span class="text-muted">{% trans "Unassigned" %}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if followup.due_date %}
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-calendar3 me-2 {% if followup.is_overdue %}text-danger{% else %}text-muted{% endif %}"></i>
-                                            <div>
-                                                <div>{{ followup.due_date|date:"M d, Y" }}</div>
-                                                <small class="{% if followup.is_overdue %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                                                    {% if followup.is_overdue %}
-                                                        {% blocktrans with time_ago=followup.due_date|timesince %}
-                                                            {{ time_ago }} overdue
-                                                        {% endblocktrans %}
-                                                    {% else %}
-                                                        {% blocktrans with time_left=followup.due_date|timeuntil %}
-                                                            {{ time_left }} left
-                                                        {% endblocktrans %}
-                                                    {% endif %}
-                                                </small>
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <span class="text-muted">{% trans "No due date" %}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-outline-primary"
-                                                hx-get="{% url 'audit:followupaction-edit' pk=followup.pk %}"
-                                                hx-target="#globalModal .modal-content"
-                                                hx-swap="innerHTML"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#globalModal"
-                                                data-bs-tooltip="tooltip"
-                                                title="{% trans 'Edit this follow-up' %}">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-outline-danger"
-                                                hx-delete="{% url 'audit:followupaction-delete' pk=followup.pk %}"
-                                                hx-confirm="{% trans 'Are you sure you want to delete this follow-up action?' %}"
-                                                hx-target="#followup-list-container"
-                                                hx-swap="outerHTML"
-                                                data-bs-tooltip="tooltip"
-                                                title="{% trans 'Delete this follow-up' %}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for followup in followups %}
+                    <tr>
+                        <td>{{ followup.description|truncatechars:100 }}</td>
+                        <td><span class="badge bg-info">{{ followup.get_status_display }}</span></td>
+                        <td>{% if followup.due_date %}{{ followup.due_date|date:"M d, Y" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
+                        <td>{{ followup.assigned_to.get_full_name|default:followup.assigned_to.username }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        hx-get="{% url 'audit:followupaction-modal-edit' issue_pk=followup.issue.pk pk=followup.pk %}"
+                                        hx-target="#modal-body"
+                                        hx-swap="innerHTML"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#mainModal">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        hx-get="{% url 'audit:followupaction-delete' followup.pk %}"
+                                        hx-target="#modal-body"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#mainModal"
+                                        title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
             <div class="text-center p-5">
                 <div class="mb-3">
@@ -156,10 +88,10 @@
                 {% if issue_id %}
                     <button class="btn btn-primary"
                             hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}"
-                            hx-target="#globalModal .modal-content"
+                            hx-target="#modal-body"
                             hx-swap="innerHTML"
                             data-bs-toggle="modal"
-                            data-bs-target="#globalModal">
+                            data-bs-target="#mainModal">
                         <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up Action" %}
                     </button>
                 {% endif %}
@@ -174,12 +106,4 @@
     </div>
 {% endif %}
 
-<script>
-// Initialize tooltips
-if (typeof bootstrap !== 'undefined') {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-tooltip="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
-</script>
+<script src="{% static 'js/followupaction_list_partial.js' %}" nonce="{{ request.csp_nonce }}"></script>

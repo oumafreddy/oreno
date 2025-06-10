@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}{% if object %}Edit{% else %}Add{% endif %} Procedure Result{% endblock %}
@@ -14,9 +15,10 @@
         <form method="post" enctype="multipart/form-data" novalidate id="procedureresultForm">
           {% csrf_token %}
           {{ form|crispy }}
+          <div id="procedure-result-prompt" class="alert alert-info mt-3" style="display:none;"></div>
           <div class="d-flex justify-content-end mt-4">
             <button type="submit" class="btn btn-success">Save</button>
-            <a href="{% if object %}{% url 'audit:procedureresult-detail' object.pk %}{% else %}{% url 'audit:procedureresult-list' procedure_pk=procedure.pk %}{% endif %}" class="btn btn-secondary ms-2">Cancel</a>
+            <a href="{% url 'audit:procedure-detail' object.procedure.pk %}" class="btn btn-secondary ms-2">Cancel</a>
           </div>
         </form>
       </div>
@@ -24,11 +26,5 @@
   </div>
 </div>
 
-<!-- Add script for HTMX/modal handling if needed -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Just some basic initialization if needed, but no form submission override
-  console.log('Procedure result form loaded');
-});
-</script>
+<script src="{% static 'js/procedureresult_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
 {% endblock %}

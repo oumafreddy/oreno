@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.views.generic import TemplateView
 from . import views
@@ -111,7 +111,10 @@ urlpatterns = [
     path('evidences/<int:pk>/', views.ComplianceEvidenceDetailView.as_view(), name='evidence_detail'),
     path('evidences/<int:pk>/update/', views.ComplianceEvidenceUpdateView.as_view(), name='evidence_update'),
     path('evidences/<int:pk>/delete/', views.ComplianceEvidenceDeleteView.as_view(), name='evidence_delete'),
-]
 
-# Include API URLs
-urlpatterns += router.urls
+    # API URLs
+    path('api/', include(router.urls)),
+    path('api/framework-data/', views.api_framework_data, name='api_framework_data'),
+    path('api/obligation-data/', views.api_obligation_data, name='api_obligation_data'),
+    path('api/policy-expiry-data/', views.api_policy_expiry_data, name='api_policy_expiry_data'),
+]

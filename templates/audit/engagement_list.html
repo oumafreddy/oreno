@@ -46,10 +46,16 @@
                 <tr>
                   <td>{{ engagement.code }}</td>
                   <td>{{ engagement.title }}</td>
-                  <td>{{ engagement.audit_workplan }}</td>
+                  <td>
+                    {% if engagement.audit_workplan and engagement.audit_workplan.code %}
+                      {{ engagement.audit_workplan.code }}
+                    {% else %}
+                      {{ engagement.audit_workplan }}
+                    {% endif %}
+                  </td>
                   <td>{{ engagement.assigned_to }}</td>
                   <td>
-                    <span class="badge {% if engagement.project_status == 'draft' %}bg-secondary{% elif engagement.project_status == 'active' %}bg-info{% elif engagement.project_status == 'closed' %}bg-success{% endif %}">
+                    <span class="badge bg-light text-dark fw-bold border border-secondary">
                       {{ engagement.get_project_status_display }}
                     </span>
                   </td>

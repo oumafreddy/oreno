@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib import messages
 from .models import DocumentRequest, Document
 from .forms import DocumentForm, DocumentRequestForm, DocumentRequestFilterForm
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from core.mixins.permissions import OrganizationPermissionMixin
 from django.urls import reverse_lazy
@@ -16,6 +16,7 @@ from django.utils.timezone import now, timedelta
 from users.permissions import IsOrgManagerOrReadOnly
 from core.mixins.organization import OrganizationScopedQuerysetMixin
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
 
 class PublicDocumentUploadView(View):
     template_name = 'document_management/public_upload.html'
@@ -184,14 +185,14 @@ class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
         # Analytics: Requests by status
         status_qs = DocumentRequest.objects.filter(organization=org).values('status').annotate(count=Count('id'))
         status_data = {s['status']: s['count'] for s in status_qs}
-        context['status_chart'] = json.dumps(status_data)
+        context['status_chart'] = json.dumps(status_data or {})
         # Analytics: Uploads over last 7 days
         today = now().date()
         days = [today - timedelta(days=i) for i in range(6, -1, -1)]
         uploads_qs = Document.objects.filter(organization=org, uploaded_at__date__gte=days[0]).values('uploaded_at__date').annotate(count=Count('id'))
         uploads_map = {str(u['uploaded_at__date']): u['count'] for u in uploads_qs}
         uploads_data = {str(day): uploads_map.get(str(day), 0) for day in days}
-        context['uploads_chart'] = json.dumps(uploads_data)
+        context['uploads_chart'] = json.dumps(uploads_data or {})
         return context
 
 class DocumentRequestViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
@@ -205,3 +206,36 @@ class DocumentViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     permission_classes = [IsOrgManagerOrReadOnly]
     def perform_create(self, serializer):
         serializer.save(organization=self.request.tenant, uploaded_by=self.request.user)
+
+@login_required
+def api_status_data(request):
+    org = request.user.organization
+    from .models import DocumentRequest
+    from django.db.models import Count
+    status_qs = DocumentRequest.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+    status_data = {s['status']: s['count'] for s in status_qs}
+    return JsonResponse(status_data, safe=False)
+
+@login_required
+def api_uploads_data(request):
+    org = request.user.organization
+    from .models import Document
+    from django.db.models import Count
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Get uploads for the last 7 days
+    today = timezone.now().date()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    uploads_qs = Document.objects.filter(
+        organization=org,
+        uploaded_at__date__gte=days[0]
+    ).values('uploaded_at__date').annotate(count=Count('id'))
+    
+    # Create a dictionary with all days, defaulting to 0
+    uploads_data = {str(day): 0 for day in days}
+    # Update with actual counts
+    for upload in uploads_qs:
+        uploads_data[str(upload['uploaded_at__date'])] = upload['count']
+    
+    return JsonResponse(uploads_data, safe=False)
