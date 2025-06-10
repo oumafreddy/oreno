@@ -270,7 +270,7 @@ TEMPLATES = [
             BASE_DIR / 'templates/tenants',  # Tenant-specific overrides
             BASE_DIR / 'templates',          # Global templates
         ],
-        'APP_DIRS': False,
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',

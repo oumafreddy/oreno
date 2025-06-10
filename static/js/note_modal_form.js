@@ -3,46 +3,37 @@
 
 document.addEventListener('DOMContentLoaded', function() {
   if (!document.body) return;
-  // Handle cancel button (if present)
-  const cancelBtn = document.getElementById('note-cancel-btn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', function() {
-      const url = cancelBtn.getAttribute('data-engagement-url');
-      if (url) {
-        window.location.href = url;
+
+  // Show the mainModal when HTMX loads the note form into the modal body
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.classList.contains('modal-body')) {
+      var modalEl = document.getElementById('mainModal');
+      if (modalEl && typeof bootstrap !== 'undefined') {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
       }
-    });
-  }
+    }
+  });
 
   // Handle form submission (if present)
-  const form = document.querySelector('#mainModal form');
-  if (form) {
-    form.addEventListener('htmx:beforeRequest', function(event) {
-      // Ensure CSRF token is included
-      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-      if (csrfToken) {
-        event.detail.headers['X-CSRFToken'] = csrfToken.value;
-      }
-    });
-
-    form.addEventListener('htmx:afterRequest', function(event) {
-      if (event.detail.successful) {
-        // Close modal
-        const modalEl = document.getElementById('mainModal');
-        if (modalEl && typeof bootstrap !== 'undefined') {
-          const modal = bootstrap.Modal.getInstance(modalEl);
-          if (modal) {
-            modal.hide();
-          }
-        }
-        // Refresh note list
-        const noteList = document.getElementById('note-list-container');
-        if (noteList) {
-          htmx.trigger(noteList, 'refresh');
+  document.body.addEventListener('htmx:afterRequest', function(event) {
+    // Only close modal if the request was for the note form and was successful
+    var form = document.querySelector('#mainModal form');
+    if (form && event.detail && event.detail.xhr && event.detail.xhr.responseURL && event.detail.successful) {
+      const modalEl = document.getElementById('mainModal');
+      if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+          modal.hide();
         }
       }
-    });
-  }
+      // Refresh note list
+      const noteList = document.getElementById('note-list-container');
+      if (noteList) {
+        htmx.trigger(noteList, 'refresh');
+      }
+    }
+  });
 
   // Initialize CKEditor for the note content textarea (if present)
   var contentTextarea = document.getElementById('id_content');
@@ -55,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(editor => {
         window.noteEditor = editor;
         // Update textarea with CKEditor content on form submit
+        var form = document.querySelector('#mainModal form');
         if (form) {
           form.addEventListener('submit', function(e) {
             editor.updateSourceElement();
@@ -63,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .catch(error => {
         console.error('Error initializing CKEditor:', error);
+        var form = document.querySelector('#mainModal form');
         if (form) {
           const errorDiv = document.createElement('div');
           errorDiv.className = 'alert alert-danger';
@@ -75,14 +68,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Show the mainModal when HTMX loads the note form into the modal body
-// Only for the note modal
-document.body && document.body.addEventListener('htmx:afterSwap', function(evt) {
-  if (evt.detail.target && evt.detail.target.id === 'modal-body') {
-    var modalEl = document.getElementById('mainModal');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-      var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      modal.show();
+// Handle cancel button (if present)
+const cancelBtn = document.getElementById('note-cancel-btn');
+if (cancelBtn) {
+  cancelBtn.addEventListener('click', function() {
+    const url = cancelBtn.getAttribute('data-engagement-url');
+    if (url) {
+      window.location.href = url;
     }
-  }
-}); 
+  });
+} 

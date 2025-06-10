@@ -11,16 +11,15 @@
 }
 
 .toast {
-  border: none;
+  border: 2px solid #fff !important;
   border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
   overflow: hidden;
   transition: all 0.3s ease-in-out;
   width: 100%;
   max-width: 350px;
   pointer-events: auto;
   background-clip: padding-box;
-  border: 1px solid rgba(0, 0, 0, 0.1);
   opacity: 0;
 }
 
@@ -32,17 +31,18 @@
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  background-color: rgba(255, 255, 255, 0.85);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: rgba(34, 34, 34, 0.95) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-top-left-radius: calc(0.5rem - 1px);
   border-top-right-radius: calc(0.5rem - 1px);
 }
 
 .toast-body {
   padding: 1rem;
-  background-color: #fff;
+  background-color: #222 !important;
   border-bottom-left-radius: calc(0.5rem - 1px);
   border-bottom-right-radius: calc(0.5rem - 1px);
+  color: #fff !important;
 }
 
 /* Toast Colors - force white text for visibility */
@@ -57,16 +57,17 @@
 }
 
 .toast.bg-success {
-  background-color: #28a745 !important;
+  background-color: #218838 !important;
 }
 .toast.bg-danger {
-  background-color: #dc3545 !important;
+  background-color: #c82333 !important;
 }
 .toast.bg-warning {
-  background-color: #ffc107 !important;
+  background-color: #e0a800 !important;
+  color: #222 !important;
 }
 .toast.bg-info {
-  background-color: #17a2b8 !important;
+  background-color: #117a8b !important;
 }
 
 /* Animation */
@@ -101,7 +102,8 @@
 
 /* Close Button */
 .btn-close {
-  opacity: 0.7;
+  opacity: 0.9;
+  filter: invert(1) grayscale(1) brightness(2);
   transition: opacity 0.2s ease-in-out;
 }
 
@@ -112,5 +114,5 @@
 /* Make close button visible on dark backgrounds */
 .toast .btn-close {
   filter: invert(1) grayscale(1) brightness(2);
-  opacity: 0.9;
+  opacity: 0.95;
 }
