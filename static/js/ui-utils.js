@@ -34,4 +34,5 @@
         showToast,
         initTooltips
     };
+    window.showToast = showToast;
 })(window);
