@@ -37,8 +37,7 @@ function initCSRFHandling() {
  */
 function initUIComponents() {
     // Bootstrap component initialization
-    const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+    UIUtils.initTooltips();
 
     const popovers = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popovers.forEach(popover => new bootstrap.Popover(popover));
@@ -96,13 +95,13 @@ function initFormHandling() {
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else if (data.message) {
-                        showToast('Success', data.message, 'success');
+                        UIUtils.showToast('Success', data.message, 'success');
                     }
                 } else {
                     handleFormErrors(form, await response.json());
                 }
             } catch (error) {
-                showToast('Error', 'An unexpected error occurred', 'danger');
+                UIUtils.showToast('Error', 'An unexpected error occurred', 'danger');
             } finally {
                 submitBtn.disabled = false;
             }
@@ -130,7 +129,7 @@ function initErrorHandling() {
         const now = Date.now();
         const errorMsg = `${message} @ ${source}:${lineno}`;
         if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
-            showToast('Application Error', 'An unexpected error occurred', 'danger');
+            UIUtils.showToast('Application Error', 'An unexpected error occurred', 'danger');
             lastErrorMsg = errorMsg;
             lastErrorTime = now;
         }
@@ -140,7 +139,7 @@ function initErrorHandling() {
     window.addEventListener('unhandledrejection', event => {
         console.error('Unhandled rejection:', event.reason);
         if (isDev || (event.reason && event.reason.message !== lastErrorMsg)) {
-            showToast('Request Failed', event.reason && event.reason.message ? event.reason.message : 'Action failed', 'danger');
+            UIUtils.showToast('Request Failed', event.reason && event.reason.message ? event.reason.message : 'Action failed', 'danger');
             lastErrorMsg = event.reason && event.reason.message ? event.reason.message : '';
             lastErrorTime = Date.now();
         }
@@ -172,31 +171,6 @@ function initAnalytics() {
 /**
  * UI Utilities
  */
-function showToast(title, message, variant = 'success') {
-    const toastContainer = document.getElementById('toast-container') || createToastContainer();
-    const toast = document.createElement('div');
-    
-    toast.className = `toast align-items-center text-bg-${variant} border-0`;
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                <strong>${title}</strong><br>${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-    
-    toastContainer.appendChild(toast);
-    new bootstrap.Toast(toast, { autohide: true, delay: 5000 }).show();
-}
-
-function createToastContainer() {
-    const container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    document.body.appendChild(container);
-    return container;
-}
 
 /**
  * Security Utilities
@@ -286,19 +260,20 @@ async function loadDynamicContent(container, url) {
  */
 document.addEventListener('ajax:success', (event) => {
     const [data, status, xhr] = event.detail;
-    showToast('Success', data.message || 'Action completed successfully', 'success');
+    UIUtils.showToast('Success', data.message || 'Action completed successfully', 'success');
 });
 
 document.addEventListener('ajax:error', (event) => {
     const [error, status, xhr] = event.detail;
-    showToast('Error', error.message || 'Action failed', 'danger');
+    UIUtils.showToast('Error', error.message || 'Action failed', 'danger');
 });
 
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
+    const uiUtils = require('./ui-utils');
     module.exports = {
         debounce,
-        showToast,
+        showToast: uiUtils.showToast,
         sanitizeInput
     };
 }
