@@ -24,6 +24,7 @@
         }
     }
 
+<<<<<<< HEAD
     function initUIComponents() {
         // Check if Bootstrap is available
         if (typeof bootstrap !== 'undefined') {
@@ -32,6 +33,14 @@
             tooltipTriggerList.map(function(tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+=======
+/**
+ * UI Components Initialization
+ */
+function initUIComponents() {
+    // Bootstrap component initialization
+    UIUtils.initTooltips();
+>>>>>>> origin/codex/add-window.showtoast-assignment
 
             // Initialize popovers
             const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
@@ -200,13 +209,13 @@ function initFormHandling() {
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else if (data.message) {
-                        showToast('Success', data.message, 'success');
+                        UIUtils.showToast('Success', data.message, 'success');
                     }
                 } else {
                     handleFormErrors(form, await response.json());
                 }
             } catch (error) {
-                showToast('Error', 'An unexpected error occurred', 'danger');
+                UIUtils.showToast('Error', 'An unexpected error occurred', 'danger');
             } finally {
                 submitBtn.disabled = false;
             }
@@ -220,6 +229,42 @@ function initFormHandling() {
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Error Handling System
+ */
+function initErrorHandling() {
+    // Global error handler with duplicate suppression and dev/prod awareness
+    let lastErrorMsg = '';
+    let lastErrorTime = 0;
+    const ERROR_TOAST_SUPPRESS_MS = 10000; // 10 seconds
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    window.onerror = function(message, source, lineno, colno, error) {
+        console.error('Global error:', { message, source, lineno, colno, error });
+        const now = Date.now();
+        const errorMsg = `${message} @ ${source}:${lineno}`;
+        if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
+            UIUtils.showToast('Application Error', 'An unexpected error occurred', 'danger');
+            lastErrorMsg = errorMsg;
+            lastErrorTime = now;
+        }
+        return true;
+    };
+
+    window.addEventListener('unhandledrejection', event => {
+        console.error('Unhandled rejection:', event.reason);
+        if (isDev || (event.reason && event.reason.message !== lastErrorMsg)) {
+            UIUtils.showToast('Request Failed', event.reason && event.reason.message ? event.reason.message : 'Action failed', 'danger');
+            lastErrorMsg = event.reason && event.reason.message ? event.reason.message : '';
+            lastErrorTime = Date.now();
+        }
+        event.preventDefault();
+    });
+}
+
+/**
+>>>>>>> origin/codex/add-window.showtoast-assignment
  * Analytics Integration
  */
 function initAnalytics() {
@@ -243,6 +288,13 @@ function initAnalytics() {
 /**
  * UI Utilities
  */
+<<<<<<< HEAD
+=======
+
+/**
+ * Security Utilities
+ */
+>>>>>>> origin/codex/add-window.showtoast-assignment
 function sanitizeInput(input) {
     const temp = document.createElement('div');
     temp.textContent = input;
@@ -328,11 +380,28 @@ function initCustomHooks() {
 
 })();
 
+<<<<<<< HEAD
+=======
+/**
+ * Custom Event Handlers
+ */
+document.addEventListener('ajax:success', (event) => {
+    const [data, status, xhr] = event.detail;
+    UIUtils.showToast('Success', data.message || 'Action completed successfully', 'success');
+});
+
+document.addEventListener('ajax:error', (event) => {
+    const [error, status, xhr] = event.detail;
+    UIUtils.showToast('Error', error.message || 'Action failed', 'danger');
+});
+
+>>>>>>> origin/codex/add-window.showtoast-assignment
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
+    const uiUtils = require('./ui-utils');
     module.exports = {
         debounce,
-        showToast,
+        showToast: uiUtils.showToast,
         sanitizeInput
     };
 }

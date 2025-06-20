@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHolder
+from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHolder, Field
 from crispy_bootstrap5.bootstrap5 import FloatingField
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -142,8 +142,8 @@ class AuditWorkplanForm(BaseAuditForm):
             ),
             Fieldset(
                 _('Details'),
-                'objectives',
-                'description',
+                Field('objectives'),
+                Field('description'),
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),

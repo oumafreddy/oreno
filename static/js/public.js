@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Initialize animations when the page loads
 window.addEventListener('load', function() {
     // Trigger hero animations
-    const heroHeading = document.querySelector('.hero h2');
+    const heroHeading = document.querySelector('.hero h1');
     const heroText = document.querySelector('.hero p');
     const heroButtons = document.querySelectorAll('.hero .btn');
     

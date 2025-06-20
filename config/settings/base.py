@@ -181,6 +181,10 @@ SIMPLE_JWT = {
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
+# Django Scopes
+DJANGO_SCOPES_MIDDLEWARE_ENABLED = True
+DJANGO_SCOPES_AUTO_CREATE_VIEWS = True
+
 # ------------------------------------------------------------------------------
 # Middleware
 # ------------------------------------------------------------------------------
@@ -267,10 +271,9 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates/tenants',  # Tenant-specific overrides
-            BASE_DIR / 'templates',          # Global templates
+            BASE_DIR / 'templates',
         ],
-        'APP_DIRS': False,
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -279,13 +282,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'common.context_processors.csp_nonce',
             ],
-            # Template caching in production
-            'loaders': [
-                ('django.template.loaders.cached.Loader', [
-                    'django.template.loaders.filesystem.Loader',
-                    'django.template.loaders.app_directories.Loader',
-                ]),
-            ] if not DEBUG else None,
         },
     },
 ]
