@@ -44,6 +44,7 @@
     <!-- Custom JavaScript -->
     <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/note_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
     <!-- Custom Styles -->
     <style nonce="{{ request.csp_nonce }}">
@@ -195,7 +196,7 @@
 
                 <ul class="navbar-nav mb-2 mb-lg-0">
                     <li class="nav-item position-relative">
-                        <a class="nav-link ai-action-btn" href="#" data-bs-toggle="modal" data-bs-target="#aiAssistantModal">
+                        <a class="nav-link ai-action-btn" href="#" id="ai-assistant-button">
                             <i class="bi bi-robot"></i> AI Assistant
                         </a>
                     </li>
@@ -300,6 +301,50 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <!-- AI Assistant Modal -->
+    <div class="modal fade" id="aiAssistantModal" tabindex="-1" aria-labelledby="aiAssistantModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiAssistantModalLabel">
+                        <i class="bi bi-robot me-2"></i>AI Assistant
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ai-assistant-form">
+                        <div class="mb-3">
+                            <label for="ai-question" class="form-label">Ask me anything about GRC, audit, risk, or compliance:</label>
+                            <textarea class="form-control" id="ai-question" name="question" rows="4" 
+                                    placeholder="e.g., How do I conduct a risk assessment? What are the key components of an audit plan?"></textarea>
+                        </div>
+                        
+                        <div id="ai-loading" class="text-center d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Thinking...</p>
+                        </div>
+                        
+                        <div id="ai-answer" class="d-none">
+                            <h6>Answer:</h6>
+                            <div class="alert alert-info">
+                                <p id="ai-answer-text"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary" id="ai-ask-btn">
+                                <i class="bi bi-send me-1"></i>Ask AI
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {% block extra_body %}{% endblock %}
 </body>

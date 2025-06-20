@@ -17,6 +17,7 @@ const csrftoken = getCookie('csrftoken');
 
 function getAssessmentFilters() {
   const form = document.getElementById('assessment-filter-form');
+  if (!form) return {};
   const data = new FormData(form);
   const filters = {};
   for (const [k, v] of data.entries()) {
@@ -27,18 +28,23 @@ function getAssessmentFilters() {
 
 function updateExportLinks(filters) {
   const params = new URLSearchParams(filters).toString();
-  document.getElementById('export-csv').href = '/risk/export/assessments/?' + params + '&format=csv';
-  document.getElementById('export-excel').href = '/risk/export/assessments/?' + params + '&format=excel';
+  const csvLink = document.getElementById('export-csv');
+  const excelLink = document.getElementById('export-excel');
+  if (csvLink) csvLink.href = '/risk/export/assessments/?' + params + '&format=csv';
+  if (excelLink) excelLink.href = '/risk/export/assessments/?' + params + '&format=excel';
 }
 
 function showLoading(show) {
-  document.getElementById('assessment-loading').style.display = show ? '' : 'none';
+  const loadingEl = document.getElementById('assessment-loading');
+  if (loadingEl) loadingEl.style.display = show ? '' : 'none';
 }
 
 function showError(msg) {
   const err = document.getElementById('assessment-error');
-  err.style.display = msg ? '' : 'none';
-  err.textContent = msg || '';
+  if (err) {
+    err.style.display = msg ? '' : 'none';
+    err.textContent = msg || '';
+  }
 }
 
 function fetchAssessments(page=1) {
@@ -56,37 +62,41 @@ function fetchAssessments(page=1) {
     })
     .then(data => {
       const tbody = document.querySelector('#assessment-table tbody');
-      tbody.innerHTML = '';
-      if (!data.results || !Array.isArray(data.results) || data.results.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No assessments found.</td></tr>`;
-      } else {
-        data.results.forEach(assessment => {
-          tbody.innerHTML += `<tr>
-            <td><a href="/risk/assessments/${assessment.id}/">${assessment.assessment_name || ''}</a></td>
-            <td>${assessment.assessor || ''}</td>
-            <td>${assessment.risk ? `<a href="/risk/risks/${assessment.risk.id}/">${assessment.risk.risk_name || ''}</a>` : ''}</td>
-            <td>
-              <span class="badge ${
-                assessment.status === 'draft' ? 'bg-secondary' :
-                assessment.status === 'in-progress' ? 'bg-warning' :
-                assessment.status === 'completed' ? 'bg-success' : 'bg-info'
-              }">${assessment.status ? assessment.status.charAt(0).toUpperCase() + assessment.status.slice(1) : ''}</span>
-            </td>
-            <td>${assessment.assessment_date || ''}</td>
-            <td>
-              <a href="/risk/assessments/${assessment.id}/" class="btn btn-sm btn-outline-info" title="View"><i class="bi bi-eye"></i></a>
-              <a href="/risk/assessments/${assessment.id}/update/" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
-              <a href="/risk/assessments/${assessment.id}/delete/" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
-            </td>
-          </tr>`;
-        });
+      if (tbody) {
+        tbody.innerHTML = '';
+        if (!data.results || !Array.isArray(data.results) || data.results.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No assessments found.</td></tr>`;
+        } else {
+          data.results.forEach(assessment => {
+            tbody.innerHTML += `<tr>
+              <td><a href="/risk/assessments/${assessment.id}/">${assessment.assessment_name || ''}</a></td>
+              <td>${assessment.assessor || ''}</td>
+              <td>${assessment.risk ? `<a href="/risk/risks/${assessment.risk.id}/">${assessment.risk.risk_name || ''}</a>` : ''}</td>
+              <td>
+                <span class="badge ${
+                  assessment.status === 'draft' ? 'bg-secondary' :
+                  assessment.status === 'in-progress' ? 'bg-warning' :
+                  assessment.status === 'completed' ? 'bg-success' : 'bg-info'
+                }">${assessment.status ? assessment.status.charAt(0).toUpperCase() + assessment.status.slice(1) : ''}</span>
+              </td>
+              <td>${assessment.assessment_date || ''}</td>
+              <td>
+                <a href="/risk/assessments/${assessment.id}/" class="btn btn-sm btn-outline-info" title="View"><i class="bi bi-eye"></i></a>
+                <a href="/risk/assessments/${assessment.id}/update/" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                <a href="/risk/assessments/${assessment.id}/delete/" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></a>
+              </td>
+            </tr>`;
+          });
+        }
       }
       // Pagination
       const pag = document.getElementById('assessment-pagination');
-      pag.innerHTML = '';
-      if (data.num_pages && data.num_pages > 1) {
-        for (let i = 1; i <= data.num_pages; i++) {
-          pag.innerHTML += `<li class="page-item${i===data.page?' active':''}"><a class="page-link" href="#" onclick="fetchAssessments(${i});return false;">${i}</a></li>`;
+      if (pag) {
+        pag.innerHTML = '';
+        if (data.num_pages && data.num_pages > 1) {
+          for (let i = 1; i <= data.num_pages; i++) {
+            pag.innerHTML += `<li class="page-item${i===data.page?' active':''}"><a class="page-link" href="#" onclick="fetchAssessments(${i});return false;">${i}</a></li>`;
+          }
         }
       }
       updateExportLinks(filters);
@@ -100,13 +110,25 @@ function fetchAssessments(page=1) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('assessment-filter-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    fetchAssessments(1);
-  });
-  document.getElementById('reset-filters').addEventListener('click', function() {
-    document.getElementById('assessment-filter-form').reset();
-    fetchAssessments(1);
-  });
+  const filterForm = document.getElementById('assessment-filter-form');
+  const resetBtn = document.getElementById('reset-filters');
+  
+  if (filterForm) {
+    filterForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetchAssessments(1);
+    });
+  }
+  
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      const form = document.getElementById('assessment-filter-form');
+      if (form) {
+        form.reset();
+        fetchAssessments(1);
+      }
+    });
+  }
+  
   fetchAssessments(1);
 }); 

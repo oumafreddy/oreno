@@ -1,4 +1,6 @@
 // issueworkingpaper_list.js
+// Form submission loading states and tooltips
+// Modal handling is now centralized in modal-handler.js
 
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof bootstrap === 'undefined') {
@@ -46,15 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     htmx.logAll();
   }
 
-  // Handle modal events
-  document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target.id === 'modal-content') {
-      var modal = new bootstrap.Modal(document.getElementById('modal'));
-      modal.show();
-    }
-  });
-
-  // Handle form submissions
+  // Handle form submission loading states
   document.body.addEventListener('htmx:beforeRequest', function(evt) {
     if (evt.detail.elt.tagName === 'FORM') {
       var submitButton = evt.detail.elt.querySelector('button[type="submit"]');
@@ -65,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Handle successful form submissions
+  // Reset form submission loading states
   document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.elt.tagName === 'FORM') {
       var submitButton = evt.detail.elt.querySelector('button[type="submit"]');

@@ -36,7 +36,26 @@
       </div>
     </div>
     <div class="tab-pane fade" id="results" role="tabpanel">
-      {% include 'audit/_procedure_result_list_partial.html' with results=procedure.results.all engagement=procedure.risk.engagement objective=procedure.risk procedure=procedure %}
+      <!-- Procedure Results Section -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">Procedure Results</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-primary" 
+                    hx-get="{% url 'audit:procedureresult-modal-add' procedure_pk=procedure.pk %}" 
+                    hx-target="#modal-body" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#mainModal">
+              <i class="bi bi-plus-circle"></i> Add Procedure Result
+            </button>
+          </div>
+          <div id="procedure-results-list">
+              {% include 'audit/_procedure_result_list_partial.html' with results=procedure.results.all %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

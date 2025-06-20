@@ -50,7 +50,9 @@
             const suppressedErrors = [
                 'Content Security Policy',
                 'Script redeclaration',
-                'document.body is null'
+                'document.body is null',
+                'Cannot read properties of undefined (reading \'backdrop\')',  // Bootstrap modal error
+                'this._config is undefined'  // Bootstrap modal error variant
             ];
             
             if (suppressedErrors.some(err => event.message.includes(err))) {
@@ -79,6 +81,26 @@
         document.addEventListener('htmx:targetError', function(evt) {
             console.warn('HTMX target error:', evt.detail);
             // Don't show toast for target errors as they're usually handled by the application
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            const trigger = event.detail.xhr.getResponseHeader('HX-Trigger');
+            if (trigger) {
+                try {
+                    const triggerData = JSON.parse(trigger);
+                    if (triggerData.closeModal) {
+                        const modalEl = document.querySelector('.modal.show');
+                        if (modalEl && window.bootstrap) {
+                            const modal = window.bootstrap.Modal.getInstance(modalEl);
+                            if (modal) {
+                                modal.hide();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Do nothing if trigger is not valid JSON
+                }
+            }
         });
     }
 
@@ -289,47 +311,22 @@ function initCustomHooks() {
     window.App.init = () => {
         console.log('Application initialized');
     };
+
+    // Custom Event Handlers
+    document.addEventListener('ajax:success', (event) => {
+        const [data, status, xhr] = event.detail;
+        showToast('Success', data.message || 'Action completed successfully', 'success');
+    });
+
+    document.addEventListener('ajax:error', (event) => {
+        const [error, status, xhr] = event.detail;
+        showToast('Error', error.message || 'Action failed', 'danger');
+    });
+
+    // Note: Modal-related htmx:afterRequest handling has been moved to modal-handler.js
+    // to consolidate all modal logic in one place
+
 })();
-
-/**
- * Custom Event Handlers
- */
-document.addEventListener('ajax:success', (event) => {
-    const [data, status, xhr] = event.detail;
-    showToast('Success', data.message || 'Action completed successfully', 'success');
-});
-
-document.addEventListener('ajax:error', (event) => {
-    const [error, status, xhr] = event.detail;
-    showToast('Error', error.message || 'Action failed', 'danger');
-});
-
-document.body.addEventListener('htmx:afterRequest', function(evt) {
-    // Only handle modal responses
-    if (evt.detail && evt.detail.successful && evt.detail.target && evt.detail.target.closest && evt.detail.target.closest('#modal-body')) {
-        try {
-            var contentType = evt.detail.xhr.getResponseHeader('content-type') || '';
-            if (contentType.includes('application/json')) {
-                var data = JSON.parse(evt.detail.xhr.responseText);
-                if (data && data.form_is_valid) {
-                    var mainModal = document.getElementById('mainModal');
-                    if (mainModal && typeof bootstrap !== 'undefined') {
-                        var bsModal = bootstrap.Modal.getInstance(mainModal);
-                        if (bsModal) bsModal.hide();
-                    }
-                    // Optionally refresh lists if present
-                    if (data.html_list) {
-                        var noteList = document.getElementById('note-list-container');
-                        if (noteList) noteList.innerHTML = data.html_list;
-                    }
-                }
-            }
-            // If not JSON, do nothing: HTMX will swap in the HTML form
-        } catch (e) {
-            console.error('Error handling modal response:', e);
-        }
-    }
-});
 
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {

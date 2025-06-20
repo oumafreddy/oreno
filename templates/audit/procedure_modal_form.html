@@ -14,9 +14,11 @@
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
-      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" onclick="window.location.href='{% url 'audit:risk-detail' risk_id %}'">Cancel</button>
+      <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" 
+              data-navigate-url="{% url 'audit:risk-detail' risk_id %}">Cancel</button>
     </div>
   </form>
 </div>
 
+<script src="{% static 'js/audit_modal_utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/procedure_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>

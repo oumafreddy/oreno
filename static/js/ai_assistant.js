@@ -1,7 +1,34 @@
 // AI Assistant popup and form logic (CSP-compliant)
 document.addEventListener('DOMContentLoaded', function() {
     const aiButton = document.getElementById('ai-assistant-button');
-    const aiPopup = document.getElementById('ai-assistant-popup');
+    const aiModalEl = document.getElementById('aiAssistantModal');
+    let aiModal = null;
+    
+    // Only initialize modal if the element exists and doesn't already have an instance
+    if (aiModalEl && aiModalEl.classList.contains('modal')) {
+        try {
+            // Check if Bootstrap is available
+            if (window.bootstrap && window.bootstrap.Modal) {
+                // Check if modal already has an instance
+                const existingInstance = bootstrap.Modal.getInstance(aiModalEl);
+                if (existingInstance) {
+                    aiModal = existingInstance;
+                } else {
+                    // Create new instance with proper configuration
+                    aiModal = new bootstrap.Modal(aiModalEl, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+                }
+            } else {
+                console.warn('Bootstrap Modal not available');
+            }
+        } catch (error) {
+            console.error('Error initializing AI Assistant modal:', error);
+        }
+    }
+    
     const form = document.getElementById('ai-assistant-form');
     const questionInput = document.getElementById('ai-question');
     const answerDiv = document.getElementById('ai-answer');
@@ -24,9 +51,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return cookieValue;
     }
 
-    if (aiButton && aiPopup) {
-        aiButton.addEventListener('click', function() {
-            aiPopup.classList.toggle('show');
+    // Only add click handler if both button and modal exist
+    if (aiButton && aiModal) {
+        aiButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            try {
+                aiModal.show();
+            } catch (error) {
+                console.error('Error showing AI Assistant modal:', error);
+            }
         });
     }
 

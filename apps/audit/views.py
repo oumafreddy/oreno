@@ -581,6 +581,12 @@ class WorkplanCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was created successfully")
     
+    def get_template_names(self):
+        # Use modal template for HTMX requests
+        if is_htmx_request(self.request):
+            return ['audit/workplan_modal_form.html']
+        return [self.template_name]
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
@@ -626,6 +632,12 @@ class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     form_class = AuditWorkplanForm
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was updated successfully")
+    
+    def get_template_names(self):
+        # Use modal template for HTMX requests
+        if is_htmx_request(self.request):
+            return ['audit/workplan_modal_form.html']
+        return [self.template_name]
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -2315,22 +2327,23 @@ class ProcedureResultModalCreateView(AuditPermissionMixin, SuccessMessageMixin, 
         procedure_pk = self.kwargs.get('procedure_pk')
         form.instance.procedure_id = procedure_pk
         form.instance.organization = self.request.organization
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+        self.object = form.save()
+
+        if self.request.headers.get('HX-Request') == 'true':
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
             results = ProcedureResult.objects.filter(procedure_id=procedure_pk, organization=self.request.organization)
-            from .models.procedure import Procedure
             html_list = render_to_string("audit/_procedure_result_list_partial.html", {
                 "results": results,
-                "procedure": Procedure.objects.get(pk=procedure_pk),
+                "procedure": self.object.procedure,
             }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
+            response = HttpResponse(html_list)
+            response['HX-Trigger'] = '{"closeModal": "true"}'
+            return response
+
+        return super().form_valid(form)
 
     def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
+        return self.render_to_response(self.get_context_data(form=form))
 
     def get_success_url(self):
         return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
@@ -2352,22 +2365,23 @@ class ProcedureResultModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, 
         return context
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+        self.object = form.save()
+
+        if self.request.headers.get('HX-Request') == 'true':
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
             results = ProcedureResult.objects.filter(procedure_id=self.object.procedure_id, organization=self.request.organization)
-            from .models.procedure import Procedure
             html_list = render_to_string("audit/_procedure_result_list_partial.html", {
                 "results": results,
-                "procedure": Procedure.objects.get(pk=self.object.procedure_id),
+                "procedure": self.object.procedure,
             }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
+            response = HttpResponse(html_list)
+            response['HX-Trigger'] = '{"closeModal": "true"}'
+            return response
+            
+        return super().form_valid(form)
 
     def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
+        return self.render_to_response(self.get_context_data(form=form))
 
     def get_success_url(self):
         return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})

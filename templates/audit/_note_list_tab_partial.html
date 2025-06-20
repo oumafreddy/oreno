@@ -57,7 +57,7 @@
             <button class="btn btn-outline-secondary" hx-get="{% url 'audit:note-modal-edit' note.pk %}" hx-target="#mainModal .modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
               Edit
             </button>
-            <form method="post" action="{% url 'audit:note-delete' note.pk %}" onsubmit="return confirm('Are you sure you want to delete this note?');" class="d-inline">
+            <form method="post" action="{% url 'audit:note-delete' note.pk %}" data-confirm="Are you sure you want to delete this note?" class="d-inline">
               {% csrf_token %}
               <button type="submit" class="btn btn-outline-danger">Delete</button>
             </form>

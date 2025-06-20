@@ -654,6 +654,7 @@
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
 <script src="{% static 'js/select2.min.js' %}"></script>
 <script src="{% static 'js/dashboard_charts.js' %}" nonce="{{ request.csp_nonce }}"></script>
+<script src="{% static 'js/audit_modal_utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/audit_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <!-- Dynamic Parent Selection Modal (reusable) -->
 <div class="modal fade" id="parentSelectModal" tabindex="-1" aria-labelledby="parentSelectModalLabel" aria-hidden="true">
@@ -669,27 +670,6 @@
     </div>
   </div>
 </div>
-<script>
-// Dynamic Parent Selection Logic
-function openParentSelectModal(type, parentApiUrl, createUrlTemplate) {
-  $('#parentSelectDropdown').empty();
-  $.get(parentApiUrl, function(data) {
-    data.forEach(function(item) {
-      $('#parentSelectDropdown').append(`<option value="${item.id}">${item.text}</option>`);
-    });
-    $('#parentSelectModal').modal('show');
-    $('#parentSelectContinueBtn').off('click').on('click', function() {
-      let parentId = $('#parentSelectDropdown').val();
-      let createUrl = createUrlTemplate.replace('__PARENT_ID__', parentId);
-      $('#parentSelectModal').modal('hide');
-      $.get(createUrl, function(html) {
-        $('#globalModal .modal-content').html(html);
-        $('#globalModal').modal('show');
-      });
-    });
-  });
-}
-</script>
 <!-- Recent Procedures List with htmx filter -->
 <form hx-get="{% url 'audit:htmx-procedure-list' %}" hx-target="#recentProceduresList" hx-swap="outerHTML" class="mb-2">
   <select name="risk" class="form-select select2">
@@ -800,10 +780,6 @@ function openParentSelectModal(type, parentApiUrl, createUrlTemplate) {
     </div>
   </div>
 </div>
-<!-- Select2 JS for dynamic selects -->
-<script src="{% static 'js/select2.min.js' %}"></script>
-<link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
-<script>$('.select2').select2();</script>
 </div>
 <div id="audit-dashboard-vars"
      data-engagement-url="{% url 'audit:api_engagement_data' %}"

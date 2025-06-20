@@ -13,7 +13,6 @@ from django.apps import apps
 from simple_history.models import HistoricalRecords
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from core.mixins.state import ApprovalStateMixin
-from .workplan import AuditWorkplan
 
 @reversion.register()
 class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -27,7 +26,7 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, Sof
         help_text=_("Unique code for identifying the engagement within a workplan."),
     )
     annual_workplan = models.ForeignKey(
-        AuditWorkplan,
+        'audit.AuditWorkplan',
         on_delete=models.CASCADE,
         related_name='engagements',
         verbose_name=_('Annual Workplan'),

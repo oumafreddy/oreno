@@ -162,7 +162,12 @@ class AuditWorkplan(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, 
 
     @property
     def engagements(self):
-        return self.engagements.all()
+        """
+        Returns all engagements linked to this workplan.
+        Uses a lazy relationship to avoid circular imports.
+        """
+        Engagement = self._meta.apps.get_model('audit', 'Engagement')
+        return Engagement.objects.filter(annual_workplan=self)
 
     @property
     def all_procedures(self):

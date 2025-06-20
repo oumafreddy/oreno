@@ -1,46 +1,17 @@
 // note_modal_form.js
-// Robust modal handler for Note modals, matching Issue modal pattern
+// CKEditor initialization for Note modals
+// Modal handling is now centralized in modal-handler.js
 
 document.addEventListener('DOMContentLoaded', function() {
   if (!document.body) return;
-
-  // Show the mainModal when HTMX loads the note form into the modal body
-  document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target && evt.detail.target.classList.contains('modal-body')) {
-      var modalEl = document.getElementById('mainModal');
-      if (modalEl && typeof bootstrap !== 'undefined') {
-        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-      }
-    }
-  });
-
-  // Handle form submission (if present)
-  document.body.addEventListener('htmx:afterRequest', function(event) {
-    // Only close modal if the request was for the note form and was successful
-    var form = document.querySelector('#mainModal form');
-    if (form && event.detail && event.detail.xhr && event.detail.xhr.responseURL && event.detail.successful) {
-      const modalEl = document.getElementById('mainModal');
-      if (modalEl && typeof bootstrap !== 'undefined') {
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) {
-          modal.hide();
-        }
-      }
-      // Refresh note list
-      const noteList = document.getElementById('note-list-container');
-      if (noteList) {
-        htmx.trigger(noteList, 'refresh');
-      }
-    }
-  });
 
   // Initialize CKEditor for the note content textarea (if present)
   var contentTextarea = document.getElementById('id_content');
   if (contentTextarea && typeof ClassicEditor !== 'undefined') {
     ClassicEditor
       .create(contentTextarea, {
-        toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'undo', 'redo'],
+        // Let Django handle the configuration via CKEDITOR_5_CONFIGS
+        // This ensures consistency between server-side and client-side
         placeholder: 'Enter your note content here...'
       })
       .then(editor => {

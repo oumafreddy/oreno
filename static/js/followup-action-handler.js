@@ -58,8 +58,21 @@
                 form.dataset.submitted = 'false';
                 
                 // Initialize any form plugins
-                if (typeof CKEDITOR !== 'undefined') {
-                    CKEDITOR.replaceAll('django_ckeditor_5');
+                if (typeof ClassicEditor !== 'undefined') {
+                    const ckeditorElements = form.querySelectorAll('.django_ckeditor_5');
+                    ckeditorElements.forEach(element => {
+                        if (!element.ckeditorInstance) {
+                            // Use Django's CKEditor configuration
+                            ClassicEditor.create(element, {
+                                // Let Django handle the configuration via CKEDITOR_5_CONFIGS
+                                // This ensures consistency between server-side and client-side
+                            }).then(editor => {
+                                element.ckeditorInstance = editor;
+                            }).catch(error => {
+                                console.warn('Error initializing CKEditor:', error);
+                            });
+                        }
+                    });
                 }
             }
         }
@@ -72,10 +85,12 @@
                 form.dataset.submitted = 'false';
                 
                 // Clean up any form plugins
-                if (typeof CKEDITOR !== 'undefined') {
-                    CKEDITOR.instances.forEach(instance => {
-                        if (instance.element.closest('#globalModal')) {
-                            instance.destroy();
+                if (typeof ClassicEditor !== 'undefined') {
+                    const ckeditorElements = form.querySelectorAll('.django_ckeditor_5');
+                    ckeditorElements.forEach(element => {
+                        if (element.ckeditorInstance) {
+                            element.ckeditorInstance.destroy();
+                            element.ckeditorInstance = null;
                         }
                     });
                 }

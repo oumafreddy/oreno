@@ -124,7 +124,8 @@ LOGGING = {
 }
 
 # Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
@@ -220,6 +221,12 @@ LOCAL_TENANT_DOMAINS = [
     'org004.localhost',
     'org005.localhost',
     'krcs.localhost',
+    'krcs.oreno.tech',
+    'org001.oreno.tech',
+    'org002.oreno.tech',
+    'org003.oreno.tech',
+    'org004.oreno.tech',
+    'org005.oreno.tech',    
     'oreno.localhost',
 ]
 

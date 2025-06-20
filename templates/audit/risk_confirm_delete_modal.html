@@ -29,7 +29,9 @@
 
 <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-    <button type="button" class="btn btn-danger" onclick="submitModalForm('delete-risk-form')">
+    <button type="button" class="btn btn-danger" data-submit-form="delete-risk-form">
         {% trans "Confirm Delete" %}
     </button>
 </div>
+
+<script src="{% static 'js/audit_modal_utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
