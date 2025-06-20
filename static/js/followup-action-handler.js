@@ -105,7 +105,7 @@ class FollowUpActionHandler {
         form.dataset.submitted = 'true';
         
         // Show success message
-        this.showToast('Follow-up action saved successfully!', 'success');
+        UIUtils.showToast('Success', 'Follow-up action saved successfully!', 'success');
         
         // Close modal after a short delay
         setTimeout(() => {
@@ -137,10 +137,10 @@ class FollowUpActionHandler {
                 errorMessage = response.message;
             }
             
-            this.showToast(errorMessage, 'danger');
+            UIUtils.showToast('Error', errorMessage, 'danger');
         } catch (e) {
             console.error('Error parsing error response:', e);
-            this.showToast('An unexpected error occurred. Please try again.', 'danger');
+            UIUtils.showToast('Error', 'An unexpected error occurred. Please try again.', 'danger');
         }
     }
 
@@ -155,49 +155,6 @@ class FollowUpActionHandler {
         }
     }
 
-    showToast(message, type = 'success') {
-        const toastContainer = document.getElementById('toast-container') || this.createToastContainer();
-        
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `toast show bg-${type} text-white mb-2`;
-        toast.role = 'alert';
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        
-        // Add toast content
-        toast.innerHTML = `
-            <div class="toast-header bg-${type} text-white">
-                <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        `;
-        
-        // Add to container
-        toastContainer.appendChild(toast);
-        
-        // Auto-remove after delay
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 150);
-        }, 5000);
-        
-        // Initialize Bootstrap toast
-        const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
-        bsToast.show();
-    }
-    
-    createToastContainer() {
-        const container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'position-fixed bottom-0 end-0 p-3';
-        container.style.zIndex = '1100';
-        document.body.appendChild(container);
-        return container;
-    }
 }
 
 // Initialize the handler when the DOM is fully loaded
