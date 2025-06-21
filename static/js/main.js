@@ -24,57 +24,53 @@
         }
     }
 
-<<<<<<< HEAD
     function initUIComponents() {
         // Check if Bootstrap is available
-        if (typeof bootstrap !== 'undefined') {
-            // Initialize tooltips
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function(tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-=======
-/**
- * UI Components Initialization
- */
-function initUIComponents() {
-    // Bootstrap component initialization
-    UIUtils.initTooltips();
->>>>>>> origin/codex/add-window.showtoast-assignment
-
+        if (typeof bootstrap !== 'undefined' && typeof UIUtils !== 'undefined') {
+            // Initialize tooltips using the utility
+            UIUtils.initTooltips();
+    
             // Initialize popovers
             const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
             popoverTriggerList.map(function(popoverTriggerEl) {
                 return new bootstrap.Popover(popoverTriggerEl);
             });
         } else {
-            console.warn('Bootstrap not loaded');
+            if (typeof bootstrap === 'undefined') console.warn('Bootstrap not loaded');
+            if (typeof UIUtils === 'undefined') console.warn('UIUtils not loaded');
         }
     }
 
     function initErrorHandling() {
-        // Global error handler
-        window.addEventListener('error', function(event) {
-            // Suppress known errors that don't need user notification
+        // Global error handler with duplicate suppression and dev/prod awareness
+        let lastErrorMsg = '';
+        let lastErrorTime = 0;
+        const ERROR_TOAST_SUPPRESS_MS = 10000; // 10 seconds
+        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('Global error:', { message, source, lineno, colno, error });
+            const now = Date.now();
+            const errorMsg = `${message} @ ${source}:${lineno}`;
+            
+            // Suppress known, non-critical errors
             const suppressedErrors = [
                 'Content Security Policy',
                 'Script redeclaration',
-                'document.body is null',
-                'Cannot read properties of undefined (reading \'backdrop\')',  // Bootstrap modal error
-                'this._config is undefined'  // Bootstrap modal error variant
+                'ResizeObserver loop limit exceeded'
             ];
-            
-            if (suppressedErrors.some(err => event.message.includes(err))) {
+            if (suppressedErrors.some(err => message.includes(err))) {
                 return;
             }
 
-            // Show error toast if Bootstrap is available
-            if (typeof bootstrap !== 'undefined') {
-                showToast('Error', event.message, 'danger');
+            if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
+                if (typeof UIUtils !== 'undefined' && typeof UIUtils.showToast === 'function') {
+                    UIUtils.showToast('Application Error', 'An unexpected error occurred. See console for details.', 'danger');
+                }
+                lastErrorMsg = errorMsg;
+                lastErrorTime = now;
             }
-            
-            console.error('Global error:', event);
-        });
+        };
     }
 
     function initHTMXHandling() {
@@ -126,6 +122,9 @@ function initUIComponents() {
         const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
     }
+
+    // Expose showToast globally for other scripts or inline calls
+    window.showToast = showToast;
 
     function createToastContainer() {
         const container = document.createElement('div');
@@ -229,72 +228,24 @@ function initFormHandling() {
 }
 
 /**
-<<<<<<< HEAD
-=======
- * Error Handling System
- */
-function initErrorHandling() {
-    // Global error handler with duplicate suppression and dev/prod awareness
-    let lastErrorMsg = '';
-    let lastErrorTime = 0;
-    const ERROR_TOAST_SUPPRESS_MS = 10000; // 10 seconds
-    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-    window.onerror = function(message, source, lineno, colno, error) {
-        console.error('Global error:', { message, source, lineno, colno, error });
-        const now = Date.now();
-        const errorMsg = `${message} @ ${source}:${lineno}`;
-        if (isDev || (errorMsg !== lastErrorMsg || now - lastErrorTime > ERROR_TOAST_SUPPRESS_MS)) {
-            UIUtils.showToast('Application Error', 'An unexpected error occurred', 'danger');
-            lastErrorMsg = errorMsg;
-            lastErrorTime = now;
-        }
-        return true;
-    };
-
-    window.addEventListener('unhandledrejection', event => {
-        console.error('Unhandled rejection:', event.reason);
-        if (isDev || (event.reason && event.reason.message !== lastErrorMsg)) {
-            UIUtils.showToast('Request Failed', event.reason && event.reason.message ? event.reason.message : 'Action failed', 'danger');
-            lastErrorMsg = event.reason && event.reason.message ? event.reason.message : '';
-            lastErrorTime = Date.now();
-        }
-        event.preventDefault();
-    });
-}
-
-/**
->>>>>>> origin/codex/add-window.showtoast-assignment
- * Analytics Integration
+ * Analytics Initialization
  */
 function initAnalytics() {
-    // Google Analytics
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXX');
-
-    // Error tracking
-    window.addEventListener('error', event => {
-        if (window.ga) {
-            ga('send', 'exception', {
-                exDescription: `${event.message} @ ${event.filename}:${event.lineno}:${event.colno}`,
-                exFatal: true
-            });
-        }
-    });
+    // Example: Google Analytics
+    const gaId = document.body.getAttribute('data-ga-id');
+    if (gaId) {
+        loadExternalScript(`https://www.googletagmanager.com/gtag/js?id=${gaId}`, () => {
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){ dataLayer.push(arguments); }
+            gtag('js', new Date());
+            gtag('config', gaId);
+        });
+    }
 }
 
 /**
- * UI Utilities
+ * Utility Functions
  */
-<<<<<<< HEAD
-=======
-
-/**
- * Security Utilities
- */
->>>>>>> origin/codex/add-window.showtoast-assignment
 function sanitizeInput(input) {
     const temp = document.createElement('div');
     temp.textContent = input;
@@ -380,22 +331,6 @@ function initCustomHooks() {
 
 })();
 
-<<<<<<< HEAD
-=======
-/**
- * Custom Event Handlers
- */
-document.addEventListener('ajax:success', (event) => {
-    const [data, status, xhr] = event.detail;
-    UIUtils.showToast('Success', data.message || 'Action completed successfully', 'success');
-});
-
-document.addEventListener('ajax:error', (event) => {
-    const [error, status, xhr] = event.detail;
-    UIUtils.showToast('Error', error.message || 'Action failed', 'danger');
-});
-
->>>>>>> origin/codex/add-window.showtoast-assignment
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
     const uiUtils = require('./ui-utils');

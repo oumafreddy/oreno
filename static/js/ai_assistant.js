@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingDiv = document.getElementById('ai-loading');
     const askBtn = document.getElementById('ai-ask-btn');
 
+    // Manually manage aria-hidden attribute to prevent accessibility warnings
+    if (aiModalEl) {
+        aiModalEl.addEventListener('show.bs.modal', function () {
+            this.setAttribute('aria-hidden', 'false');
+        });
+        aiModalEl.addEventListener('hidden.bs.modal', function () {
+            this.setAttribute('aria-hidden', 'true');
+        });
+    }
+
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

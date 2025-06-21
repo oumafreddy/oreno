@@ -74,7 +74,7 @@ class CSPNonceMiddleware:
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
                 "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
                 "img-src 'self' data: https://www.googletagmanager.com; "
-                "connect-src 'self' https://cdn.plot.ly; "
+                "connect-src 'self' https://cdn.plot.ly https://www.google-analytics.com; "
             )
         else:
             # Production: allow self, nonce, and necessary Plotly.js requirements
@@ -83,7 +83,7 @@ class CSPNonceMiddleware:
                 "style-src 'self' 'unsafe-inline'; "
                 "font-src 'self'; "
                 "img-src 'self' data:; "
-                "connect-src 'self' https://cdn.plot.ly;"
+                "connect-src 'self' https://cdn.plot.ly https://www.google-analytics.com;"
             )
         response['Content-Security-Policy'] = csp
         return response
