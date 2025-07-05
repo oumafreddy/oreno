@@ -110,11 +110,11 @@ from core.mixins import OrganizationMixin, OrganizationPermissionMixin
 from core.decorators import skip_org_check
 from organizations.models import Organization
 
-from .models import AuditWorkplan, Engagement, Issue, Approval, Notification, IssueWorkingPaper, Note, FollowUpAction, IssueRetest, Objective, Procedure, ProcedureResult
+from .models import AuditWorkplan, Engagement, Issue, Approval, Notification, IssueWorkingPaper, Note, FollowUpAction, IssueRetest, Objective, Procedure
 from .forms import (
     AuditWorkplanForm, EngagementForm, IssueForm,
     ApprovalForm, WorkplanFilterForm, EngagementFilterForm, IssueFilterForm,
-    ProcedureForm, ProcedureResultForm, FollowUpActionForm, IssueRetestForm, NoteForm,
+    ProcedureForm, FollowUpActionForm, IssueRetestForm, NoteForm,
     RecommendationForm, IssueWorkingPaperForm, ObjectiveForm, RiskForm
 )
 
@@ -147,7 +147,6 @@ from .models.issue import Issue
 from users.permissions import IsOrgManagerOrReadOnly
 
 from .models.procedure import Procedure
-from .models.procedureresult import ProcedureResult
 from .models.followupaction import FollowUpAction
 from .models.issueretest import IssueRetest
 from .models.note import Note
@@ -1139,10 +1138,10 @@ class IssueDetailView(AuditPermissionMixin, DetailView):
         context = super().get_context_data(**kwargs)
         from django.contrib.contenttypes.models import ContentType
         issue = self.object
-        # Robustly get engagement (via procedure_result > procedure > objective > engagement)
+        # Robustly get engagement via procedure > risk > objective > engagement
         engagement = None
-        if issue.procedure_result and hasattr(issue.procedure_result, 'procedure') and issue.procedure_result.procedure and hasattr(issue.procedure_result.procedure, 'objective') and issue.procedure_result.procedure.objective:
-            engagement = issue.procedure_result.procedure.objective.engagement
+        if issue.procedure and hasattr(issue.procedure, 'risk') and hasattr(issue.procedure.risk, 'objective') and issue.procedure.risk.objective and hasattr(issue.procedure.risk.objective, 'engagement'):
+            engagement = issue.procedure.risk.objective.engagement
         context['engagement'] = engagement
         # For notes
         content_type = ContentType.objects.get_for_model(issue)
@@ -1162,43 +1161,21 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        # Pre-select parent context if provided
-        procedure_pk = self.request.GET.get('procedure_pk') or self.kwargs.get('procedure_pk')
-        # Enhancement: If creating from a ProcedureResult, auto-set the procedure
-        procedure_result_pk = self.request.GET.get('procedure_result') or self.kwargs.get('procedure_result_pk')
-        if procedure_result_pk:
-            try:
-                procedure_result = ProcedureResult.objects.get(pk=procedure_result_pk)
-                kwargs['procedure_result_pk'] = procedure_result_pk  # Pass the procedure_result_pk to the form
-                kwargs['procedure_pk'] = procedure_result.procedure.pk
-            except ProcedureResult.DoesNotExist:
-                pass  # fallback to normal
-        elif procedure_pk:
-            kwargs['procedure_pk'] = procedure_pk
+        # Pass procedure_id from GET param to the form for auto-selection
+        procedure_id = self.request.GET.get('procedure')
+        if procedure_id:
+            kwargs['procedure_id'] = procedure_id
         return kwargs
-    
+
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
-        # Set procedure_result and procedure if present in request
-        procedure_result_pk = self.request.GET.get('procedure_result') or self.kwargs.get('procedure_result_pk')
-        if procedure_result_pk:
-            from .models import ProcedureResult
-            try:
-                pr = ProcedureResult.objects.get(pk=procedure_result_pk)
-                form.instance.procedure_result = pr
-                form.instance.procedure = pr.procedure
-            except ProcedureResult.DoesNotExist:
-                pass
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
-    
+
     def get_success_url(self):
-        # Redirect to parent procedure result or issue list
-        if self.object.procedure_result:
-            return reverse('audit:procedureresult-detail', kwargs={'pk': self.object.procedure_result.pk})
-        elif self.object.procedure:
-            return reverse('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
-        return reverse('audit:issue-list')
+        # Redirect to issue detail after creation
+        return reverse('audit:issue-detail', kwargs={'pk': self.object.pk})
 
 class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Issue
@@ -1455,7 +1432,6 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         from django.utils import timezone
         from .models.objective import Objective
         from .models.procedure import Procedure
-        from .models.procedureresult import ProcedureResult
         from .models.recommendation import Recommendation
         from .models.followupaction import FollowUpAction
         from .models.issueretest import IssueRetest
@@ -2143,28 +2119,25 @@ class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     form_class = ProcedureForm
     template_name = 'audit/procedure_modal_form.html'
     success_message = _('Procedure %(title)s was created successfully')
-    
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
-        # Pass the specific risk_id to the form for context-aware filtering
         kwargs['risk_id'] = self.kwargs.get('risk_id')
         return kwargs
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['risk_id'] = self.kwargs.get('risk_id')
         return context
-    
+
     def form_valid(self, form):
         risk_id = self.kwargs.get('risk_id')
         form.instance.risk_id = risk_id
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        if is_htmx or is_ajax:
-            from django.template.loader import render_to_string
+        # Handle HTMX requests
+        if self.request.headers.get('HX-Request') == 'true':
             procedures = self.model.objects.filter(risk_id=risk_id).order_by('order', 'id')
             html_list = render_to_string('audit/_procedure_list_partial.html', {
                 'procedures': procedures,
@@ -2176,215 +2149,129 @@ class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Create
     def get_success_url(self):
         return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk.pk})
 
-class ProcedureResultListView(AuditPermissionMixin, ListView):
-    model = ProcedureResult
-    template_name = 'audit/procedureresult_list.html'
-    context_object_name = 'procedure_results'
-    paginate_by = 20
-    
+class ProcedureModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = Procedure
+    form_class = ProcedureForm
+    template_name = 'audit/procedure_modal_form.html'
+    success_message = _('Procedure %(title)s was updated successfully')
+
     def get_queryset(self):
-        queryset = super().get_queryset()
-        procedure_pk = self.kwargs.get('procedure_pk')
-        organization = self.request.organization
-        
-        if procedure_pk:
-            queryset = queryset.filter(procedure_id=procedure_pk)
-        
-        return queryset.filter(procedure__objective__engagement__organization=organization)
-    
+        """Limit queryset to objects in the current organization."""
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        if hasattr(self, 'object') and self.object.risk_id:
+            kwargs['risk_id'] = self.object.risk_id
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        procedure_pk = self.kwargs.get('procedure_pk')
+        if hasattr(self, 'object') and self.object.risk:
+            context['risk'] = self.object.risk
+        return context
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        response = super().form_valid(form)
         
-        if procedure_pk:
-            # Get the procedure object and add it to the context
-            from .models import Procedure
+        # Handle HTMX/JSON response
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
             try:
-                context['procedure'] = Procedure.objects.get(pk=procedure_pk)
-            except Procedure.DoesNotExist:
-                context['procedure'] = None
-        else:
-            context['procedure'] = None
+                # Return a success response that will close the modal
+                return JsonResponse({
+                    'success': True,
+                    'message': str(self.success_message),
+                    'redirect_url': self.get_success_url()
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': _("Error updating procedure: {}".format(str(e)))
+                }, status=400)
         
-        # Create a basic filter form structure
-        from django import forms
-        from crispy_forms.helper import FormHelper
-        from crispy_forms.layout import Submit
-        
-        class EmptyFilterForm(forms.Form):
-            # Empty form - just to prevent the template error
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.helper = FormHelper()
-                self.helper.form_method = 'get'
-                self.helper.add_input(Submit('submit', 'Filter', css_class='btn-secondary'))
-        
-        context['filter_form'] = EmptyFilterForm()
-            
-        return context
-
-class ProcedureResultDetailView(AuditPermissionMixin, DetailView):
-    model = ProcedureResult
-    template_name = 'audit/procedureresult_detail.html'
-    context_object_name = 'procedure_result'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Ensure procedure is available in the context for the template
-        context['procedure'] = self.object.procedure
-        # Add all issues linked to this ProcedureResult
-        context['linked_issues'] = self.object.issues.filter(organization=self.request.organization)
-        return context
-
-class ProcedureResultCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
-    model = ProcedureResult
-    form_class = ProcedureResultForm
-    template_name = 'audit/procedureresult_form.html'
-    success_message = _('Procedure Result was created successfully')
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
-        return kwargs
-    def form_valid(self, form):
-        procedure_pk = self.kwargs.get('procedure_pk')
-        form.instance.procedure_id = procedure_pk
-        form.instance.organization = self.request.organization
-        return super().form_valid(form)
-    def get_success_url(self):
-        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
-
-class ProcedureResultUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
-    model = ProcedureResult
-    form_class = ProcedureResultForm
-    template_name = 'audit/procedureresult_form.html'
-    success_message = _('Procedure Result was updated successfully')
-    
-    def get_template_names(self):
-        """Return different templates based on HTMX request"""
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        if is_htmx:
-            return ['audit/procedureresult_modal_form.html']
-        return [self.template_name]
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
-        return kwargs
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Ensure procedure is available in the context for the template
-        context['procedure'] = self.object.procedure
-        return context
-    
-    def form_valid(self, form):
-        form.instance.updated_by = self.request.user
-        self.object = form.save()
-        
-        # Handle HTMX or AJAX requests
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        if is_htmx or is_ajax:
-            from django.http import HttpResponse
-            from django.urls import reverse
-            from django.contrib import messages
-            
-            # Add a success message
-            messages.success(self.request, self.success_message)
-            
-            # For HTMX requests, redirect instead of sending JSON with HTML content
-            # This prevents malformed URLs from being included in the response
-            redirect_url = reverse('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
-            
-            # Create a response with HX-Redirect header for HTMX
-            response = HttpResponse(status=200)
-            response['HX-Redirect'] = redirect_url
-            return response
-        
-        return super().form_valid(form)
-    
-    def get_success_url(self):
-        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
-
-class ProcedureResultModalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
-    model = ProcedureResult
-    form_class = ProcedureResultForm
-    template_name = 'audit/procedureresult_modal_form.html'
-    success_message = _('Procedure Result was created successfully')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['procedure_pk'] = self.kwargs.get('procedure_pk')
-        return context
-
-    def form_valid(self, form):
-        procedure_pk = self.kwargs.get('procedure_pk')
-        form.instance.procedure_id = procedure_pk
-        form.instance.organization = self.request.organization
-        self.object = form.save()
-
-        if self.request.headers.get('HX-Request') == 'true':
-            messages.success(self.request, self.get_success_message(form.cleaned_data))
-            results = ProcedureResult.objects.filter(procedure_id=procedure_pk, organization=self.request.organization)
-            html_list = render_to_string("audit/_procedure_result_list_partial.html", {
-                "results": results,
-                "procedure": self.object.procedure,
-            }, request=self.request)
-            response = HttpResponse(html_list)
-            response['HX-Trigger'] = '{"closeModal": "true"}'
-            return response
-
-        return super().form_valid(form)
+        return response
 
     def form_invalid(self, form):
-        return self.render_to_response(self.get_context_data(form=form))
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
+            html_form = render_to_string(
+                self.template_name,
+                self.get_context_data(form=form),
+                request=self.request
+            )
+            return JsonResponse({
+                'success': False,
+                'form_errors': form.errors,
+                'html_form': html_form
+            }, status=400)
+        return super().form_invalid(form)
 
     def get_success_url(self):
-        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+        if hasattr(self, 'object') and self.object.risk_id:
+            return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk_id})
+        return reverse_lazy('audit:procedure-list')
 
-class ProcedureResultModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
-    model = ProcedureResult
-    form_class = ProcedureResultForm
-    template_name = 'audit/procedureresult_modal_form.html'
-    success_message = _('Procedure Result was updated successfully')
+class ProcedureModalDeleteView(AuditPermissionMixin, DeleteView):
+    model = Procedure
+    template_name = 'audit/procedure_confirm_delete.html'
+    success_message = _('Procedure was deleted successfully')
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.organization
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['procedure_pk'] = self.object.procedure.pk if self.object.procedure_id else None
-        return context
-
-    def form_valid(self, form):
-        self.object = form.save()
-
-        if self.request.headers.get('HX-Request') == 'true':
-            messages.success(self.request, self.get_success_message(form.cleaned_data))
-            results = ProcedureResult.objects.filter(procedure_id=self.object.procedure_id, organization=self.request.organization)
-            html_list = render_to_string("audit/_procedure_result_list_partial.html", {
-                "results": results,
-                "procedure": self.object.procedure,
-            }, request=self.request)
-            response = HttpResponse(html_list)
-            response['HX-Trigger'] = '{"closeModal": "true"}'
-            return response
-            
-        return super().form_valid(form)
-
-    def form_invalid(self, form):
-        return self.render_to_response(self.get_context_data(form=form))
+    def get_queryset(self):
+        """Limit queryset to objects in the current organization."""
+        return super().get_queryset().filter(organization=self.request.organization)
 
     def get_success_url(self):
-        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+        """Return to the risk detail page after deletion."""
+        if hasattr(self, 'object') and self.object.risk_id:
+            return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk_id})
+        return reverse_lazy('audit:procedure-list')
+
+    def delete(self, request, *args, **kwargs):
+        """Handle the deletion and return appropriate response."""
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+        
+        # Store risk_id before deletion for HTMX response
+        risk_id = self.object.risk_id if self.object.risk else None
+        
+        # Perform deletion
+        self.object.delete()
+        
+        # Handle HTMX/JSON response
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.headers.get("HX-Request") == "true":
+            try:
+                if risk_id:
+                    # Get updated procedure list for the risk
+                    from .models.risk import Risk
+                    risk = Risk.objects.get(pk=risk_id, organization=request.organization)
+                    procedures = Procedure.objects.filter(risk=risk, organization=request.organization)
+                    
+                    # Render the procedure list partial
+                    html = render_to_string(
+                        'audit/_procedure_list_partial.html',
+                        {
+                            'procedures': procedures,
+                            'risk': risk,
+                            'request': request
+                        }
+                    )
+                    
+                    return HttpResponse(html)
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': str(self.success_message),
+                    'redirect_url': success_url
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': _("Error deleting procedure: {}".format(str(e)))
+                }, status=400)
+        
+        messages.success(request, self.success_message)
+        return HttpResponseRedirect(success_url)
 
 # FOLLOWUP ACTION VIEWS
 class FollowUpActionListView(AuditPermissionMixin, ListView):

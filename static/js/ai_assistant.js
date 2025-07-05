@@ -79,9 +79,10 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const question = questionInput.value.trim();
             if (!question) return;
-            answerDiv.style.display = 'none';
+            // Hide answer and show loading
+            answerDiv.classList.add('d-none');
             answerText.textContent = '';
-            loadingDiv.style.display = 'block';
+            loadingDiv.classList.remove('d-none');
             askBtn.disabled = true;
 
             fetch('/api/ai/ask/', {
@@ -94,24 +95,24 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
-                loadingDiv.style.display = 'none';
+                loadingDiv.classList.add('d-none');
                 askBtn.disabled = false;
                 if (data.answer) {
                     answerText.textContent = data.answer;
-                    answerDiv.style.display = 'block';
+                    answerDiv.classList.remove('d-none');
                 } else if (data.error) {
                     answerText.textContent = data.error;
-                    answerDiv.style.display = 'block';
+                    answerDiv.classList.remove('d-none');
                 } else {
                     answerText.textContent = 'Sorry, no answer was returned.';
-                    answerDiv.style.display = 'block';
+                    answerDiv.classList.remove('d-none');
                 }
             })
             .catch(() => {
-                loadingDiv.style.display = 'none';
+                loadingDiv.classList.add('d-none');
                 askBtn.disabled = false;
                 answerText.textContent = 'Sorry, there was a problem contacting the AI assistant.';
-                answerDiv.style.display = 'block';
+                answerDiv.classList.remove('d-none');
             });
         });
     }

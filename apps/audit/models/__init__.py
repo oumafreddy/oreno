@@ -4,7 +4,6 @@ from .issue import Issue
 from .approval import Approval
 from .objective import Objective
 from .procedure import Procedure
-from .procedureresult import ProcedureResult
 from .note import Note, Notification
 from .followupaction import FollowUpAction
 from .issueretest import IssueRetest
@@ -19,7 +18,6 @@ __all__ = [
     'Approval',
     'Objective',
     'Procedure',
-    'ProcedureResult',
     'Note',
     'Notification',
     'FollowUpAction',

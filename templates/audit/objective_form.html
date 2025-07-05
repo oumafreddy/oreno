@@ -12,6 +12,7 @@
       </h5>
     </div>
     <div class="card-body">
+      {{ form.media }}
       <form method="post" enctype="multipart/form-data" id="objective-form">
         {% csrf_token %}
         {{ form|crispy }}

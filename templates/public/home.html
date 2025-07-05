@@ -1,146 +1,133 @@
 {% extends 'public/base.html' %}
 {% load static %}
 
-{% block title %}Enterprise IT Solutions | Hashrate Solutions{% endblock %}
+{% block title %}Hashrate Solutions | Enterprise IT & GRC SaaS{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section id="page-top" class="hero">
-    <div class="container hero-flex">
-        <div class="hero-content">
-            <h1>Hashrate Solutions</h1>
-            <p class="hero-tagline">Empowering Digital Transformation in Africa & Beyond</p>
-            <div class="cta-buttons">
-                <a href="#contact" class="btn btn-primary">Get Started</a>
-                <a href="#services" class="btn btn-secondary">Our Services</a>
-            </div>
-        </div>
+<!-- Welcome Section -->
+<section class="hero-atlassian">
+    <div class="container hero-atlassian-content">
+        <h1 class="hero-atlassian-title">Welcome to Hashrate Solutions</h1>
+        <p class="hero-atlassian-subtitle" id="animated-subtitle">
+            Empowering organizations with enterprise-grade SaaS: <span class="highlight-animated" id="highlight-grc">GRC</span>, <span class="highlight-animated" id="highlight-learning">Learning</span>, and <span class="highlight-animated" id="highlight-digital">Digital Transformation</span>
+        </p>
+        <a href="#services" class="btn btn-primary btn-atlassian">Get Started</a>
     </div>
-    <a href="#services" class="scroll-down-arrow" aria-label="Scroll to next section">
-        <i class="fas fa-chevron-down"></i>
-    </a>
 </section>
 
-<!-- Services Section -->
-<section id="services" class="section">
+<!-- Our Services Section -->
+<section id="services" class="services-atlassian">
     <div class="container">
-        <div class="section-header">
+        <div class="section-header-atlassian">
             <h2>Our Services</h2>
             <p>Comprehensive solutions tailored to your organization's needs</p>
         </div>
-        <div class="services-grid">
-            <div class="service-card">
-                <div class="service-icon" style="background:#e8f0fe;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
-                    <!-- Clipboard SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><rect width="18" height="22" x="3" y="2" rx="4" fill="#4285f4"/><rect width="14" height="18" x="5" y="4" rx="2" fill="#fff"/><rect width="10" height="2" x="7" y="8" rx="1" fill="#e8f0fe"/><rect width="10" height="2" x="7" y="12" rx="1" fill="#e8f0fe"/><rect width="6" height="2" x="7" y="16" rx="1" fill="#e8f0fe"/></svg>
-                </div>
-                <h3>Web Apps Development</h3>
-                <p>Development of custom web applications using Django, Power Platform, and Airtable.</p>
-            </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#e6f4ea;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
+        <div class="services-atlassian-grid">
+            <!-- Data Analysis & Visualization -->
+            <div class="service-atlassian-item">
+                <div class="service-icon service-icon-analytics">
                     <!-- Bar Chart SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><rect x="6" y="12" width="3" height="8" rx="1.5" fill="#34a853"/><rect x="10.5" y="8" width="3" height="12" rx="1.5" fill="#34a853"/><rect x="15" y="4" width="3" height="16" rx="1.5" fill="#34a853"/></svg>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="13" width="4" height="8" rx="2" fill="#2196f3"/>
+                        <rect x="10" y="9" width="4" height="12" rx="2" fill="#64b5f6"/>
+                        <rect x="17" y="5" width="4" height="16" rx="2" fill="#90caf9"/>
+                    </svg>
                 </div>
                 <h3>Data Analysis & Visualization</h3>
                 <p>Data analysis and visualization with scripting, Power BI, and Tableau.</p>
             </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#fce8e6;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
+            <!-- Techno-functional Consultancy -->
+            <div class="service-atlassian-item">
+                <div class="service-icon service-icon-consultancy">
                     <!-- Briefcase SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="10" rx="2" fill="#ea4335"/><rect x="7" y="6" width="10" height="4" rx="2" fill="#fff"/><rect x="9" y="2" width="6" height="4" rx="2" fill="#ea4335"/></svg>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="7" width="16" height="13" rx="3" fill="#ff7043"/>
+                        <rect x="8" y="3" width="8" height="4" rx="2" fill="#ffa726"/>
+                        <rect x="7" y="12" width="10" height="2" rx="1" fill="#fff3e0"/>
+                    </svg>
                 </div>
                 <h3>Techno-functional Consultancy</h3>
                 <p>Consultancy for Microsoft Dynamics NAV & BC product line.</p>
             </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#e8f0fe;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
+            <!-- IT Systems Acquisitions, Audits & Reviews -->
+            <div class="service-atlassian-item">
+                <div class="service-icon service-icon-audit">
                     <!-- Server SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="4" rx="2" fill="#4285f4"/><rect x="4" y="14" width="16" height="4" rx="2" fill="#4285f4"/><rect x="7" y="8" width="2" height="2" rx="1" fill="#fff"/><rect x="7" y="16" width="2" height="2" rx="1" fill="#fff"/></svg>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="6" width="16" height="12" rx="3" fill="#42a5f5"/>
+                        <rect x="7" y="9" width="10" height="2" rx="1" fill="#fff"/>
+                        <rect x="7" y="13" width="10" height="2" rx="1" fill="#fff"/>
+                    </svg>
                 </div>
                 <h3>IT Systems Acquisitions, Audits & Reviews</h3>
                 <p>Comprehensive IT systems acquisition, audits, and infrastructure reviews.</p>
             </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#f4f8e8;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
+            <!-- Information Security Programs -->
+            <div class="service-atlassian-item">
+                <div class="service-icon service-icon-security">
                     <!-- Shield SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><path d="M12 3l7 4v5c0 5.25-3.75 9.75-7 11-3.25-1.25-7-5.75-7-11V7l7-4z" fill="#7cb342"/><path d="M12 3v17c-2.5-1-6-5-6-10V7l6-4z" fill="#fff"/></svg>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3L4 7v5c0 5.25 3.75 9.75 8 11 4.25-1.25 8-5.75 8-11V7l-8-4z" fill="#66bb6a"/>
+                        <path d="M12 21c-3.87-1.13-7-5.13-7-9.13V8.14l7-3.5 7 3.5v3.73C19 15.87 15.87 19.87 12 21z" fill="#a5d6a7"/>
+                    </svg>
                 </div>
                 <h3>Information Security Programs</h3>
                 <p>Development and management of information security programs.</p>
             </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#e6f4ea;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
-                    <!-- Sync SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.13-.31 2.19-.85 3.09l1.46 1.46C19.41 14.07 20 12.11 20 10c0-4.42-3.58-8-8-8zM6.41 4.59L5 6l1.41 1.41C4.59 9.83 4 11.89 4 14c0 4.42 3.58 8 8 8v-3l4 4-4 4v-3c-3.31 0-6-2.69-6-6 0-1.13.31-2.19.85-3.09l-1.46-1.46C4.59 13.93 4 15.89 4 18c0 4.42 3.58 8 8 8v-3l-4-4 4-4v3c3.31 0 6-2.69 6-6 0-1.13-.31-2.19-.85-3.09l1.46-1.46C19.41 9.93 20 11.89 20 14c0 4.42-3.58 8-8 8z" fill="#34a853"/></svg>
+            <!-- Process Digitization & Automation -->
+            <div class="service-atlassian-item">
+                <div class="service-icon service-icon-automation">
+                    <!-- Automation/Process SVG -->
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" fill="#26c6da"/>
+                        <path d="M8 12h8M12 8v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
                 </div>
                 <h3>Process Digitization & Automation</h3>
                 <p>Digitization and automation using Python, Power Automate, and Power Apps.</p>
             </div>
-            <div class="service-card">
-                <div class="service-icon" style="background:#fce8e6;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;">
-                    <!-- Graduation Cap SVG -->
-                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17a2 2 0 01-2 2H6a2 2 0 01-2-2V9.09L12 3z" fill="#ea4335"/><path d="M12 3v12l9-4.91V17a2 2 0 01-2 2H6a2 2 0 01-2-2V9.09L12 3z" fill="#fff"/></svg>
+        </div>
+        <!-- Floating Product Sections -->
+        <div class="floating-products-col">
+            <div class="floating-product-card-wide">
+                <h3 class="floating-product-title">Web Apps Development</h3>
+                <div class="floating-product-content-wide">
+                    <p>Development of custom web applications using Django, Power Platform, and Airtable.</p>
                 </div>
-                <h3>Udemy CISA Courses</h3>
-                <p>Online CISA preparation courses: <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener">View Course</a></p>
+                <div class="floating-product-images-wide floating-product-images-huge">
+                    <img src="{% static 'img/Add Risk.png' %}" alt="Oreno GRC - Add Risk" class="floating-product-img-huge">
+                    <img src="{% static 'img/Add Obj.png' %}" alt="Oreno GRC - Add Objective" class="floating-product-img-huge">
+                    <img src="{% static 'img/Add Issue.png' %}" alt="Oreno GRC - Add Issue" class="floating-product-img-huge">
+                </div>
+
+            </div>
+            <div class="floating-product-card-wide">
+                <h3 class="floating-product-title">Udemy CISA Courses</h3>
+                <div class="floating-product-content-wide">
+                    <p>Online CISA preparation courses: <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener" style="color:#0052cc;font-weight:600;">View Course</a></p>
+            </div>
+                <div class="floating-product-images-wide floating-product-images-huge">
+                    <img src="{% static 'img/Udemy.png' %}" alt="Udemy CISA Course" class="floating-product-img-huge">
+        </div>
+
             </div>
         </div>
     </div>
 </section>
 
-<!-- About Section -->
-<section id="about" class="section bg-light">
-    <div class="container">
-        <div class="about-grid">
-            <div class="about-content">
-                <h2>About Hashrate Solutions</h2>
-                <p><strong>Hashrate Solutions</strong> is a leading provider of digital transformation, technology, and GRC services across Africa and beyond. Since 2018, we have empowered organizations to unlock their potential with innovative web apps, data analytics, process automation, and secure IT solutions.</p>
-                <ul class="about-highlights">
-                    <li><i class="fas fa-check-circle"></i> 6+ years of proven expertise</li>
-                    <li><i class="fas fa-check-circle"></i> Trusted by enterprises, NGOs, and public sector</li>
-                    <li><i class="fas fa-check-circle"></i> Specialists in Microsoft, Python, Power Platform, and more</li>
-                </ul>
-                <a href="#contact" class="btn btn-primary">Contact Us</a>
-            </div>
-            <div class="about-image">
-                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" alt="About Hashrate Solutions" style="max-width:100%;border-radius:12px;">
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Contact Section -->
-<section id="contact" class="section">
-    <div class="container">
-        <div class="section-header">
-            <h2>Get In Touch</h2>
+<!-- Contact Us Section -->
+<section id="contact" class="contact-atlassian">
+    <div class="container contact-atlassian-container">
+        <div class="contact-atlassian-info">
+            <h2>Contact Us</h2>
             <p>Ready to transform your organization? Reach out to our team and let's build something great together.</p>
+            <ul class="contact-atlassian-list">
+                <li><i class="fas fa-map-marker-alt"></i> Nairobi, Kenya</li>
+                <li><i class="fas fa-phone"></i> +254 711 219 536</li>
+                <li><i class="fas fa-envelope"></i> <a href="mailto:info@oreno.tech">info@oreno.tech</a></li>
+            </ul>
         </div>
-        <div class="contact-grid contact-premium">
-            <div class="contact-info">
-                <h3>Contact Information</h3>
-                <div class="contact-details">
-                    <div class="contact-item">
-                        <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
-                        <div><span>Nairobi, Kenya</span></div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon"><i class="fas fa-phone"></i></div>
-                        <div><span>+254 711 219 536</span></div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon"><i class="fas fa-envelope"></i></div>
-                        <div><span>info@oreno.tech</span></div>
-                    </div>
-                </div>
-                <div class="social-links">
-                    <a href="#" class="social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#" class="social-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                </div>
-            </div>
-            <div class="contact-form contact-form-premium">
+        <div class="contact-atlassian-form">
                 <form id="contactForm" method="post" action="#">
                     <div class="form-group">
                         <label for="name">Your Name</label>
@@ -158,89 +145,320 @@
                         <label for="message">Your Message</label>
                         <textarea id="message" name="message" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                <button type="submit" class="btn btn-primary btn-atlassian">Send Message</button>
                 </form>
-            </div>
         </div>
     </div>
 </section>
 
-<!-- JavaScript for animations and interactions -->
-<script src="{% static 'js/public_home.js' %}" nonce="{{ request.csp_nonce }}"></script>
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        [
+            {id: 'highlight-grc', color: '#00c6ff'},
+            {id: 'highlight-learning', color: '#ffb300'},
+            {id: 'highlight-digital', color: '#43a047'}
+        ].forEach(function(item, idx) {
+            setTimeout(function() {
+                var el = document.getElementById(item.id);
+                if (el) {
+                    el.style.position = 'relative';
+                    var arrow = document.createElement('span');
+                    arrow.innerHTML = ' <svg width="32" height="16" viewBox="0 0 32 16" style="vertical-align:middle;"><path d="M2 14 Q16 2 30 14" stroke="' + item.color + '" stroke-width="3" fill="none"/><polygon points="30,14 27,12 28,16" fill="' + item.color + '"/></svg>';
+                    arrow.style.position = 'absolute';
+                    arrow.style.left = '0';
+                    arrow.style.bottom = '-18px';
+                    arrow.style.pointerEvents = 'none';
+                    el.appendChild(arrow);
+                    el.style.borderBottom = '3px solid ' + item.color;
+                    el.style.transition = 'border-bottom 0.5s';
+                }
+            }, idx * 600);
+        });
+    }, 800);
+});
+</script>
 
 <style>
-    /* Additional styles specific to the home page */
-    .hero {
+body { background: #fff; color: #222; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+.hero-atlassian {
+    background: #fff;
+    padding: 64px 0 32px 0;
+    text-align: center;
+    border-bottom: 1px solid #f0f2f5;
+}
+.hero-atlassian-content {
+    max-width: 700px;
+    margin: 0 auto;
+}
+.hero-atlassian-title {
+    font-size: 2.7rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+    line-height: 1.15;
+}
+.hero-atlassian-subtitle {
+    font-size: 1.25rem;
+    color: #444;
+    margin-bottom: 32px;
+}
+.btn-atlassian {
+    background: #0052cc;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 14px 38px;
+    border-radius: 32px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.08);
+    transition: background 0.2s;
+    border: none;
+}
+.btn-atlassian:hover {
+    background: #0065ff;
+    color: #fff;
+}
+.services-atlassian {
+    background: #f6f8fa;
+    padding: 48px 0 32px 0;
+}
+.section-header-atlassian {
+    text-align: center;
+    margin-bottom: 36px;
+}
+.section-header-atlassian h2 {
+    font-size: 2.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #0052cc;
+}
+.section-header-atlassian p {
+    color: #444;
+    font-size: 1.1rem;
+}
+.services-atlassian-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 36px;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.service-atlassian-item {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    padding: 24px 18px 18px 18px;
+    text-align: center;
+    width: 300px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
         position: relative;
-        color: white;
-        text-align: center;
-        padding: 32px 0 24px 0;
-        min-height: 340px;
-        background-color: #2c3e50;
-        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.08' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .hero .hero-content {
+}
+.service-icon {
+    font-size: 2.5rem;
+    margin-bottom: 14px;
+    color: #0052cc;
+    background: #e3f2fd;
+    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.08);
+    overflow: hidden;
+}
+.service-icon-img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
+}
+.service-atlassian-imgcard .service-img-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.service-img-sample {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.08);
+    background: #fff;
+}
+@media (max-width: 900px) {
+    .services-atlassian-grid { flex-direction: column; gap: 18px; }
+    .service-atlassian-item { width: 100%; min-width: 0; }
+    .hero-atlassian-title { font-size: 2rem; }
+}
+.contact-atlassian {
+    background: #fff;
+    padding: 48px 0 32px 0;
+    border-top: 1px solid #e0e4ea;
+}
+.contact-atlassian-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+.contact-atlassian-info {
+    flex: 1 1 320px;
+    min-width: 260px;
+}
+.contact-atlassian-info h2 {
+    color: #0052cc;
+    font-size: 2rem;
+    margin-bottom: 12px;
+}
+.contact-atlassian-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 0 0;
+}
+.contact-atlassian-list li {
+    margin-bottom: 10px;
+    font-size: 1.08rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+.contact-atlassian-list i {
+    color: #0052cc;
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+.contact-atlassian-form {
+    flex: 1 1 340px;
+    min-width: 280px;
+    background: #f6f8fa;
+    border-radius: 12px;
+    padding: 28px 24px 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.06);
+}
+.contact-atlassian-form form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.form-group label {
+    font-weight: 600;
+    color: #0052cc;
+    margin-bottom: 4px;
+}
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e4ea;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: #fff;
+    color: #222;
+    resize: vertical;
+}
+.form-group textarea {
+    min-height: 80px;
+    max-height: 200px;
+}
+.btn-atlassian[type="submit"] {
+    margin-top: 8px;
+    align-self: flex-end;
+}
+@media (max-width: 900px) {
+    .contact-atlassian-container { flex-direction: column; gap: 24px; }
+    .contact-atlassian-info, .contact-atlassian-form { width: 100%; min-width: 0; }
+}
+.floating-products-col {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    margin: 48px auto 0 auto;
+    max-width: 1100px;
+}
+.floating-product-card-wide {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,82,204,0.10);
+    padding: 32px 32px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 18px;
         position: relative;
+    width: 100%;
+}
+.floating-product-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0052cc;
+    margin-bottom: 18px;
+    text-align: center;
+}
+.floating-product-images-wide {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    margin-bottom: 22px;
+    width: 100%;
+}
+.floating-product-img-wide {
+    width: 220px;
+    height: 140px;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,82,204,0.10);
+    background: #fff;
+    transition: transform 0.2s;
     }
-    
-    .hero h1 {
-        font-size: 3rem;
-        margin-bottom: 20px;
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.8s ease, transform 0.8s ease;
+.floating-product-img-wide:hover {
+    transform: scale(1.04) translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,82,204,0.16);
+}
+.floating-product-content-wide {
+    font-size: 1.12rem;
+    color: #444;
+    text-align: center;
+    margin-top: 6px;
+}
+@media (max-width: 900px) {
+    .floating-products-col { gap: 32px; }
+    .floating-product-card-wide { padding: 18px 6px 18px 6px; }
+    .floating-product-images-wide { flex-direction: column; gap: 18px; }
+    .floating-product-img-wide { width: 98vw; max-width: 98vw; height: auto; }
+}
+.floating-product-images-huge {
+    gap: 48px;
     }
-    
-    .hero p {
-        font-size: 1.2rem;
-        margin-bottom: 30px;
-        max-width: 700px;
-        margin-left: auto;
-        margin-right: auto;
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+.floating-product-img-huge {
+    width: 40vw;
+    max-width: 520px;
+    min-width: 260px;
+    height: 28vw;
+    max-height: 320px;
+    min-height: 120px;
+    object-fit: contain;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,82,204,0.13);
+    background: #fff;
+    transition: transform 0.2s;
     }
-    
-    .hero .btn {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s, background-color 0.3s ease;
-    }
-    
-    .hero .btn-outline {
-        transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s, background-color 0.3s ease;
-    }
-    
-    /* Show elements when they come into view */
-    .fade-in {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.8s ease, transform 0.8s ease;
-    }
-    
-    .fade-in.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .hero {
-            padding: 100px 20px;
-        }
-        
-        .hero h1 {
-            font-size: 2rem;
-        }
-        
-        .hero p {
-            font-size: 1rem;
-        }
+.floating-product-img-huge:hover {
+    transform: scale(1.04) translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,82,204,0.18);
+}
+@media (max-width: 900px) {
+    .floating-product-images-huge { flex-direction: column; gap: 24px; }
+    .floating-product-img-huge { width: 98vw; max-width: 98vw; height: auto; }
     }
 </style>
 {% endblock %}

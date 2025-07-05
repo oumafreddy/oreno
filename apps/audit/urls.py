@@ -16,8 +16,7 @@ from .views import (
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
     ObjectiveModalCreateView, RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
     ProcedureListView, ProcedureDetailView, ProcedureCreateView,
-    ProcedureUpdateView, ProcedureModalCreateView, ProcedureResultListView, ProcedureResultDetailView,
-    ProcedureResultCreateView, ProcedureResultUpdateView,
+    ProcedureUpdateView, ProcedureModalCreateView,
     FollowUpActionListView, FollowUpActionDetailView, FollowUpActionCreateView, FollowUpActionUpdateView,
     FollowUpActionModalCreateView, IssueRetestListView, IssueRetestDetailView, IssueRetestCreateView,
     IssueRetestUpdateView, IssueRetestModalCreateView, NoteCreateView,
@@ -157,13 +156,6 @@ urlpatterns = [
     path('risks/<int:risk_id>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
     path('procedures/<int:pk>/edit/', views.ProcedureUpdateView.as_view(), name='procedure-edit'),
     path('risks/<int:risk_id>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
-    # ProcedureResult URLs
-    path('procedures/<int:procedure_pk>/results/', views.ProcedureResultListView.as_view(), name='procedureresult-list'),
-    path('procedureresults/<int:pk>/', views.ProcedureResultDetailView.as_view(), name='procedureresult-detail'),
-    path('procedures/<int:procedure_pk>/results/add/', views.ProcedureResultCreateView.as_view(), name='procedureresult-add'),
-    path('procedureresults/<int:pk>/edit/', views.ProcedureResultUpdateView.as_view(), name='procedureresult-edit'),
-    path('procedures/<int:procedure_pk>/results/modal/add/', views.ProcedureResultModalCreateView.as_view(), name='procedureresult-modal-add'),
-    path('procedures/<int:procedure_pk>/results/modal/<int:pk>/edit/', views.ProcedureResultModalUpdateView.as_view(), name='procedureresult-modal-edit'),
     # FollowUpAction URLs
     path('issues/<int:issue_pk>/followups/', views.FollowUpActionListView.as_view(), name='followupaction-list'),
     path('issues/<int:issue_pk>/followups/add/', views.FollowUpActionCreateView.as_view(), name='followupaction-add'),

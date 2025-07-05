@@ -4,31 +4,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Hashrate Solutions - Enterprise IS Solutions{% endblock %}</title>
-    <meta name="description" content="Hashrate Solutions provides enterprise-grade GRC solutions with expertise in audit management, risk assessment, and compliance.">
-    <meta name="keywords" content="GRC, Governance, Risk, Compliance, Audit Management, Kenya, Nairobi, Enterprise Solutions">
-    <meta name="author" content="Hashrate Solutions">
+    <title>{% block title %}Oreno GRC - Enterprise GRC Platform{% endblock %}</title>
+    <meta name="description" content="Oreno GRC provides enterprise-grade GRC solutions with expertise in audit management, risk assessment, and compliance.">
+    <meta name="keywords" content="GRC, Governance, Risk, Compliance, Audit Management, Enterprise Solutions">
+    <meta name="author" content="Oreno GRC">
     
     <!-- Favicon -->
     <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
     
     <!-- CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/public.css' %}">
     <style>
         body {
-            font-family: 'Inter', 'Poppins', Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f6f8fa;
+            background: #fff;
             color: #222;
         }
+        /* Navbar (Atlassian style) */
         .public-navbar {
-            background: linear-gradient(90deg, #635bff 0%, #2c3e50 100%);
-            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
+            background: #fff;
+            border-bottom: 1px solid #e0e4ea;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.03);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -37,36 +39,38 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0;
+            padding: 0.7rem 0;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         .navbar-logo {
-            display: flex; /* Added for logo and text alignment */
-            align-items: center; /* Added for logo and text alignment */
+            display: flex;
+            align-items: center;
             font-size: 2rem;
-            font-weight: 700;
-            color: #fff;
+            font-weight: 800;
+            color: #0052cc;
             letter-spacing: 1px;
             text-decoration: none;
         }
         .logo-image {
-            height: 35px; /* Adjust as needed */
+            height: 32px;
             width: auto;
             margin-right: 10px;
         }
         .navbar-logo span {
-            color: #00c4fa;
-            font-weight: 700;
+            color: #00c6ff;
+            font-weight: 800;
         }
         .navbar-links {
             display: flex;
-            align-items: center; /* Added for vertical alignment */
-            gap: 2.5rem;
+            align-items: center;
+            gap: 2.2rem;
             list-style: none;
             margin: 0;
             padding: 0;
         }
         .navbar-links a {
-            color: #fff;
+            color: #222;
             font-size: 1.08rem;
             font-weight: 500;
             text-decoration: none;
@@ -75,153 +79,65 @@
             transition: background 0.2s, color 0.2s;
         }
         .navbar-links a:hover, .navbar-links a:focus {
-            background: rgba(255,255,255,0.12);
-            color: #00c4fa;
+            background: #e6f0fa;
+            color: #0052cc;
             outline: none;
         }
         @media (max-width: 900px) {
-            .navbar-links {
-                gap: 1.2rem;
-            }
-            .navbar-logo {
-                font-size: 1.3rem;
-            }
+            .navbar-links { gap: 1.2rem; }
+            .navbar-logo { font-size: 1.3rem; }
         }
         @media (max-width: 600px) {
-            .nav-content {
-                flex-direction: column;
-                gap: 0.5rem;
-                padding: 0.8rem 0;
-            }
-            .navbar-links {
-                flex-wrap: wrap;
-                gap: 0.8rem;
-            }
+            .nav-content { flex-direction: column; gap: 0.5rem; padding: 0.8rem 0; }
+            .navbar-links { flex-wrap: wrap; gap: 0.8rem; }
         }
-        main {
-            margin-top: 0;
+        main { margin-top: 0; }
+        /* Footer (Atlassian style) */
+        .footer-atlassian {
+            background: #f6f8fa;
+            padding: 40px 0 0 0;
+            border-top: 1px solid #e0e4ea;
+            margin-top: 48px;
         }
-        .footer {
-            background: #2c3e50;
-            color: #fff;
-            padding: 1.5rem 0 1rem 0; /* Reduced top padding */
-        }
-        .footer-content {
+        .footer-atlassian-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 2rem;
+            gap: 36px;
             justify-content: space-between;
+            max-width: 1100px;
+            margin: 0 auto;
         }
-        .footer-about, .footer-links, .footer-contact {
-            min-width: 220px;
+        .footer-atlassian-col {
+            flex: 1 1 180px;
+            min-width: 180px;
+            margin-bottom: 24px;
         }
-        .footer-links ul {
+        .footer-atlassian-col h4 {
+            font-size: 1.08rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #0052cc;
+        }
+        .footer-atlassian-col ul {
+            list-style: none;
             padding: 0;
+            margin: 0;
         }
-        .footer-links li {
-            margin-bottom: 0.7rem;
+        .footer-atlassian-col ul li {
+            margin-bottom: 7px;
         }
-        .footer-links a {
-            color: #ddd;
+        .footer-atlassian-col ul li a {
+            color: #222;
+            text-decoration: none;
+            font-size: 1rem;
             transition: color 0.2s;
         }
-        .footer-links a:hover {
-            color: #3498db;
-        }
-        .footer-contact p {
-            margin: 0.2rem 0;
-            display: flex;
-            align-items: center;
-        }
-        .footer-contact i {
-            margin-right: 0.6rem;
-            color: #3498db;
-        }
-        .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 1rem;
-            border-top: 1px solid #4e5d6c;
-            font-size: 0.9rem;
-        }
-        .back-to-top {
-            position: fixed;
-            bottom: 25px; /* Adjusted for potentially larger button */
-            right: 25px;  /* Adjusted for potentially larger button */
-            background: #3498db;
-            color: #fff;
-            width: 44px; /* Define width */
-            height: 44px; /* Define height, equal to width for a circle */
-            border-radius: 50%; /* Makes it circular */
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); /* Slightly enhanced shadow */
-            z-index: 1001;
-            text-decoration: none;
-            opacity: 0;
-            visibility: hidden;
-            display: flex; /* For centering content */
-            align-items: center; /* Vertically center content */
-            justify-content: center; /* Horizontally center content */
-            font-size: 1.1rem; /* Adjust icon size if needed */
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, background-color 0.2s, transform 0.2s ease-in-out; /* Added transform transition */
-        }
-        .back-to-top.visible {
-            opacity: 0.85;
-            visibility: visible;
-        }
-        .back-to-top:hover {
-            background: #2c3e50;
-            color: #fff;
-            opacity: 1;
-            transform: translateY(-2px); /* Slight lift on hover */
-        }
-        .cookie-consent {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            color: #333;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.07);
-            padding: 1rem 0;
-            z-index: 2000;
-            display: none;
-        }
-        .cookie-consent.active {
-            display: block;
-        }
-        .cookie-content {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .cookie-buttons .btn {
-            margin-left: 1rem;
-            background: #3498db;
-            color: #fff;
-            border: none;
-            padding: 0.4rem 1.2rem;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-        .cookie-buttons .btn-outline {
-            background: transparent;
-            color: #3498db;
-            border: 1px solid #3498db;
+        .footer-atlassian-col ul li a:hover {
+            color: #0052cc;
         }
         @media (max-width: 900px) {
-            .footer-content { flex-direction: column; gap: 1.5rem; }
-            .cookie-content { flex-direction: column; gap: 1rem; }
-        }
-        @media (max-width: 600px) {
-            .header .container, .footer-content, .footer-bottom { flex-direction: column; align-items: flex-start; }
-            .nav-menu { flex-direction: column; gap: 1rem; }
-            .footer-bottom { gap: 1rem; }
+            .footer-atlassian-grid { flex-direction: column; gap: 18px; }
+            .footer-atlassian-col { width: 100%; min-width: 0; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -229,73 +145,46 @@
 <body>
     <!-- Navigation Bar -->
     <nav class="public-navbar">
-        <div class="nav-content container">
-            <a href="{% url 'public-home' %}" class="navbar-logo">
-                <img src="{% static 'img/favicon.ico' %}" alt="Hashrate Solutions Logo" class="logo-image">
-                Hashrate<span>Solutions</span>
+        <div class="nav-content">
+            <a href="/" class="navbar-logo">
+                <img src="{% static 'img/logo.svg' %}" alt="Hashrate Solutions Logo" class="logo-image">
+                Hashrate <span>Solutions</span>
             </a>
-            <ul class="navbar-links">
-                <li><a href="{% url 'public-home' %}">Home</a></li>
-                <li><a href="{% url 'public-home' %}#services">Services</a></li>
-                <li><a href="{% url 'public-home' %}#about">About</a></li>
-                <li><a href="{% url 'public-home' %}#contact">Contact</a></li>
-            </ul>
+            <!-- Navigation links removed for minimal look -->
         </div>
     </nav>
 
     <!-- Main Content -->
     <main>
-        {% block content %}
-        {% endblock %}
+        {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-column">
-                <h3>Hashrate Solutions</h3>
-                <p>Providing enterprise-grade GRC and technology solutions since 2018. We help organizations manage governance, risk, and compliance effectively.</p>
-                <div class="social-links">
-                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                </div>
+    <footer class="footer-atlassian">
+        <div class="container footer-atlassian-grid">
+            <div class="footer-atlassian-col">
+                <img src="{% static 'img/logo.svg' %}" alt="Oreno GRC Logo" style="height:32px; margin-bottom:10px;">
+                <p>Oreno GRC<br>Enterprise-grade Governance, Risk & Compliance Platform</p>
+                <p style="font-size:0.95em; color:#888;">&copy; 2025 Oreno GRC. All rights reserved.</p>
             </div>
-            <div class="footer-column">
-                <h3>Quick Links</h3>
-                <ul class="footer-links">
-                    <li><a href="#home">Home</a></li>
-                    <li><a href="#services">Services</a></li>
-                    <li><a href="#about">About Us</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                    <li><a href="{% url 'public-privacy' %}">Privacy Policy</a></li>
-                    <li><a href="{% url 'public-cookies' %}">Cookies Policy</a></li>
+            <div class="footer-atlassian-col">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="/">About</a></li>
+                    <li><a href="/">Contact</a></li>
                 </ul>
             </div>
 
-            <div class="footer-column">
-                <h3>Contact Us</h3>
-                <ul class="footer-links">
-                    <li><i class="fas fa-map-marker-alt contact-icon"></i>Nairobi, Kenya</li>
-                    <li><i class="fas fa-phone contact-icon"></i>+254 711 219 536</li>
-                    <li><i class="fas fa-envelope contact-icon"></i>info@oreno.tech</li>
+            <div class="footer-atlassian-col">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/cookies">Cookies</a></li>
+                    <li><a href="/">Terms</a></li>
                 </ul>
             </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Hashrate Solutions. All Rights Reserved. <span style="margin-left: 10px;">Powered by <a href="https://oreno.tech" target="_blank" style="color: #3498db; text-decoration: none;">Hashrate Solutions</a></span></p>
         </div>
     </footer>
-
-    <!-- Cookie Consent -->
-    <div class="cookie-consent" id="cookieConsent">
-        <div class="cookie-content">
-            <p>We use cookies to enhance your experience on our website. By continuing to browse, you agree to our use of cookies. <a href="{% url 'public-cookies' %}" style="color: #3498db; text-decoration: underline;">Learn more</a></p>
-        </div>
-        <button class="btn" id="acceptCookies">Accept</button>
-    </div>
-
-    <a href="#" id="backToTopBtn" class="back-to-top" aria-label="Back to top"><i class="fas fa-arrow-up"></i></a>
 
     <!-- JavaScript -->
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>

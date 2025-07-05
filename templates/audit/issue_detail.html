@@ -105,15 +105,10 @@
       {% endif %}
     </div>
   </div>
-  {% if issue.procedure_result %}
+  {% if issue.procedure %}
   <div class="alert alert-info mb-4">
-    <strong>Linked Procedure Result:</strong>
-    <a href="{% url 'audit:procedureresult-detail' issue.procedure_result.pk %}">
-      Procedure Result #{{ issue.procedure_result.pk }}
-    </a>
-    {% if issue.procedure_result.procedure %}
-      (Procedure: <a href="{% url 'audit:procedure-detail' issue.procedure_result.procedure.pk %}">{{ issue.procedure_result.procedure.title }}</a>)
-    {% endif %}
+    <strong>Linked Procedure:</strong>
+    <a href="{% url 'audit:procedure-detail' issue.procedure.pk %}">{{ issue.procedure.title }}</a>
   </div>
   {% endif %}
   <ul class="nav nav-tabs mb-3" id="issueTabs" role="tablist">

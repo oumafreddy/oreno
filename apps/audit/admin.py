@@ -13,7 +13,7 @@ from .models.engagement import Engagement
 from .models.issue import Issue
 from .models.approval import Approval
 from .models import (
-    Objective, Procedure, ProcedureResult, Note
+    Objective, Procedure, Note
 )
 from .models.risk import Risk
 from .models.followupaction import FollowUpAction
@@ -157,24 +157,6 @@ class ApprovalInline(GenericTabularInline):
     )
     extra      = 0
     can_delete = False
-
-
-class ProcedureResultInlineFormSet(BaseInlineFormSet):
-    def save_new(self, form, commit=True):
-        obj = super().save_new(form, commit=False)
-        if hasattr(self.instance, 'organization'):
-            obj.organization = self.instance.organization
-        if commit:
-            obj.save()
-        return obj
-
-
-class ProcedureResultInline(admin.TabularInline):
-    model = ProcedureResult
-    formset = ProcedureResultInlineFormSet
-    extra = 1
-    fields = ('status', 'notes', 'is_for_the_record', 'order')
-    ordering = ('order',)
 
 
 class ProcedureInlineFormSet(BaseInlineFormSet):
@@ -488,7 +470,7 @@ class IssueAdmin(OrganizationScopedVersionAdmin):
         "issue_status", "risk_level", "remediation_status", "date_identified",
     )
     list_filter    = ("organization", "issue_status", "risk_level", "remediation_status")
-    search_fields  = ("code", "issue_title", "procedure_result__id")
+    search_fields  = ("code", "issue_title")
     inlines        = [RecommendationInline, IssueWorkingPaperInline]
     date_hierarchy = "date_identified"
     readonly_fields = ("created_by", "created_at", "updated_by", "updated_at", "organization")
@@ -545,27 +527,12 @@ class ProcedureAdmin(OrganizationScopedVersionAdmin):
     )
     list_filter = ("risk__organization", "procedure_type", "risk")
     search_fields = ("title", "description", "control_being_tested", "criteria")
-    inlines = [ProcedureResultInline]
     readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
     
     def save_model(self, request, obj, form, change):
         # Ensure organization is set from the risk
-        if obj.risk and not obj.organization_id:
-            obj.organization = obj.risk.organization
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(ProcedureResult)
-class ProcedureResultAdmin(OrganizationScopedVersionAdmin):
-    list_display = ('procedure', 'status', 'is_for_the_record', 'is_positive', 'order')
-    list_filter = ('status', 'is_for_the_record', 'is_positive', 'procedure__risk__organization')
-    search_fields = ('procedure__title', 'notes')
-    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
-    
-    def save_model(self, request, obj, form, change):
-        # Ensure organization is set from the procedure
-        if obj.procedure and not obj.organization_id:
-            obj.organization = obj.procedure.organization
+        if not change and obj.risk and obj.risk.objective and obj.risk.objective.engagement:
+            obj.organization = obj.risk.objective.engagement.organization
         super().save_model(request, obj, form, change)
 
 

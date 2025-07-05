@@ -375,3 +375,11 @@ class Procedure(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     def get_absolute_url(self):
         """Return the absolute URL for the procedure detail view."""
         return reverse('audit:procedure-detail', kwargs={'pk': self.pk})
+
+    @property
+    def issue_count(self):
+        return self.issues.count()
+
+    @property
+    def requires_issue_creation(self):
+        return self.result in ['not_effective', 'partially_effective', 'design_ineffective'] and self.exceptions_noted > 0

@@ -7,6 +7,7 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
+  {{ form.media }}
   <form method="post" enctype="multipart/form-data" novalidate id="issueRetestForm" action="{% if object %}{% url 'audit:issueretest-update' object.pk %}{% else %}{% url 'audit:issueretest-add' issue_pk=issue.pk %}{% endif %}">
     {% csrf_token %}
     {{ form|crispy }}

@@ -19,7 +19,6 @@ from .models.followupaction import FollowUpAction
 from .models.issueretest import IssueRetest
 from .models.note import Note, Notification
 from .models.procedure import Procedure
-from .models.procedureresult import ProcedureResult
 from .models.recommendation import Recommendation
 from .models.issue_working_paper import IssueWorkingPaper
 from .models.engagement import Engagement
@@ -248,7 +247,7 @@ class IssueForm(BaseAuditForm):
             'issue_owner_email', 'issue_owner_title',
             'audit_procedures', 'issue_status', 'remediation_status',
             'target_date', 'actual_remediation_date',
-            'procedure', 'procedure_result', 'impact', 'likelihood', 'risk_level',
+            'procedure', 'impact', 'likelihood', 'risk_level',
             'issue_type', 'is_repeat_issue', 'prior_issue_reference',
             'business_impact', 'financial_impact', 'regulatory_impact',
             'reputational_impact', 'management_action_plan',
@@ -271,9 +270,12 @@ class IssueForm(BaseAuditForm):
         }
     
     def __init__(self, *args, **kwargs):
-        procedure_result_pk = kwargs.pop('procedure_result_pk', None)
+        procedure_id = None
+        if 'initial' in kwargs and 'procedure' in kwargs['initial']:
+            procedure_id = kwargs['initial']['procedure']
+        if 'procedure_id' in kwargs:
+            procedure_id = kwargs.pop('procedure_id')
         super().__init__(*args, **kwargs)
-        
         # Filter users by organization
         if self.organization:
             self.fields['issue_owner'].queryset = CustomUser.objects.filter(
@@ -285,22 +287,17 @@ class IssueForm(BaseAuditForm):
             self.fields['verified_by'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
-        
-        # Handle procedure result linking
-        if procedure_result_pk:
-            from .models.procedureresult import ProcedureResult
+        # If creating from a procedure, set it as the initial value and restrict queryset to just that procedure
+        if procedure_id:
             try:
-                pr = ProcedureResult.objects.get(pk=procedure_result_pk)
-                self.fields['procedure_result'].initial = pr.pk
-                self.fields['procedure_result'].widget = forms.HiddenInput()
-                self.fields['procedure'].initial = pr.procedure.pk
+                from .models.procedure import Procedure
+                procedure = Procedure.objects.get(pk=procedure_id)
+                self.fields['procedure'].initial = procedure_id
+                self.fields['procedure'].queryset = self.fields['procedure'].queryset.filter(pk=procedure_id)
                 self.fields['procedure'].widget = forms.HiddenInput()
-                self.procedure_result_summary = f"Linked to: {pr.procedure.title} (Result: {pr.get_status_display()})"
-            except ProcedureResult.DoesNotExist:
-                self.procedure_result_summary = "Linked to selected procedure result."
-        else:
-            self.procedure_result_summary = None
-
+                self.fields['procedure'].disabled = True
+            except Exception:
+                pass
         # Set up form layout
         self.helper.layout = Layout(
             Fieldset(
@@ -366,10 +363,7 @@ class IssueForm(BaseAuditForm):
             ),
             Fieldset(
                 _('Related Items'),
-                Row(
-                    Column('procedure', css_class='col-md-6'),
-                    Column('procedure_result', css_class='col-md-6'),
-                ),
+                'procedure',
                 Row(
                     Column('is_repeat_issue', css_class='col-md-6'),
                     Column('prior_issue_reference', css_class='col-md-6'),
@@ -598,9 +592,9 @@ class ProcedureForm(BaseAuditForm):
     class Meta:
         model = Procedure
         fields = [
-            'title', 'description', 'order', 'test_date', 'tested_by',
+            'title', 'description', 'order', 'planned_date', 'test_date', 'tested_by',
             'procedure_type', 'control_being_tested', 'criteria', 'sample_size',
-            'sampling_method', 'planned_date', 'estimated_hours', 'actual_hours',
+            'sampling_method', 'estimated_hours', 'actual_hours',
             'test_status', 'result', 'result_notes', 'exceptions_noted',
             'exception_details', 'conclusion', 'impact_assessment',
             'is_positive_finding', 'control_maturity', 'evidence_list',
@@ -620,78 +614,24 @@ class ProcedureForm(BaseAuditForm):
             'review_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        risk_pk = kwargs.pop('risk_id', None)
-        objective_pk = kwargs.pop('objective_pk', None)
-        engagement_pk = kwargs.pop('engagement_pk', None)
-        super().__init__(*args, **kwargs)
-        if self.organization:
-            risk_queryset = self.fields['risk'].queryset.filter(
-                objective__engagement__organization=self.organization
-            )
-            if objective_pk:
-                risk_queryset = risk_queryset.filter(objective_id=objective_pk)
-            elif engagement_pk:
-                risk_queryset = risk_queryset.filter(objective__engagement_id=engagement_pk)
-            self.fields['risk'].queryset = risk_queryset
-            # Filter tested_by and reviewed_by fields by organization
-            if 'tested_by' in self.fields:
-                self.fields['tested_by'].queryset = CustomUser.objects.filter(organization=self.organization)
-            if 'reviewed_by' in self.fields:
-                self.fields['reviewed_by'].queryset = CustomUser.objects.filter(organization=self.organization)
-        # If creating from a risk, set it as the initial value and restrict queryset to just that risk
-        if risk_pk:
-            try:
-                from .models.risk import Risk
-                risk = Risk.objects.get(pk=risk_pk)
-                self.fields['risk'].initial = risk_pk
-                self.fields['risk'].queryset = self.fields['risk'].queryset.filter(pk=risk_pk)
-            except Exception:
-                pass
+    def clean(self):
+        cleaned_data = super().clean()
+        result = cleaned_data.get('result')
+        exceptions_noted = cleaned_data.get('exceptions_noted', 0)
+        if result == 'not_effective' and (not exceptions_noted or exceptions_noted == 0):
+            self.add_error('exceptions_noted', _('You must note at least one exception for a Not Effective result.'))
+        return cleaned_data
 
-class ProcedureResultForm(BaseAuditForm):
-    class Meta:
-        model = ProcedureResult
-        fields = [
-            'procedure', 'status', 'notes', 'is_for_the_record',
-            'is_positive', 'order'
-        ]
-        widgets = {
-            'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
-        }
-        
     def __init__(self, *args, **kwargs):
-        procedure_pk = kwargs.pop('procedure_pk', None)
-        objective_pk = kwargs.pop('objective_pk', None)
-        engagement_pk = kwargs.pop('engagement_pk', None)
+        risk_id = kwargs.pop('risk_id', None)
         super().__init__(*args, **kwargs)
-        if self.organization:
-            procedure_queryset = self.fields['procedure'].queryset.filter(
-                risk__objective__engagement__organization=self.organization
-            )
-            if objective_pk:
-                procedure_queryset = procedure_queryset.filter(risk__objective_id=objective_pk)
-            elif engagement_pk:
-                procedure_queryset = procedure_queryset.filter(risk__objective__engagement_id=engagement_pk)
-            self.fields['procedure'].queryset = procedure_queryset
-        
-        self.helper.layout = Layout(
-            Fieldset(
-                _('Procedure Result'),
-                'procedure',
-                Row(
-                    Column(FloatingField('status'), css_class='col-md-4'),
-                    Column(FloatingField('order'), css_class='col-md-4'),
-                    Column(FloatingField('is_for_the_record'), css_class='col-md-2'),
-                    Column(FloatingField('is_positive'), css_class='col-md-2'),
-                ),
-                'notes',
-            ),
-            ButtonHolder(
-                Submit('submit', _('Save'), css_class='btn-primary'),
-                css_class='mt-3'
-            )
-        )
+        if risk_id:
+            self.fields['risk'].initial = risk_id
+            self.fields['risk'].widget = forms.HiddenInput()
+            self.fields['risk'].disabled = True
+        # Optionally, if you want to remove the field from the form entirely:
+        # if risk_id:
+        #     self.fields.pop('risk')
 
 class RiskForm(BaseAuditForm):
     """Form for creating and editing Risk objects with organization scoping."""

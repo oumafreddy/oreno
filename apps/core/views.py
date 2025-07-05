@@ -47,11 +47,16 @@ class AIAssistantAPIView(APIView):
     def post(self, request, *args, **kwargs):
         question = request.data.get('question', '').strip()
         if not question:
-            return Response({'error': 'No question provided.'}, status=400)
+            return Response({'answer': 'Please enter a question.'}, status=200)
         
-        # Handle both authenticated and unauthenticated users
         user = request.user if request.user.is_authenticated else None
         org = getattr(request, 'tenant', None) or getattr(request, 'organization', None)
-        
-        answer = ai_assistant_answer(question, user, org)
-        return Response({'answer': answer})
+        try:
+            answer = ai_assistant_answer(question, user, org)
+            if not answer:
+                answer = 'Sorry, I could not find an answer to your question.'
+            return Response({'answer': answer})
+        except Exception as e:
+            import logging
+            logging.getLogger('services.ai.ai_service').error(f"AI Assistant error: {e}")
+            return Response({'answer': 'Sorry, there was a problem processing your request. Please try again later.'}, status=200)

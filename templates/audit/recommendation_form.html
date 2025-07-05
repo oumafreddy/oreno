@@ -7,6 +7,7 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
+  {{ form.media }}
   {% if issue and issue.pk %}
     <form method="post" enctype="multipart/form-data" novalidate id="recommendationForm" action="{% if object %}{% url 'audit:recommendation-update' object.pk %}{% else %}{% url 'audit:recommendation-add' issue_pk=issue.pk %}{% endif %}">
       {% csrf_token %}

@@ -21,7 +21,6 @@ from .tasks import (
     process_issue_working_paper_upload
 )
 from .models.note import Note, Notification
-from .models.procedureresult import ProcedureResult
 from .models.issue_working_paper import IssueWorkingPaper
 from .models.risk import Risk
 from .models.followupaction import FollowUpAction
@@ -624,12 +623,6 @@ def log_issue_change(sender, instance, created, **kwargs):
     # Log creation or update of issues (could be to a log file, audit trail, etc.)
     pass
 
-@receiver(post_save, sender=ProcedureResult)
-def auto_close_procedure(sender, instance, **kwargs):
-    # Example: if all results for a procedure are 'operating_effectively', mark procedure as complete
-    pass
-
-# ─── ISSUE WORKING PAPER SIGNALS ─────────────────────────────────────────────
 @receiver(post_save, sender=IssueWorkingPaper)
 def issue_working_paper_post_save(sender, instance, created, **kwargs):
     # Log creation or update of working papers (could be to a log file, audit trail, etc.)

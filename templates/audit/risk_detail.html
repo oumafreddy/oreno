@@ -101,7 +101,7 @@
                             <strong>{% trans "Description" %}:</strong>
                         </div>
                         <div class="col-md-9">
-                            {{ risk.description|linebreaks }}
+                            {{ risk.description|safe }}
                         </div>
                     </div>
                 </div>

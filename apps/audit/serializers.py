@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 from .models import (
     AuditWorkplan, Engagement, Recommendation, Issue, IssueWorkingPaper, Objective,
-    Procedure, ProcedureResult, Approval, Note, Risk, Notification, IssueRetest, FollowUpAction
+    Procedure, Approval, Note, Risk, Notification, IssueRetest, FollowUpAction
 )
 from users.serializers import UserSerializer
 from users.models import CustomUser
@@ -175,11 +175,6 @@ class IssueSerializer(BaseAuditSerializer):
     )
     recommendations = RecommendationSerializer(many=True, read_only=True)
     working_papers = IssueWorkingPaperSerializer(many=True, read_only=True, source='issueworkingpaper_set')
-    procedure_result = serializers.PrimaryKeyRelatedField(
-        queryset=ProcedureResult.objects.all(),
-        required=False,
-        allow_null=True
-    )
     get_absolute_url = serializers.SerializerMethodField()
     
     class Meta:
@@ -191,8 +186,7 @@ class IssueSerializer(BaseAuditSerializer):
             'risk_level', 'issue_status', 'remediation_status',
             'target_date', 'actual_remediation_date',
             'management_action_plan', 'organization',
-            'procedure', 'procedure_result',
-            'created_by', 'created_at', 'updated_at', 'recommendations', 'working_papers', 'get_absolute_url'
+            'procedure', 'created_by', 'created_at', 'updated_at', 'recommendations', 'working_papers', 'get_absolute_url'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
     
@@ -357,34 +351,7 @@ class AuditWorkplanDetailSerializer(AuditWorkplanSerializer):
     class Meta(AuditWorkplanSerializer.Meta):
         fields = AuditWorkplanSerializer.Meta.fields + ['engagements', 'approvals']
 
-class ProcedureResultSerializer(BaseAuditSerializer):
-    procedure = serializers.PrimaryKeyRelatedField(
-        queryset=Procedure.objects.all(),
-        required=True
-    )
-    performed_by = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    reviewed_by = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all(),
-        required=False,
-        allow_null=True
-    )
-    
-    class Meta:
-        model = ProcedureResult
-        fields = [
-            'id', 'procedure', 'result', 'performed_date', 
-            'performed_by', 'findings', 'evidence', 'notes',
-            'review_status', 'reviewed_by', 'review_date', 'review_notes',
-            'organization', 'created_by', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at', 'review_date']
-
 class ProcedureSerializer(BaseAuditSerializer):
-    results = serializers.SerializerMethodField()
     get_absolute_url = serializers.SerializerMethodField()
     objective = serializers.PrimaryKeyRelatedField(
         queryset=Objective.objects.all(),
@@ -395,6 +362,11 @@ class ProcedureSerializer(BaseAuditSerializer):
         required=False,
         allow_null=True
     )
+    risk = serializers.PrimaryKeyRelatedField(
+        queryset=Risk.objects.all(),
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = Procedure
@@ -402,23 +374,11 @@ class ProcedureSerializer(BaseAuditSerializer):
             'id', 'objective', 'title', 'description', 'procedure_type',
             'priority', 'assigned_to', 'test_steps', 'expected_results', 
             'sample_size', 'sample_selection_method', 'status', 'order',
-            'due_date', 'organization', 'results', 'created_by', 
+            'due_date', 'organization', 'created_by', 
             'created_at', 'updated_at', 'get_absolute_url'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
     
-    def get_results(self, obj):
-        # Use local import to avoid circular references
-        from .models.procedureresult import ProcedureResult
-        results = ProcedureResult.objects.filter(procedure=obj)
-        # Return basic data without using ProcedureResultSerializer to avoid circular reference
-        return [{
-            'id': r.id,
-            'status': getattr(r, 'status', None),
-            'result': getattr(r, 'result', None),
-            'performed_date': getattr(r, 'performed_date', None).isoformat() if getattr(r, 'performed_date', None) else None
-        } for r in results]
-        
     def get_get_absolute_url(self, obj):
         return obj.get_absolute_url()
 
@@ -438,14 +398,9 @@ class EngagementDetailSerializer(EngagementSerializer):
 class IssueDetailSerializer(IssueSerializer):
     engagement = NestedEngagementSerializer(read_only=True)
     approvals = ApprovalSerializer(many=True, read_only=True)
-    procedure_result = serializers.PrimaryKeyRelatedField(
-        queryset=ProcedureResult.objects.all(),
-        required=False,
-        allow_null=True
-    )
     
     class Meta(IssueSerializer.Meta):
-        fields = IssueSerializer.Meta.fields + ['approvals', 'procedure_result']
+        fields = IssueSerializer.Meta.fields + ['approvals']
 
 class NotificationSerializer(BaseAuditSerializer):
     user = serializers.PrimaryKeyRelatedField(
@@ -664,26 +619,6 @@ class FollowUpActionDetailSerializer(FollowUpActionSerializer):
     
     class Meta(FollowUpActionSerializer.Meta):
         fields = FollowUpActionSerializer.Meta.fields + ['approvals']
-
-
-class ProcedureResultDetailSerializer(ProcedureResultSerializer):
-    procedure = serializers.SerializerMethodField()
-    performed_by = UserSerializer(read_only=True)
-    reviewed_by = UserSerializer(read_only=True)
-    created_by = UserSerializer(read_only=True)
-    
-    def get_procedure(self, obj):
-        if obj.procedure:
-            return {
-                'id': obj.procedure.id,
-                'title': obj.procedure.title,
-                'description': getattr(obj.procedure, 'description', ''),
-                'procedure_type': getattr(obj.procedure, 'procedure_type', '')
-            }
-        return None
-        
-    class Meta(ProcedureResultSerializer.Meta):
-        fields = ProcedureResultSerializer.Meta.fields
 
 
 class ObjectiveDetailSerializer(ObjectiveSerializer):

@@ -13,7 +13,7 @@
       <dt class="col-sm-4">File</dt>
       <dd class="col-sm-8"><a href="{{ object.file.url }}" target="_blank">{{ object.file.name|default:'—' }}</a></dd>
       <dt class="col-sm-4">Description</dt>
-      <dd class="col-sm-8">{{ object.description|default:'—' }}</dd>
+      <dd class="col-sm-8">{{ object.description|safe|default:'—' }}</dd>
       <dt class="col-sm-4">Uploaded By</dt>
       <dd class="col-sm-8">{{ object.created_by.get_full_name|default:object.created_by.email|default:'—' }}</dd>
       <dt class="col-sm-4">Date</dt>
