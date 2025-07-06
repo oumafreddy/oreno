@@ -1,4 +1,5 @@
 {% load crispy_forms_tags %}
+{{ form.media }}
 <style>
   /* Reduce padding for workplan modal to match engagement modal */
   #mainModal .modal-body {
@@ -10,7 +11,10 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" enctype="multipart/form-data" novalidate id="workplanForm" action="{% if object %}{% url 'audit:workplan-update' object.pk %}{% else %}{% url 'audit:workplan-create' %}{% endif %}">
+  <form method="post" enctype="multipart/form-data" novalidate id="workplanForm" 
+        hx-post="{% if object %}{% url 'audit:workplan-update' object.pk %}{% else %}{% url 'audit:workplan-create' %}{% endif %}" 
+        hx-target="#modal-body" 
+        hx-swap="outerHTML">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">

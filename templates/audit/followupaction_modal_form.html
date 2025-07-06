@@ -1,22 +1,22 @@
 {% load static %}
 {% load crispy_forms_tags %}
+{{ form.media }}
 <div class="modal-header">
   <h5 class="modal-title">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Follow-Up Action</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form method="post" 
+  <form method="post" id="followupActionForm"
         hx-post="{% if form.instance.pk %}{% url 'audit:followupaction-update' form.instance.pk %}{% else %}{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}{% endif %}"
-        hx-target="#globalModal .modal-content"
-        hx-swap="innerHTML"
+        hx-target="#modal-body"
+        hx-swap="outerHTML"
         enctype="multipart/form-data"
         class="followup-action-form">
     {% csrf_token %}
     {{ form|crispy }}
-    <div class="modal-footer">
+    <div class="d-flex justify-content-end mt-4">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       <button type="submit" class="btn btn-primary">Save</button>
     </div>
   </form>
 </div>
-<script src="{% static 'js/followup-action-handler.js' %}"></script>

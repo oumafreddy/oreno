@@ -74,7 +74,7 @@ def main():
     # Check if Ollama is running
     if check_ollama_status():
         print("✅ Ollama is running and accessible")
-        
+    
         # Get available models
         try:
             response = requests.get("http://localhost:11434/api/tags", timeout=5)

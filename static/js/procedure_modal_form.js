@@ -4,58 +4,14 @@
 
 /**
  * Procedure Modal Form JavaScript
- * Handles procedure form submission and modal interactions
+ * Handles procedure-specific form logic
+ * Generic modal functionality is now handled by modal-handler.js
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    initializeModalNavigation();
-    initializeFormConfirmations();
-});
-
-/**
- * Initialize modal navigation handlers
- */
-function initializeModalNavigation() {
-    // Handle navigation buttons with data-navigate-url attribute
-    document.addEventListener('click', function(event) {
-        const button = event.target.closest('[data-navigate-url]');
-        if (button) {
-            const url = button.getAttribute('data-navigate-url');
-            if (url && url !== '#') {
-                window.location.href = url;
-            }
-        }
-    });
-}
-
-/**
- * Initialize form confirmation handlers
- */
-function initializeFormConfirmations() {
-    // Handle form submissions with data-confirm attribute
-    document.addEventListener('submit', function(event) {
-        const form = event.target;
-        if (form.hasAttribute('data-confirm')) {
-            const confirmMessage = form.getAttribute('data-confirm');
-            if (!confirmAction(confirmMessage)) {
-                event.preventDefault();
-                return false;
-            }
-        }
-    });
-}
-
-/**
- * Confirm an action with a custom message
- * @param {string} message - The confirmation message
- * @returns {boolean} - True if confirmed, false otherwise
- */
-function confirmAction(message) {
-    return confirm(message || 'Are you sure you want to proceed?');
-}
-
-// Export functions for global access
-window.ProcedureModalForm = {
-    initializeModalNavigation,
-    confirmAction
-}; 
+    // All generic modal functionality (navigation, confirmations, notifications)
+    // is now handled by modal-handler.js
+    
+    // Add any procedure-specific logic here if needed
+    console.log('Procedure modal form initialized');
+}); 

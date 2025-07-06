@@ -20,6 +20,10 @@
  * - Form component initialization (Select2, datepickers, etc.)
  * - Error state management
  * - Modal overlay cleanup
+ * - Generic navigation handling
+ * - Form confirmation dialogs
+ * - Toast notification system
+ * - Enhanced form submission with spinner states
  * 
  * PUBLIC API:
  * -----------
@@ -28,6 +32,9 @@
  * ModalHandler.getInstance(modalId) - Get modal instance
  * ModalHandler.cleanupContent(modalBody) - Clean modal content
  * ModalHandler.initializeComponents(modalBody) - Initialize form components
+ * ModalHandler.showNotification(message, type) - Show toast notification
+ * ModalHandler.confirmAction(message) - Show confirmation dialog
+ * ModalHandler.handleFormSubmission(formId, options) - Handle form submission
  * 
  * DEPENDENCIES:
  * -------------
@@ -47,7 +54,134 @@
         setupBootstrapModals();
         initializeDynamicContentObserver();
         cleanupModalOverlays();
+        setupGenericModalFeatures();
     });
+
+    /**
+     * Setup generic modal features (navigation, confirmations, notifications)
+     */
+    function setupGenericModalFeatures() {
+        // Initialize modal navigation handlers
+        initializeModalNavigation();
+        
+        // Initialize form confirmation handlers
+        initializeFormConfirmations();
+        
+        // Initialize notification system
+        initializeNotificationSystem();
+        
+        // Initialize enhanced form submission handling
+        initializeEnhancedFormSubmission();
+    }
+
+    /**
+     * Initialize modal navigation handlers
+     */
+    function initializeModalNavigation() {
+        // Handle navigation buttons with data-navigate-url attribute
+        document.addEventListener('click', function(event) {
+            const button = event.target.closest('[data-navigate-url]');
+            if (button) {
+                const url = button.getAttribute('data-navigate-url');
+                if (url && url !== '#') {
+                    window.location.href = url;
+                }
+            }
+        });
+    }
+
+    /**
+     * Initialize form confirmation handlers
+     */
+    function initializeFormConfirmations() {
+        // Handle form submissions with data-confirm attribute
+        document.addEventListener('submit', function(event) {
+            const form = event.target;
+            if (form.hasAttribute('data-confirm')) {
+                const confirmMessage = form.getAttribute('data-confirm');
+                if (!confirmAction(confirmMessage)) {
+                    event.preventDefault();
+                    return false;
+                }
+            }
+        });
+        
+        // Handle buttons with data-submit-form attribute
+        document.addEventListener('click', function(event) {
+            const button = event.target.closest('[data-submit-form]');
+            if (button) {
+                const formId = button.getAttribute('data-submit-form');
+                submitModalForm(formId);
+            }
+        });
+    }
+
+    /**
+     * Initialize notification system
+     */
+    function initializeNotificationSystem() {
+        // Create toast container if it doesn't exist
+        if (!document.getElementById('toast-container')) {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(container);
+        }
+    }
+
+    /**
+     * Initialize enhanced form submission handling
+     */
+    function initializeEnhancedFormSubmission() {
+        // Handle form submissions with spinner states
+        document.addEventListener('htmx:beforeRequest', function(event) {
+            const form = event.detail.elt.closest('form');
+            if (form && form.closest('.modal')) {
+                const submitButton = form.querySelector('[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    const originalText = submitButton.textContent;
+                    submitButton.setAttribute('data-original-text', originalText);
+                    
+                    // Add spinner if not present
+                    if (!submitButton.querySelector('.spinner-border')) {
+                        const spinner = document.createElement('span');
+                        spinner.className = 'spinner-border spinner-border-sm ms-2';
+                        spinner.setAttribute('role', 'status');
+                        spinner.innerHTML = '<span class="visually-hidden">Loading...</span>';
+                        submitButton.appendChild(spinner);
+                    }
+                    
+                    // Update button text
+                    submitButton.textContent = 'Saving...';
+                }
+            }
+        });
+
+        // Handle form submission completion
+        document.addEventListener('htmx:afterRequest', function(event) {
+            const form = event.detail.elt.closest('form');
+            if (form && form.closest('.modal')) {
+                const submitButton = form.querySelector('[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    
+                    // Remove spinner
+                    const spinner = submitButton.querySelector('.spinner-border');
+                    if (spinner) {
+                        spinner.remove();
+                    }
+                    
+                    // Restore original text
+                    const originalText = submitButton.getAttribute('data-original-text');
+                    if (originalText) {
+                        submitButton.textContent = originalText;
+                        submitButton.removeAttribute('data-original-text');
+                    }
+                }
+            }
+        });
+    }
 
     /**
      * Setup the main modal handling functionality
@@ -213,6 +347,26 @@
                     // If not JSON, do nothing: HTMX will swap in the HTML form
                 } catch (e) {
                     console.error('Error handling modal response:', e);
+                }
+            }
+        });
+
+        // Fallback: Ensure CKEditor5 is always initialized on modal show (for dynamic modals)
+        document.body.addEventListener('shown.bs.modal', function(event) {
+            const modal = event.target;
+            if (modal && modal.classList.contains('modal')) {
+                // Initialize CKEditor5 for all .django_ckeditor_5 fields if not already
+                if (typeof ClassicEditor !== 'undefined') {
+                    const ckeditorElements = modal.querySelectorAll('.django_ckeditor_5');
+                    ckeditorElements.forEach(element => {
+                        if (!element.ckeditorInstance) {
+                            ClassicEditor.create(element, {}).then(editor => {
+                                element.ckeditorInstance = editor;
+                            }).catch(error => {
+                                console.warn('Error initializing CKEditor in modal:', error);
+                            });
+                        }
+                    });
                 }
             }
         });
@@ -546,6 +700,204 @@
         document.body.classList.remove('modal-open');
         document.body.style = '';
     }
+
+    /**
+     * Close the current modal
+     */
+    function closeCurrentModal() {
+        const modalEl = document.getElementById('mainModal') || 
+                       document.getElementById('globalModal') || 
+                       document.querySelector('.modal.show');
+        
+        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            const modal = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+            modal.hide();
+        }
+    }
+
+    /**
+     * Update content container with new HTML
+     * @param {string} html - The HTML content to insert
+     * @param {string} targetId - The ID of the target container
+     */
+    function updateContentContainer(html, targetId) {
+        const container = document.getElementById(targetId);
+        if (container) {
+            container.innerHTML = html;
+        }
+    }
+
+    /**
+     * Update modal content
+     * @param {string} html - The HTML content to insert
+     */
+    function updateModalContent(html) {
+        const modalBody = document.getElementById('modal-body') || 
+                         document.querySelector('.modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = html;
+        }
+    }
+
+    /**
+     * Submit a modal form by ID
+     * @param {string} formId - The ID of the form to submit
+     */
+    function submitModalForm(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.submit();
+        } else {
+            console.error(`Form with ID '${formId}' not found`);
+        }
+    }
+
+    /**
+     * Confirm an action with a custom message
+     * @param {string} message - The confirmation message
+     * @returns {boolean} - True if confirmed, false otherwise
+     */
+    function confirmAction(message) {
+        return confirm(message || 'Are you sure you want to proceed?');
+    }
+
+    /**
+     * Show a notification message
+     * @param {string} message - The message to display
+     * @param {string} type - The type of notification (success, error, warning, info)
+     */
+    function showNotification(message, type = 'info') {
+        // Use Bootstrap toast if available
+        if (window.bootstrap && window.bootstrap.Toast) {
+            const toastContainer = document.getElementById('toast-container') || createToastContainer();
+            const toast = createToastElement('Oreno GRC', message, type);
+            toastContainer.appendChild(toast);
+            
+            const bsToast = new window.bootstrap.Toast(toast);
+            bsToast.show();
+        } else {
+            // Fallback to alert
+            alert(message);
+        }
+    }
+
+    /**
+     * Create toast container if it doesn't exist
+     */
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    /**
+     * Create toast element
+     */
+    function createToastElement(title, message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong><br>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        return toast;
+    }
+
+    /**
+     * Handle form submission with enhanced features
+     * @param {string} formId - The form ID
+     * @param {object} options - Options for form handling
+     */
+    function handleFormSubmission(formId, options = {}) {
+        const form = document.getElementById(formId);
+        if (!form) {
+            console.error(`Form with ID '${formId}' not found`);
+            return;
+        }
+
+        const {
+            onSuccess,
+            onError,
+            showSpinner = true,
+            closeModal = true,
+            refreshList = null,
+            successMessage = 'Form submitted successfully!'
+        } = options;
+
+        // Add form submission handler
+        form.addEventListener('htmx:afterRequest', function(event) {
+            try {
+                const detail = event.detail;
+                const xhr = detail.xhr;
+                const contentType = xhr.getResponseHeader('content-type') || '';
+                
+                if (contentType.includes('application/json')) {
+                    const data = JSON.parse(xhr.responseText);
+                    
+                    if (data.success || data.form_is_valid) {
+                        // Close the modal if requested
+                        if (closeModal) {
+                            closeCurrentModal();
+                        }
+                        
+                        // Update the list if provided
+                        if (refreshList && data.html_list) {
+                            updateContentContainer(data.html_list, refreshList);
+                        }
+                        
+                        // Show success message
+                        if (successMessage) {
+                            showNotification(successMessage, 'success');
+                        }
+                        
+                        // Call custom success handler
+                        if (onSuccess) {
+                            onSuccess(data);
+                        }
+                        
+                        // Redirect if provided
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        }
+                    } else if (data.html_form) {
+                        // Replace the modal content with the form containing errors
+                        updateModalContent(data.html_form);
+                        
+                        // Call custom error handler
+                        if (onError) {
+                            onError(data);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Error handling form response:', e);
+                if (onError) {
+                    onError(e);
+                }
+            }
+        });
+
+        // Handle form submission errors
+        form.addEventListener('htmx:responseError', function(event) {
+            console.error('Form submission error:', event.detail);
+            showNotification('An error occurred while submitting the form.', 'error');
+            if (onError) {
+                onError(event.detail);
+            }
+        });
+    }
     
     // Public API
     window.ModalHandler = {
@@ -579,6 +931,34 @@
         
         initializeComponents: function(modalBody) {
             initializeFormElements(modalBody);
+        },
+
+        showNotification: function(message, type = 'info') {
+            showNotification(message, type);
+        },
+
+        confirmAction: function(message) {
+            return confirmAction(message);
+        },
+
+        handleFormSubmission: function(formId, options) {
+            handleFormSubmission(formId, options);
+        },
+
+        closeCurrentModal: function() {
+            closeCurrentModal();
+        },
+
+        updateContentContainer: function(html, targetId) {
+            updateContentContainer(html, targetId);
+        },
+
+        updateModalContent: function(html) {
+            updateModalContent(html);
+        },
+
+        submitModalForm: function(formId) {
+            submitModalForm(formId);
         }
     };
 })();

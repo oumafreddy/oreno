@@ -1,5 +1,11 @@
-// engagement_modal_form.js
+/**
+ * Engagement Modal Form JavaScript
+ * Handles engagement-specific form logic
+ * Generic modal functionality is now handled by modal-handler.js
+ */
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Engagement-specific: Normalize date input values
   document.querySelectorAll('input[type="date"]').forEach(function(input) {
     if (input.value) {
       const dateValue = new Date(input.value);

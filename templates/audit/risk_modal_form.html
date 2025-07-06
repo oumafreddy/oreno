@@ -1,6 +1,7 @@
 {% load crispy_forms_tags %}
 {% load i18n %}
 {% load static %}
+{{ form.media }}
 
 <div class="modal-header">
   <h5 class="modal-title">
@@ -34,8 +35,7 @@
   <form method="post" enctype="multipart/form-data" novalidate id="riskForm"
         hx-post="{% if form.instance.pk %}{% url 'audit:risk-edit' form.instance.pk %}{% elif objective %}{% url 'audit:risk-add' objective_id=objective.id %}{% elif engagement and engagement.id %}{% url 'audit:risk-modal-add' engagement_pk=engagement.id %}{% else %}#{% endif %}"
         hx-target="#modal-body"
-        hx-swap="outerHTML"
-        hx-trigger="submit">
+        hx-swap="outerHTML">
     {% csrf_token %}
     
     <!-- Hidden fields for context -->
@@ -46,7 +46,7 @@
       <input type="hidden" name="engagement_pk" value="{{ engagement.id }}">
     {% endif %}
     
-    {% crispy form %}
+    {{ form|crispy }}
     
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success me-2">
@@ -59,6 +59,3 @@
     </div>
   </form>
 </div>
-
-<script src="{% static 'js/audit_modal_utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
-<script src="{% static 'js/risk_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>

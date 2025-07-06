@@ -1,5 +1,6 @@
 {% load crispy_forms_tags %}
 {% load static %}
+{{ form.media }}
 <div class="modal-header">
   <h5 class="modal-title">{% if object %}Edit{% else %}Add{% endif %} Issue</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -8,8 +9,7 @@
   <form method="post" enctype="multipart/form-data" novalidate id="issueForm"
         hx-post="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% if risk_pk %}{% url 'audit:issue-modal-add' risk_pk=risk_pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}{% endif %}"
         hx-target="#modal-body"
-        hx-swap="outerHTML"
-        hx-trigger="submit">
+        hx-swap="outerHTML">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
@@ -18,5 +18,3 @@
     </div>
   </form>
 </div>
-
-<script src="{% static 'js/issue_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>

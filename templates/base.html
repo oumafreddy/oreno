@@ -2,6 +2,10 @@
 <html lang="en" data-bs-theme="auto">
 <head>
     {% load static %}
+    {% if 'django_ckeditor_5' in INSTALLED_APPS %}
+      <link rel="stylesheet" href="{% static 'django_ckeditor_5/dist/styles.css' %}">
+      <script src="{% static 'django_ckeditor_5/dist/bundle.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    {% endif %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -40,13 +44,25 @@
     <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
-    <!-- Custom JavaScript -->
+    <!-- Core Custom JavaScript - Load first -->
     <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/note_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
-    <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/ui-utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/modal-handler.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/modal-context.js' %}" nonce="{{ request.csp_nonce }}"></script>
+
+    <!-- Feature-specific JavaScript - Load after core -->
+    <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
+
+    <!-- Modal Form JavaScript - Load after modal-handler.js -->
+    <script src="{% static 'js/objective_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/procedure_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/note_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/issueretest_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/issueworkingpaper_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/recommendation_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/issue_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/engagement_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/risk_modal_form.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
     <!-- Custom Styles -->
     <style nonce="{{ request.csp_nonce }}">
