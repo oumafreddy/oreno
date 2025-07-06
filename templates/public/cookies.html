@@ -1,13 +1,19 @@
 {% extends 'public/base.html' %}
+{% load static %}
 
 {% block title %}Cookie Policy | Hashrate Solutions{% endblock %}
 
 {% block content %}
-<section class="section" style="padding-top: 100px;">
+<section class="cookies-section" style="position:relative; overflow:hidden;">
+    <!-- Decorative Backgrounds -->
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Top Left" class="cookies-bg decor-e decor-e-topleft">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor D Top Right" class="cookies-bg decor-d decor-d-topright">
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Bottom Left" class="cookies-bg decor-e decor-e-bottomleft">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor D Bottom Right" class="cookies-bg decor-d decor-d-bottomright">
     <div class="container">
         <div class="text-center mb-5">
             <h1>Cookie Policy</h1>
-            <p class="lead">Last updated: May 23, 2024</p>
+            <p class="lead">Last updated: June 23, 2025</p>
         </div>
         
         <div class="cookies-content" style="max-width: 800px; margin: 0 auto; line-height: 1.8;">
@@ -165,6 +171,60 @@
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+        }
+    }
+
+    .cookies-section { background: #fff; }
+    .cookies-bg {
+        position: absolute;
+        z-index: 0;
+        pointer-events: none;
+        user-select: none;
+        opacity: 0.11;
+        transition: opacity 0.3s;
+    }
+    .decor-e-topleft {
+        top: -60px;
+        left: -80px;
+        width: 220px;
+        transform: rotate(-12deg);
+        opacity: 0.13;
+    }
+    .decor-d-topright {
+        top: -50px;
+        right: -70px;
+        width: 180px;
+        transform: rotate(10deg) scaleX(-1);
+        opacity: 0.12;
+    }
+    .decor-e-bottomleft {
+        bottom: -40px;
+        left: -60px;
+        width: 180px;
+        transform: rotate(-18deg);
+        opacity: 0.09;
+    }
+    .decor-d-bottomright {
+        bottom: -30px;
+        right: 2vw;
+        width: 120px;
+        transform: rotate(8deg) scaleX(-1);
+        opacity: 0.08;
+    }
+    @media (max-width: 900px) {
+        .cookies-bg {
+            width: 60px !important;
+            left: -10px !important;
+            right: -10px !important;
+            opacity: 0.06 !important;
+        }
+    }
+    @media (max-width: 600px) {
+        .cookies-bg {
+            width: 36px !important;
+            left: 0 !important;
+            right: 0 !important;
+            opacity: 0.04 !important;
         }
     }
 </style>

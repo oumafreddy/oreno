@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const question = questionInput.value.trim();
             if (!question) return;
+            
             // Hide answer and show loading
             answerDiv.classList.add('d-none');
             answerText.textContent = '';
@@ -93,25 +94,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ question })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 loadingDiv.classList.add('d-none');
                 askBtn.disabled = false;
-                if (data.answer) {
-                    answerText.textContent = data.answer;
+                
+                if (data.response) {
+                    // Success - show the AI response
+                    answerText.textContent = data.response;
                     answerDiv.classList.remove('d-none');
                 } else if (data.error) {
-                    answerText.textContent = data.error;
+                    // Error from the server
+                    answerText.textContent = `Error: ${data.error}`;
                     answerDiv.classList.remove('d-none');
                 } else {
-                    answerText.textContent = 'Sorry, no answer was returned.';
+                    // Unexpected response format
+                    answerText.textContent = 'Sorry, I received an unexpected response format.';
                     answerDiv.classList.remove('d-none');
                 }
             })
-            .catch(() => {
+            .catch(error => {
                 loadingDiv.classList.add('d-none');
                 askBtn.disabled = false;
-                answerText.textContent = 'Sorry, there was a problem contacting the AI assistant.';
+                console.error('AI Assistant error:', error);
+                
+                if (error.message.includes('401')) {
+                    answerText.textContent = 'Please log in to use the AI assistant.';
+                } else if (error.message.includes('500')) {
+                    answerText.textContent = 'The AI service is temporarily unavailable. Please try again later.';
+                } else {
+                    answerText.textContent = 'Sorry, there was a problem contacting the AI assistant. Please try again.';
+                }
                 answerDiv.classList.remove('d-none');
             });
         });

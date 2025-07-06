@@ -175,16 +175,15 @@
                 <h4>Company</h4>
                 <ul>
                     <li><a href="/">About</a></li>
-                    <li><a href="/">Contact</a></li>
+                    <li><a href="/#contact" class="footer-contact-link">Contact</a></li>
                 </ul>
             </div>
 
             <div class="footer-atlassian-col">
                 <h4>Legal</h4>
                 <ul>
-                    <li><a href="/privacy">Privacy Policy</a></li>
-                    <li><a href="/cookies">Cookies</a></li>
-                    <li><a href="/">Terms</a></li>
+                    <li><a href="{% url 'public-privacy' %}">Privacy Policy</a></li>
+                    <li><a href="{% url 'public-cookies' %}">Cookies</a></li>
                 </ul>
             </div>
         </div>
@@ -194,6 +193,31 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/ui-utils.js' %}"></script>
     <script src="{% static 'js/public.js' %}"></script>
+    <script>
+    // Smooth scroll to #contact section from any page
+    (function() {
+        function isHomePage() {
+            return window.location.pathname === '/' || window.location.pathname === '';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var contactLinks = document.querySelectorAll('a.footer-contact-link');
+            contactLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    if (isHomePage()) {
+                        var contactSection = document.getElementById('contact');
+                        if (contactSection) {
+                            e.preventDefault();
+                            contactSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    } else {
+                        // Go to home page and scroll to contact
+                        link.setAttribute('href', '/#contact');
+                    }
+                });
+            });
+        });
+    })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

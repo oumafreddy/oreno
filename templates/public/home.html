@@ -5,7 +5,10 @@
 
 {% block content %}
 <!-- Welcome Section -->
-<section class="hero-atlassian">
+<section class="hero-atlassian" style="position:relative; overflow:hidden;">
+    <!-- Decorative Images -->
+    <img src="{% static 'img/stylingC.png' %}" alt="Decorative Left" class="hero-decor-left">
+    <img src="{% static 'img/stylingD.png' %}" alt="Decorative Right" class="hero-decor-right">
     <div class="container hero-atlassian-content">
         <h1 class="hero-atlassian-title">Welcome to Hashrate Solutions</h1>
         <p class="hero-atlassian-subtitle" id="animated-subtitle">
@@ -16,7 +19,16 @@
 </section>
 
 <!-- Our Services Section -->
-<section id="services" class="services-atlassian">
+<section id="services" class="services-atlassian" style="position:relative; overflow:hidden;">
+    <!-- Decorative Backgrounds: Mix of StylingE.png and stylingD.png -->
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor Left 1" class="services-bg decor-e decor-e-topleft">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor Left 2" class="services-bg decor-d decor-d-topmid">
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor Left 3" class="services-bg decor-e decor-e-leftmid">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor Right 1" class="services-bg decor-d decor-d-topright">
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor Right 2" class="services-bg decor-e decor-e-rightmid">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor Right 3" class="services-bg decor-d decor-d-bottomright">
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor Bottom Left" class="services-bg decor-e decor-e-bottomleft">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor Bottom Right" class="services-bg decor-d decor-d-bottomright2">
     <div class="container">
         <div class="section-header-atlassian">
             <h2>Our Services</h2>
@@ -116,9 +128,21 @@
 </section>
 
 <!-- Contact Us Section -->
-<section id="contact" class="contact-atlassian">
+<section id="contact" class="contact-atlassian" style="position:relative; overflow:hidden;">
+    <!-- Decorative Backgrounds for Contact Section -->
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Bottom Left" class="contact-bg decor-e decor-e-bottomleft">
+    <img src="{% static 'img/stylingD.png' %}" alt="Decor D Bottom Right" class="contact-bg decor-d decor-d-bottomright">
+    <img src="{% static 'img/StylingC.png' %}" alt="Decor C Top Left" class="contact-bg decor-c decor-c-topleft">
+    <img src="{% static 'img/StylingD.png' %}" alt="Decor D Top Right" class="contact-bg decor-d decor-d-topright">
+    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Bottom Center" class="contact-bg decor-e decor-e-bottomcenter">
+    <img src="{% static 'img/stylingC.png' %}" alt="Decor C Bottom Far Left" class="contact-bg decor-c decor-c-bottomfarleft">
+    <img src="{% static 'img/stylingC.png' %}" alt="Decor C Bottom Far Right" class="contact-bg decor-c decor-c-bottomfarright">
     <div class="container contact-atlassian-container">
-        <div class="contact-atlassian-info">
+        <div class="contact-atlassian-info" style="position:relative;">
+            <!-- Foreground decorative image for circled X, now below contact info and not overlapping -->
+            <div class="contact-foreground-c-final-wrapper">
+                <img src="{% static 'img/stylingC.png' %}" alt="Decor C Foreground" class="contact-foreground-c-final">
+            </div>
             <h2>Contact Us</h2>
             <p>Ready to transform your organization? Reach out to our team and let's build something great together.</p>
             <ul class="contact-atlassian-list">
@@ -126,6 +150,10 @@
                 <li><i class="fas fa-phone"></i> +254 711 219 536</li>
                 <li><i class="fas fa-envelope"></i> <a href="mailto:info@oreno.tech">info@oreno.tech</a></li>
             </ul>
+            <!-- Place the image below the contact info, not overlapping -->
+            <div class="contact-foreground-c-final-wrapper">
+                <img src="{% static 'img/stylingC.png' %}" alt="Decor C Foreground" class="contact-foreground-c-final">
+            </div>
         </div>
         <div class="contact-atlassian-form">
                 <form id="contactForm" method="post" action="#">
@@ -460,5 +488,230 @@ body { background: #fff; color: #222; font-family: 'Inter', 'Segoe UI', Arial, s
     .floating-product-images-huge { flex-direction: column; gap: 24px; }
     .floating-product-img-huge { width: 98vw; max-width: 98vw; height: auto; }
     }
+.hero-decor-left {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 260px;
+    max-width: 30vw;
+    height: auto;
+    z-index: 1;
+    opacity: 0.92;
+    pointer-events: none;
+    user-select: none;
+}
+.hero-decor-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 260px;
+    max-width: 30vw;
+    height: auto;
+    z-index: 1;
+    opacity: 0.92;
+    pointer-events: none;
+    user-select: none;
+}
+.services-bg {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.11;
+    transition: opacity 0.3s;
+}
+/* Placement and sizing for each decorative image */
+.decor-e-topleft {
+    top: -60px;
+    left: -80px;
+    width: 220px;
+    transform: rotate(-12deg);
+    opacity: 0.13;
+}
+.decor-d-topmid {
+    top: -40px;
+    left: 32%;
+    width: 140px;
+    transform: rotate(-8deg);
+    opacity: 0.10;
+}
+.decor-e-leftmid {
+    top: 32%;
+    left: -100px;
+    width: 180px;
+    transform: rotate(-6deg);
+    opacity: 0.10;
+}
+.decor-d-topright {
+    top: -50px;
+    right: -70px;
+    width: 180px;
+    transform: rotate(10deg) scaleX(-1);
+    opacity: 0.12;
+}
+.decor-e-rightmid {
+    top: 38%;
+    right: -90px;
+    width: 160px;
+    transform: rotate(7deg) scaleX(-1);
+    opacity: 0.10;
+}
+.decor-d-bottomright {
+    bottom: 18%;
+    right: -60px;
+    width: 140px;
+    transform: rotate(16deg) scaleX(-1);
+    opacity: 0.09;
+}
+.decor-e-bottomleft {
+    bottom: -40px;
+    left: -60px;
+    width: 180px;
+    transform: rotate(-18deg);
+    opacity: 0.09;
+}
+.decor-d-bottomright2 {
+    bottom: -30px;
+    right: 2vw;
+    width: 120px;
+    transform: rotate(8deg) scaleX(-1);
+    opacity: 0.08;
+}
+@media (max-width: 1200px) {
+    .decor-e-topleft, .decor-d-topmid, .decor-e-leftmid, .decor-d-topright, .decor-e-rightmid, .decor-d-bottomright, .decor-e-bottomleft, .decor-d-bottomright2 {
+        width: 90px !important;
+        left: -30px !important;
+        right: -30px !important;
+        opacity: 0.08 !important;
+    }
+}
+@media (max-width: 900px) {
+    .hero-decor-left, .hero-decor-right {
+        width: 120px;
+        max-width: 40vw;
+        opacity: 0.7;
+    }
+    .decor-e-topleft, .decor-d-topmid, .decor-e-leftmid, .decor-d-topright, .decor-e-rightmid, .decor-d-bottomright, .decor-e-bottomleft, .decor-d-bottomright2 {
+        width: 60px !important;
+        left: -10px !important;
+        right: -10px !important;
+        opacity: 0.06 !important;
+    }
+}
+@media (max-width: 600px) {
+    .hero-decor-left, .hero-decor-right {
+        width: 70px;
+        max-width: 50vw;
+        opacity: 0.5;
+    }
+    .decor-e-topleft, .decor-d-topmid, .decor-e-leftmid, .decor-d-topright, .decor-e-rightmid, .decor-d-bottomright, .decor-e-bottomleft, .decor-d-bottomright2 {
+        width: 36px !important;
+        left: 0 !important;
+        right: 0 !important;
+        opacity: 0.04 !important;
+    }
+}
+/* Contact Section Decorative Backgrounds */
+.contact-bg {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.12;
+    transition: opacity 0.3s;
+}
+.decor-e-bottomleft {
+    left: -60px;
+    bottom: 0;
+    width: 180px;
+    transform: rotate(-18deg);
+    opacity: 0.13;
+}
+.decor-d-bottomright {
+    right: -60px;
+    bottom: 0;
+    width: 180px;
+    transform: rotate(12deg) scaleX(-1);
+    opacity: 0.13;
+}
+.decor-c-topleft {
+    left: -40px;
+    top: -40px;
+    width: 120px;
+    transform: rotate(-10deg);
+    opacity: 0.10;
+}
+.decor-d-topright {
+    right: -40px;
+    top: -40px;
+    width: 120px;
+    transform: rotate(10deg) scaleX(-1);
+    opacity: 0.10;
+}
+.decor-e-bottomcenter {
+    left: 50%;
+    bottom: -30px;
+    width: 120px;
+    transform: translateX(-50%) rotate(8deg);
+    opacity: 0.09;
+}
+.decor-c-bottomfarleft {
+    left: 0;
+    bottom: -60px;
+    width: 80px;
+    transform: rotate(-8deg);
+    opacity: 0.08;
+}
+.decor-c-bottomfarright {
+    right: 0;
+    bottom: -60px;
+    width: 80px;
+    transform: rotate(8deg) scaleX(-1);
+    opacity: 0.08;
+}
+/* Foreground decorative image for circled X, now below contact info and not overlapping */
+.contact-foreground-c-final-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 32px;
+    margin-bottom: 0;
+}
+.contact-foreground-c-final {
+    width: 90px;
+    height: auto;
+    opacity: 0.98;
+    pointer-events: none;
+    user-select: none;
+    display: block;
+}
+@media (max-width: 900px) {
+    .contact-bg {
+        width: 60px !important;
+        left: -10px !important;
+        right: -10px !important;
+        opacity: 0.06 !important;
+    }
+    .contact-foreground-c-final {
+        width: 50px;
+    }
+    .contact-foreground-c-final-wrapper {
+        margin-top: 18px;
+    }
+}
+@media (max-width: 600px) {
+    .contact-bg {
+        width: 36px !important;
+        left: 0 !important;
+        right: 0 !important;
+        opacity: 0.04 !important;
+    }
+    .contact-foreground-c-final {
+        width: 32px;
+    }
+    .contact-foreground-c-final-wrapper {
+        margin-top: 8px;
+    }
+}
 </style>
 {% endblock %}

@@ -1,68 +1,113 @@
+#!/usr/bin/env python3
 """
-Utility script to test the Ollama integration.
-This script helps verify that the Ollama setup is working correctly.
+Test script for Ollama integration
+Usage: python test_ollama.py "Your question here"
+"""
 
-Usage:
-    python test_ollama.py "Your test question here"
-"""
-import os
 import sys
-import django
+import requests
+import json
+from ollama_adapter import ask_ollama, check_ollama_status
 
-# Set up Django environment
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-django.setup()
-
-from services.ai.ollama_adapter import ask_ollama
-from services.ai.llm_adapter import ask_llm
-
-def test_ollama_direct(question):
-    """Test Ollama directly using the ask_ollama function"""
-    print("\n=== Testing Ollama directly ===")
+def test_ollama_direct_api(question: str):
+    """Test direct Ollama API call"""
     print(f"Question: {question}")
-    response = ask_ollama(question, "test_user", "test_org")
-    print(f"Ollama Response: {response}")
-    return response
-
-def test_llm_adapter(question):
-    """Test using the main LLM adapter which might use Ollama or fallback to OpenAI"""
-    print("\n=== Testing LLM Adapter (might use Ollama or OpenAI) ===")
-    print(f"Question: {question}")
-    response = ask_llm(question, "test_user", "test_org")
-    print(f"LLM Adapter Response: {response}")
-    return response
-
-def check_ollama_running():
-    """Check if Ollama is running by importing requests and checking the server"""
-    import requests
-    from services.ai.ollama_config import OLLAMA_BASE_URL
+    
+    # Use the correct model that the user has installed
+    model = "llama3:8b"
+    
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": question}
+        ],
+        "stream": False
+    }
     
     try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags")
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(payload),
+            timeout=30
+        )
+        
         if response.status_code == 200:
-            models = response.json().get("models", [])
-            print("\n=== Ollama Status: RUNNING ===")
-            print(f"Available models: {[model['name'] for model in models]}")
+            result = response.json()
+            answer = result.get("message", {}).get("content", "").strip()
+            print(f"✅ Ollama Direct Response: {answer}")
             return True
         else:
-            print("\n=== Ollama Status: NOT RESPONDING CORRECTLY ===")
-            print(f"Status code: {response.status_code}")
+            print(f"❌ Ollama API error: {response.status_code} - {response.text}")
             return False
+            
     except Exception as e:
-        print("\n=== Ollama Status: NOT RUNNING ===")
-        print(f"Error: {e}")
+        print(f"❌ Ollama Error: {e}")
         return False
 
-if __name__ == "__main__":
+def test_ai_service(question: str):
+    """Test the full AI service"""
+    print(f"Question: {question}")
+    
+    try:
+        # Mock user and org for testing
+        user = "test_user"
+        org = "test_org"
+        
+        response = ask_ollama(question, user, org)
+        print(f"✅ AI Service Response: {response}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ AI Service Error: {e}")
+        return False
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python test_ollama.py 'Your question here'")
+        sys.exit(1)
+    
+    question = sys.argv[1]
+    
+    print("=== Testing Ollama Connection ===")
+    
     # Check if Ollama is running
-    check_ollama_running()
+    if check_ollama_status():
+        print("✅ Ollama is running and accessible")
+        
+        # Get available models
+        try:
+            response = requests.get("http://localhost:11434/api/tags", timeout=5)
+            if response.status_code == 200:
+                models = response.json().get("models", [])
+                model_names = [model.get("name", "") for model in models]
+                print(f"📋 Available models: {model_names}")
+            else:
+                print("⚠️  Could not retrieve model list")
+        except Exception as e:
+            print(f"⚠️  Error getting model list: {e}")
+    else:
+        print("❌ Ollama is not running")
+        print("Please start Ollama with: ollama serve")
+        sys.exit(1)
     
-    # Get the question from command line arguments or use a default
-    question = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "What is GRC and how can it help my organization?"
+    print(f"\n🔍 Testing with question: '{question}'")
     
-    # Test with direct Ollama call
-    test_ollama_direct(question)
+    print("\n=== Testing Ollama Direct API ===")
+    direct_success = test_ollama_direct_api(question)
     
-    # Test with LLM adapter (might use Ollama or OpenAI)
-    test_llm_adapter(question)
+    print("\n=== Testing Full AI Service ===")
+    service_success = test_ai_service(question)
+    
+    print("\n=== Test Summary ===")
+    print(f"Ollama Direct: {'✅ PASS' if direct_success else '❌ FAIL'}")
+    print(f"AI Service: {'✅ PASS' if service_success else '❌ FAIL'}")
+    
+    if not direct_success or not service_success:
+        print("\n⚠️  Some tests failed. Check the error messages above.")
+        sys.exit(1)
+    else:
+        print("\n🎉 All tests passed!")
+
+if __name__ == "__main__":
+    main()
