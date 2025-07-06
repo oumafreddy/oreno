@@ -229,5 +229,5 @@
 </div>
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'js/legal_dashboard.js' %}" defer></script>
+<script src="{% static 'js/legal_dashboard.js' %}" defer nonce="{{ request.csp_nonce }}"></script>
 {% endblock %} 

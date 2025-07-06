@@ -500,7 +500,7 @@
 {{ risk_trend|json_script:"risk-trend-data" }}
 
 <!-- Plotly.js for charts -->
-<script src="https://cdn.plot.ly/plotly-2.27.1.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/risk_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <div id="risk-dashboard-vars"
      data-heatmap-url="{% url 'risk:api_heatmap_data' %}"

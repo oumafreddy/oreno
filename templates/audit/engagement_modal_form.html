@@ -11,7 +11,26 @@
         hx-target="#modal-body" 
         hx-swap="outerHTML">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.code|as_crispy_field }}
+    {{ form.title|as_crispy_field }}
+    {{ form.annual_workplan|as_crispy_field }}
+    {{ form.engagement_type|as_crispy_field }}
+    {{ form.project_start_date|as_crispy_field }}
+    {{ form.target_end_date|as_crispy_field }}
+    {{ form.assigned_to|as_crispy_field }}
+    {{ form.estimated_hours|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.criteria %}
+    {{ form.field_work_start_date|as_crispy_field }}
+    {{ form.field_work_end_date|as_crispy_field }}
+    {{ form.report_issued_date|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.executive_summary %}
+    {% include 'audit/_ckeditor_field.html' with field=form.purpose %}
+    {% include 'audit/_ckeditor_field.html' with field=form.background %}
+    {% include 'audit/_ckeditor_field.html' with field=form.scope %}
+    {% include 'audit/_ckeditor_field.html' with field=form.conclusion_description %}
+    {{ form.conclusion|as_crispy_field }}
+    {{ form.project_status|as_crispy_field }}
+    {{ form.approval_status|as_crispy_field }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>

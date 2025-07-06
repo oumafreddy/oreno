@@ -93,5 +93,5 @@
 {{ uploads_chart|json_script:"uploads-chart-data" }}
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'js/document_management_dashboard.js' %}" defer></script>
+<script src="{% static 'js/document_management_dashboard.js' %}" defer nonce="{{ request.csp_nonce }}"></script>
 {% endblock %} 

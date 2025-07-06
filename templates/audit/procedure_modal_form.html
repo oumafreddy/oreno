@@ -11,7 +11,35 @@
         hx-target="#modal-body" 
         hx-swap="outerHTML">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.title|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.description %}
+    {{ form.order|as_crispy_field }}
+    {{ form.planned_date|as_crispy_field }}
+    {{ form.test_date|as_crispy_field }}
+    {{ form.tested_by|as_crispy_field }}
+    {{ form.procedure_type|as_crispy_field }}
+    {{ form.control_being_tested|as_crispy_field }}
+    {{ form.criteria|as_crispy_field }}
+    {{ form.sample_size|as_crispy_field }}
+    {{ form.sampling_method|as_crispy_field }}
+    {{ form.estimated_hours|as_crispy_field }}
+    {{ form.actual_hours|as_crispy_field }}
+    {{ form.test_status|as_crispy_field }}
+    {{ form.result|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.result_notes %}
+    {{ form.exceptions_noted|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.exception_details %}
+    {{ form.conclusion|as_crispy_field }}
+    {{ form.impact_assessment|as_crispy_field }}
+    {{ form.is_positive_finding|as_crispy_field }}
+    {{ form.control_maturity|as_crispy_field }}
+    {{ form.evidence_list|as_crispy_field }}
+    {{ form.evidence|as_crispy_field }}
+    {{ form.additional_evidence|as_crispy_field }}
+    {{ form.reviewed_by|as_crispy_field }}
+    {{ form.review_date|as_crispy_field }}
+    {{ form.review_notes|as_crispy_field }}
+    {{ form.risk|as_crispy_field }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal" 

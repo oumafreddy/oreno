@@ -605,7 +605,7 @@
 <!-- Add Plotly CDN before dashboard_charts.js for CSP compliance and chart rendering -->
 <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
-<script src="{% static 'js/select2.min.js' %}"></script>
+<script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/dashboard_charts.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/audit_modal_utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/audit_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>

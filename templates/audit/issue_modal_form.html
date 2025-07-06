@@ -11,7 +11,39 @@
         hx-target="#modal-body"
         hx-swap="outerHTML">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.code|as_crispy_field }}
+    {{ form.issue_title|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.issue_description %}
+    {% include 'audit/_ckeditor_field.html' with field=form.root_cause %}
+    {{ form.risks|as_crispy_field }}
+    {{ form.date_identified|as_crispy_field }}
+    {{ form.issue_owner|as_crispy_field }}
+    {{ form.secondary_owner|as_crispy_field }}
+    {{ form.issue_owner_email|as_crispy_field }}
+    {{ form.issue_owner_title|as_crispy_field }}
+    {{ form.audit_procedures|as_crispy_field }}
+    {{ form.issue_status|as_crispy_field }}
+    {{ form.remediation_status|as_crispy_field }}
+    {{ form.target_date|as_crispy_field }}
+    {{ form.actual_remediation_date|as_crispy_field }}
+    {{ form.procedure|as_crispy_field }}
+    {{ form.impact|as_crispy_field }}
+    {{ form.likelihood|as_crispy_field }}
+    {{ form.risk_level|as_crispy_field }}
+    {{ form.issue_type|as_crispy_field }}
+    {{ form.is_repeat_issue|as_crispy_field }}
+    {{ form.prior_issue_reference|as_crispy_field }}
+    {{ form.business_impact|as_crispy_field }}
+    {{ form.financial_impact|as_crispy_field }}
+    {{ form.regulatory_impact|as_crispy_field }}
+    {{ form.reputational_impact|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.management_action_plan %}
+    {{ form.remediation_approach|as_crispy_field }}
+    {{ form.verification_method|as_crispy_field }}
+    {{ form.verification_result|as_crispy_field }}
+    {{ form.verification_date|as_crispy_field }}
+    {{ form.verified_by|as_crispy_field }}
+    {{ form.positive_finding_notes|as_crispy_field }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>

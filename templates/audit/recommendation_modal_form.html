@@ -12,7 +12,25 @@
         hx-swap="outerHTML"
         enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.title|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.description %}
+    {{ form.issue|as_crispy_field }}
+    {{ form.priority|as_crispy_field }}
+    {{ form.cost_benefit_analysis|as_crispy_field }}
+    {{ form.assigned_to|as_crispy_field }}
+    {{ form.estimated_hours|as_crispy_field }}
+    {{ form.estimated_cost|as_crispy_field }}
+    {{ form.order|as_crispy_field }}
+    {{ form.implementation_status|as_crispy_field }}
+    {{ form.target_date|as_crispy_field }}
+    {{ form.revised_date|as_crispy_field }}
+    {{ form.extension_reason|as_crispy_field }}
+    {{ form.implementation_date|as_crispy_field }}
+    {{ form.verification_date|as_crispy_field }}
+    {{ form.verified_by|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.management_action_plan %}
+    {{ form.effectiveness_evaluation|as_crispy_field }}
+    {{ form.effectiveness_rating|as_crispy_field }}
     <div class="d-flex justify-content-end mt-4">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       <button type="submit" class="btn btn-primary">Save</button>

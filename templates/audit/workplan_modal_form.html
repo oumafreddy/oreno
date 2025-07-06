@@ -16,7 +16,14 @@
         hx-target="#modal-body" 
         hx-swap="outerHTML">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.code|as_crispy_field }}
+    {{ form.name|as_crispy_field }}
+    {{ form.fiscal_year|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.objectives %}
+    {% include 'audit/_ckeditor_field.html' with field=form.description %}
+    {{ form.approval_status|as_crispy_field }}
+    {{ form.estimated_total_hours|as_crispy_field }}
+    {{ form.priority_ranking|as_crispy_field }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
       <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">Cancel</button>

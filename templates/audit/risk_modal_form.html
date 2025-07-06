@@ -33,7 +33,7 @@
   {% endif %}
 
   <form method="post" enctype="multipart/form-data" novalidate id="riskForm"
-        hx-post="{% if form.instance.pk %}{% url 'audit:risk-edit' form.instance.pk %}{% elif objective %}{% url 'audit:risk-add' objective_id=objective.id %}{% elif engagement and engagement.id %}{% url 'audit:risk-modal-add' engagement_pk=engagement.id %}{% else %}#{% endif %}"
+        hx-post="{% if form.instance.pk %}{% url 'audit:risk-update' form.instance.pk %}{% else %}{% url 'audit:risk-modal-add' objective_pk=objective.pk %}{% endif %}"
         hx-target="#modal-body"
         hx-swap="outerHTML">
     {% csrf_token %}
@@ -46,7 +46,20 @@
       <input type="hidden" name="engagement_pk" value="{{ engagement.id }}">
     {% endif %}
     
-    {{ form|crispy }}
+    {{ form.title|as_crispy_field }}
+    {{ form.objective|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.description %}
+    {{ form.category|as_crispy_field }}
+    {{ form.status|as_crispy_field }}
+    {{ form.likelihood|as_crispy_field }}
+    {{ form.impact|as_crispy_field }}
+    {{ form.risk_appetite|as_crispy_field }}
+    {{ form.risk_tolerance|as_crispy_field }}
+    {{ form.control_effectiveness|as_crispy_field }}
+    {{ form.mitigation_plan|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.existing_controls %}
+    {{ form.assigned_to|as_crispy_field }}
+    {{ form.order|as_crispy_field }}
     
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success me-2">

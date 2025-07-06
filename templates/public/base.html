@@ -190,10 +190,10 @@
     </footer>
 
     <!-- JavaScript -->
-    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'js/ui-utils.js' %}"></script>
-    <script src="{% static 'js/public.js' %}"></script>
-    <script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/ui-utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/public.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script nonce="{{ request.csp_nonce }}">
     // Smooth scroll to #contact section from any page
     (function() {
         function isHomePage() {

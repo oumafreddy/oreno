@@ -351,20 +351,56 @@
             }
         });
 
-        // Fallback: Ensure CKEditor5 is always initialized on modal show (for dynamic modals)
+        // --- CKEditor5 Robust Initialization for Modal Forms ---
+        // Helper: Add .ckeditor-richtext class to all CKEditor fields (if not present)
+        function ensureCkeditorClass(modal) {
+            if (!modal) return;
+            const ckeditors = modal.querySelectorAll('.django_ckeditor_5');
+            ckeditors.forEach(el => {
+                if (!el.classList.contains('ckeditor-richtext')) {
+                    el.classList.add('ckeditor-richtext');
+                }
+            });
+        }
+
+        // Force CKEditor5 initialization after modal content loads (shown.bs.modal)
         document.body.addEventListener('shown.bs.modal', function(event) {
             const modal = event.target;
             if (modal && modal.classList.contains('modal')) {
-                // Initialize CKEditor5 for all .django_ckeditor_5 fields if not already
+                ensureCkeditorClass(modal);
                 if (typeof ClassicEditor !== 'undefined') {
-                    const ckeditorElements = modal.querySelectorAll('.django_ckeditor_5');
+                    const ckeditorElements = modal.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
                     ckeditorElements.forEach(element => {
                         if (!element.ckeditorInstance) {
-                            ClassicEditor.create(element, {}).then(editor => {
-                                element.ckeditorInstance = editor;
-                            }).catch(error => {
-                                console.warn('Error initializing CKEditor in modal:', error);
-                            });
+                            ClassicEditor.create(element, {})
+                                .then(editor => {
+                                    element.ckeditorInstance = editor;
+                                })
+                                .catch(error => {
+                                    console.warn('Error initializing CKEditor in modal:', error);
+                                });
+                        }
+                    });
+                }
+            }
+        });
+
+        // Force CKEditor5 initialization after HTMX swaps in modal content
+        // (e.g., after AJAX loads modal body)
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target && (event.detail.target.id === 'modal-body' || event.detail.target.classList.contains('modal-body'))) {
+                ensureCkeditorClass(event.detail.target);
+                if (typeof ClassicEditor !== 'undefined') {
+                    const ckeditorElements = event.detail.target.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
+                    ckeditorElements.forEach(element => {
+                        if (!element.ckeditorInstance) {
+                            ClassicEditor.create(element, {})
+                                .then(editor => {
+                                    element.ckeditorInstance = editor;
+                                })
+                                .catch(error => {
+                                    console.warn('Error initializing CKEditor in modal after HTMX swap:', error);
+                                });
                         }
                     });
                 }
