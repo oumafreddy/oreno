@@ -6,12 +6,23 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
+  {% if not issue %}
+    <div class="alert alert-danger">
+      Issue context is missing. Please refresh the page or contact support.
+    </div>
+  {% endif %}
   <form method="post" id="followupActionForm"
-        hx-post="{% if form.instance.pk %}{% url 'audit:followupaction-update' form.instance.pk %}{% else %}{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}{% endif %}"
-        hx-target="#modal-body"
-        hx-swap="outerHTML"
-        enctype="multipart/form-data"
-        class="needs-validation" novalidate>
+    {% if form.instance.pk %}
+      hx-post="{% url 'audit:followupaction-update' form.instance.pk %}"
+    {% elif issue %}
+      hx-post="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}"
+    {% else %}
+      action="#"
+    {% endif %}
+    hx-target="#modal-body"
+    hx-swap="outerHTML"
+    enctype="multipart/form-data"
+    class="needs-validation" novalidate>
     {% csrf_token %}
     {{ form.issue|as_crispy_field }}
     {% include 'audit/_ckeditor_field.html' with field=form.description %}

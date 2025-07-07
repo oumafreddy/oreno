@@ -21,6 +21,7 @@ try:
 except ImportError:
     pd = None
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
+from django.core.exceptions import PermissionDenied
 
 from .models import Risk, RiskRegister, RiskMatrixConfig, Control, KRI, RiskAssessment
 from .serializers import (
@@ -42,6 +43,14 @@ class RiskScopedViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOrgManagerOrReadOnly]
 
 
+class OrganizationPermissionMixin:
+    """Mixin to ensure the user has access to the current organization."""
+    def dispatch(self, request, *args, **kwargs):
+        if not hasattr(request, 'organization') or request.organization is None:
+            raise PermissionDenied("No organization context found.")
+        return super().dispatch(request, *args, **kwargs)
+
+
 class RiskListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     """
     Web listing of Risks, automatically filtered to request.organization.
@@ -52,10 +61,10 @@ class RiskListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
-            qs = qs.filter(Q(risk_name__icontains=q) | Q(code__icontains=q))
+            qs = qs.filter(risk_name__icontains=q)
         owner = self.request.GET.get('owner')
         if owner:
             qs = qs.filter(risk_owner__icontains=owner)
@@ -75,6 +84,10 @@ class RiskListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
         if register:
             qs = qs.filter(risk_register_id=register)
         return qs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['risks'] = self.get_queryset()
+        return context
 
 
 class RiskDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
@@ -86,7 +99,7 @@ class RiskDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView
     context_object_name = 'risk'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
 
 
 # --- RiskRegister Views ---
@@ -97,7 +110,7 @@ class RiskRegisterListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.organization)
         form = RiskRegisterFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
@@ -119,13 +132,13 @@ class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Cr
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -135,12 +148,12 @@ class RiskRegisterUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Up
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -150,7 +163,7 @@ class RiskRegisterDetailView(OrganizationPermissionMixin, LoginRequiredMixin, De
     context_object_name = 'riskregister'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
 
 
 class RiskRegisterDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -167,7 +180,7 @@ class RiskMatrixConfigListView(OrganizationPermissionMixin, LoginRequiredMixin, 
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.organization)
         form = RiskMatrixConfigFilterForm(self.request.GET)
         if form.is_valid():
             name = form.cleaned_data.get('name')
@@ -191,13 +204,13 @@ class RiskMatrixConfigCreateView(OrganizationPermissionMixin, LoginRequiredMixin
     template_name = 'risk/riskmatrixconfig_form.html'
     success_url = reverse_lazy('risk:riskmatrixconfig_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -207,12 +220,12 @@ class RiskMatrixConfigUpdateView(OrganizationPermissionMixin, LoginRequiredMixin
     template_name = 'risk/riskmatrixconfig_form.html'
     success_url = reverse_lazy('risk:riskmatrixconfig_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -222,7 +235,7 @@ class RiskMatrixConfigDetailView(OrganizationPermissionMixin, LoginRequiredMixin
     context_object_name = 'matrixconfig'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
 
 
 class RiskMatrixConfigDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -238,13 +251,13 @@ class RiskCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -254,12 +267,12 @@ class RiskUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -277,7 +290,7 @@ class ControlListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView)
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.organization)
         owner = self.request.GET.get('owner')
         if owner:
             qs = qs.filter(control_owner__icontains=owner)
@@ -296,11 +309,11 @@ class ControlCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateV
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -310,14 +323,14 @@ class ControlUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateV
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         if not form.instance.pk:
             form.instance.created_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -327,7 +340,7 @@ class ControlDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailV
     context_object_name = 'control'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
 
 
 class ControlDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -344,7 +357,11 @@ class KRIListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(risk__organization=self.request.tenant)
+        return qs.filter(risk__organization=self.request.organization)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['kris'] = self.get_queryset()
+        return context
 
 
 class KRICreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
@@ -353,10 +370,12 @@ class KRICreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView)
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
     def form_valid(self, form):
+        if form.instance.risk.organization != self.request.organization:
+            raise PermissionDenied("Risk does not belong to this organization.")
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -366,10 +385,12 @@ class KRIUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView)
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
     def form_valid(self, form):
+        if form.instance.risk.organization != self.request.organization:
+            raise PermissionDenied("Risk does not belong to this organization.")
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -379,7 +400,7 @@ class KRIDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView)
     context_object_name = 'kri'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(risk__organization=self.request.tenant)
+        return qs.filter(risk__organization=self.request.organization)
 
 
 class KRIDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -396,7 +417,11 @@ class RiskAssessmentListView(OrganizationPermissionMixin, LoginRequiredMixin, Li
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['riskassessments'] = self.get_queryset()
+        return context
 
 
 class RiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
@@ -405,13 +430,13 @@ class RiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
@@ -421,22 +446,22 @@ class RiskAssessmentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 
 class RiskAssessmentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = RiskAssessment
     template_name = 'risk/riskassessment_detail.html'
-    context_object_name = 'riskassessment'
+    context_object_name = 'assessment'
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(organization=self.request.tenant)
+        return qs.filter(organization=self.request.organization)
 
 
 class RiskAssessmentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -455,7 +480,7 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         return []  # Not used
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        org = self.request.tenant
+        org = self.request.organization
         selected_register = self.request.GET.get('register')
         riskregisters = RiskRegister.objects.filter(organization=org)
         risks = Risk.objects.filter(organization=org)
@@ -522,7 +547,7 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_heatmap_data(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -556,7 +581,7 @@ def api_heatmap_data(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_assessment_timeline(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -583,7 +608,7 @@ def api_assessment_timeline(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_summary_cards(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -605,7 +630,7 @@ def api_summary_cards(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_top_risks(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -617,7 +642,7 @@ def api_top_risks(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_kri_status(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     kris = KRI.objects.filter(risk__organization=org)
     if selected_register:
@@ -629,7 +654,7 @@ def api_kri_status(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_recent_activity(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -644,7 +669,7 @@ def api_recent_activity(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_assessment_timeline_details(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -659,7 +684,7 @@ def api_assessment_timeline_details(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_risk_category_distribution(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -670,7 +695,7 @@ def api_risk_category_distribution(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_risk_status_distribution(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -681,7 +706,7 @@ def api_risk_status_distribution(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_control_effectiveness(request):
-    org = request.tenant
+    org = request.organization
     controls = Control.objects.filter(organization=org)
     data = controls.values('effectiveness_rating').annotate(count=Count('id')).order_by('effectiveness_rating')
     # Map to serializer field
@@ -691,7 +716,7 @@ def api_control_effectiveness(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_kri_status_counts(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     kris = KRI.objects.filter(risk__organization=org)
     if selected_register:
@@ -708,7 +733,7 @@ def api_kri_status_counts(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_assessment_type_counts(request):
-    org = request.tenant
+    org = request.organization
     selected_register = request.GET.get('register')
     risks = Risk.objects.filter(organization=org)
     if selected_register:
@@ -722,7 +747,7 @@ def api_assessment_type_counts(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_risk_advanced_filter(request):
-    org = request.tenant
+    org = request.organization
     qs = Risk.objects.filter(organization=org)
     owner = request.GET.get('owner')
     category = request.GET.get('category')
@@ -753,7 +778,7 @@ def api_risk_advanced_filter(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_kri_advanced_filter(request):
-    org = request.tenant
+    org = request.organization
     qs = KRI.objects.filter(risk__organization=org)
     risk = request.GET.get('risk')
     status = request.GET.get('status')
@@ -790,7 +815,7 @@ def api_kri_advanced_filter(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def api_assessment_advanced_filter(request):
-    org = request.tenant
+    org = request.organization
     qs = RiskAssessment.objects.filter(risk__organization=org)
     risk = request.GET.get('risk')
     assessment_type = request.GET.get('assessment_type')
@@ -848,7 +873,7 @@ def queryset_to_excel_response(qs, fields, filename):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def export_risks(request):
-    org = request.tenant
+    org = request.organization
     qs = Risk.objects.filter(organization=org)
     # Apply same filters as api_risk_advanced_filter
     owner = request.GET.get('owner')
@@ -878,7 +903,7 @@ def export_risks(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def export_kris(request):
-    org = request.tenant
+    org = request.organization
     qs = KRI.objects.filter(risk__organization=org)
     # Apply same filters as api_kri_advanced_filter
     risk = request.GET.get('risk')
@@ -908,7 +933,7 @@ def export_kris(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
 def export_assessments(request):
-    org = request.tenant
+    org = request.organization
     qs = RiskAssessment.objects.filter(risk__organization=org)
     # Apply same filters as api_assessment_advanced_filter
     risk = request.GET.get('risk')

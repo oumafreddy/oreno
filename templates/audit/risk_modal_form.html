@@ -33,7 +33,7 @@
   {% endif %}
 
   <form method="post" enctype="multipart/form-data" novalidate id="riskForm"
-        hx-post="{% if form.instance.pk %}{% url 'audit:risk-update' form.instance.pk %}{% else %}{% url 'audit:risk-modal-add' objective_pk=objective.pk %}{% endif %}"
+        hx-post="{% if form.instance.pk %}{% url 'audit:risk-edit' form.instance.pk %}{% else %}{% url 'audit:risk-add' objective_id=objective.pk %}{% endif %}"
         hx-target="#modal-body"
         hx-swap="outerHTML">
     {% csrf_token %}

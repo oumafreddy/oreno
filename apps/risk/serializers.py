@@ -43,7 +43,7 @@ class TopRiskSerializer(serializers.ModelSerializer):
     risk_level = serializers.SerializerMethodField()
     class Meta:
         model = Risk
-        fields = ['id', 'risk_name', 'residual_risk_score', 'risk_level']
+        fields = ['id', 'risk_name', 'risk_owner', 'category', 'status', 'residual_risk_score', 'risk_level']
     def get_risk_level(self, obj):
         return obj.get_risk_level()
 

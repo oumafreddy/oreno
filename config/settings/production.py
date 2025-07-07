@@ -161,12 +161,12 @@ REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
 ]
 
 # Performance settings
-TEMPLATES[0]['OPTIONS']['loaders'] = [
-    ('django.template.loaders.cached.Loader', [
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    ]),
-]
+# TEMPLATES[0]['OPTIONS']['loaders'] = [
+#     ('django.template.loaders.cached.Loader', [
+#         'django.template.loaders.filesystem.Loader',
+#         'django.template.loaders.app_directories.Loader',
+#     ]),
+# ]
 
 # Session settings
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'

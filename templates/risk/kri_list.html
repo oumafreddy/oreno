@@ -8,39 +8,39 @@
             <a href="{% url 'risk:kri_create' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add KRI</a>
         </div>
     </div>
-    <form id="kri-filter-form" class="row g-2 mb-3">
+    <form id="kri-filter-form" class="row g-2 mb-3" method="get">
         <div class="col-md-2">
-            <input type="text" class="form-control" name="risk" placeholder="Risk ID">
+            <input type="text" class="form-control" name="risk" placeholder="Risk ID" value="{{ request.GET.risk }}">
         </div>
         <div class="col-md-2">
             <select class="form-select" name="direction">
                 <option value="">All Directions</option>
-                <option value="increasing">Increasing</option>
-                <option value="decreasing">Decreasing</option>
+                <option value="increasing" {% if request.GET.direction == 'increasing' %}selected{% endif %}>Increasing</option>
+                <option value="decreasing" {% if request.GET.direction == 'decreasing' %}selected{% endif %}>Decreasing</option>
             </select>
         </div>
         <div class="col-md-2">
             <select class="form-select" name="status">
                 <option value="">All Statuses</option>
-                <option value="normal">Normal</option>
-                <option value="warning">Warning</option>
-                <option value="critical">Critical</option>
+                <option value="normal" {% if request.GET.status == 'normal' %}selected{% endif %}>Normal</option>
+                <option value="warning" {% if request.GET.status == 'warning' %}selected{% endif %}>Warning</option>
+                <option value="critical" {% if request.GET.status == 'critical' %}selected{% endif %}>Critical</option>
             </select>
         </div>
         <div class="col-md-2">
-            <input type="number" class="form-control" name="min_value" placeholder="Min Value">
+            <input type="number" class="form-control" name="min_value" placeholder="Min Value" value="{{ request.GET.min_value }}">
         </div>
         <div class="col-md-2">
-            <input type="number" class="form-control" name="max_value" placeholder="Max Value">
+            <input type="number" class="form-control" name="max_value" placeholder="Max Value" value="{{ request.GET.max_value }}">
         </div>
         <div class="col-md-2 d-flex align-items-center">
             <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
-            <button type="button" id="reset-kri-filters" class="btn btn-outline-secondary">Reset</button>
+            <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-secondary">Reset</a>
         </div>
     </form>
     <div class="mb-3">
-        <a id="export-kri-csv" href="#" class="btn btn-outline-secondary me-2">Export CSV</a>
-        <a id="export-kri-excel" href="#" class="btn btn-outline-success">Export Excel</a>
+        <a id="export-kri-csv" href="{% url 'risk:export_kris' %}?format=csv" class="btn btn-outline-secondary me-2">Export CSV</a>
+        <a id="export-kri-excel" href="{% url 'risk:export_kris' %}?format=excel" class="btn btn-outline-success">Export Excel</a>
     </div>
     <div class="card">
         <div class="card-body p-0">
@@ -57,14 +57,53 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- AJAX results here -->
+                    {% if kris %}
+                        {% for kri in kris %}
+                            <tr>
+                                <td>{{ kri.name }}</td>
+                                <td>{% if kri.risk %}<a href="{% url 'risk:risk_detail' kri.risk.pk %}">{{ kri.risk.risk_name }}</a>{% endif %}</td>
+                                <td>{{ kri.value }}</td>
+                                <td>{{ kri.unit }}</td>
+                                <td>
+                                    {% if kri.get_status == 'critical' %}
+                                        <span class="badge bg-danger">Critical</span>
+                                    {% elif kri.get_status == 'warning' %}
+                                        <span class="badge bg-warning text-dark">Warning</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ kri.timestamp }}</td>
+                                <td>
+                                    <a href="{% url 'risk:kri_detail' kri.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'risk:kri_update' kri.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'risk:kri_delete' kri.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="7" class="text-center text-muted">No KRIs found.</td></tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-muted">No KRIs found.</td></tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
-    <nav class="mt-3">
-        <ul class="pagination" id="kri-pagination"></ul>
-    </nav>
+    {% if is_paginated %}
+        <nav class="mt-3">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                {% for num in paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
 </div>
-<script src="{% static 'js/kri_list.js' %}" nonce="{{ request.csp_nonce }}"></script>
 {% endblock %} 

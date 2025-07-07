@@ -287,6 +287,19 @@ class Risk(SoftDeletionModel):
             return _('Medium')
         else:
             return _('High')
+    
+    def get_risk_level_display(self):
+        """Returns the risk level display name"""
+        return self.risk_level
+    
+    def get_risk_level_class(self):
+        """Returns the CSS class for the risk level badge"""
+        if self.inherent_risk_score <= 2:
+            return 'success'  # green for low
+        elif self.inherent_risk_score <= 6:
+            return 'warning'  # yellow for medium
+        else:
+            return 'danger'   # red for high
             
     @property
     def within_appetite(self):
