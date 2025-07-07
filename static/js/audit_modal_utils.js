@@ -7,25 +7,25 @@
 (function() {
     'use strict';
 
-    /**
+/**
      * Initializes all event listeners for the modal utilities.
      * This function is designed to be called once when the DOM is ready.
      */
     function initialize() {
         // Use event delegation for dynamically added elements
         document.body.addEventListener('click', handleModalEvents);
-    }
+}
 
-    /**
+/**
      * Handles all click events within the body and delegates to specific functions.
      * @param {Event} event - The click event object.
-     */
+ */
     function handleModalEvents(event) {
         const navigateButton = event.target.closest('[data-navigate-url]');
         if (navigateButton) {
             handleNavigation(navigateButton);
             return;
-        }
+            }
 
         const backButton = event.target.closest('[data-navigate-back]');
         if (backButton) {
@@ -44,7 +44,7 @@
         if (url && url !== '#') {
             window.location.href = url;
         }
-    }
+}
 
     /**
      * Publicly exposed function to confirm an action.
@@ -64,7 +64,7 @@
     }
 
     // Expose necessary functions to the global window object.
-    window.AuditModalUtils = {
+window.AuditModalUtils = {
         confirmAction: confirmAction
     };
 

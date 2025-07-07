@@ -2191,7 +2191,145 @@ class ProcedureModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Update
                     'message': _("Error updating procedure: {}".format(str(e)))
                 }, status=400)
         
+<<<<<<< HEAD
         return response
+=======
+        # Create a basic filter form structure
+        from django import forms
+        from crispy_forms.helper import FormHelper
+        from crispy_forms.layout import Submit
+        
+        class EmptyFilterForm(forms.Form):
+            # Empty form - just to prevent the template error
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.helper = FormHelper()
+                self.helper.form_method = 'get'
+                self.helper.add_input(Submit('submit', 'Filter', css_class='btn-secondary'))
+        
+        context['filter_form'] = EmptyFilterForm()
+            
+        return context
+
+class ProcedureResultDetailView(AuditPermissionMixin, DetailView):
+    model = ProcedureResult
+    template_name = 'audit/procedureresult_detail.html'
+    context_object_name = 'procedure_result'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure procedure is available in the context for the template
+        context['procedure'] = self.object.procedure
+        # Add all issues linked to this ProcedureResult
+        context['linked_issues'] = self.object.issues.filter(organization=self.request.organization)
+        return context
+
+class ProcedureResultCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = ProcedureResult
+    form_class = ProcedureResultForm
+    template_name = 'audit/procedureresult_form.html'
+    success_message = _('Procedure Result was created successfully')
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+    def form_valid(self, form):
+        procedure_pk = self.kwargs.get('procedure_pk')
+        form.instance.procedure_id = procedure_pk
+        form.instance.organization = self.request.organization
+        return super().form_valid(form)
+    def get_success_url(self):
+        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+
+class ProcedureResultUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
+    model = ProcedureResult
+    form_class = ProcedureResultForm
+    template_name = 'audit/procedureresult_form.html'
+    success_message = _('Procedure Result was updated successfully')
+    
+    def get_template_names(self):
+        """Return different templates based on HTMX request"""
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        if is_htmx:
+            return ['audit/procedureresult_modal_form.html']
+        return [self.template_name]
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure procedure is available in the context for the template
+        context['procedure'] = self.object.procedure
+        return context
+    
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        self.object = form.save()
+        
+        # Handle HTMX or AJAX requests
+        is_htmx = self.request.headers.get('HX-Request') == 'true'
+        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_htmx or is_ajax:
+            from django.http import HttpResponse
+            from django.urls import reverse
+            from django.contrib import messages
+            
+            # Add a success message
+            messages.success(self.request, self.success_message)
+            
+            # For HTMX requests, redirect instead of sending JSON with HTML content
+            # This prevents malformed URLs from being included in the response
+            redirect_url = reverse('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+            
+            # Create a response with HX-Redirect header for HTMX
+            response = HttpResponse(status=200)
+            response['HX-Redirect'] = redirect_url
+            return response
+        
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('audit:procedure-detail', kwargs={'pk': self.object.procedure.pk})
+
+class ProcedureResultModalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = ProcedureResult
+    form_class = ProcedureResultForm
+    template_name = 'audit/procedureresult_modal_form.html'
+    success_message = _('Procedure Result was created successfully')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['procedure_pk'] = self.kwargs.get('procedure_pk')
+        return context
+
+    def form_valid(self, form):
+        procedure_pk = self.kwargs.get('procedure_pk')
+        form.instance.procedure_id = procedure_pk
+        form.instance.organization = self.request.organization
+        self.object = form.save()
+
+        if self.request.headers.get('HX-Request') == 'true':
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
+            results = ProcedureResult.objects.filter(procedure_id=procedure_pk, organization=self.request.organization)
+            html_list = render_to_string("audit/_procedure_result_list_partial.html", {
+                "results": results,
+                "procedure": self.object.procedure,
+            }, request=self.request)
+            response = HttpResponse(html_list)
+            response['HX-Trigger'] = '{"closeModal": "true"}'
+        return response
+
+        return super().form_valid(form)
+>>>>>>> 6015254 (Enhancements and fixes: modal forms, JS, and audit views)
 
     def form_invalid(self, form):
         if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
@@ -2217,9 +2355,40 @@ class ProcedureModalDeleteView(AuditPermissionMixin, DeleteView):
     template_name = 'audit/procedure_confirm_delete.html'
     success_message = _('Procedure was deleted successfully')
 
+<<<<<<< HEAD
     def get_queryset(self):
         """Limit queryset to objects in the current organization."""
         return super().get_queryset().filter(organization=self.request.organization)
+=======
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['procedure_pk'] = self.object.procedure.pk if self.object.procedure_id else None
+        return context
+
+    def form_valid(self, form):
+        self.object = form.save()
+
+        if self.request.headers.get('HX-Request') == 'true':
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
+            results = ProcedureResult.objects.filter(procedure_id=self.object.procedure_id, organization=self.request.organization)
+            html_list = render_to_string("audit/_procedure_result_list_partial.html", {
+                "results": results,
+                "procedure": self.object.procedure,
+            }, request=self.request)
+            response = HttpResponse(html_list)
+            response['HX-Trigger'] = '{"closeModal": "true"}'
+        return response
+            
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        return self.render_to_response(self.get_context_data(form=form))
+>>>>>>> 6015254 (Enhancements and fixes: modal forms, JS, and audit views)
 
     def get_success_url(self):
         """Return to the risk detail page after deletion."""

@@ -24,32 +24,32 @@ function fetchKRIs(page=1) {
         .then(data => {
             const tbody = document.querySelector('#kri-table tbody');
             if (tbody) {
-                tbody.innerHTML = '';
+            tbody.innerHTML = '';
                 if (data.results && Array.isArray(data.results)) {
-                    data.results.forEach(kri => {
-                        tbody.innerHTML += `<tr>
-                            <td>${kri.name}</td>
-                            <td>${kri.risk_name || ''}</td>
-                            <td>${kri.value}</td>
-                            <td>${kri.unit || ''}</td>
-                            <td><span class="badge bg-${kri.status}">${kri.status.charAt(0).toUpperCase() + kri.status.slice(1)}</span></td>
-                            <td>${kri.timestamp || ''}</td>
-                            <td>
-                                <a href="/risk/kri/${kri.id}/" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
-                                <a href="/risk/kri/${kri.id}/update/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                                <a href="/risk/kri/${kri.id}/delete/" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
-                            </td>
-                        </tr>`;
-                    });
+            data.results.forEach(kri => {
+                tbody.innerHTML += `<tr>
+                    <td>${kri.name}</td>
+                    <td>${kri.risk_name || ''}</td>
+                    <td>${kri.value}</td>
+                    <td>${kri.unit || ''}</td>
+                    <td><span class="badge bg-${kri.status}">${kri.status.charAt(0).toUpperCase() + kri.status.slice(1)}</span></td>
+                    <td>${kri.timestamp || ''}</td>
+                    <td>
+                        <a href="/risk/kri/${kri.id}/" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                        <a href="/risk/kri/${kri.id}/update/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                        <a href="/risk/kri/${kri.id}/delete/" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>`;
+            });
                 }
             }
             // Pagination
             const pag = document.getElementById('kri-pagination');
             if (pag) {
-                pag.innerHTML = '';
+            pag.innerHTML = '';
                 if (data.num_pages) {
-                    for (let i = 1; i <= data.num_pages; i++) {
-                        pag.innerHTML += `<li class="page-item${i===data.page?' active':''}"><a class="page-link" href="#" onclick="fetchKRIs(${i});return false;">${i}</a></li>`;
+            for (let i = 1; i <= data.num_pages; i++) {
+                pag.innerHTML += `<li class="page-item${i===data.page?' active':''}"><a class="page-link" href="#" onclick="fetchKRIs(${i});return false;">${i}</a></li>`;
                     }
                 }
             }
@@ -65,9 +65,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (filterForm) {
         filterForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            fetchKRIs(1);
-        });
+    e.preventDefault();
+    fetchKRIs(1);
+});
     }
     
     if (resetBtn) {
@@ -75,9 +75,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('kri-filter-form');
             if (form) {
                 form.reset();
-                fetchKRIs(1);
+    fetchKRIs(1);
             }
-        });
+});
     }
     
     fetchKRIs(1);

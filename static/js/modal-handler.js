@@ -227,7 +227,7 @@
                     if (modal && modal.classList.contains('modal')) {
                         const modalInstance = getOrCreateModalInstance(modal);
                         if (modalInstance) {
-                            modalInstance.show();
+                        modalInstance.show();
                         }
                     }
                 }
@@ -578,7 +578,7 @@
                     if (modal) {
                         const modalInstance = getOrCreateModalInstance(modal);
                         if (modalInstance) {
-                            modalInstance.show();
+                        modalInstance.show();
                         }
                     }
                 }
@@ -598,7 +598,7 @@
             }
             
             try {
-                getOrCreateModalInstance(modal);
+            getOrCreateModalInstance(modal);
             } catch (error) {
                 console.warn('Failed to initialize modal:', modal.id, error);
             }
