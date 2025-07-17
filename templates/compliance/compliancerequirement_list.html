@@ -4,7 +4,10 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Compliance Requirements</h2>
-        <a href="{% url 'compliance:requirement_create' %}" class="btn btn-primary">Add Requirement</a>
+        <div>
+            <a href="{% url 'compliance:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
+            <a href="{% url 'compliance:requirement_create' %}" class="btn btn-primary">Add Requirement</a>
+        </div>
     </div>
     <form method="get" class="row g-2 mb-3">
         <div class="col-md-3">
