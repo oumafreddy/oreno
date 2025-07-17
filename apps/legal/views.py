@@ -80,7 +80,8 @@ class LegalPartyCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('legal:legalparty_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        # Set organization as ForeignKey
+        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
         return super().form_valid(form)
 
 class LegalPartyUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -90,7 +91,8 @@ class LegalPartyUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('legal:legalparty_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        # Set organization as ForeignKey
+        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
         return super().form_valid(form)
 
 class LegalPartyDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -329,7 +331,17 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'legal/dashboard.html'
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        org = self.request.organization
+        # Robust fallback for organization context
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        if not org:
+            context['dashboard_error'] = 'Organization context is missing. Please contact support.'
+            # Set all variables to safe defaults
+            context['case_count'] = context['party_count'] = context['document_count'] = context['task_count'] = 0
+            context['overdue_tasks'] = context['completed_tasks'] = context['pending_tasks'] = 0
+            context['recent_cases'] = context['recent_documents'] = context['recent_tasks'] = []
+            context['case_status_chart'] = {'Open': 0, 'Closed': 0, 'Archived': 0}
+            context['task_status_chart'] = {'Completed': 0, 'Pending': 0, 'Overdue': 0}
+            return context
         # Case counts
         context['case_count'] = LegalCase.objects.filter(organization=org).count()
         context['open_cases'] = LegalCase.objects.filter(organization=org, status='intake').count() + \

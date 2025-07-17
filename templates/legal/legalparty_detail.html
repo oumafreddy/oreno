@@ -5,6 +5,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="fw-bold">Legal Party: {{ object.name }}</h2>
     <div>
+      <a href="{% url 'legal:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
       <a href="{% url 'legal:legalparty_update' object.pk %}" class="btn btn-secondary">Edit</a>
       <a href="{% url 'legal:legalparty_delete' object.pk %}" class="btn btn-danger">Delete</a>
       <a href="{% url 'legal:legalparty_list' %}" class="btn btn-outline-primary">Back to List</a>

@@ -32,7 +32,8 @@ class LegalParty(AuditableModel):
 
     name = models.CharField(max_length=255, db_index=True)
     party_type = models.CharField(max_length=20, choices=PARTY_TYPES)
-    organization = models.CharField(max_length=255, blank=True, null=True)
+    # CHANGED: organization is now a ForeignKey for robust permission checks
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='legalparty_set', null=False, blank=False, help_text='Organization that owns this party')
     contact_person = models.CharField(max_length=100, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
     contact_phone = models.CharField(max_length=20, blank=True, null=True)

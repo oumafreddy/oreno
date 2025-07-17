@@ -2,6 +2,7 @@
 {% block title %}Contract Detail{% endblock %}
 {% block content %}
 <div class="container mt-4">
+    <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark mb-3 float-end">Back to Dashboard</a>
     <h2>{{ contract.title }}</h2>
     <div class="mb-3"><strong>Code:</strong> {{ contract.code }}</div>
     <div class="mb-3"><strong>Type:</strong> {{ contract.contract_type.name }}</div>

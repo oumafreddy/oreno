@@ -3,6 +3,7 @@
 {% block title %}Contract Form{% endblock %}
 {% block content %}
 <div class="container mt-4">
+    <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark mb-3 float-end">Back to Dashboard</a>
     <div class="card">
         <div class="card-header"><h4>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Contract</h4></div>
         <div class="card-body">

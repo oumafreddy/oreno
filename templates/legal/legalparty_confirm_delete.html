@@ -2,6 +2,7 @@
 {% block title %}Delete Legal Party{% endblock %}
 {% block content %}
 <div class="container py-4">
+  <a href="{% url 'legal:dashboard' %}" class="btn btn-outline-dark mb-3 float-end">Back to Dashboard</a>
   <div class="alert alert-danger">
     <h4 class="alert-heading">Confirm Delete</h4>
     <p>Are you sure you want to delete the legal party <strong>{{ object.name }}</strong>? This action cannot be undone.</p>

@@ -14,6 +14,7 @@ class LegalPartyForm(forms.ModelForm):
     phone_validator = RegexValidator(r'^[\d\+\-]+$', 'Enter a valid phone number (digits, +, - only).')
     class Meta:
         model = LegalParty
+        # organization is now a ForeignKey and should not be exposed in the form
         fields = ['name', 'party_type', 'contact_person', 'contact_email', 'contact_phone', 'address']
         widgets = {
             'contact_email': EmailInput(attrs={'type': 'email'}),
