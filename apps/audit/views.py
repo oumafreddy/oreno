@@ -2789,6 +2789,7 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
         form.instance.organization = self.request.organization
         response = super().form_valid(form)
         
+        # For HTMX requests, return JSON with updated list
         if self.request.htmx or self.request.headers.get('HX-Request') == 'true':
             from django.template.loader import render_to_string
             from django.http import JsonResponse
@@ -2803,7 +2804,7 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
             return JsonResponse({
                 'form_is_valid': True,
                 'html_list': html,
-                'message': self.success_message
+                'message': 'Retest was created successfully.'
             })
         return response
 
@@ -2853,7 +2854,7 @@ class IssueRetestModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Upda
             return JsonResponse({
                 'form_is_valid': True,
                 'html_list': html,
-                'message': self.success_message
+                'message': 'Retest was updated successfully.'
             })
         return response
 

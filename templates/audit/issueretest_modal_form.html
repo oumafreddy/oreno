@@ -8,9 +8,7 @@
 <div class="modal-body">
   {% if issue and issue.pk %}
     <form id="issueretestForm" method="post"
-          hx-post="{% if form.instance.pk %}{% url 'audit:issueretest-modal-edit' issue_pk=issue.pk pk=form.instance.pk %}{% else %}{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}{% endif %}"
-          hx-target="#modal-body"
-          hx-swap="outerHTML"
+          action="{% if form.instance.pk %}{% url 'audit:issueretest-modal-edit' issue_pk=issue.pk pk=form.instance.pk %}{% else %}{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}{% endif %}"
           enctype="multipart/form-data">
       {% csrf_token %}
       {{ form.issue|as_crispy_field }}

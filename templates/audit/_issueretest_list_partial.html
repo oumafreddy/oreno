@@ -44,7 +44,7 @@
                 {{ retest.get_verification_status_display }}
               </span>
             </td>
-            <td>{{ retest.retested_by.get_full_name|default:retest.retested_by.email|default:"—" }}</td>
+            <td>{% if retest.retested_by %}{{ retest.retested_by.get_full_name|default:retest.retested_by.email }}{% else %}—{% endif %}</td>
             <td>
               <div class="btn-group btn-group-sm">
                 <button class="btn btn-outline-secondary"
