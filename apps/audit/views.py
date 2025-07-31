@@ -2768,7 +2768,19 @@ class IssueRetestModalCreateView(AuditPermissionMixin, SuccessMessageMixin, Crea
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_pk'] = self.kwargs.get('issue_pk')
+        issue_pk = self.kwargs.get('issue_pk')
+        context['issue_pk'] = issue_pk
+        
+        # Add the issue object to context
+        if issue_pk:
+            try:
+                from .models.issue import Issue
+                context['issue'] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                context['issue'] = None
+        else:
+            context['issue'] = None
+            
         return context
 
     def form_valid(self, form):
