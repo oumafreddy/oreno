@@ -15,7 +15,7 @@
     {{ form|crispy }}
     <div class="d-flex justify-content-end mt-4">
       <button type="submit" class="btn btn-success">Save</button>
-      <a href="{% url 'audit:issue-detail' object.issue.pk %}" class="btn btn-secondary me-2">Cancel</a>
+      <a href="{% if object %}{% url 'audit:issue-detail' object.issue.pk %}{% else %}{% url 'audit:issue-detail' issue.pk %}{% endif %}" class="btn btn-secondary me-2">Cancel</a>
     </div>
   </form>
 </div>

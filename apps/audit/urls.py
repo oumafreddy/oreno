@@ -78,6 +78,7 @@ urlpatterns = [
     path('workplans/<int:pk>/submit/', views.submit_workplan, name='workplan-submit'),
     path('workplans/<int:pk>/approve/', views.approve_workplan, name='workplan-approve'),
     path('workplans/<int:pk>/reject/', views.reject_workplan, name='workplan-reject'),
+    path('workplans/<int:workplan_pk>/engagements/add/', EngagementCreateView.as_view(), name='workplan-engagement-add'),
     
     # ─── ENGAGEMENT URLS ────────────────────────────────────────────────────
     path('engagements/', EngagementListView.as_view(), name='engagement-list'),
@@ -158,6 +159,7 @@ urlpatterns = [
     path('risks/<int:risk_id>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
     # FollowUpAction URLs
     path('issues/<int:issue_pk>/followups/', views.FollowUpActionListView.as_view(), name='followupaction-list'),
+    path('followupactions/', views.FollowUpActionListView.as_view(), name='followupaction-list-all'),
     path('issues/<int:issue_pk>/followups/add/', views.FollowUpActionCreateView.as_view(), name='followupaction-add'),
     path('followupactions/<int:pk>/edit/', views.FollowUpActionUpdateView.as_view(), name='followupaction-edit'),
     path('followupactions/<int:pk>/', views.FollowUpActionDetailView.as_view(), name='followupaction-detail'),
@@ -167,6 +169,10 @@ urlpatterns = [
     path('followupactions/<int:pk>/update/', views.FollowUpActionUpdateView.as_view(), name='followupaction-update'),
     # IssueRetest URLs
     path('issues/<int:issue_pk>/retests/', views.IssueRetestListView.as_view(), name='issueretest-list'),
+    path('issues/<int:issue_pk>/retests/add/', views.IssueRetestCreateView.as_view(), name='issueretest-add'),
+    path('issueretests/<int:pk>/', views.IssueRetestDetailView.as_view(), name='issueretest-detail'),
+    path('issueretests/<int:pk>/edit/', views.IssueRetestUpdateView.as_view(), name='issueretest-edit'),
+    path('issueretests/<int:pk>/update/', views.IssueRetestUpdateView.as_view(), name='issueretest-update'),
     path('issues/<int:issue_pk>/retests/modal/add/', views.IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
     path('issues/<int:issue_pk>/retests/<int:pk>/modal/edit/', views.IssueRetestModalUpdateView.as_view(), name='issueretest-modal-edit'),
     path('issues/<int:issue_pk>/retests/<int:pk>/modal/delete/', views.IssueRetestDeleteView.as_view(), name='issueretest-modal-delete'),
@@ -174,6 +180,7 @@ urlpatterns = [
     path('notes/modal/add/<int:content_type_id>/<int:object_id>/', views.NoteCreateView.as_view(), name='note-modal-add'),
     path('notes/modal/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-modal-edit'),
     path('notes/<int:pk>/delete/', views.NoteDeleteView.as_view(), name='note-delete'),
+    path('notes/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-edit'),
     # API endpoint for notifications (JSON data)
     path('api/notifications/', NotificationListView.as_view(), name='notification-api'),
     # Template view for notifications (HTML interface)
@@ -200,6 +207,9 @@ urlpatterns = [
     path('issues/<int:issue_pk>/working-papers/<int:pk>/edit/', views.IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-modal-edit'),
     path('issues/<int:issue_pk>/working-papers/<int:pk>/delete/', views.IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-modal-delete'),
     path('working-papers/<int:pk>/', IssueWorkingPaperDetailView.as_view(), name='issueworkingpaper-detail'),
+    path('issues/<int:issue_pk>/working-papers/add/', views.IssueWorkingPaperCreateView.as_view(), name='issueworkingpaper-add'),
+    path('working-papers/<int:pk>/edit/', views.IssueWorkingPaperUpdateView.as_view(), name='issueworkingpaper-update'),
+    path('working-papers/<int:pk>/delete/', views.IssueWorkingPaperDeleteView.as_view(), name='issueworkingpaper-delete'),
     path('api/engagement-status-data/', views.api_engagement_status_data, name='api_engagement_status_data'),
     path('api/issue-risk-data/', views.api_issue_risk_data, name='api_issue_risk_data'),
     path('api/approval-status-data/', views.api_approval_status_data, name='api_approval_status_data'),

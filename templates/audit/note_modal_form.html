@@ -39,7 +39,7 @@
 </div>
 <div class="modal-body">
     <form method="post" id="noteForm"
-          hx-post="{% if object %}{% url 'audit:note-edit' pk=object.pk %}{% else %}{% url 'audit:note-add' %}{% endif %}"
+                          hx-post="{% if object %}{% url 'audit:note-edit' pk=object.pk %}{% else %}{% url 'audit:note-add' %}{% endif %}"
           hx-target="#modal-body"
           hx-swap="outerHTML"
           class="needs-validation" novalidate>

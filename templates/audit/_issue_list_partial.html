@@ -1,0 +1,72 @@
+{% load static %}
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Issues</h5>
+  </div>
+  <div class="card-body">
+    {% if issues %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Code</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Severity</th>
+              <th>Date Identified</th>
+              <th>Owner</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in issues %}
+              <tr>
+                <td>{{ issue.code|default:"-" }}</td>
+                <td>
+                  <a href="{% url 'audit:issue-detail' issue.pk %}" class="text-decoration-none">
+                    {{ issue.issue_title }}
+                  </a>
+                </td>
+                <td>
+                  <span class="badge bg-{% if issue.issue_status == 'open' %}danger{% elif issue.issue_status == 'in_progress' %}warning{% elif issue.issue_status == 'closed' %}success{% else %}secondary{% endif %}">
+                    {{ issue.get_issue_status_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-{% if issue.severity_status == 'high' %}danger{% elif issue.severity_status == 'medium' %}warning{% else %}info{% endif %}">
+                    {{ issue.get_severity_status_display }}
+                  </span>
+                </td>
+                <td>{{ issue.date_identified|date:"M d, Y" }}</td>
+                <td>
+                  {% if issue.issue_owner %}
+                    {{ issue.issue_owner.get_full_name|default:issue.issue_owner.username }}
+                  {% else %}
+                    <span class="text-muted">Not assigned</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-outline-primary">
+                      <i class="bi bi-eye"></i> View
+                    </a>
+                    <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-outline-secondary">
+                      <i class="bi bi-pencil"></i> Edit
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-exclamation-triangle text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mt-2">No issues found for this engagement.</p>
+        <p class="text-muted small">Issues are created through the audit workflow: Engagement → Objective → Risk → Procedure → Issue</p>
+      </div>
+    {% endif %}
+  </div>
+</div> 

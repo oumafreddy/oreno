@@ -1,29 +1,116 @@
 {% extends 'base.html' %}
-{% block title %}Issue Retest: {{ issueretest.title }}{% endblock %}
+{% block title %}Issue Retest: {{ issueretest }}{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-10">
-    <div class="card shadow-sm">
-      <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-        <h3 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Issue Retest: {{ issueretest.title }}</h3>
-        <button class="btn btn-outline-light btn-sm"
-                hx-get="{% url 'audit:issueretest-edit' issueretest.pk %}"
-                hx-target="#globalModal .modal-body"
-                data-bs-toggle="modal"
-                data-bs-target="#globalModal">
-          Edit
-        </button>
-      </div>
-      <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ issueretest.title }}</dd>
-          <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ issueretest.description|safe }}</dd>
-          <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ issueretest.get_status_display }}</dd>
-          <dt class="col-sm-3">Retest Date</dt><dd class="col-sm-9">{{ issueretest.retest_date }}</dd>
-        </dl>
-        <div class="d-flex justify-content-between align-items-center mt-4">
-          <div>
-            <a href="{% url 'audit:issue-detail' issueretest.issue.pk %}" class="btn btn-secondary btn-sm">Back</a>
+<div class="container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+          {% if issueretest.issue %}
+            {% if issueretest.issue.procedure %}
+              {% if issueretest.issue.procedure.risk %}
+                {% if issueretest.issue.procedure.risk.objective %}
+                  {% if issueretest.issue.procedure.risk.objective.engagement %}
+                    {% if issueretest.issue.procedure.risk.objective.engagement.audit_workplan %}
+                      <li class="breadcrumb-item"><a href="{% url 'audit:workplan-detail' issueretest.issue.procedure.risk.objective.engagement.audit_workplan.pk %}">Workplan: {{ issueretest.issue.procedure.risk.objective.engagement.audit_workplan.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' issueretest.issue.procedure.risk.objective.engagement.pk %}">Engagement: {{ issueretest.issue.procedure.risk.objective.engagement.title }}</a></li>
+                  {% endif %}
+                  <li class="breadcrumb-item"><a href="{% url 'audit:objective-detail' issueretest.issue.procedure.risk.objective.pk %}">Objective: {{ issueretest.issue.procedure.risk.objective.title }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item"><a href="{% url 'audit:risk-detail' issueretest.issue.procedure.risk.pk %}">Risk: {{ issueretest.issue.procedure.risk.title }}</a></li>
+              {% endif %}
+              <li class="breadcrumb-item"><a href="{% url 'audit:procedure-detail' issueretest.issue.procedure.pk %}">Procedure: {{ issueretest.issue.procedure.title }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:issue-detail' issueretest.issue.pk %}">Issue: {{ issueretest.issue.issue_title }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active">Issue Retest</li>
+        </ol>
+      </nav>
+
+      <!-- Issue Retest Detail Card -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">
+            <i class="bi bi-arrow-clockwise me-2"></i>Issue Retest Details
+          </h4>
+          {% if issueretest.pk %}
+          <div class="btn-group">
+            <a href="{% url 'audit:issueretest-edit' issueretest.pk %}" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a href="{% url 'audit:issueretest-delete' issueretest.pk %}" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash me-1"></i>Delete
+            </a>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-8">
+              <dl class="row">
+                {% if issueretest.issue %}
+                <dt class="col-sm-3">Issue</dt>
+                <dd class="col-sm-9">
+                  <a href="{% url 'audit:issue-detail' issueretest.issue.pk %}">
+                    {{ issueretest.issue.issue_title }}
+                  </a>
+                </dd>
+                {% endif %}
+                
+                <dt class="col-sm-3">Result</dt>
+                <dd class="col-sm-9">{{ issueretest.get_result_display }}</dd>
+                
+                <dt class="col-sm-3">Verification Status</dt>
+                <dd class="col-sm-9">{{ issueretest.get_verification_status_display }}</dd>
+                
+                <dt class="col-sm-3">Retest Date</dt>
+                <dd class="col-sm-9">{{ issueretest.retest_date|default:"Not performed yet" }}</dd>
+                
+                <dt class="col-sm-3">Scheduled Date</dt>
+                <dd class="col-sm-9">{{ issueretest.scheduled_date|default:"Not scheduled" }}</dd>
+                
+                {% if issueretest.retested_by %}
+                <dt class="col-sm-3">Retested By</dt>
+                <dd class="col-sm-9">{{ issueretest.retested_by.get_full_name|default:issueretest.retested_by.username }}</dd>
+                {% endif %}
+                
+                {% if issueretest.test_approach %}
+                <dt class="col-sm-3">Test Approach</dt>
+                <dd class="col-sm-9">{{ issueretest.test_approach|safe }}</dd>
+                {% endif %}
+                
+                {% if issueretest.test_evidence %}
+                <dt class="col-sm-3">Test Evidence</dt>
+                <dd class="col-sm-9">{{ issueretest.test_evidence|safe }}</dd>
+                {% endif %}
+                
+                {% if issueretest.notes %}
+                <dt class="col-sm-3">Notes</dt>
+                <dd class="col-sm-9">{{ issueretest.notes|safe }}</dd>
+                {% endif %}
+              </dl>
+            </div>
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Actions</h6>
+                </div>
+                <div class="card-body">
+                  {% if issueretest.issue %}
+                  <a href="{% url 'audit:issue-detail' issueretest.issue.pk %}" class="btn btn-secondary btn-sm w-100 mb-2">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Issue
+                  </a>
+                  {% endif %}
+                  
+                  <a href="{% url 'audit:issueretest-list' %}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-list me-1"></i>View All Retests
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

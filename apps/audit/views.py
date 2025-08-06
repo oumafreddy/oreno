@@ -715,7 +715,7 @@ class EngagementDetailView(AuditPermissionMixin, DetailView):
         all_risks = Risk.objects.filter(objective__engagement=engagement)
         context.update({
             'issues': engagement.all_issues.select_related(
-                'issue_owner', 'procedure_result'
+                'issue_owner', 'procedure'
             ),
             'approvals': engagement.approvals.all().select_related(
                 'requester', 'approver'
@@ -741,9 +741,11 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
     
     def get_initial(self):
         initial = super().get_initial()
-        if self.request.GET.get('workplan'):
+        # Check for workplan from URL parameter first, then from GET parameter
+        workplan_id = self.kwargs.get('workplan_pk') or self.request.GET.get('workplan')
+        if workplan_id:
             try:
-                workplan_id = int(self.request.GET.get('workplan'))
+                workplan_id = int(workplan_id)
                 workplan = get_object_or_404(AuditWorkplan, pk=workplan_id, organization=self.request.organization)
                 initial['annual_workplan'] = workplan
             except (ValueError, TypeError):
@@ -808,6 +810,10 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
         return super().form_invalid(form)
     
     def get_success_url(self):
+        # If created from a workplan, redirect back to the workplan
+        workplan_id = self.kwargs.get('workplan_pk') or self.request.GET.get('workplan')
+        if workplan_id:
+            return reverse_lazy('audit:workplan-detail', kwargs={'pk': workplan_id})
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
 
 class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
@@ -1506,6 +1512,50 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['approval_count'] = approval_qs.count()
         context['approval_status_dist'] = dict(Counter(approval_qs.values_list('status', flat=True))) or {}
         context['pending_approvals'] = approval_qs.filter(status='pending').order_by('-created_at')[:8]
+        
+        # Recommendations: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
+        recommendation_qs = Recommendation.objects.filter(
+            organization=organization,
+            issue__procedure__risk__objective__engagement__in=engagement_qs
+        )
+        context['recommendation_count'] = recommendation_qs.count()
+        context['recent_recommendations'] = recommendation_qs.order_by('-created_at')[:8]
+        context['recommendation_status_dist'] = dict(Counter(recommendation_qs.values_list('implementation_status', flat=True))) or {}
+        
+        # Follow-up actions: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
+        followup_qs = FollowUpAction.objects.filter(
+            organization=organization,
+            issue__procedure__risk__objective__engagement__in=engagement_qs
+        )
+        context['followup_count'] = followup_qs.count()
+        context['recent_followups'] = followup_qs.order_by('-created_at')[:8]
+        context['followup_status_dist'] = dict(Counter(followup_qs.values_list('status', flat=True))) or {}
+        
+        # Issue retests: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
+        retest_qs = IssueRetest.objects.filter(
+            organization=organization,
+            issue__procedure__risk__objective__engagement__in=engagement_qs
+        )
+        context['retest_count'] = retest_qs.count()
+        context['recent_retests'] = retest_qs.order_by('-created_at')[:8]
+        
+        # Procedures: filter by risk__objective__engagement__in=engagement_qs
+        procedure_qs = Procedure.objects.filter(
+            organization=organization,
+            risk__objective__engagement__in=engagement_qs
+        )
+        context['procedure_count'] = procedure_qs.count()
+        context['recent_procedures'] = procedure_qs.order_by('-created_at')[:8]
+        
+        # Notes: filter by content_type__model='engagement' and object_id__in=engagement_qs
+        note_qs = Note.objects.filter(
+            organization=organization,
+            content_type__model='engagement',
+            object_id__in=engagement_qs.values_list('id', flat=True)
+        )
+        context['note_count'] = note_qs.count()
+        context['recent_notes'] = note_qs.order_by('-created_at')[:8]
+        
         context['available_years'] = years
         context['available_months'] = months
         context['selected_years'] = selected_years
@@ -2309,8 +2359,9 @@ class FollowUpActionListView(AuditPermissionMixin, ListView):
             queryset = queryset.filter(assigned_to_id=assigned_to)
             
         # Order by due date (ascending, with nulls last)
+        from django.db.models import F
         queryset = queryset.order_by(
-            models.F('due_date').asc(nulls_last=True),
+            F('due_date').asc(nulls_last=True),
             '-created_at'
         )
         

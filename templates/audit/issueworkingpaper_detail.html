@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Working Paper: {{ working_paper.file.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+          {% if working_paper.issue %}
+            {% if working_paper.issue.procedure %}
+              {% if working_paper.issue.procedure.risk %}
+                {% if working_paper.issue.procedure.risk.objective %}
+                  {% if working_paper.issue.procedure.risk.objective.engagement %}
+                    {% if working_paper.issue.procedure.risk.objective.engagement.audit_workplan %}
+                      <li class="breadcrumb-item"><a href="{% url 'audit:workplan-detail' working_paper.issue.procedure.risk.objective.engagement.audit_workplan.pk %}">Workplan: {{ working_paper.issue.procedure.risk.objective.engagement.audit_workplan.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' working_paper.issue.procedure.risk.objective.engagement.pk %}">Engagement: {{ working_paper.issue.procedure.risk.objective.engagement.title }}</a></li>
+                  {% endif %}
+                  <li class="breadcrumb-item"><a href="{% url 'audit:objective-detail' working_paper.issue.procedure.risk.objective.pk %}">Objective: {{ working_paper.issue.procedure.risk.objective.title }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item"><a href="{% url 'audit:risk-detail' working_paper.issue.procedure.risk.pk %}">Risk: {{ working_paper.issue.procedure.risk.title }}</a></li>
+              {% endif %}
+              <li class="breadcrumb-item"><a href="{% url 'audit:procedure-detail' working_paper.issue.procedure.pk %}">Procedure: {{ working_paper.issue.procedure.title }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:issue-detail' working_paper.issue.pk %}">Issue: {{ working_paper.issue.issue_title }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active">Working Paper</li>
+        </ol>
+      </nav>
+
+      <!-- Working Paper Detail Card -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>Working Paper Details
+          </h4>
+          {% if working_paper.pk %}
+          <div class="btn-group">
+            <a href="{% url 'audit:issueworkingpaper-update' working_paper.pk %}" class="btn btn-outline-light btn-sm">
+              <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a href="{% url 'audit:issueworkingpaper-delete' working_paper.pk %}" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash me-1"></i>Delete
+            </a>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-8">
+              <dl class="row">
+                <dt class="col-sm-3">File Name</dt>
+                <dd class="col-sm-9">
+                  <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                  {{ working_paper.file.name|default:"No file uploaded" }}
+                </dd>
+                
+                {% if working_paper.description %}
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">{{ working_paper.description }}</dd>
+                {% endif %}
+                
+                <dt class="col-sm-3">Uploaded</dt>
+                <dd class="col-sm-9">{{ working_paper.uploaded_at|date:"M d, Y H:i" }}</dd>
+                
+                {% if working_paper.created_by %}
+                <dt class="col-sm-3">Uploaded By</dt>
+                <dd class="col-sm-9">{{ working_paper.created_by.get_full_name|default:working_paper.created_by.username }}</dd>
+                {% endif %}
+                
+                {% if working_paper.issue %}
+                <dt class="col-sm-3">Related Issue</dt>
+                <dd class="col-sm-9">
+                  <a href="{% url 'audit:issue-detail' working_paper.issue.pk %}">
+                    {{ working_paper.issue.issue_title }}
+                  </a>
+                </dd>
+                {% endif %}
+              </dl>
+            </div>
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">File Actions</h6>
+                </div>
+                <div class="card-body">
+                  {% if working_paper.file %}
+                  <a href="{{ working_paper.file.url }}" class="btn btn-primary btn-sm w-100 mb-2" target="_blank">
+                    <i class="bi bi-download me-1"></i>Download File
+                  </a>
+                  {% endif %}
+                  
+                  {% if working_paper.issue %}
+                  <a href="{% url 'audit:issue-detail' working_paper.issue.pk %}" class="btn btn-secondary btn-sm w-100">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Issue
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

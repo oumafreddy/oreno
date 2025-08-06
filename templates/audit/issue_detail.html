@@ -1,174 +1,159 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 {% load static %}
-{% block title %}Issue: {{ issue.issue_title }} | Oreno GRC{% endblock %}
+
+{% block title %}Issue Detail - {{ issue.issue_title }}{% endblock %}
+
 {% block content %}
-<div class="container main-container">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h3 mb-0">{{ issue.issue_title }} <span class="badge bg-info">{{ issue.get_issue_status_display }}</span></h1>
-      <div class="text-muted">Engagement: {% if engagement %}<a href="{% url 'audit:engagement-detail' engagement.pk %}">{{ engagement.title }}</a>{% else %}<span class="text-danger">Not linked</span>{% endif %}</div>
-    </div>
-    <div class="d-flex flex-wrap align-items-center gap-3">
-      <!-- Primary Action Buttons -->
-      <div class="d-flex align-items-center gap-2">
-        <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-sm btn-outline-secondary d-flex align-items-center">
-          <i class="bi bi-pencil me-1"></i> Edit Issue
-        </a>
-      </div>
-      
-      <!-- Secondary Action Dropdown -->
-      <div class="dropdown">
-        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center" type="button" id="addItemDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-plus-lg me-1"></i> Add Item
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="addItemDropdown">
-          {% if issue.pk %}
-            <li>
-              <button class="dropdown-item d-flex align-items-center" 
-                      hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" 
-                      hx-target="#globalModal .modal-body" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
-                <i class="bi bi-lightbulb text-primary me-2"></i> Add Recommendation
-              </button>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <button class="dropdown-item d-flex align-items-center"
-                      hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}" 
-                      hx-target="#globalModal .modal-content" 
-                      hx-swap="innerHTML"
-                      data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
-                <i class="bi bi-arrow-repeat text-success me-2"></i> Add Follow-Up
-              </button>
-            </li>
-            <li>
-              <button class="dropdown-item d-flex align-items-center"
-                      hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" 
-                      hx-target="#globalModal .modal-body" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#globalModal">
-                <i class="bi bi-arrow-counterclockwise text-warning me-2"></i> Add Retest
-              </button>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <button class="dropdown-item d-flex align-items-center"
-                      hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" 
-                      hx-target="#mainModal .modal-body" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#mainModal">
-                <i class="bi bi-sticky text-info me-2"></i> Add Note
-              </button>
-            </li>
-          {% else %}
-            <li>
-              <span class="dropdown-item-text text-muted">
-                <small>Save the issue to add items</small>
-              </span>
-            </li>
-          {% endif %}
-        </ul>
-      </div>
-      
-      <!-- Quick Actions -->
-      {% if issue.pk %}
-        <div class="vr d-none d-md-inline-block"></div>
-        <div class="d-flex gap-2 d-none d-md-flex">
-          <button class="btn btn-sm btn-outline-success d-flex align-items-center"
-                  hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue.pk %}" 
-                  hx-target="#globalModal .modal-content" 
-                  hx-swap="innerHTML"
-                  data-bs-toggle="tooltip" 
-                  title="Add Follow-Up"
-                  data-bs-placement="bottom">
-            <i class="bi bi-arrow-repeat"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-warning d-flex align-items-center"
-                  hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" 
-                  hx-target="#globalModal .modal-body" 
-                  data-bs-toggle="tooltip" 
-                  title="Add Retest"
-                  data-bs-placement="bottom">
-            <i class="bi bi-arrow-counterclockwise"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-info d-flex align-items-center"
-                  hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" 
-                  hx-target="#mainModal .modal-body" 
-                  data-bs-toggle="tooltip" 
-                  title="Add Note"
-                  data-bs-placement="bottom">
-            <i class="bi bi-sticky"></i>
-          </button>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-  {% if issue.procedure %}
-  <div class="alert alert-info mb-4">
-    <strong>Linked Procedure:</strong>
-    <a href="{% url 'audit:procedure-detail' issue.procedure.pk %}">{{ issue.procedure.title }}</a>
-  </div>
-  {% endif %}
-  <ul class="nav nav-tabs mb-3" id="issueTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">Recommendations</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="followup-tab" data-bs-toggle="tab" data-bs-target="#followup" type="button" role="tab">Follow-Up</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="retest-tab" data-bs-toggle="tab" data-bs-target="#retest" type="button" role="tab">Retest</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="workingpapers-tab" data-bs-toggle="tab" data-bs-target="#workingpapers" type="button" role="tab">Working Papers</button>
-    </li>
-  </ul>
-  <div class="tab-content" id="issueTabsContent">
-    <div class="tab-pane fade show active" id="overview" role="tabpanel">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5>Description</h5>
-          <div>
-            {% if issue.issue_description %}
-              {{ issue.issue_description|safe }}
-            {% else %}
-              <span class="text-muted">No description provided.</span>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+          {% if issue.procedure %}
+            {% if issue.procedure.risk %}
+              {% if issue.procedure.risk.objective %}
+                {% if issue.procedure.risk.objective.engagement %}
+                  {% if issue.procedure.risk.objective.engagement.audit_workplan %}
+                    <li class="breadcrumb-item"><a href="{% url 'audit:workplan-detail' issue.procedure.risk.objective.engagement.audit_workplan.pk %}">Workplan: {{ issue.procedure.risk.objective.engagement.audit_workplan.name }}</a></li>
+                  {% endif %}
+                  <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' issue.procedure.risk.objective.engagement.pk %}">Engagement: {{ issue.procedure.risk.objective.engagement.title }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item"><a href="{% url 'audit:objective-detail' issue.procedure.risk.objective.pk %}">Objective: {{ issue.procedure.risk.objective.title }}</a></li>
+              {% endif %}
+              <li class="breadcrumb-item"><a href="{% url 'audit:risk-detail' issue.procedure.risk.pk %}">Risk: {{ issue.procedure.risk.title }}</a></li>
             {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'audit:procedure-detail' issue.procedure.pk %}">Procedure: {{ issue.procedure.title }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item"><a href="{% url 'audit:issue-list' %}">Issues</a></li>
+          <li class="breadcrumb-item active">{{ issue.issue_title }}</li>
+        </ol>
+      </nav>
+
+      <!-- Issue Header -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="mb-0">{{ issue.issue_title }}</h3>
+          <div class="btn-group" role="group">
+            <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-primary">Edit Issue</a>
+            <a href="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" class="btn btn-success">Add Recommendation</a>
+            <a href="{% url 'audit:followupaction-add' issue_pk=issue.pk %}" class="btn btn-info">Add Follow-up Action</a>
+            <a href="{% url 'audit:issueretest-add' issue_pk=issue.pk %}" class="btn btn-warning">Add Retest</a>
+            <a href="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" class="btn btn-secondary">Add Working Paper</a>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Issue Details -->
+          <div class="row">
+            <div class="col-md-8">
+              <h5>Description</h5>
+              <p>{{ issue.issue_description|safe }}</p>
+              
+              <h5>Root Cause</h5>
+              <p>{{ issue.root_cause|safe }}</p>
+              
+              {% if issue.management_action_plan %}
+                <h5>Management Action Plan</h5>
+                <p>{{ issue.management_action_plan|safe }}</p>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Issue Information</h6>
+                </div>
+                <div class="card-body">
+                  <dl class="row mb-0">
+                    <dt class="col-sm-4">Code:</dt>
+                    <dd class="col-sm-8">{{ issue.code }}</dd>
+                    
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                      <span class="badge bg-{% if issue.issue_status == 'open' %}danger{% elif issue.issue_status == 'in_progress' %}warning{% else %}success{% endif %}">
+                        {{ issue.get_issue_status_display }}
+                      </span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Severity:</dt>
+                    <dd class="col-sm-8">
+                      <span class="badge bg-{% if issue.risk_level == 'high' %}danger{% elif issue.risk_level == 'medium' %}warning{% else %}success{% endif %}">
+                        {{ issue.get_risk_level_display }}
+                      </span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Owner:</dt>
+                    <dd class="col-sm-8">
+                      {% if issue.issue_owner %}
+                        {{ issue.issue_owner.get_full_name|default:issue.issue_owner.username }}
+                      {% else %}
+                        <span class="text-muted">Not assigned</span>
+                      {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Date Identified:</dt>
+                    <dd class="col-sm-8">{{ issue.date_identified }}</dd>
+                    
+                    {% if issue.target_date %}
+                      <dt class="col-sm-4">Target Date:</dt>
+                      <dd class="col-sm-8">{{ issue.target_date }}</dd>
+                    {% endif %}
+                  </dl>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="tab-pane fade" id="recommendations" role="tabpanel">
-      {% include 'audit/_recommendation_list_partial.html' with recommendations=issue.recommendations.all engagement=engagement issue=issue %}
-    </div>
-    <div class="tab-pane fade" id="followup" role="tabpanel">
-      {% include 'audit/_followupaction_list_partial.html' with followups=issue.followup_actions.all issue=issue %}
-    </div>
-    <div class="tab-pane fade" id="retest" role="tabpanel">
-      {% include 'audit/_issueretest_list_partial.html' with retests=issue.issueretests.all issue=issue %}
-    </div>
-    <div class="tab-pane fade" id="workingpapers" role="tabpanel">
-      {% include 'audit/issueworkingpaper_list.html' with working_papers=working_papers issue=issue %}
-    </div>
-  </div>
-</div>
-<!-- Global Modal -->
-<div class="modal fade" id="globalModal" tabindex="-1" aria-labelledby="globalModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="globalModalLabel">Loading...</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+
+      <!-- Tabs for Related Items -->
+      <div class="card">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs" id="issueTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">
+                Recommendations
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="followups-tab" data-bs-toggle="tab" data-bs-target="#followups" type="button" role="tab">
+                Follow-up Actions
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="retests-tab" data-bs-toggle="tab" data-bs-target="#retests" type="button" role="tab">
+                Retests
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="workingpapers-tab" data-bs-toggle="tab" data-bs-target="#workingpapers" type="button" role="tab">
+                Working Papers
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <div class="tab-content" id="issueTabsContent">
+            <!-- Recommendations Tab -->
+            <div class="tab-pane fade show active" id="recommendations" role="tabpanel">
+              {% include 'audit/_recommendation_list_partial.html' with recommendations=issue.recommendations.all %}
+            </div>
+            
+            <!-- Follow-up Actions Tab -->
+            <div class="tab-pane fade" id="followups" role="tabpanel">
+              {% include 'audit/_followupaction_list_partial.html' with followupactions=issue.followup_actions.all issue_id=issue.pk %}
+            </div>
+            
+            <!-- Retests Tab -->
+            <div class="tab-pane fade" id="retests" role="tabpanel">
+              {% include 'audit/_issueretest_list_partial.html' with issueretests=issue.retests.all issue=issue %}
+            </div>
+            
+            <!-- Working Papers Tab -->
+            <div class="tab-pane fade" id="workingpapers" role="tabpanel">
+              {% include 'audit/_issueworkingpaper_list_partial.html' with workingpapers=issue.working_papers.all issue=issue %}
+            </div>
           </div>
         </div>
       </div>

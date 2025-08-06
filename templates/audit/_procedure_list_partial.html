@@ -1,59 +1,86 @@
-<div id="procedure-list-container">
-  <div class="card shadow-sm mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Procedures</h5>
-      {% if risk and risk.pk %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' risk_id=risk.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-          <i class="bi bi-plus-circle"></i> Add Procedure
-        </button>
-      {% elif procedures and procedures.0 and procedures.0.risk and procedures.0.risk.pk %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:procedure-modal-add' risk_id=procedures.0.risk.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-          <i class="bi bi-plus-circle"></i> Add Procedure
-        </button>
-      {% else %}
-        <button class="btn btn-primary btn-sm" disabled>
-          <i class="bi bi-plus-circle"></i> Add Procedure
-        </button>
-      {% endif %}
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-hover mb-0 align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Title</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for procedure in procedures %}
-          <tr>
-            <td>{{ procedure.title }}</td>
-            <td>
-              {% if procedure.get_status_display %}
-                <span class="badge bg-info">{{ procedure.get_status_display }}</span>
-              {% else %}
-                <span class="text-muted">N/A</span>
-              {% endif %}
-            </td>
-            <td>
-              <a href="{% url 'audit:procedure-detail' procedure.pk %}" class="btn btn-sm btn-primary">
-                <i class="bi bi-eye"></i> View
-              </a>
-              <button class="btn btn-sm btn-secondary"
-                      hx-get="{% url 'audit:procedure-edit' procedure.pk %}"
-                      hx-target="#modal-body"
-                      data-bs-toggle="modal"
-                      data-bs-target="#mainModal">
-                <i class="bi bi-pencil"></i> Edit
-              </button>
-            </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="3" class="text-center text-muted">No procedures found.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+{% load static %}
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Procedures</h5>
+  </div>
+  <div class="card-body">
+    {% if procedures %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Test Status</th>
+              <th>Result</th>
+              <th>Risk</th>
+              <th>Tested By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for procedure in procedures %}
+              <tr>
+                <td>
+                  <a href="{% url 'audit:procedure-detail' procedure.pk %}" class="text-decoration-none">
+                    {{ procedure.title }}
+                  </a>
+                </td>
+                <td>
+                  <span class="badge bg-info">{{ procedure.get_procedure_type_display|default:"Not specified" }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-{% if procedure.test_status == 'completed' %}success{% elif procedure.test_status == 'in_progress' %}warning{% elif procedure.test_status == 'not_started' %}secondary{% else %}info{% endif %}">
+                    {{ procedure.get_test_status_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if procedure.result %}
+                    <span class="badge bg-{% if procedure.result == 'operating_effectively' %}success{% elif procedure.result == 'not_effective' %}danger{% elif procedure.result == 'partially_effective' %}warning{% else %}secondary{% endif %}">
+                      {{ procedure.get_result_display }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">Not tested</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if procedure.risk %}
+                    <a href="{% url 'audit:risk-detail' procedure.risk.pk %}" class="text-decoration-none">
+                      {{ procedure.risk.title }}
+                    </a>
+                  {% else %}
+                    <span class="text-muted">Not assigned</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if procedure.tested_by %}
+                    {{ procedure.tested_by.get_full_name|default:procedure.tested_by.username }}
+                  {% else %}
+                    <span class="text-muted">Not assigned</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{% url 'audit:procedure-detail' procedure.pk %}" class="btn btn-outline-primary">
+                      <i class="bi bi-eye"></i> View
+                    </a>
+                    <a href="{% url 'audit:procedure-edit' procedure.pk %}" class="btn btn-outline-secondary">
+                      <i class="bi bi-pencil"></i> Edit
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-clipboard-check text-muted" style="font-size: 2rem;"></i>
+        <p class="text-muted mt-2">No procedures found for this engagement.</p>
+        <p class="text-muted small">Procedures are created through the audit workflow: Engagement → Objective → Risk → Procedure</p>
+      </div>
+    {% endif %}
   </div>
 </div> 

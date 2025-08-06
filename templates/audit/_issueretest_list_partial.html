@@ -1,80 +1,41 @@
-<div id="issueretest-list-container">
-  <div class="card shadow-sm mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Retests</h5>
-      {% if issue and issue.pk %}
-        <button class="btn btn-primary btn-sm" 
-                hx-get="{% url 'audit:issueretest-modal-add' issue_pk=issue.pk %}" 
-                hx-target="#globalModal .modal-content" 
-                hx-swap="innerHTML"
-                data-bs-toggle="modal" 
-                data-bs-target="#globalModal">
-          <i class="bi bi-plus-circle"></i> Add Retest
-        </button>
-      {% else %}
-        <button class="btn btn-primary btn-sm" disabled data-bs-toggle="tooltip" title="Cannot add retest: Issue not saved.">
-          <i class="bi bi-plus-circle"></i> Add Retest
-        </button>
-      {% endif %}
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-hover mb-0 align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Scheduled Date</th>
-            <th>Retest Date</th>
-            <th>Result</th>
-            <th>Status</th>
-            <th>Retested By</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for retest in retests %}
-          <tr>
-            <td>{{ retest.scheduled_date|default:"—" }}</td>
-            <td>{{ retest.retest_date|default:"—" }}</td>
-            <td>
-              <span class="badge {% if retest.result == 'pass' %}bg-success{% elif retest.result == 'fail' %}bg-danger{% elif retest.result == 'partially_effective' %}bg-warning{% else %}bg-secondary{% endif %}">
+{% if issueretests %}
+  <div class="list-group">
+    {% for retest in issueretests %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <h6 class="mb-1">Retest #{{ forloop.counter }}</h6>
+            <p class="mb-1 text-muted">
+              {% if retest.test_approach %}{{ retest.test_approach|truncatewords:20|safe }}{% else %}No test approach specified{% endif %}
+            </p>
+            <div class="d-flex gap-2">
+              <span class="badge bg-{% if retest.result == 'pass' %}success{% elif retest.result == 'fail' %}danger{% else %}secondary{% endif %}">
                 {{ retest.get_result_display }}
               </span>
-            </td>
-            <td>
-              <span class="badge {% if retest.verification_status == 'completed' %}bg-success{% elif retest.verification_status == 'in_progress' %}bg-warning{% elif retest.verification_status == 'cancelled' %}bg-danger{% else %}bg-info{% endif %}">
-                {{ retest.get_verification_status_display }}
-              </span>
-            </td>
-            <td>{% if retest.retested_by %}{{ retest.retested_by.get_full_name|default:retest.retested_by.email }}{% else %}—{% endif %}</td>
-            <td>
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-secondary"
-                        hx-get="{% url 'audit:issueretest-modal-edit' issue_pk=issue.pk pk=retest.pk %}"
-                        hx-target="#globalModal .modal-content"
-                        hx-swap="innerHTML"
-                        data-bs-toggle="modal"
-                        data-bs-target="#globalModal">
-                  Edit
-                </button>
-                <button class="btn btn-outline-danger"
-                        hx-get="{% url 'audit:issueretest-modal-delete' issue_pk=issue.pk pk=retest.pk %}"
-                        hx-target="#globalModal .modal-content"
-                        hx-swap="innerHTML"
-                        data-bs-toggle="modal"
-                        data-bs-target="#globalModal">
-                  Delete
-                </button>
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted py-3">
-              No retests found. Click "Add Retest" to create one.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+              {% if retest.retest_date %}
+                <span class="badge bg-info">Date: {{ retest.retest_date|date:"M d, Y" }}</span>
+              {% endif %}
+              {% if retest.retested_by %}
+                <span class="badge bg-light text-dark">{{ retest.retested_by.get_full_name|default:retest.retested_by.username }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="btn-group" role="group">
+            <a href="{% url 'audit:issueretest-detail' retest.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+            <a href="{% url 'audit:issueretest-edit' retest.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   </div>
-</div> 
+{% else %}
+  <p class="text-muted">No retests found.</p>
+{% endif %}
+
+{% if issue and issue.pk %}
+<div class="mt-3">
+  <a href="{% url 'audit:issueretest-add' issue_pk=issue.pk %}" class="btn btn-sm btn-outline-primary">
+    <i class="bi bi-plus-circle"></i> Add Retest
+  </a>
+</div>
+{% endif %} 

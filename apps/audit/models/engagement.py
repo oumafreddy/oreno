@@ -278,6 +278,14 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, Sof
         return Procedure.objects.filter(risk__objective__engagement=self)
 
     @property
+    def all_risks(self):
+        """
+        Returns all risks linked to this engagement via objectives.
+        """
+        Risk = apps.get_model('audit', 'Risk')
+        return Risk.objects.filter(objective__engagement=self)
+
+    @property
     def all_followups(self):
         """
         Returns all follow-up actions linked to this engagement via issues > recommendations > followup_actions.

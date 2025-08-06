@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+  {% if form.instance.pk %}Edit{% else %}Add{% endif %} Working Paper
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'audit:issue-list' %}">Issues</a></li>
+          {% if issue %}
+          <li class="breadcrumb-item"><a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Working Paper</li>
+        </ol>
+      </nav>
+
+      <!-- Form Card -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            {% if form.instance.pk %}Edit{% else %}Add{% endif %} Working Paper
+          </h4>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            
+            <div class="d-flex justify-content-between mt-4">
+              <div>
+                {% if issue %}
+                <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-secondary">
+                  <i class="bi bi-arrow-left me-1"></i>Back to Issue
+                </a>
+                {% else %}
+                <a href="{% url 'audit:issue-list' %}" class="btn btn-secondary">
+                  <i class="bi bi-arrow-left me-1"></i>Back to Issues
+                </a>
+                {% endif %}
+              </div>
+              <div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-save me-1"></i>
+                  {% if form.instance.pk %}Update{% else %}Save{% endif %} Working Paper
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

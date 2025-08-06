@@ -5,73 +5,53 @@
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <i class="bi bi-arrow-repeat me-2"></i>{% trans "Follow-Up Actions" %}
-            {% if followups %}<span class="badge bg-primary ms-2">{{ followups|length }}</span>{% endif %}
+            {% if followupactions %}<span class="badge bg-primary ms-2">{{ followupactions|length }}</span>{% endif %}
         </h5>
         <div>
             {% if issue_id %}
-                <button class="btn btn-sm btn-primary"
-                        hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}"
-                        hx-target="#modal-body"
-                        hx-swap="innerHTML"
-                        data-bs-toggle="modal"
-                        data-bs-target="#mainModal"
-                        data-bs-tooltip="tooltip"
-                        title="{% trans 'Add a new follow-up action' %}">
+                <a href="{% url 'audit:followupaction-add' issue_pk=issue_id %}" class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up" %}
-                </button>
+                </a>
             {% else %}
-                <button class="btn btn-sm btn-primary"
-                        disabled
-                        data-bs-toggle="tooltip"
-                        title="{% trans 'Cannot add follow-up: Issue not saved yet' %}">
+                <button class="btn btn-sm btn-primary" disabled>
                     <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up" %}
                 </button>
             {% endif %}
         </div>
     </div>
     <div class="card-body p-0">
-        {% if followups %}
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Due Date</th>
-                        <th>Assigned To</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for followup in followups %}
-                    <tr>
-                        <td>{{ followup.description|truncatechars:100 }}</td>
-                        <td><span class="badge bg-info">{{ followup.get_status_display }}</span></td>
-                        <td>{% if followup.due_date %}{{ followup.due_date|date:"M d, Y" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
-                        <td>{{ followup.assigned_to.get_full_name|default:followup.assigned_to.username }}</td>
-                        <td>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-primary"
-                                        hx-get="{% url 'audit:followupaction-modal-edit' issue_pk=followup.issue.pk pk=followup.pk %}"
-                                        hx-target="#modal-body"
-                                        hx-swap="innerHTML"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#mainModal">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger"
-                                        hx-get="{% url 'audit:followupaction-delete' followup.pk %}"
-                                        hx-target="#modal-body"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#mainModal"
-                                        title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+        {% if followupactions %}
+            <div class="list-group">
+                {% for followup in followupactions %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ followup.title }}</h6>
+                            <p class="mb-1 text-muted">{{ followup.description|truncatewords:30|safe }}</p>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-{% if followup.status == 'completed' %}success{% elif followup.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                    {{ followup.get_status_display }}
+                                </span>
+                                {% if followup.due_date %}
+                                    <span class="badge bg-{% if followup.due_date < today %}danger{% elif followup.due_date < today_plus_week %}warning{% else %}info{% endif %}">
+                                        Due: {{ followup.due_date|date:"M d, Y" }}
+                                    </span>
+                                {% endif %}
+                                {% if followup.assigned_to %}
+                                    <span class="badge bg-light text-dark">
+                                        {{ followup.assigned_to.get_full_name|default:followup.assigned_to.username }}
+                                    </span>
+                                {% endif %}
                             </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'audit:followupaction-detail' followup.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{% url 'audit:followupaction-edit' followup.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         {% else %}
             <div class="text-center p-5">
                 <div class="mb-3">
@@ -86,14 +66,9 @@
                     {% endif %}
                 </p>
                 {% if issue_id %}
-                    <button class="btn btn-primary"
-                            hx-get="{% url 'audit:followupaction-modal-add' issue_pk=issue_id %}"
-                            hx-target="#modal-body"
-                            hx-swap="innerHTML"
-                            data-bs-toggle="modal"
-                            data-bs-target="#mainModal">
+                    <a href="{% url 'audit:followupaction-add' issue_pk=issue_id %}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> {% trans "Add Follow-Up Action" %}
-                    </button>
+                    </a>
                 {% endif %}
             </div>
         {% endif %}
