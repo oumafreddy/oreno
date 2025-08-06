@@ -2,7 +2,7 @@
 {# Usage: {% include 'audit/_ckeditor_field.html' with field=form.description %} #}
 <div class="form-group">
     <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-    {# Add classes directly to the widget without using add_class filter #}
+    {# Add both classes for compatibility #}
     <textarea 
         name="{{ field.name }}" 
         id="{{ field.id_for_label }}" 

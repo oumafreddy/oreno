@@ -1,6 +1,7 @@
 # oreno\config\settings\development.py
 from .base import *  # noqa: F401, F403
 from .tenants import *  # noqa: F401, F403
+import time
 
 # ------------------------------------------------------------------------------
 # Development-specific settings
@@ -145,6 +146,19 @@ TEMPLATES[0]['OPTIONS']['string_if_invalid'] = 'INVALID EXPRESSION: %s'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# Add cache-busting for development
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Disable static file caching in development
+STATIC_URL = '/static/'
+if DEBUG:
+    import time
+    # Force cache refresh every time in development
+    STATIC_URL = STATIC_URL + '?v=' + str(int(time.time()))
+    
+    # Add cache-busting headers
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Development-specific media settings
 MEDIA_ROOT = BASE_DIR / 'media'

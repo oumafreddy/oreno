@@ -1,61 +1,187 @@
 /**
  * Oreno GRC Modal Handler
- * A comprehensive modal management system for the entire application
- * Handles Bootstrap modals, HTMX integration, form submissions, and dynamic content
- * 
- * USAGE:
- * ------
- * 1. Include this script in your base template
- * 2. Use Bootstrap modal triggers: data-bs-toggle="modal" data-bs-target="#modalId"
- * 3. For HTMX modals, target the modal body: hx-target="#modal-body"
- * 4. Access modal functions: window.ModalHandler.showModal('modalId')
- * 
- * FEATURES:
- * ---------
- * - Automatic modal instance management
- * - HTMX form submission handling with loading states
- * - Content cleanup to prevent duplication
- * - Dynamic content observer for new modals
- * - Bootstrap 5 compatibility with fallbacks
- * - Form component initialization (Select2, datepickers, etc.)
- * - Error state management
- * - Modal overlay cleanup
- * - Generic navigation handling
- * - Form confirmation dialogs
- * - Toast notification system
- * - Enhanced form submission with spinner states
- * 
- * PUBLIC API:
- * -----------
- * ModalHandler.showModal(modalId) - Show a modal by ID
- * ModalHandler.hideModal(modalId) - Hide a modal by ID  
- * ModalHandler.getInstance(modalId) - Get modal instance
- * ModalHandler.cleanupContent(modalBody) - Clean modal content
- * ModalHandler.initializeComponents(modalBody) - Initialize form components
- * ModalHandler.showNotification(message, type) - Show toast notification
- * ModalHandler.confirmAction(message) - Show confirmation dialog
- * ModalHandler.handleFormSubmission(formId, options) - Handle form submission
- * 
- * DEPENDENCIES:
- * -------------
- * - Bootstrap 5 (with fallback for older versions)
- * - HTMX (for dynamic content loading)
- * - jQuery (optional, for Select2 and other components)
+ * Handles all modal interactions, form submissions, and dynamic content loading
+ * CSP-compliant and optimized for performance
  */
 
-// Self-executing function to avoid global namespace pollution
+// --- CKEditor5 Helper Functions (Global Scope) ---
+// Helper: Add .ckeditor-richtext class to all CKEditor fields (if not present)
+function ensureCkeditorClass(modal) {
+    if (!modal) return;
+    const ckeditors = modal.querySelectorAll('.django_ckeditor_5');
+    console.log('ensureCkeditorClass: Found', ckeditors.length, 'CKEditor fields');
+    ckeditors.forEach(el => {
+        if (!el.classList.contains('ckeditor-richtext')) {
+            el.classList.add('ckeditor-richtext');
+            console.log('Added ckeditor-richtext class to:', el.id);
+        }
+    });
+}
+
+// Enhanced CKEditor5 initialization function with retry mechanism and modal context awareness
+function initializeCKEditor5(container) {
+    console.log('initializeCKEditor5 called with container:', container);
+    console.log('ClassicEditor available:', typeof ClassicEditor);
+    
+    // If ClassicEditor is not available, skip initialization
+    if (typeof ClassicEditor === 'undefined') {
+        console.log('CKEditor5 ClassicEditor not available, skipping initialization');
+        return;
+    }
+
+    const ckeditorElements = container.querySelectorAll('.django_ckeditor_5');
+    console.log('Found CKEditor elements:', ckeditorElements.length);
+    
+    ckeditorElements.forEach((element, index) => {
+        console.log(`Processing CKEditor element ${index + 1}:`, element.id);
+        
+        // Skip if already initialized
+        if (element.ckeditorInstance) {
+            console.log('CKEditor already initialized for:', element.id);
+            return;
+        }
+
+        // Enhanced configuration for modal context
+        const config = {
+            // Ensure proper toolbar and features
+            toolbar: {
+                items: [
+                    'heading', '|', 'outdent', 'indent', '|', 'bold', 'italic', 'link', 'underline', 'strikethrough',
+                    'code', 'subscript', 'superscript', 'highlight', '|',
+                    'bulletedList', 'numberedList', 'todoList', '|', 'blockQuote', 'imageUpload', '|',
+                    'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', 'mediaEmbed', 'removeFormat',
+                    'insertTable'
+                ]
+            },
+            // Ensure proper height and styling
+            height: '200px',
+            // Ensure proper placeholder handling
+            placeholder: element.placeholder || 'Enter content here...',
+            // Ensure proper language
+            language: 'en',
+            // Ensure proper image handling
+            image: {
+                toolbar: ['imageTextAlternative', '|', 'imageStyle:alignLeft',
+                         'imageStyle:alignRight', 'imageStyle:alignCenter', 'imageStyle:side', '|'],
+                styles: [
+                    'full',
+                    'side',
+                    'alignLeft',
+                    'alignRight',
+                    'alignCenter',
+                ]
+            },
+            // Ensure proper table handling
+            table: {
+                contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells',
+                               'tableProperties', 'tableCellProperties'],
+            },
+            // Ensure proper heading options
+            heading: {
+                options: [
+                    {'model': 'paragraph', 'title': 'Paragraph', 'class': 'ck-heading_paragraph'},
+                    {'model': 'heading1', 'view': 'h1', 'title': 'Heading 1', 'class': 'ck-heading_heading1'},
+                    {'model': 'heading2', 'view': 'h2', 'title': 'Heading 2', 'class': 'ck-heading_heading2'},
+                    {'model': 'heading3', 'view': 'h3', 'title': 'Heading 3', 'class': 'ck-heading_heading3'}
+                ]
+            }
+        };
+
+        // Create CKEditor instance with enhanced configuration
+        ClassicEditor.create(element, config).then(editor => {
+            element.ckeditorInstance = editor;
+            console.log('CKEditor5 initialized successfully for:', element.id);
+            
+            // Ensure proper styling in modal context
+            const editorElement = editor.ui.view.element;
+            if (editorElement) {
+                editorElement.style.minHeight = '200px';
+                editorElement.style.border = '1px solid #ced4da';
+                editorElement.style.borderRadius = '0.375rem';
+            }
+            
+            // Handle editor focus for better UX
+            editor.ui.focusTracker.on('change:isFocused', (evt, data, isFocused) => {
+                if (isFocused) {
+                    console.log('CKEditor focused:', element.id);
+                }
+            });
+            
+        }).catch(error => {
+            console.error('Error initializing CKEditor5 for element', element.id, ':', error);
+        });
+    });
+}
+
+// Global function to check if CKEditor5 is available
+window.ensureCKEditor5Available = function(callback) {
+    if (typeof ClassicEditor !== 'undefined') {
+        if (callback) callback();
+        return Promise.resolve(true);
+    }
+    
+    console.log('CKEditor5 not available, skipping callback');
+    return Promise.resolve(false);
+};
+
+// Make functions globally available immediately
+window.initializeCKEditor5 = initializeCKEditor5;
+window.ensureCkeditorClass = ensureCkeditorClass;
+
+// Add comprehensive debugging
+console.log('CKEditor5 functions defined at:', new Date().toISOString());
+console.log('initializeCKEditor5 type:', typeof window.initializeCKEditor5);
+console.log('ensureCkeditorClass type:', typeof window.ensureCkeditorClass);
+
+// Fallback mechanism for when functions are called before they're defined
+if (typeof window.initializeCKEditor5 === 'undefined') {
+    window.initializeCKEditor5 = function(container) {
+        console.warn('initializeCKEditor5 called before definition, using fallback');
+        // Queue the initialization for when the function is properly defined
+        setTimeout(() => {
+            if (typeof window.initializeCKEditor5 === 'function' && window.initializeCKEditor5 !== arguments.callee) {
+                window.initializeCKEditor5(container);
+            }
+        }, 100);
+    };
+}
+
+if (typeof window.ensureCkeditorClass === 'undefined') {
+    window.ensureCkeditorClass = function(modal) {
+        console.warn('ensureCkeditorClass called before definition, using fallback');
+        // Queue the initialization for when the function is properly defined
+        setTimeout(() => {
+            if (typeof window.ensureCkeditorClass === 'function' && window.ensureCkeditorClass !== arguments.callee) {
+                window.ensureCkeditorClass(modal);
+            }
+        }, 100);
+    };
+}
+
+// Add a safety check to ensure functions are available
 (function() {
+    'use strict';
+
     // Store modal instances to prevent duplicate instantiation
     const modalInstances = new Map();
     
-    // When DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        setupModalHandling();
-        setupBootstrapModals();
-        initializeDynamicContentObserver();
-        cleanupModalOverlays();
-        setupGenericModalFeatures();
-    });
+    // Safety check for function availability
+    function checkFunctionAvailability() {
+        console.log('Checking function availability...');
+        console.log('window.initializeCKEditor5:', typeof window.initializeCKEditor5);
+        console.log('window.ensureCkeditorClass:', typeof window.ensureCkeditorClass);
+        
+        if (typeof window.initializeCKEditor5 === 'undefined') {
+            console.error('initializeCKEditor5 is not available globally');
+            return false;
+        }
+        if (typeof window.ensureCkeditorClass === 'undefined') {
+            console.error('ensureCkeditorClass is not available globally');
+            return false;
+        }
+        console.log('All functions available');
+        return true;
+    }
 
     /**
      * Setup generic modal features (navigation, confirmations, notifications)
@@ -259,10 +385,14 @@
                 // Clean up CKEditor instances when modal is closed
                 if (typeof ClassicEditor !== 'undefined') {
                     try {
-                        const ckeditorElements = modalBody.querySelectorAll('.django_ckeditor_5');
+                        const ckeditorElements = modalBody.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
                         ckeditorElements.forEach(element => {
                             if (element.ckeditorInstance) {
-                                element.ckeditorInstance.destroy();
+                                try {
+                                    element.ckeditorInstance.destroy();
+                                } catch (destroyError) {
+                                    console.warn('Error destroying CKEditor instance on modal close:', destroyError);
+                                }
                                 element.ckeditorInstance = null;
                             }
                         });
@@ -351,61 +481,6 @@
             }
         });
 
-        // --- CKEditor5 Robust Initialization for Modal Forms ---
-        // Helper: Add .ckeditor-richtext class to all CKEditor fields (if not present)
-        function ensureCkeditorClass(modal) {
-            if (!modal) return;
-            const ckeditors = modal.querySelectorAll('.django_ckeditor_5');
-            ckeditors.forEach(el => {
-                if (!el.classList.contains('ckeditor-richtext')) {
-                    el.classList.add('ckeditor-richtext');
-                }
-            });
-        }
-
-        // Force CKEditor5 initialization after modal content loads (shown.bs.modal)
-        document.body.addEventListener('shown.bs.modal', function(event) {
-            const modal = event.target;
-            if (modal && modal.classList.contains('modal')) {
-                ensureCkeditorClass(modal);
-                if (typeof ClassicEditor !== 'undefined') {
-                    const ckeditorElements = modal.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
-                    ckeditorElements.forEach(element => {
-                        if (!element.ckeditorInstance) {
-                            ClassicEditor.create(element, {})
-                                .then(editor => {
-                                    element.ckeditorInstance = editor;
-                                })
-                                .catch(error => {
-                                    console.warn('Error initializing CKEditor in modal:', error);
-                                });
-                        }
-                    });
-                }
-            }
-        });
-
-        // Force CKEditor5 initialization after HTMX swaps in modal content
-        // (e.g., after AJAX loads modal body)
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            if (event.detail.target && (event.detail.target.id === 'modal-body' || event.detail.target.classList.contains('modal-body'))) {
-                ensureCkeditorClass(event.detail.target);
-                if (typeof ClassicEditor !== 'undefined') {
-                    const ckeditorElements = event.detail.target.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
-                    ckeditorElements.forEach(element => {
-                        if (!element.ckeditorInstance) {
-                            ClassicEditor.create(element, {})
-                                .then(editor => {
-                                    element.ckeditorInstance = editor;
-                                })
-                                .catch(error => {
-                                    console.warn('Error initializing CKEditor in modal after HTMX swap:', error);
-                                });
-                        }
-                    });
-                }
-            }
-        });
     }
     
     /**
@@ -416,12 +491,15 @@
         if (typeof ClassicEditor !== 'undefined') {
             try {
                 // Destroy any existing CKEditor 5 instances in the modal
-                const ckeditorElements = modalBody.querySelectorAll('.django_ckeditor_5');
+                const ckeditorElements = modalBody.querySelectorAll('.django_ckeditor_5, .ckeditor-richtext');
                 ckeditorElements.forEach(element => {
-                    const editorId = element.id;
                     // Check if there's an editor instance attached to this element
                     if (element.ckeditorInstance) {
-                        element.ckeditorInstance.destroy();
+                        try {
+                            element.ckeditorInstance.destroy();
+                        } catch (destroyError) {
+                            console.warn('Error destroying CKEditor instance:', destroyError);
+                        }
                         element.ckeditorInstance = null;
                     }
                 });
@@ -502,33 +580,49 @@
         }
     }
     
-    /**
+        /**
      * Initialize components inside modal forms
      */
     function initializeFormElements(target) {
-        // Initialize CKEditor instances
-        if (typeof ClassicEditor !== 'undefined') {
-            try {
-                const ckeditorElements = target.querySelectorAll('.django_ckeditor_5');
-                ckeditorElements.forEach(element => {
-                    const editorId = element.id;
-                    // Only initialize if not already initialized
-                    if (!element.ckeditorInstance) {
-                        // Use Django's CKEditor configuration
-                        ClassicEditor.create(element, {
-                            // Let Django handle the configuration via CKEDITOR_5_CONFIGS
-                            // This ensures consistency between server-side and client-side
-                        }).then(editor => {
-                            element.ckeditorInstance = editor;
-                        }).catch(error => {
-                            console.warn('Error initializing CKEditor:', error);
-                        });
-                    }
-                });
-            } catch (error) {
-                console.warn('Error initializing CKEditor instances:', error);
+        console.log('initializeFormElements called with target:', target);
+        
+        // Safety check for function availability
+        if (!checkFunctionAvailability()) {
+            console.error('Required functions not available, skipping CKEditor initialization');
+            return;
+        }
+        
+        console.log('ensureCkeditorClass function available:', typeof window.ensureCkeditorClass);
+        console.log('initializeCKEditor5 function available:', typeof window.initializeCKEditor5);
+        
+        // Ensure CKEditor fields have proper classes
+        window.ensureCkeditorClass(target);
+        
+        // Enhanced CKEditor5 initialization with retry mechanism
+        console.log('About to initialize CKEditor5 for target:', target);
+        console.log('CKEditor fields found:', target.querySelectorAll('.django_ckeditor_5'));
+        
+        // Use enhanced initialization with retry mechanism
+        let ckeditorAttempts = 0;
+        const maxCkeditorAttempts = 10;
+        
+        function attemptCKEditorInitialization() {
+            ckeditorAttempts++;
+            console.log(`CKEditor initialization attempt ${ckeditorAttempts}/${maxCkeditorAttempts}`);
+            
+            if (typeof ClassicEditor !== 'undefined' && typeof window.initializeCKEditor5 === 'function') {
+                console.log('CKEditor5 available, initializing...');
+                window.initializeCKEditor5(target);
+            } else if (ckeditorAttempts < maxCkeditorAttempts) {
+                console.log('CKEditor5 not available yet, retrying in 200ms...');
+                setTimeout(attemptCKEditorInitialization, 200);
+            } else {
+                console.warn('CKEditor5 initialization failed after maximum attempts');
             }
         }
+        
+        // Start CKEditor initialization
+        attemptCKEditorInitialization();
 
         // Find select2 elements and initialize them
         if (window.jQuery && jQuery().select2) {
@@ -997,4 +1091,33 @@
             submitModalForm(formId);
         }
     };
+
+    // Global error handler for modal operations
+    window.handleModalError = function(error, context) {
+        console.error('Modal error in', context, ':', error);
+        showNotification('An error occurred while processing the modal. Please try again.', 'error');
+    };
+
+    // When DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        setupModalHandling();
+        setupBootstrapModals();
+        initializeDynamicContentObserver();
+        cleanupModalOverlays();
+        setupGenericModalFeatures();
+    });
+
+    console.log('Modal handler initialized successfully');
+    console.log('Global functions available:', {
+        initializeCKEditor5: typeof window.initializeCKEditor5,
+        ensureCkeditorClass: typeof window.ensureCkeditorClass,
+        ensureCKEditor5Available: typeof window.ensureCKEditor5Available
+    });
+    
+    // Final safety check
+    if (!checkFunctionAvailability()) {
+        console.error('CRITICAL: CKEditor5 functions not available after initialization');
+    } else {
+        console.log('CKEditor5 functions successfully available globally');
+    }
 })();

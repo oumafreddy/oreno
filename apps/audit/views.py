@@ -2986,6 +2986,23 @@ class NoteModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView)
     def get_success_url(self):
         return reverse_lazy('audit:note-list')
 
+
+class NoteDeleteView(AuditPermissionMixin, DeleteView):
+    model = Note
+    template_name = 'audit/note_confirm_delete.html'
+    success_message = _('Note was deleted successfully')
+    
+    def get_queryset(self):
+        # Ensure user can only delete notes in their organization
+        return super().get_queryset().filter(organization=self.request.organization)
+    
+    def get_success_url(self):
+        # Redirect back to the parent object if it exists
+        if hasattr(self.object, 'content_object') and self.object.content_object:
+            return self.object.content_object.get_absolute_url()
+        return reverse_lazy('audit:note-list')
+
+
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = []  # Allow unauthenticated access
@@ -3792,3 +3809,5 @@ class IssueRetestDeleteView(AuditPermissionMixin, DeleteView):
 
     def get_success_url(self):
         return reverse_lazy('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+
+

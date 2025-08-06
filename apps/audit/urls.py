@@ -173,6 +173,7 @@ urlpatterns = [
     # Note (generic modal)
     path('notes/modal/add/<int:content_type_id>/<int:object_id>/', views.NoteCreateView.as_view(), name='note-modal-add'),
     path('notes/modal/<int:pk>/edit/', views.NoteModalUpdateView.as_view(), name='note-modal-edit'),
+    path('notes/<int:pk>/delete/', views.NoteDeleteView.as_view(), name='note-delete'),
     # API endpoint for notifications (JSON data)
     path('api/notifications/', NotificationListView.as_view(), name='notification-api'),
     # Template view for notifications (HTML interface)
@@ -206,6 +207,8 @@ urlpatterns = [
     path('api/issue-data/', views.api_issue_data, name='api_issue_data'),
     path('issues/<int:issue_pk>/retests/modal/add/', IssueRetestModalCreateView.as_view(), name='issueretest-modal-add'),
     path('notes/add/', NoteCreateView.as_view(), name='note-add'),
+    
+
 ]
 
 # ─── API DOCUMENTATION ───────────────────────────────────────────────────────

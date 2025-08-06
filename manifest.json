@@ -1,0 +1,10 @@
+{
+    "manifest_version": 3,
+    "name": "My Debug Extension",
+    "version": "0.0.1",
+    "permissions": ["scripting", "tabs"],
+    "host_permissions": ["<all_urls>"],
+    "background": { "service_worker": "background.js" },
+    "action": { "default_title": "My Debug Ext" }
+  }
+  

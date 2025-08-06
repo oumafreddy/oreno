@@ -1,5 +1,36 @@
 {% load static %}
 {% load crispy_forms_tags %}
+
+{# Enhanced CKEditor5 initialization for modal context #}
+<script nonce="{{ request.csp_nonce }}">
+// Enhanced CKEditor5 initialization for modal context
+(function() {
+    let attempts = 0;
+    const maxAttempts = 200; // 10 seconds max
+    
+    function waitForCKEditor() {
+        attempts++;
+        if (typeof ClassicEditor !== 'undefined' && typeof window.initializeCKEditor5 === 'function') {
+            console.log('CKEditor5 available in recommendation modal, initializing...');
+            console.log('Modal type:', '{% if form.instance.pk %}Edit{% else %}Add{% endif %}');
+            
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                window.initializeCKEditor5(document);
+            }, 100);
+        } else if (attempts < maxAttempts) {
+            console.log('Waiting for CKEditor5 from main page... attempt', attempts);
+            setTimeout(waitForCKEditor, 50);
+        } else {
+            console.warn('CKEditor5 not available after waiting, skipping initialization');
+        }
+    }
+    
+    // Start waiting
+    waitForCKEditor();
+})();
+</script>
+
 {{ form.media }}
 <div class="modal-header">
   <h5 class="modal-title">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Recommendation</h5>
