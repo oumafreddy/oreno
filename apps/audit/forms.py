@@ -295,11 +295,16 @@ class IssueForm(BaseAuditForm):
                 self.fields['procedure'].initial = procedure_id
                 self.fields['procedure'].queryset = self.fields['procedure'].queryset.filter(pk=procedure_id)
                 self.fields['procedure'].widget = forms.HiddenInput()
-                self.fields['procedure'].disabled = True
+                # Don't disable the field - it prevents form submission
+                # self.fields['procedure'].disabled = True
+                
+                # Add a message to show which procedure is pre-selected
+                self.procedure_pre_selected = True
+                self.pre_selected_procedure = procedure
             except Exception:
                 pass
         # Set up form layout
-        self.helper.layout = Layout(
+        layout_fields = [
             Fieldset(
                 _('Basic Information'),
                 Row(
@@ -363,7 +368,6 @@ class IssueForm(BaseAuditForm):
             ),
             Fieldset(
                 _('Related Items'),
-                'procedure',
                 Row(
                     Column('is_repeat_issue', css_class='col-md-6'),
                     Column('prior_issue_reference', css_class='col-md-6'),
@@ -374,7 +378,17 @@ class IssueForm(BaseAuditForm):
                 Submit('submit', _('Save'), css_class='btn-primary'),
                 css_class='mt-3'
             )
-        )
+        ]
+        
+        # Add procedure field to layout only if not pre-selected
+        if not procedure_id:
+            # Insert procedure field in the Related Items fieldset
+            for fieldset in layout_fields:
+                if isinstance(fieldset, Fieldset) and fieldset.legend == _('Related Items'):
+                    fieldset.fields.insert(0, 'procedure')
+                    break
+        
+        self.helper.layout = Layout(*layout_fields)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -556,11 +570,6 @@ class ObjectiveForm(BaseAuditForm):
             self.fields['assigned_to'].queryset = CustomUser.objects.filter(
                 organization=self.organization
             )
-            
-            # If engagement_pk is provided, set it as the initial value
-            if engagement_pk and not self.instance.pk:
-                self.fields['engagement'].initial = engagement_pk
-                self.fields['engagement'].widget.attrs['readonly'] = True
         
         # Set up crispy form layout
         self.helper.layout = Layout(
@@ -953,10 +962,9 @@ class NoteForm(BaseAuditForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        content_type_id = cleaned_data.get('content_type')
-        if content_type_id:
-            ct = ContentType.objects.get_for_id(content_type_id)
-            if ct.model != 'engagement':
+        content_type = cleaned_data.get('content_type')
+        if content_type:
+            if content_type.model != 'engagement':
                 raise ValidationError('Notes can only be attached to Engagements.')
         return cleaned_data
 

@@ -20,7 +20,7 @@
         {% csrf_token %}
         {{ form|crispy }}
         <div class="mt-3 d-flex justify-content-end">
-          <a href="{% if object %}{% url 'audit:risk-detail' object.risk.pk %}{% else %}{% url 'audit:risk-detail' risk.pk %}{% endif %}" class="btn btn-secondary me-2">Cancel</a>
+          <a href="{% if object %}{% url 'audit:risk-detail' object.risk.pk %}{% elif risk %}{% url 'audit:risk-detail' risk.pk %}{% else %}{% url 'audit:procedure-list' %}{% endif %}" class="btn btn-secondary me-2">Cancel</a>
           <button type="submit" class="btn btn-success">
             {% if object %}Update{% else %}Create{% endif %}
           </button>

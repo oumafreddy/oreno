@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Delete Recommendation{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-danger text-white">
+        <h3 class="mb-0">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Recommendation
+        </h3>
+      </div>
+      <div class="card-body">
+        <p class="lead">Are you sure you want to delete the recommendation "<strong>{{ object.title }}</strong>"?</p>
+        
+        {% if object.issue %}
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          This recommendation is linked to issue: <strong>{{ object.issue.issue_title }}</strong>
+        </div>
+        {% endif %}
+        
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Warning:</strong> This action cannot be undone. All data associated with this recommendation will be permanently deleted.
+        </div>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex justify-content-between">
+            <a href="{% if object.issue %}{% url 'audit:issue-detail' object.issue.pk %}{% else %}{% url 'audit:dashboard' %}{% endif %}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i>Delete Recommendation
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

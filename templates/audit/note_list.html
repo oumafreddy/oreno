@@ -1,20 +1,38 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load limited_html %}
+{% load tenant_utils %}
 {% block title %}Notes | Oreno GRC{% endblock %}
 {% block content %}
 <div class="container main-container">
+  <!-- Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+      <li class="breadcrumb-item active">Notes</li>
+    </ol>
+  </nav>
+
+  <!-- Page Header with Navigation -->
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3">Notes</h1>
-    {% if content_type_id and object_id %}
-      <button class="btn btn-primary" hx-get="{% url 'audit:note-modal-add' content_type_id=content_type_id object_id=object_id %}" hx-target="#mainModal .modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-        <i class="bi bi-plus-circle"></i> Create Note
-      </button>
-    {% else %}
-      <button class="btn btn-primary" disabled data-bs-toggle="tooltip" title="Cannot add note: context not available.">
-        <i class="bi bi-plus-circle"></i> Create Note
-      </button>
-    {% endif %}
+    <div>
+      <h1 class="h3 mb-1">Notes</h1>
+      <p class="text-muted mb-0">Manage and track audit notes, to-dos, and review requests</p>
+    </div>
+    <div class="btn-group">
+      {% if content_type_id and object_id %}
+        <a href="{% url 'audit:note-add' %}?content_type_id={{ content_type_id }}&object_id={{ object_id }}" class="btn btn-primary">
+          <i class="bi bi-plus-circle me-1"></i>Create Note
+        </a>
+      {% else %}
+        <a href="{% url 'audit:note-add' %}" class="btn btn-primary">
+          <i class="bi bi-plus-circle me-1"></i>Create Note
+        </a>
+      {% endif %}
+      <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+      </a>
+    </div>
   </div>
   <div class="row mb-4">
     <div class="col-md-3">
@@ -35,22 +53,65 @@
               <th>Content</th>
               <th>Linked To</th>
               <th>Type</th>
+              <th>Status</th>
+              <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for note in notes %}
             <tr>
-              <td>{{ note.content|limited_html|truncatechars:60|safe }}</td>
-              <td>{{ note.content_object }}</td>
-              <td>{{ note.get_note_type_display }}</td>
               <td>
-                <a href="{% url 'audit:note-detail' note.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'audit:note-modal-edit' note.pk %}" hx-target="#mainModal .modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">Edit</button>
+                <div class="fw-medium">{{ note.content|limited_html|truncatechars:60|safe }}</div>
+                {% if note.assigned_to %}
+                  <small class="text-muted">Assigned to: {{ note.assigned_to.get_full_name|default:note.assigned_to.email }}</small>
+                {% endif %}
+              </td>
+              <td>
+                {% if note.content_object %}
+                  {% if note.content_object|class_name == 'Engagement' %}
+                    <a href="{% url 'audit:engagement-detail' note.content_object.pk %}" class="text-decoration-none">
+                      <i class="bi bi-clipboard-check me-1"></i>{{ note.content_object.title|truncatechars:40 }}
+                    </a>
+                  {% else %}
+                    {{ note.content_object|truncatechars:40 }}
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">Not linked</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {% if note.note_type == 'todo' %}bg-warning{% elif note.note_type == 'review' %}bg-info{% elif note.note_type == 'review_request' %}bg-primary{% else %}bg-secondary{% endif %}">
+                  {{ note.get_note_type_display }}
+                </span>
+              </td>
+              <td>
+                <span class="badge {% if note.status == 'open' %}bg-warning{% elif note.status == 'cleared' %}bg-success{% elif note.status == 'closed' %}bg-secondary{% endif %}">
+                  {{ note.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <small class="text-muted">{{ note.created_at|date:"M d, Y" }}</small>
+              </td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'audit:note-detail' note.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>View
+                  </a>
+                  <a href="{% url 'audit:note-edit' note.pk %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                  </a>
+                </div>
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted">No notes found.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">
+              <i class="bi bi-sticky display-4 text-muted mb-3"></i>
+              <p class="mb-2">No notes found.</p>
+              <a href="{% url 'audit:note-add' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Create Your First Note
+              </a>
+            </td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -58,11 +119,40 @@
     </div>
   </div>
 </div>
-<!-- Modal -->
-<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content" id="modal-body">
-      <!-- Modal content loaded here via htmx -->
+
+<!-- Quick Navigation Section -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-compass me-2"></i>Quick Navigation
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3 mb-2">
+            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-primary w-100">
+              <i class="bi bi-speedometer2 me-2"></i>Audit Dashboard
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-info w-100">
+              <i class="bi bi-clipboard-check me-2"></i>Engagements
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-warning w-100">
+              <i class="bi bi-exclamation-triangle me-2"></i>Issues
+            </a>
+          </div>
+          <div class="col-md-3 mb-2">
+            <a href="{% url 'audit:workplan-list' %}" class="btn btn-outline-success w-100">
+              <i class="bi bi-calendar-check me-2"></i>Workplans
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

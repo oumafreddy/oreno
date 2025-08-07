@@ -188,12 +188,14 @@ urlpatterns = [
     path('notes/', views.NoteListView.as_view(), name='note-list'),
     path('notes/<int:pk>/', views.NoteDetailView.as_view(), name='note-detail'),
     # Recommendation URLs
-    path('issues/<int:issue_pk>/recommendations/', RecommendationListView.as_view(), name='recommendation-list'),
+    path('recommendations/', RecommendationListView.as_view(), name='recommendation-list'),
+    path('issues/<int:issue_pk>/recommendations/', RecommendationListView.as_view(), name='issue-recommendation-list'),
     path('issues/<int:issue_pk>/recommendations/add/', RecommendationCreateView.as_view(), name='recommendation-add'),
     path('recommendations/<int:pk>/edit/', RecommendationUpdateView.as_view(), name='recommendation-edit'),
     # Add the recommendation-update URL pattern to match template references (points to same view as edit)
     path('recommendations/<int:pk>/update/', RecommendationUpdateView.as_view(), name='recommendation-update'),
     path('recommendations/<int:pk>/', RecommendationDetailView.as_view(), name='recommendation-detail'),
+    path('recommendations/<int:pk>/delete/', views.RecommendationDeleteView.as_view(), name='recommendation-delete'),
     path('issues/<int:issue_pk>/recommendations/modal/<int:pk>/edit/', views.RecommendationModalUpdateView.as_view(), name='recommendation-modal-edit'),
     path('htmx/objectives/', views.htmx_objective_list, name='htmx-objective-list'),
     path('htmx/procedures/', views.htmx_procedure_list, name='htmx-procedure-list'),

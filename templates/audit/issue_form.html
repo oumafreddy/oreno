@@ -30,12 +30,20 @@
             <i class="bi bi-link-45deg"></i> {{ form.procedure_result_summary }}
           </div>
         {% endif %}
+        {% if form.procedure_pre_selected %}
+          <div class="alert alert-success mb-3">
+            <i class="bi bi-check-circle"></i> 
+            <strong>Procedure Pre-selected:</strong> 
+            "{{ form.pre_selected_procedure.title }}" 
+            (from Risk: {{ form.pre_selected_procedure.risk.title }})
+          </div>
+        {% endif %}
         <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:issue-update' object.pk %}{% else %}{% url 'audit:issue-create' %}{% endif %}">
           {% csrf_token %}
           {{ form|crispy }}
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success">Save</button>
-            <a href="{% url 'audit:issue-list' %}" class="btn btn-secondary ms-2">Cancel</a>
+            <a href="{% if object %}{% url 'audit:issue-detail' object.pk %}{% else %}{% url 'audit:issue-list' %}{% endif %}" class="btn btn-secondary ms-2">Cancel</a>
           </div>
         </form>
         <div class="alert alert-info mt-3">

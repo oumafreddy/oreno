@@ -10,17 +10,28 @@ def log_change(instance, action, changes=None, user=None):
     """Helper function to log model changes."""
     try:
         content_type = ContentType.objects.get_for_model(instance)
+        # Truncate object_repr to fit within the 200 character limit
+        object_repr = str(instance)
+        if len(object_repr) > 200:
+            object_repr = object_repr[:197] + "..."
+        
         AuditLog.objects.create(
             content_type=content_type,
             object_id=instance.pk,
             action=action,
             changes=changes or {},
-            object_repr=str(instance),
+            object_repr=object_repr,
             user=user,
             model=f"{instance._meta.app_label}.{instance._meta.model_name}"
         )
     except (ProgrammingError, OperationalError, DatabaseError):
         # Silently fail if table doesn't exist
+        pass
+    except Exception as e:
+        # Log any other errors but don't break the main operation
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to log audit change for {instance}: {str(e)}")
         pass
 
 @receiver(post_save)

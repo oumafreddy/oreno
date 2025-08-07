@@ -1,29 +1,45 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 {% block title %}Recommendations{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-12">
-    <div class="card shadow-sm">
-      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-          {% if issue and issue.pk %}
-            <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-light me-3">
-              <i class="bi bi-arrow-left me-1"></i> Back to Issue
-            </a>
-          {% endif %}
-          <h3 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendations</h3>
-        </div>
+<div class="container main-container">
+  <!-- Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+      {% if issue and issue.pk %}
+        <li class="breadcrumb-item"><a href="{% url 'audit:issue-detail' issue.pk %}">{{ issue.issue_title }}</a></li>
+      {% endif %}
+      <li class="breadcrumb-item active">Recommendations</li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
         {% if issue and issue.pk %}
-          <button class="btn btn-success" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-            <i class="bi bi-plus-lg me-1"></i> New Recommendation
-          </button>
+          <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-light me-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Issue
+          </a>
         {% else %}
-          <button class="btn btn-success" disabled data-bs-toggle="tooltip" title="Cannot add recommendation: Issue not saved.">
-            <i class="bi bi-plus-lg me-1"></i> New Recommendation
-          </button>
+          <a href="{% url 'audit:dashboard' %}" class="btn btn-sm btn-outline-light me-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+          </a>
         {% endif %}
+        <h3 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendations</h3>
       </div>
+      <div class="btn-group">
+        {% if issue and issue.pk %}
+          <a href="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" class="btn btn-success">
+            <i class="bi bi-plus-lg me-1"></i> New Recommendation
+          </a>
+        {% endif %}
+        <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-light">
+          <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+      </div>
+    </div>
       <div class="card-body">
         <form method="get" class="mb-3">
           {% if filter_form %}
@@ -37,23 +53,62 @@
                 <tr>
                   <th>Title</th>
                   <th>Description</th>
-                  <th>Order</th>
+                  <th>Issue</th>
+                  <th>Status</th>
+                  <th>Deadline</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {% for recommendation in recommendations %}
                 <tr>
-                  <td>{{ recommendation.title }}</td>
-                  <td>{{ recommendation.description|truncatechars:60 }}</td>
-                  <td>{{ recommendation.order }}</td>
                   <td>
-                    <a href="{% url 'audit:recommendation-detail' recommendation.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                    <button class="btn btn-sm btn-outline-secondary" hx-get="{% url 'audit:recommendation-edit' recommendation.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">Edit</button>
+                    <div class="fw-medium">{{ recommendation.title }}</div>
+                    <small class="text-muted">Order: {{ recommendation.order }}</small>
+                  </td>
+                  <td>{{ recommendation.description|truncatechars:60 }}</td>
+                  <td>
+                    {% if recommendation.issue %}
+                      <a href="{% url 'audit:issue-detail' recommendation.issue.pk %}" class="text-decoration-none">
+                        <i class="bi bi-exclamation-triangle me-1"></i>{{ recommendation.issue.issue_title|truncatechars:40 }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted">No issue linked</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge {% if recommendation.remediation_status == 'completed' %}bg-success{% elif recommendation.remediation_status == 'in_progress' %}bg-warning{% else %}bg-secondary{% endif %}">
+                      {{ recommendation.get_remediation_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if recommendation.remediation_deadline_date %}
+                      <small class="text-muted">{{ recommendation.remediation_deadline_date|date:"M d, Y" }}</small>
+                    {% else %}
+                      <span class="text-muted">No deadline</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <a href="{% url 'audit:recommendation-detail' recommendation.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                      <a href="{% url 'audit:recommendation-edit' recommendation.pk %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                      </a>
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4" class="text-center text-muted">No recommendations found.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                  <i class="bi bi-lightbulb display-4 text-muted mb-3"></i>
+                  <p class="mb-2">No recommendations found.</p>
+                  {% if issue and issue.pk %}
+                    <a href="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" class="btn btn-primary btn-sm">
+                      <i class="bi bi-plus-circle me-1"></i>Create First Recommendation
+                    </a>
+                  {% endif %}
+                </td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -62,12 +117,41 @@
       </div>
     </div>
   </div>
-</div>
-<!-- Modal -->
-<div class="modal fade" id="mainModal" tabindex="-1" aria-labelledby="mainModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content" id="modal-body">
-      <!-- Modal content loaded here via htmx -->
+
+  <!-- Quick Navigation Section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="bi bi-compass me-2"></i>Quick Navigation
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-primary w-100">
+                <i class="bi bi-speedometer2 me-2"></i>Audit Dashboard
+              </a>
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-warning w-100">
+                <i class="bi bi-exclamation-triangle me-2"></i>Issues
+              </a>
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-info w-100">
+                <i class="bi bi-clipboard-check me-2"></i>Engagements
+              </a>
+            </div>
+            <div class="col-md-3 mb-2">
+              <a href="{% url 'audit:workplan-list' %}" class="btn btn-outline-success w-100">
+                <i class="bi bi-calendar-check me-2"></i>Workplans
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -251,16 +251,6 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
     template_name = 'audit/risk_form.html'
     success_message = _('Risk "%(title)s" was created successfully')
     
-    def get_template_names(self):
-        try:
-            # Use modal template for HTMX requests
-            if is_htmx_request(self.request):
-                return ['audit/risk_modal_form.html']
-            return [self.template_name]
-        except Exception as e:
-            logger.error(f"Error in get_template_names: {str(e)}", exc_info=True)
-            raise
-    
     def get_success_url(self):
         try:
             # Return to objective detail if creating from an objective
@@ -302,85 +292,16 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
             form.instance.organization = self.request.organization
             form.instance.created_by = self.request.user
             form.instance.updated_by = self.request.user
-            engagement_pk = self.kwargs.get('engagement_pk')
-            if engagement_pk and not form.instance.objective:
-                try:
-                    engagement = Engagement.objects.get(pk=engagement_pk, organization=self.request.organization)
-                    form.instance.engagement_context = engagement
-                except Engagement.DoesNotExist:
-                    logger.warning(f"Engagement with pk {engagement_pk} not found for organization {self.request.organization}")
-                except Exception as e:
-                    logger.error(f"Error setting engagement context: {str(e)}", exc_info=True)
             
             # Call super().form_valid() first to save the object and set self.object
             response = super().form_valid(form)
-            
-            # --- HTMX: Return HTML partial, not JSON ---
-            if is_htmx_request(self.request):
-                if hasattr(self.object, 'objective') and self.object.objective:
-                    risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                    html_list = render_to_string('audit/_risk_list_partial.html', {
-                        'risks': risks,
-                        'objective': self.object.objective,
-                    }, request=self.request)
-                    return HttpResponse(html_list)
-                else:
-                    engagement_pk = self.kwargs.get('engagement_pk')
-                    if engagement_pk:
-                        redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
-                    else:
-                        redirect_url = self.get_success_url()
-                    # Return a simple redirect script for HTMX
-                    return HttpResponse(f'<script>window.location.href="{redirect_url}";</script>')
-            
-            # --- AJAX: Return JSON ---
-            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                if hasattr(self.object, 'objective') and self.object.objective:
-                    risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                    html_list = render_to_string('audit/_risk_list_partial.html', {
-                        'risks': risks,
-                        'objective': self.object.objective,
-                    }, request=self.request)
-                    return JsonResponse({
-                        'success': True,
-                        'html_list': html_list,
-                        'message': self.success_message % {'title': self.object.title}
-                    })
-                else:
-                    engagement_pk = self.kwargs.get('engagement_pk')
-                    if engagement_pk:
-                        redirect_url = reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement_pk})
-                    else:
-                        redirect_url = self.get_success_url()
-                    return JsonResponse({
-                        'success': True,
-                        'redirect': str(redirect_url),
-                        'message': self.success_message % {'title': self.object.title}
-                    })
             return response
-        except ValidationError as e:
-            logger.error(f"Validation error in form_valid: {str(e)}", exc_info=True)
-            return self.form_invalid(form)
-        except DatabaseError as e:
-            logger.error(f"Database error in form_valid: {str(e)}", exc_info=True)
-            raise
         except Exception as e:
             logger.error(f"Unexpected error in form_valid: {str(e)}", exc_info=True)
             raise
     
     def form_invalid(self, form):
-        try:
-            if is_htmx_request(self.request):
-                html_form = render_to_string(
-                    'audit/risk_modal_form.html',
-                    self.get_context_data(form=form),
-                    request=self.request
-                )
-                return JsonResponse({'success': False, 'html_form': html_form})
-            return super().form_invalid(form)
-        except Exception as e:
-            logger.error(f"Error in form_invalid: {str(e)}", exc_info=True)
-            raise
+        return super().form_invalid(form)
     
     def get_context_data(self, **kwargs):
         try:
@@ -427,12 +348,6 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
     template_name = 'audit/risk_form.html'
     success_message = _('Risk "%(title)s" was updated successfully')
     
-    def get_template_names(self):
-        # Use modal template for HTMX requests
-        if is_htmx_request(self.request):
-            return ['audit/risk_modal_form.html']
-        return [self.template_name]
-    
     def get_queryset(self):
         # Ensure user can only update risks in their organization
         return super().get_queryset().filter(organization=self.request.organization)
@@ -454,44 +369,9 @@ class RiskUpdateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
         response = super().form_valid(form)
-        if is_htmx_request(self.request):
-            if self.object.objective:
-                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html = render_to_string('audit/_risk_list_partial.html', {
-                    'risks': risks,
-                    'objective': self.object.objective,
-                }, request=self.request)
-                return HttpResponse(html)
-            else:
-                return HttpResponse(f'<script>window.location.href="{self.get_success_url()}";</script>')
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            if self.object.objective:
-                risks = Risk.objects.filter(objective=self.object.objective).order_by('order')
-                html = render_to_string('audit/_risk_list_partial.html', {
-                    'risks': risks,
-                    'objective': self.object.objective,
-                }, request=self.request)
-                return JsonResponse({
-                    'success': True,
-                    'html': html,
-                    'message': self.success_message % {'title': self.object.title}
-                })
-            else:
-                return JsonResponse({
-                    'success': True,
-                    'redirect': self.get_success_url(),
-                    'message': self.success_message % {'title': self.object.title}
-                })
         return response
     
     def form_invalid(self, form):
-        if is_htmx_request(self.request):
-            html_form = render_to_string(
-                'audit/risk_modal_form.html',
-                self.get_context_data(form=form),
-                request=self.request
-            )
-            return JsonResponse({'success': False, 'html_form': html_form})
         return super().form_invalid(form)
 
 
@@ -499,11 +379,7 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
     model = Risk
     template_name = 'audit/risk_confirm_delete.html'
 
-    def get_template_names(self):
-        # Use modal template for HTMX requests
-        if is_htmx_request(self.request):
-            return ['audit/risk_confirm_delete_modal.html']
-        return [self.template_name]
+
 
     def get_queryset(self):
         # Ensure user can only delete risks in their organization
@@ -584,12 +460,6 @@ class WorkplanCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was created successfully")
     
-    def get_template_names(self):
-        # Use modal template for HTMX requests
-        if is_htmx_request(self.request):
-            return ['audit/workplan_modal_form.html']
-        return [self.template_name]
-    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
@@ -635,12 +505,6 @@ class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     form_class = AuditWorkplanForm
     template_name = 'audit/workplan_form.html'
     success_message = _("Workplan %(name)s was updated successfully")
-    
-    def get_template_names(self):
-        # Use modal template for HTMX requests
-        if is_htmx_request(self.request):
-            return ['audit/workplan_modal_form.html']
-        return [self.template_name]
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1181,6 +1045,12 @@ class IssueCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
+        
+        # Ensure procedure is set if passed via GET parameter
+        procedure_id = self.request.GET.get('procedure')
+        if procedure_id and not form.instance.procedure_id:
+            form.instance.procedure_id = procedure_id
+        
         return super().form_valid(form)
     
     def get_success_url(self):
@@ -2041,6 +1911,23 @@ class ObjectiveCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView)
         kwargs['organization'] = self.request.organization
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add engagement to context for the cancel button
+        engagement_pk = self.kwargs.get('engagement_pk')
+        if engagement_pk:
+            try:
+                from .models.engagement import Engagement
+                engagement = Engagement.objects.get(
+                    pk=engagement_pk, 
+                    organization=self.request.organization
+                )
+                context['engagement'] = engagement
+            except Engagement.DoesNotExist:
+                # If engagement doesn't exist, we'll handle this in the template
+                pass
+        return context
+
     def form_valid(self, form):
         engagement_pk = self.kwargs.get('engagement_pk')
         form.instance.engagement_id = engagement_pk
@@ -2087,6 +1974,13 @@ class ObjectiveUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView)
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add engagement to context for the cancel button
+        if self.object and self.object.engagement:
+            context['engagement'] = self.object.engagement
+        return context
 
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
@@ -2144,29 +2038,45 @@ class ProcedureCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView)
     form_class = ProcedureForm
     template_name = 'audit/procedure_form.html'
     success_message = _('Procedure %(title)s was created successfully')
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
+        kwargs['risk_id'] = self.kwargs.get('risk_id')
         return kwargs
+    
     def form_valid(self, form):
-        objective_pk = self.kwargs.get('objective_pk')
-        form.instance.objective_id = objective_pk
+        risk_id = self.kwargs.get('risk_id')
+        form.instance.risk_id = risk_id
         form.instance.organization = self.request.organization
         return super().form_valid(form)
+    
     def get_success_url(self):
-        return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        risk_id = self.kwargs.get('risk_id')
+        if risk_id:
+            try:
+                context['risk'] = Risk.objects.get(pk=risk_id, organization=self.request.organization)
+            except Risk.DoesNotExist:
+                pass
+        return context
 
 class ProcedureUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Procedure
     form_class = ProcedureForm
     template_name = 'audit/procedure_form.html'
     success_message = _('Procedure %(title)s was updated successfully')
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+    
     def get_success_url(self):
-        return reverse_lazy('audit:objective-detail', kwargs={'pk': self.object.objective.pk})
+        return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk.pk})
 
 class ProcedureModalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Procedure
@@ -2927,7 +2837,7 @@ class IssueRetestModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, Upda
 class NoteCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Note
     form_class = NoteForm
-    template_name = 'audit/note_modal_form.html'
+    template_name = 'audit/note_form.html'
     success_message = _('Note was created successfully')
 
     def get_issue_pk(self):
@@ -2983,20 +2893,7 @@ class NoteCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
         form.instance.organization = self.request.organization
         form.instance.content_type_id = self.kwargs.get('content_type_id')
         form.instance.object_id = self.kwargs.get('object_id')
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            notes = Note.objects.filter(content_type_id=self.kwargs.get('content_type_id'), object_id=self.kwargs.get('object_id'), organization=self.request.organization)
-            html_list = render_to_string("audit/_note_list_partial.html", {
-                "notes": notes,
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
-    def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse_lazy('audit:note-list')
@@ -3004,7 +2901,7 @@ class NoteCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
 class NoteModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Note
     form_class = NoteForm
-    template_name = "audit/note_modal_form.html"
+    template_name = "audit/note_form.html"
     success_message = _("Note was updated successfully")
 
     def get_form_kwargs(self):
@@ -3019,20 +2916,7 @@ class NoteModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView)
         return context
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest" or self.request.headers.get("HX-Request") == "true":
-            notes = Note.objects.filter(content_type_id=self.object.content_type_id, object_id=self.object.object_id, organization=self.request.organization)
-            html_list = render_to_string("audit/_note_list_partial.html", {
-                "notes": notes,
-            }, request=self.request)
-            return JsonResponse({"form_is_valid": True, "html_list": html_list})
-        return response
-
-    def form_invalid(self, form):
-        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
-            html_form = render_to_string(self.template_name, {"form": form}, request=self.request)
-            return JsonResponse({"form_is_valid": False, "html_form": html_form})
-        return super().form_invalid(form)
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse_lazy('audit:note-list')
@@ -3120,15 +3004,31 @@ class RecommendationListView(AuditPermissionMixin, ListView):
     model = Recommendation
     template_name = "audit/recommendation_list.html"
     context_object_name = "recommendations"
+    paginate_by = 20
 
     def get_queryset(self):
-        issue_pk = self.kwargs["issue_pk"]
-        return Recommendation.objects.filter(issue_id=issue_pk, organization=self.request.organization)
+        # Check if we have an issue_pk in kwargs (for issue-specific recommendations)
+        issue_pk = self.kwargs.get("issue_pk")
+        if issue_pk:
+            return Recommendation.objects.filter(
+                issue_id=issue_pk, 
+                organization=self.request.organization
+            ).select_related('issue', 'issue__engagement')
+        else:
+            # Return all recommendations for the organization
+            return Recommendation.objects.filter(
+                organization=self.request.organization
+            ).select_related('issue', 'issue__engagement')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from .models.issue import Issue
-        context["issue"] = Issue.objects.get(pk=self.kwargs["issue_pk"])
+        issue_pk = self.kwargs.get("issue_pk")
+        if issue_pk:
+            from .models.issue import Issue
+            try:
+                context["issue"] = Issue.objects.get(pk=issue_pk, organization=self.request.organization)
+            except Issue.DoesNotExist:
+                context["issue"] = None
         return context
 
 class RecommendationCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
@@ -3182,6 +3082,16 @@ class RecommendationDetailView(AuditPermissionMixin, DetailView):
     model = Recommendation
     template_name = "audit/recommendation_detail.html"
     context_object_name = "recommendation"
+
+class RecommendationDeleteView(AuditPermissionMixin, SuccessMessageMixin, DeleteView):
+    model = Recommendation
+    template_name = "audit/recommendation_confirm_delete.html"
+    success_message = _("Recommendation was deleted successfully")
+    
+    def get_success_url(self):
+        if self.object.issue:
+            return reverse('audit:issue-detail', kwargs={'pk': self.object.issue.pk})
+        return reverse('audit:dashboard')
 
 class RecommendationModalUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     model = Recommendation

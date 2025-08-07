@@ -1,24 +1,82 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load limited_html %}
+{% load tenant_utils %}
 {% block title %}Note Detail | Oreno GRC{% endblock %}
 {% block content %}
 <div class="container main-container">
+  <!-- Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
+      {% if note.content_object %}
+        {% if note.content_object|class_name == 'Engagement' %}
+          <li class="breadcrumb-item"><a href="{% url 'audit:engagement-list' %}">Engagements</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'audit:engagement-detail' note.content_object.pk %}">{{ note.content_object.title }}</a></li>
+        {% else %}
+          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Dashboard</a></li>
+        {% endif %}
+      {% endif %}
+      <li class="breadcrumb-item active">Note Detail</li>
+    </ol>
+  </nav>
+
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-0">Note <span class="badge bg-info">{{ note.get_note_type_display }}</span></h1>
       <div class="text-muted">Linked To: {{ note.content_object }}</div>
     </div>
-    <div>
-      <button class="btn btn-primary" hx-get="{% url 'audit:note-modal-edit' note.pk %}" hx-target="#mainModal .modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">Edit Note</button>
+    <div class="btn-group">
+      <a href="{% url 'audit:note-edit' note.pk %}" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Edit Note
+      </a>
+      <a href="{% if note.content_object %}{% if note.content_object|class_name == 'Engagement' %}{% url 'audit:engagement-detail' note.content_object.pk %}{% else %}{% url 'audit:dashboard' %}{% endif %}{% else %}{% url 'audit:dashboard' %}{% endif %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
     </div>
   </div>
+
   <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Note Details</h5>
+    </div>
     <div class="card-body">
-      <h5>Content</h5>
-      <div class="mb-3">
-        <label class="form-label fw-bold">Content</label>
-        <div class="border rounded p-2 bg-light">{{ note.content|limited_html|safe }}</div>
+      <div class="row">
+        <div class="col-md-6">
+          <dl class="row">
+            <dt class="col-sm-4">Note Type:</dt>
+            <dd class="col-sm-8">{{ note.get_note_type_display }}</dd>
+            
+            <dt class="col-sm-4">Status:</dt>
+            <dd class="col-sm-8">
+              <span class="badge {% if note.status == 'open' %}bg-warning{% elif note.status == 'closed' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ note.get_status_display }}
+              </span>
+            </dd>
+            
+            {% if note.assigned_to %}
+            <dt class="col-sm-4">Assigned To:</dt>
+            <dd class="col-sm-8">{{ note.assigned_to.get_full_name|default:note.assigned_to.email }}</dd>
+            {% endif %}
+            
+            <dt class="col-sm-4">Created By:</dt>
+            <dd class="col-sm-8">{{ note.created_by.get_full_name|default:note.created_by.email }}</dd>
+            
+            <dt class="col-sm-4">Created:</dt>
+            <dd class="col-sm-8">{{ note.created_at|date:"M d, Y H:i" }}</dd>
+            
+            {% if note.updated_at != note.created_at %}
+            <dt class="col-sm-4">Last Updated:</dt>
+            <dd class="col-sm-8">{{ note.updated_at|date:"M d, Y H:i" }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+        <div class="col-md-6">
+          <h6>Content:</h6>
+          <div class="border rounded p-3 bg-light">
+            {{ note.content|limited_html|safe }}
+          </div>
+        </div>
       </div>
     </div>
   </div>

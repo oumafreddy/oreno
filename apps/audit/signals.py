@@ -595,11 +595,11 @@ def notify_note_assignment(sender, instance, created, **kwargs):
             fail_silently=True,
         )
         # In-app notification
-        Notification.objects.create(
+        Notification.create_for_user(
             user=instance.assigned_to,
-            note=instance,
             message=f"You have been assigned a new {instance.get_note_type_display()} on {instance.content_object}.",
-            notification_type=instance.note_type
+            notification_type=instance.note_type,
+            note=instance
         )
     # On status change to 'cleared', notify supervisor (user field)
     elif not created and instance.status == 'cleared' and instance.user:
@@ -611,11 +611,11 @@ def notify_note_assignment(sender, instance, created, **kwargs):
             fail_silently=True,
         )
         # In-app notification
-        Notification.objects.create(
+        Notification.create_for_user(
             user=instance.user,
-            note=instance,
             message=f"The note you assigned on {instance.content_object} has been marked as cleared by {instance.assigned_to}.",
-            notification_type='note_cleared'
+            notification_type='note_cleared',
+            note=instance
         )
 
 @receiver(post_save, sender=Issue)

@@ -19,3 +19,10 @@ def is_public_schema_safe(context, app):
     
     # Now safely check the schema_name
     return context.request.tenant.schema_name == get_public_schema_name()
+
+@register.filter
+def class_name(obj):
+    """
+    Returns the class name of an object.
+    """
+    return obj.__class__.__name__

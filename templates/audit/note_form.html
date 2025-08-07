@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if object %}Edit{% else %}Create{% endif %} Note{% endblock %}
+{% block extra_head %}
+  {{ form.media }}
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-info text-white">
+        <h3 class="mb-0">
+          <i class="bi bi-sticky me-2"></i>
+          {% if object %}Edit{% else %}Create{% endif %} Note
+        </h3>
+      </div>
+      <div class="card-body">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <strong>Please correct the errors below:</strong>
+          </div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" novalidate action="{% if object %}{% url 'audit:note-edit' object.pk %}{% else %}{% url 'audit:note-add' %}{% endif %}">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="text-end mt-3">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-check-circle me-1"></i>Save
+            </button>
+            <a href="{% if object %}{% url 'audit:note-detail' object.pk %}{% else %}{% url 'audit:dashboard' %}{% endif %}" class="btn btn-secondary ms-2">
+              <i class="bi bi-x-circle me-1"></i>Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
