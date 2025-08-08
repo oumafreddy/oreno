@@ -1345,18 +1345,7 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['engagement_status_dist'] = dict(Counter(engagement_qs.values_list('project_status', flat=True))) or {}
         durations = [(e.target_end_date - e.project_start_date).days for e in engagement_qs if e.target_end_date and e.project_start_date]
         context['avg_engagement_duration'] = sum(durations) / len(durations) if durations else 0
-        # Engagement Owner Workload: count by assigned_to full name (or email, or 'Unassigned')
-        def owner_label(user):
-            if user:
-                if hasattr(user, 'get_full_name') and user.get_full_name():
-                    return f"{user.get_full_name()} ({user.email})"
-                elif hasattr(user, 'email'):
-                    return user.email
-            return 'Unassigned'
-        owner_workload = [owner_label(e.assigned_to) for e in engagement_qs]
-        context['engagement_owner_workload'] = dict(Counter(owner_workload)) or {}
-        import json
-        context['engagement_owner_workload_debug'] = json.dumps(context['engagement_owner_workload'], indent=2)
+
         # Issues: filter by procedure__risk__objective__engagement__in=engagement_qs
         issue_qs = Issue.objects.filter(
             organization=organization,

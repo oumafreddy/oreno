@@ -173,19 +173,7 @@
             </div>
         </div>
     </div>
-    <!-- Owner Workload Chart -->
-    <div class="row mb-4 g-3">
-        <div class="col-md-12">
-            <div class="card h-100">
-                <div class="card-header bg-light"><strong>Engagement Owner Workload</strong></div>
-                <div class="card-body">
-                    <div id="owner-workload-chart" style="height:250px;"></div>
-                    <!-- Debug: Engagement Owner Workload Data (visible for troubleshooting) -->
-                    <pre style="font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px; margin-top:10px;">{{ engagement_owner_workload_debug }}</pre>
-                </div>
-            </div>
-        </div>
-    </div>
+
     <!-- Scrollable Recent Lists -->
     <div class="row mb-4 g-3">
         <div class="col-md-4">
@@ -515,7 +503,7 @@
                 {% for note in recent_notes %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <a href="{% url 'audit:note-modal-add' note.content_type_id note.object_id %}" class="text-decoration-none">
-                            <span class="fw-bold">{{ note.get_note_type_display }}</span>: {{ note.content|truncatechars:60 }}
+                            <span class="fw-bold">{{ note.get_note_type_display }}</span>: {{ note.content|striptags|truncatechars:60 }}
                         </a>
                         <span class="badge bg-{{ note.status|yesno:'success,secondary,danger' }}">{{ note.get_status_display }}</span>
                     </li>
@@ -524,7 +512,7 @@
                 {% endfor %}
             </ul>
             <div class="card-footer text-end p-2">
-                <a href="/audit/api/notes/" class="btn btn-sm btn-outline-primary">View All Notes</a>
+                <a href="{% url 'audit:note-list' %}" class="btn btn-sm btn-outline-primary">View All Notes</a>
             </div>
         </div>
     </div>
@@ -601,7 +589,7 @@
 {{ engagement_status_dist|json_script:"engagement-status-data" }}
 {{ issue_risk_dist|json_script:"issue-risk-data" }}
 {{ approval_status_dist|json_script:"approval-status-data" }}
-{{ engagement_owner_workload|json_script:"engagement-owner-workload-data" }}
+
 <!-- Add Plotly CDN before dashboard_charts.js for CSP compliance and chart rendering -->
 <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet" />
@@ -741,10 +729,4 @@
 {% endblock %}
 {% block extra_scripts %}
 <script src="{% static 'js/audit_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
-{% endblock %}
-<pre style="background:#f8f9fa; color:#333; padding:10px; border:1px solid #eee;">
-Engagement Status Data: {{ engagement_status_dist|safe }}
-Issue Risk Data: {{ issue_risk_dist|safe }}
-Approval Status Data: {{ approval_status_dist|safe }}
-Owner Workload Data: {{ engagement_owner_workload|safe }}
-</pre> 
+{% endblock %} 

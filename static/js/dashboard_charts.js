@@ -71,23 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }],
         options: {height: 250, margin: { t: 0, b: 0, l: 0, r: 0 }, showlegend: true}
     });
-    // Engagement Owner Workload (Bar Chart)
-    const ownerWorkload = safeParseJSON('engagement-owner-workload-data');
-    plotOrShowEmpty('owner-workload-chart', [
-        {
-            x: Object.keys(ownerWorkload),
-            y: Object.values(ownerWorkload),
-            type: 'bar',
-            marker: { color: '#2563eb' },
-        }
-    ], {
-        height: 250,
-        margin: { t: 50, r: 50, b: 100, l: 50 },
-        showlegend: false,
-        title: 'Engagement Owner Workload',
-        xaxis: { title: 'Owner' },
-        yaxis: { title: 'Number of Engagements' },
-    });
+
     // Risk Category Pie Chart
     const riskCategory = safeParseJSON('risk-category-data');
     plotOrShowEmpty('risk-category-chart', riskCategory, {
