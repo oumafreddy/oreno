@@ -344,11 +344,11 @@ def issue_register_pdf(request):
     if severity:
         issues = issues.filter(risk_level=severity)
     if engagement_name:
-        # Try exact match first, then icontains
+        # Filter issues by engagement through the relationship chain: Issue -> Procedure -> Risk -> Objective -> Engagement
         if Engagement.objects.filter(organization=org, title=engagement_name).exists():
-            issues = issues.filter(engagement__title=engagement_name)
+            issues = issues.filter(procedure__risk__objective__engagement__title=engagement_name)
         else:
-            issues = issues.filter(engagement__title__icontains=engagement_name)
+            issues = issues.filter(procedure__risk__objective__engagement__title__icontains=engagement_name)
     engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_issue_register.html', {
         'organization': org,
@@ -462,7 +462,7 @@ def engagement_with_issues_pdf(request):
             engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
     else:
         engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
-    issues = engagement.issues.all() if engagement else []
+    issues = engagement.all_issues if engagement else []
     engagement_names = get_engagement_names(org)
     html_string = render_to_string('reports/audit_engagement_with_issues.html', {
         'organization': org,

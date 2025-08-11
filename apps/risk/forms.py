@@ -27,6 +27,15 @@ class RiskRegisterForm(OrganizationScopedModelForm):
         widgets = {
             'register_creation_date': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure CKEditor5 fields are properly configured
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
+                field.widget.attrs.update({
+                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
+                })
 
 class RiskMatrixConfigForm(OrganizationScopedModelForm):
     class Meta:
@@ -46,6 +55,15 @@ class RiskForm(OrganizationScopedModelForm):
             'last_reviewed_date': forms.DateInput(attrs={'type': 'date'}),
             'closure_date': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure CKEditor5 fields are properly configured
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
+                field.widget.attrs.update({
+                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
+                })
 
 class ControlForm(OrganizationScopedModelForm):
     class Meta:
@@ -55,11 +73,29 @@ class ControlForm(OrganizationScopedModelForm):
             'last_review_date': forms.DateInput(attrs={'type': 'date'}),
             'next_review_date': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure CKEditor5 fields are properly configured
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
+                field.widget.attrs.update({
+                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
+                })
 
 class KRIForm(OrganizationScopedModelForm):
     class Meta:
         model = KRI
         exclude = ('organization',)
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure CKEditor5 fields are properly configured
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
+                field.widget.attrs.update({
+                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
+                })
 
 class RiskAssessmentForm(OrganizationScopedModelForm):
     class Meta:
@@ -68,6 +104,15 @@ class RiskAssessmentForm(OrganizationScopedModelForm):
         widgets = {
             'assessment_date': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure CKEditor5 fields are properly configured
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
+                field.widget.attrs.update({
+                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
+                })
 
 # If any risk forms add direct email/phone fields in the future, use the following pattern:
 # widgets = {'contact_email': EmailInput(attrs={'type': 'email'}), 'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'})} 

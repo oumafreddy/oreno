@@ -6,6 +6,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from . import models
 from users.models import CustomUser
 from .models.workplan import AuditWorkplan
+from .models.engagement import Engagement
 
 
 # Utility functions to avoid AttributeError with htmx
@@ -1420,6 +1421,10 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         context['selected_years'] = selected_years
         context['selected_months'] = selected_months
         context['filter_all'] = filter_all
+        
+        # Add engagement names for dropdown filters
+        context['engagement_names'] = list(Engagement.objects.filter(organization=organization).values_list('title', flat=True).distinct().order_by('title'))
+        
         return context
 
 class AuditWorkplanViewSet(viewsets.ModelViewSet):
