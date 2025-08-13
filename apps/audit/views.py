@@ -618,60 +618,19 @@ class EngagementCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView
         return initial
     
     def get_template_names(self):
-        """Return different templates based on request type."""
-        if self.request.headers.get('HX-Request'):
-            return ['audit/engagement_modal_form.html']
+        """Return template - always use full page form."""
         return [self.template_name]
         
     def get(self, request, *args, **kwargs):
-        # Check if this is an HTMX request - if so, we use the modal template via get_template_names()
         return super().get(request, *args, **kwargs)
     
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
-        response = super().form_valid(form)
-        
-        # Handle HTMX or AJAX requests
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        if is_htmx or is_ajax:
-            from django.http import JsonResponse
-            from django.urls import reverse
-            detail_url = reverse('audit:engagement-detail', kwargs={'pk': self.object.pk})
-            return JsonResponse({
-                'success': True,
-                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
-                'pk': self.object.pk,
-                'redirect': detail_url,  # Redirect to the engagement detail view
-                'html_redirect': detail_url,  # For compatibility with existing JS
-                'message': self.success_message % form.cleaned_data,
-            })
-        
-        return response
+        return super().form_valid(form)
     
     def form_invalid(self, form):
         """Handle form validation errors."""
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        if is_htmx or is_ajax:
-            from django.http import JsonResponse
-            from django.template.loader import render_to_string
-            
-            # Render the form with errors
-            html = render_to_string(
-                self.get_template_names()[0],
-                self.get_context_data(form=form),
-                request=self.request
-            )
-            
-            return JsonResponse({
-                'success': False,
-                'html': html,
-            }, status=400)
-        
         return super().form_invalid(form)
     
     def get_success_url(self):
@@ -693,62 +652,17 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
         return kwargs
     
     def get_template_names(self):
-        """Return different templates based on request type."""
-        if self.request.headers.get('HX-Request'):
-            return ['audit/engagement_modal_form.html']
+        """Return template - always use full page form."""
         return [self.template_name]
     
     def form_valid(self, form):
         """Handle successful form submission."""
         form.instance.organization = self.request.organization
         form.instance.last_modified_by = self.request.user
-        response = super().form_valid(form)
-        
-        # Handle HTMX or AJAX requests
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        if is_htmx or is_ajax:
-            from django.http import JsonResponse
-            from django.template.loader import render_to_string
-            
-            # Get the URL for the engagement list page
-            from django.urls import reverse
-            list_url = reverse('audit:engagement-list')
-            
-            # Provide JSON response for modal handler
-            return JsonResponse({
-                'success': True,
-                'form_is_valid': True,  # Triggers successful form handling in modal-handler.js
-                'pk': self.object.pk,
-                'redirect': list_url,  # Always redirect to the engagement list
-                'html_redirect': list_url,  # For compatibility with existing JS
-                'message': self.success_message % form.cleaned_data,
-            })
-        
-        return response
+        return super().form_valid(form)
     
     def form_invalid(self, form):
         """Handle form validation errors."""
-        is_htmx = self.request.headers.get('HX-Request') == 'true'
-        is_ajax = self.request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        if is_htmx or is_ajax:
-            from django.http import JsonResponse
-            from django.template.loader import render_to_string
-            
-            # Render the form with errors
-            html = render_to_string(
-                self.get_template_names()[0],
-                self.get_context_data(form=form),
-                request=self.request
-            )
-            
-            return JsonResponse({
-                'success': False,
-                'html': html,
-            }, status=400)
-        
         return super().form_invalid(form)
     
     def get_success_url(self):

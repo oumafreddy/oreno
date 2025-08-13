@@ -97,7 +97,7 @@
             {% if workplan.description %}
             <tr>
                 <td><strong>Description:</strong></td>
-                <td>{{ workplan.description }}</td>
+                <td>{{ workplan.description|striptags|truncatechars:200 }}</td>
             </tr>
             {% endif %}
         </table>

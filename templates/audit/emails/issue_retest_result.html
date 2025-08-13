@@ -111,7 +111,7 @@
             {% if retest.result_notes %}
             <tr>
                 <td><strong>Test Notes:</strong></td>
-                <td>{{ retest.result_notes }}</td>
+                <td>{{ retest.result_notes|striptags|truncatechars:200 }}</td>
             </tr>
             {% endif %}
             {% if retest.verification_status %}
@@ -135,12 +135,11 @@
         {% endif %}
         
         <p>Thank you,<br>
-        {{ site_name }}</p>
+        Oreno GRC</p>
     </div>
     
     <div class="footer">
-        <p>This is an automated message from {{ site_name }}.</p>
-        <p>Please do not reply to this email.</p>
+        <p>This is an automated message from Oreno GRC. Please do not reply to this email.</p>
     </div>
 </body>
 </html>

@@ -132,7 +132,7 @@
             {% endif %}
             <tr>
                 <td><strong>Description:</strong></td>
-                <td>{{ recommendation.description|truncatechars:200 }}</td>
+                <td>{{ recommendation.description|striptags|truncatechars:200 }}</td>
             </tr>
             {% if recommendation.issue %}
             <tr>
@@ -155,12 +155,11 @@
         {% endif %}
         
         <p>Thank you,<br>
-        {{ site_name }}</p>
+        Oreno GRC</p>
     </div>
     
     <div class="footer">
-        <p>This is an automated message from {{ site_name }}.</p>
-        <p>Please do not reply to this email.</p>
+        <p>This is an automated message from Oreno GRC. Please do not reply to this email.</p>
     </div>
 </body>
 </html>

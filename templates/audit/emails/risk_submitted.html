@@ -118,7 +118,7 @@
             </tr>
             <tr>
                 <td><strong>Description:</strong></td>
-                <td>{{ risk.description|truncatechars:200 }}</td>
+                <td>{{ risk.description|striptags|truncatechars:200 }}</td>
             </tr>
         </table>
         
@@ -129,12 +129,11 @@
         {% endif %}
         
         <p>Thank you,<br>
-        {{ site_name }}</p>
+        Oreno GRC</p>
     </div>
     
     <div class="footer">
-        <p>This is an automated message from {{ site_name }}.</p>
-        <p>Please do not reply to this email.</p>
+        <p>This is an automated message from Oreno GRC. Please do not reply to this email.</p>
     </div>
 </body>
 </html>
