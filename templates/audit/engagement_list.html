@@ -63,7 +63,12 @@
                     <a href="{% url 'audit:engagement-detail' engagement.pk %}" class="btn btn-sm btn-outline-primary">View</a>
                     <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                     {% if engagement.can_submit %}
-                      <a href="{% url 'audit:engagement-submit' engagement.pk %}" class="btn btn-sm btn-warning">Submit</a>
+                      <form method="post" action="{% url 'audit:engagement-submit' engagement.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to submit this engagement for approval?')">
+                          Submit
+                        </button>
+                      </form>
                     {% endif %}
                   </td>
                 </tr>

@@ -18,8 +18,8 @@ from django.template.loader import render_to_string
 logger = logging.getLogger(__name__)
 
 def default_expiration():
-    """Generate expiration time 5 minutes from now."""
-    return timezone.now() + timedelta(minutes=5)
+    """Generate expiration time 10 minutes from now."""
+    return timezone.now() + timedelta(minutes=10)
 
 def default_datetime():
     """Provide a default timezone-aware datetime for registration."""
@@ -36,10 +36,12 @@ class CustomUser(AbstractUser):
     Extended User model for multi-tenancy with additional fields.
     """
     ROLE_ADMIN = 'admin'
+    ROLE_HEAD_OF_UNIT = 'head_of_unit'
     ROLE_MANAGER = 'manager'
     ROLE_STAFF = 'staff'
     ROLE_CHOICES = [
         (ROLE_ADMIN, _('Admin')),
+        (ROLE_HEAD_OF_UNIT, _('Head of Unit')),
         (ROLE_MANAGER, _('Manager')),
         (ROLE_STAFF, _('Staff')),
     ]
@@ -68,6 +70,16 @@ class CustomUser(AbstractUser):
         default=default_datetime,
         verbose_name=_("Registration Date"),
         help_text=_("The date and time when the user registered.")
+    )
+    is_first_time_setup_complete = models.BooleanField(
+        default=False,
+        verbose_name=_("First Time Setup Complete"),
+        help_text=_("Whether the user has completed their first-time setup (OTP verification and password reset).")
+    )
+    is_admin_created = models.BooleanField(
+        default=False,
+        verbose_name=_("Admin Created"),
+        help_text=_("Whether this user was created by an admin (requires first-time setup).")
     )
 
     # Use email for authentication
@@ -133,6 +145,19 @@ class CustomUser(AbstractUser):
             organization=organization,
             role__in=['admin', 'manager', 'staff']  # Staff can have audit access
         ).exists()
+
+    def requires_first_time_setup(self):
+        """
+        Check if user requires first-time setup (OTP verification and password reset).
+        """
+        return not self.is_first_time_setup_complete
+
+    def can_delete_users(self):
+        """
+        Check if user can delete other users.
+        Only superusers can delete users, not organization admins.
+        """
+        return self.is_superuser
 
 
 class Profile(models.Model):

@@ -14,6 +14,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Q, Prefetch
@@ -28,7 +29,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
-from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm
+from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm
 from .models import CustomUser, Profile, OTP, OrganizationRole
 from .serializers import (
     UserRegisterSerializer,
@@ -79,6 +80,29 @@ class UserRegisterAPIView(generics.CreateAPIView):
 class UserLoginAPIView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        """Override to add tenant access validation after successful authentication."""
+        response = super().post(request, *args, **kwargs)
+        
+        # Only check if authentication was successful
+        if response.status_code == 200:
+            # Get the user from the serializer
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.user
+                
+                # Get current tenant from request
+                current_tenant = getattr(request, 'tenant', None)
+                
+                from core.utils import user_has_tenant_access
+                if current_tenant and not user_has_tenant_access(user, current_tenant):
+                    # User doesn't have access to this tenant
+                    return Response({
+                        'detail': _("Access denied. You can only access your assigned organization.")
+                    }, status=403)
+        
+        return response
 
 @method_decorator(skip_org_check, name='dispatch')
 class TokenRefreshAPIView(TokenRefreshView):
@@ -155,9 +179,195 @@ class UserLoginView(LoginView):
     template_name = 'users/login.html'
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        """Override to add tenant access validation and first-time setup check after successful authentication."""
+        response = super().form_valid(form)
+        
+        # Get the authenticated user
+        user = form.get_user()
+        
+        # Get current tenant from request
+        current_tenant = getattr(self.request, 'tenant', None)
+        
+        from core.utils import user_has_tenant_access
+        if current_tenant and not user_has_tenant_access(user, current_tenant):
+            # User doesn't have access to this tenant
+            from django.contrib.auth import logout
+            logout(self.request)
+            
+            messages.error(
+                self.request,
+                _("Access denied. You can only access your assigned organization.")
+            )
+            
+            # Redirect back to login
+            return redirect('users:login')
+        
+        # Check if user requires first-time setup
+        if user.requires_first_time_setup():
+            # Store user info in session for first-time setup
+            self.request.session['first_time_setup_user_id'] = user.id
+            self.request.session['first_time_setup_required'] = True
+            
+            # Redirect to first-time setup page
+            return redirect('users:first-time-setup')
+        
+        return response
+
     def get_success_url(self):
         # Always redirect to the Professional Home Dashboard
         return reverse_lazy('home')
+
+
+@method_decorator(skip_org_check, name='dispatch')
+class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
+    """
+    First-time setup view for new users to verify OTP and reset password.
+    """
+    template_name = 'users/first_time_setup.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Check if user actually needs first-time setup
+        if not request.user.requires_first_time_setup():
+            return redirect('home')
+        
+        # Check if this is the correct user for first-time setup
+        setup_user_id = request.session.get('first_time_setup_user_id')
+        if not setup_user_id or setup_user_id != request.user.id:
+            messages.error(request, _("Invalid first-time setup session."))
+            return redirect('users:login')
+        
+        # Handle resend OTP request
+        if (request.path.endswith('/resend-otp/') or request.POST.get('resend_otp')) and request.method == 'POST':
+            return self.resend_otp(request, *args, **kwargs)
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Get or create OTP for the user
+        otp, created = OTP.objects.get_or_create(
+            user=user,
+            is_verified=False,
+            defaults={'is_expired': False}
+        )
+        
+        if created:
+            # Send OTP via email
+            try:
+                otp.send_via_email()
+                messages.success(
+                    self.request,
+                    _("OTP code has been sent to your email address.")
+                )
+            except Exception as e:
+                messages.error(
+                    self.request,
+                    _("Failed to send OTP. Please contact support.")
+                )
+        
+        context.update({
+            'user': user,
+            'otp': otp,
+            'is_admin_created': user.is_admin_created,
+        })
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle OTP verification and password reset."""
+        user = request.user
+        otp_code = request.POST.get('otp_code')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        # Verify OTP
+        try:
+            otp = OTP.objects.get(
+                user=user,
+                otp=otp_code,
+                is_verified=False,
+                is_expired=False
+            )
+            
+            if otp.has_expired():
+                messages.error(request, _("OTP code has expired. Please request a new one."))
+                return self.get(request, *args, **kwargs)
+            
+            if otp.attempts >= OTP.MAX_ATTEMPTS:
+                messages.error(request, _("Too many failed attempts. Please request a new OTP."))
+                return self.get(request, *args, **kwargs)
+            
+            # Verify OTP
+            if otp.verify(otp_code):
+                # OTP is valid, now handle password reset
+                if new_password and confirm_password:
+                    if new_password != confirm_password:
+                        messages.error(request, _("Passwords do not match."))
+                        return self.get(request, *args, **kwargs)
+                    
+                    if len(new_password) < 8:
+                        messages.error(request, _("Password must be at least 8 characters long."))
+                        return self.get(request, *args, **kwargs)
+                    
+                    # Set new password and mark setup as complete
+                    user.set_password(new_password)
+                    user.is_first_time_setup_complete = True
+                    user.save()
+                    
+                    # Clear session data
+                    request.session.pop('first_time_setup_user_id', None)
+                    request.session.pop('first_time_setup_required', None)
+                    
+                    messages.success(
+                        request,
+                        _("Account setup completed successfully! You can now access the application.")
+                    )
+                    
+                    # Re-authenticate user with new password
+                    from django.contrib.auth import login
+                    login(request, user)
+                    
+                    return redirect('home')
+                else:
+                    messages.error(request, _("Please provide a new password."))
+                    return self.get(request, *args, **kwargs)
+            else:
+                messages.error(request, _("Invalid OTP code. Please try again."))
+                return self.get(request, *args, **kwargs)
+                
+        except OTP.DoesNotExist:
+            messages.error(request, _("Invalid OTP code. Please try again."))
+            return self.get(request, *args, **kwargs)
+    
+    def resend_otp(self, request, *args, **kwargs):
+        """Handle OTP resend request."""
+        user = request.user
+        
+        # Expire old OTPs
+        OTP.objects.filter(
+            user=user,
+            is_verified=False
+        ).update(is_expired=True)
+        
+        # Create new OTP
+        new_otp = OTP.objects.create(user=user)
+        
+        try:
+            new_otp.send_via_email()
+            messages.success(
+                request,
+                _("New OTP code has been sent to your email address.")
+            )
+        except Exception as e:
+            messages.error(
+                request,
+                _("Failed to send OTP. Please contact support.")
+            )
+        
+        # Redirect back to the setup page
+        return redirect('users:first-time-setup')
 
 @method_decorator(skip_org_check, name='dispatch')
 class UserLogoutView(LogoutView):
@@ -243,6 +453,11 @@ class UserListView(UserPermissionMixin, ListView):
 
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        return context
+
 class UserDetailView(UserPermissionMixin, DetailView):
     model = CustomUser
     template_name = 'users/user_detail.html'
@@ -253,6 +468,11 @@ class UserDetailView(UserPermissionMixin, DetailView):
 
     def get_organization(self):
         return self.get_object().organization
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        return context
 
 class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
     model = CustomUser
@@ -266,6 +486,11 @@ class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
     def get_organization(self):
         return self.get_object().organization
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        return context
+
 class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
     model = CustomUser
     template_name = 'users/user_confirm_delete.html'
@@ -275,6 +500,10 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         if self.get_object() == request.user:
             raise PermissionDenied(_("You cannot delete your own account"))
+        
+        # Check if user has permission to delete users
+        if not request.user.can_delete_users():
+            raise PermissionDenied(_("You do not have permission to delete users. Only superusers can delete users."))
             
         user = self.get_object()
         
@@ -291,6 +520,53 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
             
             # Now delete the user from the public schema
             return super().delete(request, *args, **kwargs)
+
+class AdminUserCreateView(UserPermissionMixin, SuccessMessageMixin, CreateView):
+    """
+    View for admin users to create new users within their organization.
+    Only users with admin role can access this view.
+    """
+    model = CustomUser
+    form_class = AdminUserCreationForm
+    template_name = 'users/admin_user_form.html'
+    success_url = reverse_lazy('users:user-list')
+    success_message = _("User created successfully. They will receive an email to complete their account setup.")
+
+    def dispatch(self, request, *args, **kwargs):
+        # Check if user has admin role
+        if request.user.role != CustomUser.ROLE_ADMIN:
+            raise PermissionDenied(_("Only admin users can create new users."))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
+
+    def form_valid(self, form):
+        # Set the organization to the current user's organization
+        form.instance.organization = self.request.user.organization
+        form.instance.is_admin_created = True
+        form.instance.is_first_time_setup_complete = False
+        
+        response = super().form_valid(form)
+        
+        # Create profile and OTP for the new user
+        Profile.objects.create(user=form.instance)
+        OTP.objects.create(user=form.instance)
+        
+        # Send welcome email
+        try:
+            from .tasks import send_welcome_email
+            send_welcome_email.delay(form.instance.id, form.instance.email, form.instance.username)
+        except Exception as e:
+            # Log error but don't fail the user creation
+            pass
+        
+        return response
+
+    def get_organization(self):
+        return self.request.user.organization
 
 # ─── PASSWORD MANAGEMENT VIEWS ──────────────────────────────────────────────
 @method_decorator(login_required, name='dispatch')

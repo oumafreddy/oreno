@@ -63,6 +63,66 @@ class CustomUserCreationForm(BaseUserForm, UserCreationForm):
             'role': forms.Select(attrs={'class': 'form-select'}),
         }
 
+class AdminUserCreationForm(BaseUserForm, UserCreationForm):
+    """
+    Form for admin users to create users within their organization.
+    Organization field is pre-filled and hidden.
+    """
+    password1 = forms.CharField(
+        label=_("Password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        help_text=password_validation.password_validators_help_text_html(),
+    )
+    password2 = forms.CharField(
+        label=_("Password confirmation"),
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        strip=False,
+        help_text=_("Enter the same password as before, for verification."),
+    )
+
+    class Meta:
+        model = CustomUser
+        fields = ('email', 'username', 'first_name', 'last_name', 'organization', 'role')
+        widgets = {
+            'organization': forms.HiddenInput(),
+            'role': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        organization = kwargs.pop('organization', None)
+        super().__init__(*args, **kwargs)
+        
+        if organization:
+            self.fields['organization'].initial = organization
+            self.fields['organization'].widget = forms.HiddenInput()
+        
+        # Update layout to remove organization field from display
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Basic Information'),
+                Row(
+                    Column('email', css_class='col-md-6'),
+                    Column('username', css_class='col-md-6'),
+                ),
+                Row(
+                    Column('first_name', css_class='col-md-6'),
+                    Column('last_name', css_class='col-md-6'),
+                ),
+            ),
+            Fieldset(
+                _('Organization'),
+                'organization',  # Hidden field
+                Row(
+                    Column('role', css_class='col-md-6'),
+                ),
+            ),
+            ButtonHolder(
+                Submit('submit', _('Create User'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")
         password2 = self.cleaned_data.get("password2")

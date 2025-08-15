@@ -141,9 +141,18 @@ def handle_user_deletion(sender, instance, **kwargs):
     Handle cleanup and anonymization before user deletion.
     """
     # Clear all related data in the public schema
-    instance.profile.delete()
-    instance.otp_set.all().delete()
+    try:
+        if hasattr(instance, 'profile'):
+            instance.profile.delete()
+    except Profile.DoesNotExist:
+        pass  # Profile doesn't exist, which is fine
+    
+    # Delete OTPs
+    instance.otps.all().delete()
+    
+    # Delete organization roles
     instance.user_roles.all().delete()
+    
     # Clear cached data
     safe_delete_pattern(f'user_{instance.id}_*')
     if instance.organization:

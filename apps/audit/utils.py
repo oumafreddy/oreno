@@ -26,7 +26,7 @@ def send_approval_notification(approval, request=None):
         approval: The Approval instance
         request: The HTTP request object (optional, for building absolute URLs)
     """
-    context = _build_approval_context(approval, request)
+    context = build_approval_email_context(approval, request)
     
     subject = _("New approval request: {0}").format(str(approval.content_object))
     template = 'audit/emails/approval_request.html'
@@ -47,7 +47,7 @@ def send_approval_status_notification(approval, request=None):
         approval: The Approval instance
         request: The HTTP request object (optional, for building absolute URLs)
     """
-    context = _build_approval_context(approval, request)
+    context = build_approval_email_context(approval, request)
     
     if approval.status == 'approved':
         subject = _("Approval request approved: {0}").format(str(approval.content_object))
@@ -146,6 +146,80 @@ def _send_templated_email(subject, template, context, recipient_email):
     )
 
 
+def get_workplan_approvers(organization):
+    """
+    Get users who can approve workplans (Head of Unit and Admin roles).
+    Workplans are submitted by Managers and approved by Head of Unit.
+    
+    Args:
+        organization: The organization instance
+        
+    Returns:
+        QuerySet of users with Head of Unit or Admin roles in the organization
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    return User.objects.filter(
+        organization=organization,
+        role__in=['head_of_unit', 'admin']
+    ).distinct()
+
+def get_engagement_approvers(organization):
+    """
+    Get users who can approve engagements (Manager, Head of Unit, and Admin roles).
+    Engagements are submitted by Staff and approved by Managers.
+    
+    Args:
+        organization: The organization instance
+        
+    Returns:
+        QuerySet of users with Manager, Head of Unit, or Admin roles in the organization
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    return User.objects.filter(
+        organization=organization,
+        role__in=['manager', 'head_of_unit', 'admin']
+    ).distinct()
+
+def get_workplan_submitters(organization):
+    """
+    Get users who can submit workplans (Manager, Head of Unit, and Admin roles).
+    
+    Args:
+        organization: The organization instance
+        
+    Returns:
+        QuerySet of users with Manager, Head of Unit, or Admin roles in the organization
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    return User.objects.filter(
+        organization=organization,
+        role__in=['manager', 'head_of_unit', 'admin']
+    ).distinct()
+
+def get_engagement_submitters(organization):
+    """
+    Get users who can submit engagements (Staff, Manager, Head of Unit, and Admin roles).
+    
+    Args:
+        organization: The organization instance
+        
+    Returns:
+        QuerySet of users with Staff, Manager, Head of Unit, or Admin roles in the organization
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    return User.objects.filter(
+        organization=organization,
+        role__in=['staff', 'manager', 'head_of_unit', 'admin']
+    ).distinct()
+
 def send_workplan_approval_notification(workplan, status, request):
     """
     Send email notification for workplan approval status changes.
@@ -190,13 +264,15 @@ def send_workplan_approval_notification(workplan, status, request):
     }
     
     if status == 'submitted':
-        # Notify approvers
-        # Find users with approval permission
-        approvers = User.objects.filter(
-            groups__permissions__codename='can_approve_workplan', 
-            groups__permissions__content_type__app_label='audit',
-            organization=workplan.organization
-        ).distinct()
+        # Notify approvers using the new approval hierarchy
+        approvers = get_workplan_approvers(workplan.organization)
+        
+        if not approvers.exists():
+            # Fallback: notify admins if no Head of Unit exists
+            approvers = User.objects.filter(
+                organization=workplan.organization,
+                role='admin'
+            )
         
         for approver in approvers:
             context['approver'] = approver
@@ -279,13 +355,15 @@ def send_engagement_approval_notification(engagement, status, request):
     }
     
     if status == 'submitted':
-        # Notify approvers
-        # Find users with approval permission
-        approvers = User.objects.filter(
-            groups__permissions__codename='can_approve_engagement', 
-            groups__permissions__content_type__app_label='audit',
-            organization=engagement.organization
-        ).distinct()
+        # Notify approvers using the new approval hierarchy
+        approvers = get_engagement_approvers(engagement.organization)
+        
+        if not approvers.exists():
+            # Fallback: notify admins if no managers exist
+            approvers = User.objects.filter(
+                organization=engagement.organization,
+                role='admin'
+            )
         
         for approver in approvers:
             context['approver'] = approver

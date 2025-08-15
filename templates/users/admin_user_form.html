@@ -1,12 +1,14 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
-{% block title %}Edit User{% endblock %}
+{% block title %}Create New User{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card shadow-sm">
-      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h3 class="mb-0">Edit User</h3>
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">
+          <i class="fas fa-user-plus me-2"></i>Create New User
+        </h3>
         <a href="{% url 'users:user-list' %}" class="btn btn-outline-light btn-sm">
           <i class="fas fa-arrow-left me-1"></i>Back to User List
         </a>
@@ -20,17 +22,27 @@
             </div>
           {% endfor %}
         {% endif %}
+        
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Note:</strong> The new user will be created in your organization ({{ request.user.organization.customer_name }}) and will receive an email to complete their account setup.
+        </div>
+        
         {% if form.errors %}
           <div class="alert alert-danger">
             <strong>Please correct the errors below:</strong>
+            {{ form.non_field_errors }}
           </div>
         {% endif %}
+        
         <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
           {{ form|crispy }}
           <div class="text-end mt-3">
-            <button type="submit" class="btn btn-success">Save Changes</button>
-            <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-secondary ms-2">Cancel</a>
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-user-plus me-1"></i>Create User
+            </button>
+            <a href="{% url 'users:user-list' %}" class="btn btn-secondary ms-2">Cancel</a>
           </div>
         </form>
       </div>

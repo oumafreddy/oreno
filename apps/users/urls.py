@@ -19,10 +19,12 @@ from .views import (
     UserDetailView,
     UserUpdateView,
     UserDeleteView,
+    AdminUserCreateView,
     OrganizationRoleCreateView,
     OrganizationRoleUpdateView,
     OrganizationRoleDeleteView,
     UserRegisterView,
+    FirstTimeSetupView,
     # API Views
     UserRegisterAPIView,
     UserLoginAPIView,
@@ -51,6 +53,7 @@ urlpatterns = [
     
     # User Management
     path('', UserListView.as_view(), name='user-list'),
+    path('create/', AdminUserCreateView.as_view(), name='admin-user-create'),
     path('<int:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('<int:pk>/update/', UserUpdateView.as_view(), name='user-update'),
     path('<int:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
@@ -62,6 +65,10 @@ urlpatterns = [
     
     # Registration
     path('register/', UserRegisterView.as_view(), name='register'),
+    
+    # First-time Setup
+    path('first-time-setup/', FirstTimeSetupView.as_view(), name='first-time-setup'),
+    path('first-time-setup/resend-otp/', FirstTimeSetupView.as_view(), name='resend-otp-setup'),
     
     # API endpoints
     path('api/register/', UserRegisterAPIView.as_view(), name='api-register'),

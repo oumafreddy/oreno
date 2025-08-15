@@ -18,7 +18,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
     """
     list_display = (
         'email', 'username', 'get_full_name', 'organization', 'role',
-        'is_staff', 'is_active', 'last_login', 'date_joined'
+        'is_staff', 'is_active', 'setup_status', 'last_login', 'date_joined'
     )
     list_filter = (
         'organization', 'role', 'is_staff', 'is_active',
@@ -29,7 +29,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         'organization__customer_name', 'organization__customer_code'
     )
     ordering = ('-date_joined',)
-    readonly_fields = ('date_joined', 'last_login', 'admin_delete_help')
+    readonly_fields = ('date_joined', 'last_login', 'admin_delete_help', 'is_first_time_setup_complete')
     
     fieldsets = (
         (None, {
@@ -40,6 +40,10 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         }),
         (_('Organization'), {
             'fields': ('organization', 'role')
+        }),
+        (_('Account Setup'), {
+            'fields': ('is_admin_created', 'is_first_time_setup_complete'),
+            'classes': ('collapse',)
         }),
         (_('Permissions'), {
             'fields': (
@@ -59,7 +63,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
             'classes': ('wide',),
             'fields': (
                 'email', 'username', 'password1', 'password2',
-                'organization', 'role', 'is_staff', 'is_active'
+                'organization', 'role', 'is_staff', 'is_active', 'is_admin_created'
             )
         }),
     )
@@ -82,7 +86,10 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         return obj.organization == request.user.organization
     
     def has_delete_permission(self, request, obj=None):
-        return False  # Remove delete from admin UI for CustomUser
+        # Only superusers can delete users, not organization admins
+        if not request.user.is_superuser:
+            return False
+        return True
 
     def admin_delete_help(self, obj=None):
         return (
@@ -94,6 +101,22 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         )
     admin_delete_help.short_description = 'Delete User (Important Notice)'
     admin_delete_help.allow_tags = True
+
+    def setup_status(self, obj):
+        """Display setup status with color coding."""
+        if obj.is_first_time_setup_complete:
+            return '<span style="color: green;">✓ Complete</span>'
+        else:
+            return '<span style="color: orange;">⚠ Pending</span>'
+    setup_status.short_description = 'Setup Status'
+    setup_status.allow_tags = True
+
+    def save_model(self, request, obj, form, change):
+        """Override to automatically set admin_created flag for new users."""
+        if not change:  # New user being created
+            obj.is_admin_created = True
+            obj.is_first_time_setup_complete = False
+        super().save_model(request, obj, form, change)
 
 @admin.register(Profile)
 class ProfileAdmin(VersionAdmin):

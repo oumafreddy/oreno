@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}First Time Setup - OTP Verification{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>
+                        First Time Setup
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="fas fa-shield-alt fa-3x text-primary"></i>
+                        </div>
+                        <h5>Welcome, {{ user.get_full_name|default:user.email }}!</h5>
+                        <p class="text-muted">
+                            {% if is_admin_created %}
+                                Your account was created by an administrator. Please complete the setup process to access the application.
+                            {% else %}
+                                Please complete your account setup to access the application.
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <form method="post" id="setupForm">
+                        {% csrf_token %}
+                        
+                        <!-- Step 1: OTP Verification -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-key me-2"></i>
+                                Step 1: Verify Your Email
+                            </h6>
+                            <p class="text-muted small">
+                                We've sent a 6-digit verification code to <strong>{{ user.email }}</strong>. 
+                                The code expires in 10 minutes.
+                            </p>
+                            
+                            <div class="mb-3">
+                                <label for="otp_code" class="form-label">Verification Code</label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center" 
+                                       id="otp_code" 
+                                       name="otp_code" 
+                                       maxlength="6" 
+                                       pattern="[0-9]{6}" 
+                                       placeholder="000000"
+                                       required>
+                                <div class="form-text">
+                                    Enter the 6-digit code from your email
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="button" 
+                                        class="btn btn-outline-secondary btn-sm"
+                                        id="resendOtpBtn">
+                                    <i class="fas fa-redo me-1"></i>
+                                    Resend Code
+                                </button>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Expires in <span id="countdown">10:00</span>
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Password Reset -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-lock me-2"></i>
+                                Step 2: Set Your Password
+                            </h6>
+                            <p class="text-muted small">
+                                {% if is_admin_created %}
+                                    Since your account was created by an administrator, you need to set your own password.
+                                {% else %}
+                                    Please set a strong password for your account.
+                                {% endif %}
+                            </p>
+                            
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="new_password" 
+                                       name="new_password" 
+                                       minlength="8"
+                                       required>
+                                <div class="form-text">
+                                    Password must be at least 8 characters long
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm Password</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="confirm_password" 
+                                       name="confirm_password" 
+                                       required>
+                                <div class="form-text">
+                                    Re-enter your password to confirm
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check me-2"></i>
+                                Complete Setup
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Need help? Contact your system administrator
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resend OTP Form -->
+<form id="resendForm" method="post" action="{% url 'users:resend-otp-setup' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="resend_otp" value="1">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+// Countdown timer for OTP expiration
+function startCountdown() {
+    console.log('Starting countdown...');
+    let timeLeft = 10 * 60; // 10 minutes in seconds
+    const countdownElement = document.getElementById('countdown');
+    
+    if (!countdownElement) {
+        console.error('Countdown element not found');
+        return;
+    }
+    
+    console.log('Countdown element found:', countdownElement);
+    
+    const timer = setInterval(function() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            countdownElement.textContent = 'Expired';
+            countdownElement.classList.add('text-danger');
+        }
+        
+        timeLeft--;
+    }, 1000);
+    
+    console.log('Countdown timer started');
+}
+
+// Resend OTP function
+function resendOTP(event) {
+    if (confirm('Send a new verification code to your email?')) {
+        // Show loading state
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+        button.disabled = true;
+        
+        // Submit the form
+        document.getElementById('resendForm').submit();
+    }
+}
+
+// Password confirmation validation
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('new_password').value;
+    const confirmPassword = this.value;
+    
+    if (password !== confirmPassword) {
+        this.setCustomValidity('Passwords do not match');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+
+// OTP input formatting
+document.getElementById('otp_code').addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+});
+
+// Form validation
+document.getElementById('setupForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match. Please try again.');
+        return false;
+    }
+    
+    if (password.length < 8) {
+        e.preventDefault();
+        alert('Password must be at least 8 characters long.');
+        return false;
+    }
+});
+
+// Start countdown when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, starting countdown...');
+    startCountdown();
+    
+    // Attach event listeners
+    const resendBtn = document.getElementById('resendOtpBtn');
+    if (resendBtn) {
+        resendBtn.addEventListener('click', resendOTP);
+        console.log('Resend button event listener attached');
+    } else {
+        console.error('Resend button not found');
+    }
+});
+
+// Also try to start countdown immediately if DOM is already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        startCountdown();
+        
+        // Attach event listeners
+        const resendBtn = document.getElementById('resendOtpBtn');
+        if (resendBtn) {
+            resendBtn.addEventListener('click', resendOTP);
+        }
+    });
+} else {
+    startCountdown();
+    
+    // Attach event listeners
+    const resendBtn = document.getElementById('resendOtpBtn');
+    if (resendBtn) {
+        resendBtn.addEventListener('click', resendOTP);
+    }
+}
+</script>
+{% endblock %}

@@ -39,9 +39,11 @@ class CurrentUserMiddleware:
 
 class OrganizationMiddleware:
     """
-    Auto-attach request.organization and redirect unaffiliated users
-    to the organization creation page. Allows skipping via decorator
-    or URL prefixes.
+    Enhanced middleware that enforces tenant access control and organization context.
+    This middleware ensures:
+    1. Users can only access their assigned organization/tenant
+    2. Proper organization context is set for all requests
+    3. Cross-tenant access is prevented
     """
 
     # Paths to bypass org‑check entirely
@@ -57,6 +59,11 @@ class OrganizationMiddleware:
         '/api/users/profile/',
         '/api/users/logout/',
         '/api/',  # Exempt all API endpoints
+        '/users/login/',
+        '/users/register/',
+        '/users/logout/',
+        '/service_paused/',
+        '/service_info/',
     )
 
     def __init__(self, get_response):
@@ -76,13 +83,36 @@ class OrganizationMiddleware:
             request.organization = None
             return self.get_response(request)
 
-        # 3) Enforce for authenticated users
+        # 3) Get current tenant from request
+        current_tenant = getattr(request, 'tenant', None)
+        
+        # 4) Enforce tenant access control for authenticated users
         user = getattr(request, 'user', None)
         organization = None
         
         if user and user.is_authenticated:
-            # Get organization from user or their memberships
-            organization = getattr(user, 'organization', None)
+            # Get user's assigned organization
+            user_organization = getattr(user, 'organization', None)
+            
+            # Check if user has access to current tenant
+            if current_tenant and user_organization:
+                from .utils import user_has_tenant_access
+                if not user_has_tenant_access(user, current_tenant):
+                    # User doesn't have access to this tenant - log them out
+                    from django.contrib.auth import logout
+                    from django.contrib import messages
+                    from django.shortcuts import redirect
+                    from django.utils.translation import gettext_lazy as _
+                    
+                    logout(request)
+                    messages.error(
+                        request, 
+                        _("Access denied. You can only access your assigned organization.")
+                    )
+                    return redirect('users:login')
+            
+            # Set organization for the request
+            organization = user_organization
             if not organization:
                 # Check OrganizationUser memberships
                 from organizations.models import OrganizationUser
@@ -92,7 +122,7 @@ class OrganizationMiddleware:
                 elif not path.startswith('/organizations/create/'):
                     return redirect('organizations:create')
 
-        # 4) Store for downstream use
+        # 5) Store for downstream use
         _thread_locals.organization = organization
         request.organization = organization
 
@@ -102,5 +132,4 @@ class OrganizationMiddleware:
         if hasattr(_thread_locals, 'organization'):
             del _thread_locals.organization
             
-        print(f"Current schema: {connection.schema_name}")
         return response

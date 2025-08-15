@@ -86,3 +86,47 @@ def safe_cast(val, to_type, default=None):
     except (ValueError, TypeError):
         logger.warning(f"Failed to cast {val} to {to_type}. Returning default: {default}.")
         return default
+
+
+def user_has_tenant_access(user, tenant):
+    """
+    Check if user has access to the specified tenant.
+    
+    Args:
+        user: The authenticated user
+        tenant: The tenant/organization being accessed
+        
+    Returns:
+        bool: True if user has access, False otherwise
+    """
+    # Superusers can access all tenants (for admin purposes)
+    if user.is_superuser:
+        return True
+    
+    # Get user's assigned organization
+    user_organization = getattr(user, 'organization', None)
+    
+    # If user has no organization assigned, they can't access any tenant
+    if not user_organization:
+        logger.warning(f"User {user.email} has no organization assigned")
+        return False
+    
+    # Check if user's organization matches the tenant
+    if hasattr(tenant, 'schema_name'):
+        # For django-tenants, compare schema names
+        has_access = user_organization.schema_name == tenant.schema_name
+        if not has_access:
+            logger.warning(
+                f"User {user.email} (org: {user_organization.schema_name}) "
+                f"attempted to access tenant {tenant.schema_name}"
+            )
+        return has_access
+    else:
+        # For direct organization comparison
+        has_access = user_organization == tenant
+        if not has_access:
+            logger.warning(
+                f"User {user.email} (org: {user_organization}) "
+                f"attempted to access tenant {tenant}"
+            )
+        return has_access

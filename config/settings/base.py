@@ -197,8 +197,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.OrganizationMiddleware',  # Enhanced tenant access control & org context
     'apps.common.middleware.OrganizationActiveMiddleware',
-    'apps.core.middleware.OrganizationMiddleware',
     'apps.common.middleware.AppAccessControlMiddleware',
     'common.middleware.AjaxLoginRequiredMiddleware',
     'common.middleware.LoginRequiredMiddleware',

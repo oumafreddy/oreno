@@ -80,9 +80,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'email', 'username', 'first_name', 'last_name',
             'organization', 'organization_name', 'role', 'is_active',
-            'is_staff', 'date_joined', 'last_login', 'profile', 'roles'
+            'is_staff', 'date_joined', 'last_login', 'profile', 'roles',
+            'is_first_time_setup_complete', 'is_admin_created'
         )
-        read_only_fields = ('date_joined', 'last_login')
+        read_only_fields = ('date_joined', 'last_login', 'is_first_time_setup_complete', 'is_admin_created')
 
     def validate_organization(self, value):
         if value and not value.is_active:
@@ -128,12 +129,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        # Enforce OTP verification before issuing tokens
+        # Check if user requires first-time setup
         user = User.objects.filter(email=attrs.get('email')).first()
-        if user:
-            latest_otp = user.otps.order_by('-created_at').first()
-            if latest_otp and not latest_otp.is_verified:
-                raise serializers.ValidationError({'otp_required': True, 'detail': 'OTP verification required before login.'})
+        if user and user.requires_first_time_setup():
+            raise serializers.ValidationError({
+                'first_time_setup_required': True, 
+                'detail': 'First-time setup required. Please complete OTP verification and password reset.'
+            })
+        
         data = super().validate(attrs)
         # Include extra user info
         data['user'] = {
@@ -143,6 +146,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'organization': self.user.organization.pk if self.user.organization else None,
             'role': self.user.role,
             'is_staff': self.user.is_staff,
+            'is_first_time_setup_complete': self.user.is_first_time_setup_complete,
+            'is_admin_created': self.user.is_admin_created,
         }
         return data
 

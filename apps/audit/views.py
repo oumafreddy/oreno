@@ -1546,68 +1546,320 @@ class IssueApprovalViewSet(viewsets.ModelViewSet):
 
 @login_required
 def submit_workplan(request, pk):
-    workplan = get_object_or_404(AuditWorkplan, pk=pk)
-    if can_proceed(workplan.submit_for_approval):
-        workplan.submit_for_approval()
-        workplan.save()
-        messages.success(request, _("Workplan submitted for approval successfully."))
-    else:
-        messages.error(request, _("Cannot submit workplan for approval in its current state."))
+    """Submit a workplan for approval."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the submit button."))
+        return redirect('audit:workplan-detail', pk=pk)
+    
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.tenant)
+    
+    # Check if the workplan is in draft state
+    if workplan.approval_status != 'draft':
+        messages.error(request, _('Workplan must be in draft status to submit for approval.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_submit_workplan'):
+        messages.error(request, _('You do not have permission to submit workplans for approval.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    try:
+        if can_proceed(workplan.submit_for_approval):
+            workplan.submit_for_approval()
+            workplan.save()
+            
+            # Create approval record
+            from django.contrib.contenttypes.models import ContentType
+            Approval.objects.create(
+                content_type=ContentType.objects.get_for_model(AuditWorkplan),
+                object_id=workplan.pk,
+                requester=request.user,
+                organization=request.tenant
+            )
+            
+            # Send email notification to approvers
+            try:
+                from .utils import send_workplan_approval_notification
+                send_workplan_approval_notification(workplan, 'submitted', request)
+            except Exception as e:
+                # Log the error but don't fail the submission
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send workplan approval notification: {str(e)}")
+            
+            messages.success(request, _("Workplan submitted for approval successfully."))
+        else:
+            messages.error(request, _("Cannot submit workplan for approval in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while submitting the workplan for approval."))
+    
     return redirect('audit:workplan-detail', pk=pk)
 
 @login_required
 def approve_workplan(request, pk):
-    workplan = get_object_or_404(AuditWorkplan, pk=pk)
-    if can_proceed(workplan.approve):
-        workplan.approve()
-        workplan.save()
-        messages.success(request, _("Workplan approved successfully."))
-    else:
-        messages.error(request, _("Cannot approve workplan in its current state."))
+    """Approve a workplan."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the approve button."))
+        return redirect('audit:workplan-detail', pk=pk)
+    
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.tenant)
+    
+    # Check if the workplan is submitted for approval
+    if workplan.approval_status != 'submitted':
+        messages.error(request, _('Workplan must be submitted for approval before it can be approved.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_approve_workplan'):
+        messages.error(request, _('You do not have permission to approve workplans.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    try:
+        if can_proceed(workplan.approve):
+            workplan.approve()
+            workplan.save()
+            
+            # Update approval record
+            approval = Approval.objects.filter(
+                content_type=ContentType.objects.get_for_model(AuditWorkplan),
+                object_id=workplan.pk,
+                status='pending'
+            ).first()
+            if approval:
+                approval.status = 'approved'
+                approval.approver = request.user
+                approval.approved_at = timezone.now()
+                approval.save()
+            
+            # Send email notification to submitter
+            try:
+                from .utils import send_workplan_approval_notification
+                send_workplan_approval_notification(workplan, 'approved', request)
+            except Exception as e:
+                # Log the error but don't fail the approval
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send workplan approval notification: {str(e)}")
+            
+            messages.success(request, _("Workplan approved successfully."))
+        else:
+            messages.error(request, _("Cannot approve workplan in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while approving the workplan."))
+    
     return redirect('audit:workplan-detail', pk=pk)
 
 @login_required
 def reject_workplan(request, pk):
-    workplan = get_object_or_404(AuditWorkplan, pk=pk)
-    if can_proceed(workplan.reject):
-        workplan.reject()
-        workplan.save()
-        messages.success(request, _("Workplan rejected."))
-    else:
-        messages.error(request, _("Cannot reject workplan in its current state."))
+    """Reject a workplan."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the reject button."))
+        return redirect('audit:workplan-detail', pk=pk)
+    
+    workplan = get_object_or_404(AuditWorkplan, pk=pk, organization=request.tenant)
+    
+    # Check if the workplan is submitted for approval
+    if workplan.approval_status != 'submitted':
+        messages.error(request, _('Workplan must be submitted for approval before it can be rejected.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_approve_workplan'):
+        messages.error(request, _('You do not have permission to reject workplans.'))
+        return redirect('audit:workplan-detail', pk=workplan.pk)
+    
+    try:
+        if can_proceed(workplan.reject):
+            workplan.reject()
+            workplan.save()
+            
+            # Update approval record
+            approval = Approval.objects.filter(
+                content_type=ContentType.objects.get_for_model(AuditWorkplan),
+                object_id=workplan.pk,
+                status='pending'
+            ).first()
+            if approval:
+                approval.status = 'rejected'
+                approval.approver = request.user
+                approval.rejected_at = timezone.now()
+                approval.save()
+            
+            # Send email notification to submitter
+            try:
+                from .utils import send_workplan_approval_notification
+                send_workplan_approval_notification(workplan, 'rejected', request)
+            except Exception as e:
+                # Log the error but don't fail the rejection
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send workplan rejection notification: {str(e)}")
+            
+            messages.success(request, _("Workplan rejected."))
+        else:
+            messages.error(request, _("Cannot reject workplan in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while rejecting the workplan."))
+    
     return redirect('audit:workplan-detail', pk=pk)
 
 @login_required
 def submit_engagement(request, pk):
-    engagement = get_object_or_404(Engagement, pk=pk)
-    if can_proceed(engagement.submit_for_approval):
-        engagement.submit_for_approval()
-        engagement.save()
-        messages.success(request, _("Engagement submitted for approval successfully."))
-    else:
-        messages.error(request, _("Cannot submit engagement for approval in its current state."))
+    """Submit an engagement for approval."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the submit button."))
+        return redirect('audit:engagement-detail', pk=pk)
+    
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.tenant)
+    
+    # Check if the engagement is in draft state
+    if engagement.approval_status != 'draft':
+        messages.error(request, _('Engagement must be in draft status to submit for approval.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_submit_engagement'):
+        messages.error(request, _('You do not have permission to submit engagements for approval.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    try:
+        if can_proceed(engagement.submit_for_approval):
+            engagement.submit_for_approval()
+            engagement.save()
+            
+            # Create approval record
+            from django.contrib.contenttypes.models import ContentType
+            Approval.objects.create(
+                content_type=ContentType.objects.get_for_model(Engagement),
+                object_id=engagement.pk,
+                requester=request.user,
+                organization=request.tenant
+            )
+            
+            # Send email notification to approvers
+            try:
+                from .utils import send_engagement_approval_notification
+                send_engagement_approval_notification(engagement, 'submitted', request)
+            except Exception as e:
+                # Log the error but don't fail the submission
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send engagement approval notification: {str(e)}")
+            
+            messages.success(request, _("Engagement submitted for approval successfully."))
+        else:
+            messages.error(request, _("Cannot submit engagement for approval in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while submitting the engagement for approval."))
+    
     return redirect('audit:engagement-detail', pk=pk)
 
 @login_required
 def approve_engagement(request, pk):
-    engagement = get_object_or_404(Engagement, pk=pk)
-    if can_proceed(engagement.approve):
-        engagement.approve()
-        engagement.save()
-        messages.success(request, _("Engagement approved successfully."))
-    else:
-        messages.error(request, _("Cannot approve engagement in its current state."))
+    """Approve an engagement."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the approve button."))
+        return redirect('audit:engagement-detail', pk=pk)
+    
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.tenant)
+    
+    # Check if the engagement is submitted for approval
+    if engagement.approval_status != 'submitted':
+        messages.error(request, _('Engagement must be submitted for approval before it can be approved.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_approve_engagement'):
+        messages.error(request, _('You do not have permission to approve engagements.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    try:
+        if can_proceed(engagement.approve):
+            engagement.approve()
+            engagement.save()
+            
+            # Update approval record
+            approval = Approval.objects.filter(
+                content_type=ContentType.objects.get_for_model(Engagement),
+                object_id=engagement.pk,
+                status='pending'
+            ).first()
+            if approval:
+                approval.status = 'approved'
+                approval.approver = request.user
+                approval.approved_at = timezone.now()
+                approval.save()
+            
+            # Send email notification to submitter
+            try:
+                from .utils import send_engagement_approval_notification
+                send_engagement_approval_notification(engagement, 'approved', request)
+            except Exception as e:
+                # Log the error but don't fail the approval
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send engagement approval notification: {str(e)}")
+            
+            messages.success(request, _("Engagement approved successfully."))
+        else:
+            messages.error(request, _("Cannot approve engagement in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while approving the engagement."))
+    
     return redirect('audit:engagement-detail', pk=pk)
 
 @login_required
 def reject_engagement(request, pk):
-    engagement = get_object_or_404(Engagement, pk=pk)
-    if can_proceed(engagement.reject):
-        engagement.reject()
-        engagement.save()
-        messages.success(request, _("Engagement rejected."))
-    else:
-        messages.error(request, _("Cannot reject engagement in its current state."))
+    """Reject an engagement."""
+    if request.method != 'POST':
+        messages.error(request, _("Invalid request method. Please use the reject button."))
+        return redirect('audit:engagement-detail', pk=pk)
+    
+    engagement = get_object_or_404(Engagement, pk=pk, organization=request.tenant)
+    
+    # Check if the engagement is submitted for approval
+    if engagement.approval_status != 'submitted':
+        messages.error(request, _('Engagement must be submitted for approval before it can be rejected.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    # Check if user has permission
+    if not request.user.has_perm('audit.can_approve_engagement'):
+        messages.error(request, _('You do not have permission to reject engagements.'))
+        return redirect('audit:engagement-detail', pk=engagement.pk)
+    
+    try:
+        if can_proceed(engagement.reject):
+            engagement.reject()
+            engagement.save()
+            
+            # Update approval record
+            approval = Approval.objects.filter(
+                content_type=ContentType.objects.get_for_model(Engagement),
+                object_id=engagement.pk,
+                status='pending'
+            ).first()
+            if approval:
+                approval.status = 'rejected'
+                approval.approver = request.user
+                approval.rejected_at = timezone.now()
+                approval.save()
+            
+            # Send email notification to submitter
+            try:
+                from .utils import send_engagement_approval_notification
+                send_engagement_approval_notification(engagement, 'rejected', request)
+            except Exception as e:
+                # Log the error but don't fail the rejection
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send engagement rejection notification: {str(e)}")
+            
+            messages.success(request, _("Engagement rejected."))
+        else:
+            messages.error(request, _("Cannot reject engagement in its current state."))
+    except Exception as e:
+        messages.error(request, _("An error occurred while rejecting the engagement."))
+    
     return redirect('audit:engagement-detail', pk=pk)
 
 @login_required

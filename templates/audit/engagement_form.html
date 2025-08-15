@@ -37,7 +37,12 @@
             <div>
               <button type="submit" class="btn btn-success">Save</button>
               {% if object and can_submit %}
-                <a href="{% url 'audit:engagement-submit' object.pk %}" class="btn btn-warning ms-2">Submit for Approval</a>
+                <form method="post" action="{% url 'audit:engagement-submit' object.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-warning ms-2" onclick="return confirm('Are you sure you want to submit this engagement for approval?')">
+                    Submit for Approval
+                  </button>
+                </form>
               {% endif %}
               <a href="{% url 'audit:engagement-list' %}" class="btn btn-secondary ms-2">Cancel</a>
             </div>

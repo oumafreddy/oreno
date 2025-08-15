@@ -3,42 +3,75 @@
 {% block title %}Workplan: {{ workplan.name }} | Oreno GRC{% endblock %}
 {% block content %}
 <div class="container main-container">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h3 mb-0">{{ workplan.name }} <span class="badge bg-info">{{ workplan.approval_status|capfirst }}</span></h1>
-      <div class="text-muted">Fiscal Year: {{ workplan.fiscal_year }}</div>
-    </div>
-    <div>
-      {% if workplan.approval_status == 'draft' %}
-      <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
-      {% if perms.audit.can_submit_workplan %}
-      <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-primary me-2">
-        <i class="bi bi-send"></i> Submit for Approval
-      </a>
-      {% endif %}
-      {% elif workplan.approval_status == 'submitted' %}
-      {% if perms.audit.can_approve_workplan %}
-      <a href="{% url 'audit:workplan-approve' workplan.pk %}" class="btn btn-success me-2">
-        <i class="bi bi-check2-circle"></i> Approve
-      </a>
-      <a href="{% url 'audit:workplan-reject' workplan.pk %}" class="btn btn-danger me-2">
-        <i class="bi bi-x-circle"></i> Reject
-      </a>
-      {% endif %}
-      {% elif workplan.approval_status == 'rejected' %}
-      {% if perms.audit.can_submit_workplan %}
-      <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-outline-secondary me-2"><i class="bi bi-pencil"></i> Edit</a>
-      <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-primary me-2">
-        <i class="bi bi-send"></i> Re-submit
-      </a>
-      {% endif %}
-      {% endif %}
-      <a href="{% url 'audit:workplan-engagement-add' workplan.pk %}" class="btn btn-success me-2">
-        <i class="bi bi-plus-circle"></i> Add Engagement
-      </a>
-      <a href="{% url 'audit:dashboard' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Audit Dashboard
-      </a>
+  <!-- Header Section with Professional Button Layout -->
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1">
+          <h1 class="h3 mb-1">{{ workplan.name }}</h1>
+          <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-info fs-6">{{ workplan.approval_status|capfirst }}</span>
+            <span class="text-muted">Fiscal Year: {{ workplan.fiscal_year }}</span>
+          </div>
+        </div>
+        
+        <!-- Action Buttons - Organized by Priority -->
+        <div class="d-flex flex-column gap-2 align-items-end">
+          <!-- Primary Actions -->
+          <div class="btn-group" role="group" aria-label="Primary actions">
+            {% if workplan.approval_status == 'draft' %}
+              <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil me-1"></i> Edit
+              </a>
+              {% if perms.audit.can_submit_workplan %}
+                <form method="post" action="{% url 'audit:workplan-submit' workplan.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary" onclick="return confirm('Are you sure you want to submit this workplan for approval?')">
+                    <i class="bi bi-send me-1"></i> Submit for Approval
+                  </button>
+                </form>
+              {% endif %}
+            {% elif workplan.approval_status == 'submitted' %}
+              {% if perms.audit.can_approve_workplan %}
+                <form method="post" action="{% url 'audit:workplan-approve' workplan.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to approve this workplan?')">
+                    <i class="bi bi-check2-circle me-1"></i> Approve
+                  </button>
+                </form>
+                <form method="post" action="{% url 'audit:workplan-reject' workplan.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this workplan?')">
+                    <i class="bi bi-x-circle me-1"></i> Reject
+                  </button>
+                </form>
+              {% endif %}
+            {% elif workplan.approval_status == 'rejected' %}
+              {% if perms.audit.can_submit_workplan %}
+                <a href="{% url 'audit:workplan-update' workplan.pk %}" class="btn btn-outline-primary">
+                  <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+                <form method="post" action="{% url 'audit:workplan-submit' workplan.pk %}" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-primary" onclick="return confirm('Are you sure you want to re-submit this workplan for approval?')">
+                    <i class="bi bi-send me-1"></i> Re-submit
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+          
+          <!-- Secondary Actions -->
+          <div class="btn-group" role="group" aria-label="Secondary actions">
+            <a href="{% url 'audit:workplan-engagement-add' workplan.pk %}" class="btn btn-success">
+              <i class="bi bi-plus-circle me-1"></i> Add Engagement
+            </a>
+            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <ul class="nav nav-tabs mb-3" id="workplanTabs" role="tablist">
