@@ -111,9 +111,6 @@ INSTALLED_APPS = [
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
     'reports.apps.ReportsConfig',
-    
-    # Services
-    'services.ai',
 ]
 
 # Apps that should be audited
