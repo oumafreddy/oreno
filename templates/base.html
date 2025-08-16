@@ -61,169 +61,442 @@
 
     <!-- Custom Styles -->
     <style nonce="{{ request.csp_nonce }}">
-        /* Color palette */
+        /* Custom CSS variables and overrides */
         :root {
-          --clr-primary:   #2563eb;
-          --clr-secondary: #4f46e5;
-          --clr-accent:    #22c55e;
-          --clr-bg-light:  #f8fafc;
-          --clr-bg-dark:   #1e293b;
-          --clr-footer:    #111827;
-          --clr-text-light:#adb5bd;
-        }
-
-        /* Dashboard animations */
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+            --primary-color: #1a365d;
+            --secondary-color: #3182ce;
+            --accent-color: #ed8936;
+            --success-color: #38a169;
+            --warning-color: #d69e2e;
+            --danger-color: #e53e3e;
+            --light-color: #f7fafc;
+            --dark-color: #2d3748;
+            --text-color: #2d3748;
+            --text-light: #4a5568;
+            --white-color: #ffffff;
+            --border-color: #e2e8f0;
+            --shadow-light: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
         
-        @keyframes slideIn {
-          from { transform: translateX(-20px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
+        /* Enhanced button styles */
+        .btn {
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: none;
+            padding: 0.5rem 1rem;
         }
         
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+            color: var(--white-color);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+            background: linear-gradient(135deg, #2b6cb0 0%, #dd6b20 100%);
+        }
+        
+        /* Enhanced form styles */
+        .form-control {
+            border: 2px solid var(--border-color);
+            border-radius: 0.5rem;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(49, 130, 206, 0.25);
+        }
+        
+        /* Enhanced card styles */
         .card {
-          animation: fadeIn 0.5s ease-out;
-          transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            transition: box-shadow 0.2s ease;
         }
         
         .card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: var(--shadow-medium);
         }
         
-        .dashboard-chart {
-          animation: slideIn 0.6s ease-out;
+        /* Enhanced alert styles */
+        .alert {
+            border-radius: 0.5rem;
+            border: none;
+            box-shadow: var(--shadow-light);
         }
         
-        .alert-warning {
-          animation: pulse 2s infinite;
+        /* Enhanced modal styles */
+        .modal-content {
+            border-radius: 0.75rem;
+            border: none;
+            box-shadow: var(--shadow-large);
         }
         
-        /* Chart container improvements */
-        [id$="-chart"] {
-          min-height: 250px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            background: var(--light-color);
+            border-radius: 0.75rem 0.75rem 0 0;
         }
         
-        [id$="-chart"]:empty::before {
-          content: "Loading chart...";
-          color: #6c757d;
-          font-style: italic;
+        /* Enhanced table styles */
+        .table {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-light);
         }
-
-
-  
-        /* Base */
-        body {
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
-          background-color: var(--clr-bg-light);
-          display: flex;
-          flex-direction: column;
-          min-height: 100vh;
+        
+        .table thead th {
+            background: var(--light-color);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            color: var(--text-color);
         }
-        a { text-decoration: none; }
-        a:hover { text-decoration: none; }
-  
-        /* Navbar */
+        
+        /* Enhanced navigation styles */
         .navbar {
-          padding-top: 0.5rem;
-          padding-bottom: 0.5rem;
-          background: linear-gradient(135deg, var(--clr-bg-dark), var(--clr-footer));
+            box-shadow: var(--shadow-light);
         }
+        
+        .nav-link {
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-link:hover {
+            background: var(--light-color);
+            transform: translateY(-1px);
+        }
+        
+        /* Enhanced sidebar styles */
+        .sidebar {
+            background: var(--white-color);
+            border-right: 1px solid var(--border-color);
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced footer styles */
+        .footer {
+            background: var(--dark-color);
+            color: var(--white-color);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Enhanced loading states */
+        .spinner-border {
+            border-width: 0.2em;
+        }
+        
+        /* Enhanced tooltip styles */
+        .tooltip {
+            border-radius: 0.5rem;
+        }
+        
+        .tooltip-inner {
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-medium);
+        }
+        
+        /* Enhanced toast styles */
+        .toast {
+            border-radius: 0.5rem;
+            border: none;
+            box-shadow: var(--shadow-medium);
+        }
+        
+        /* Enhanced badge styles */
+        .badge {
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+        
+        /* Enhanced progress bar styles */
+        .progress {
+            border-radius: 0.5rem;
+            background: var(--light-color);
+        }
+        
+        .progress-bar {
+            border-radius: 0.5rem;
+        }
+        
+        /* Enhanced pagination styles */
+        .pagination {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .page-link {
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .page-link:hover {
+            background: var(--light-color);
+            transform: translateY(-1px);
+        }
+        
+        /* Enhanced dropdown styles */
+        .dropdown-menu {
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .dropdown-item {
+            border-radius: 0.25rem;
+            margin: 0.125rem;
+            transition: all 0.2s ease;
+        }
+        
+        .dropdown-item:hover {
+            background: var(--light-color);
+            transform: translateX(2px);
+        }
+        
+        /* Enhanced list group styles */
+        .list-group-item {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s ease;
+        }
+        
+        .list-group-item:hover {
+            background: var(--light-color);
+            transform: translateX(2px);
+        }
+        
+        /* Enhanced breadcrumb styles */
+        .breadcrumb {
+            background: var(--light-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+        
+        .breadcrumb-item + .breadcrumb-item::before {
+            color: var(--text-light);
+        }
+        
+        /* Enhanced jumbotron styles */
+        .jumbotron {
+            background: linear-gradient(135deg, var(--light-color) 0%, var(--white-color) 100%);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced well styles */
+        .well {
+            background: var(--light-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced panel styles */
+        .panel {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .panel-heading {
+            background: var(--light-color);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+        
+        /* Enhanced thumbnail styles */
+        .thumbnail {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-light);
+            transition: all 0.2s ease;
+        }
+        
+        .thumbnail:hover {
+            box-shadow: var(--shadow-medium);
+            transform: translateY(-2px);
+        }
+        
+        /* Enhanced media styles */
+        .media {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: var(--white-color);
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced input group styles */
+        .input-group {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .input-group-text {
+            background: var(--light-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        /* Enhanced button group styles */
+        .btn-group {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced navbar brand styles */
         .navbar-brand {
-          display: flex;
-          align-items: center;
-          font-weight: 600;
-          font-size: 1.25rem;
-          letter-spacing: 0.5px;
-          color: var(--clr-accent) !important;
+            font-weight: 700;
+            color: var(--primary-color);
         }
-        .navbar-brand img {
-          margin-right: 0.5rem;
+        
+        /* Enhanced navbar toggle styles */
+        .navbar-toggler {
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
         }
+        
+        /* Enhanced navbar collapse styles */
+        .navbar-collapse {
+            border-radius: 0.5rem;
+        }
+        
+        /* Enhanced navbar nav styles */
         .navbar-nav .nav-link {
-          padding: 0.5rem 1rem;
-          font-weight: 500;
-          color: #fff !important;
+            border-radius: 0.25rem;
+            margin: 0.125rem;
         }
-        .navbar-nav .nav-link:hover {
-          color: var(--clr-accent) !important;
+        
+        /* Enhanced navbar form styles */
+        .navbar-form {
+            border-radius: 0.5rem;
         }
-        .btn-ai {
-          background: linear-gradient(135deg, var(--clr-primary), var(--clr-secondary));
-          color: #fff;
-          border-radius: 6px;
-          padding: 0.4rem 0.9rem;
-          font-weight: 500;
-          transition: transform 0.2s, box-shadow 0.2s;
+        
+        /* Enhanced navbar button styles */
+        .navbar-btn {
+            border-radius: 0.25rem;
         }
-        .btn-ai:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        
+        /* Enhanced navbar text styles */
+        .navbar-text {
+            color: var(--text-color);
         }
-        .dropdown-toggle::after {
-          margin-left: 0.25rem;
+        
+        /* Enhanced navbar divider styles */
+        .navbar-divider {
+            border-right: 1px solid var(--border-color);
         }
-  
-        /* Main Content */
-        .main-content {
-          flex: 1;
-          padding: 2rem 1rem;
+        
+        /* Enhanced navbar fixed styles */
+        .navbar-fixed-top {
+            box-shadow: var(--shadow-medium);
         }
-        @media (min-width: 768px) {
-          .main-content { padding: 3rem 2rem; }
+        
+        .navbar-fixed-bottom {
+            box-shadow: var(--shadow-medium);
         }
-        .main-container {
-          max-width: 960px;
-          margin: 0 auto;
+        
+        /* Enhanced navbar static styles */
+        .navbar-static-top {
+            box-shadow: var(--shadow-light);
         }
-  
-        /* Footer */
-        footer {
-          background-color: var(--clr-footer);
-          color: var(--clr-text-light);
-          padding: 0.75rem 0;
-          font-size: 0.875rem;
+        
+        /* Enhanced navbar inverse styles */
+        .navbar-inverse {
+            background: var(--dark-color);
+            border-color: var(--dark-color);
         }
-        footer h5 {
-          color: #fff;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
+        
+        /* Enhanced navbar default styles */
+        .navbar-default {
+            background: var(--white-color);
+            border-color: var(--border-color);
         }
-        footer a {
-          color: var(--clr-text-light);
-          transition: color 0.15s;
+        
+        /* Enhanced navbar brand styles */
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color);
         }
-        footer a:hover {
-          color: var(--clr-accent);
+        
+        /* Enhanced navbar toggle styles */
+        .navbar-toggler {
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
         }
-        footer hr {
-          border-color: #2c2f36;
-          margin: 0.5rem 0;
+        
+        /* Enhanced navbar collapse styles */
+        .navbar-collapse {
+            border-radius: 0.5rem;
         }
-        .social-icons a {
-          font-size: 1.2rem;
-          margin-right: 0.75rem;
-          color: var(--clr-text-light);
+        
+        /* Enhanced navbar nav styles */
+        .navbar-nav .nav-link {
+            border-radius: 0.25rem;
+            margin: 0.125rem;
         }
-        .social-icons a:hover {
-          color: var(--clr-accent);
+        
+        /* Enhanced navbar form styles */
+        .navbar-form {
+            border-radius: 0.5rem;
         }
-        .footer-bottom {
-          text-align: center;
-          font-size: 0.8rem;
-          margin-top: 0.25rem;
+        
+        /* Enhanced navbar button styles */
+        .navbar-btn {
+            border-radius: 0.25rem;
+        }
+        
+        /* Enhanced navbar text styles */
+        .navbar-text {
+            color: var(--text-color);
+        }
+        
+        /* Enhanced navbar divider styles */
+        .navbar-divider {
+            border-right: 1px solid var(--border-color);
+        }
+        
+        /* Enhanced navbar fixed styles */
+        .navbar-fixed-top {
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .navbar-fixed-bottom {
+            box-shadow: var(--shadow-medium);
+        }
+        
+        /* Enhanced navbar static styles */
+        .navbar-static-top {
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Enhanced navbar inverse styles */
+        .navbar-inverse {
+            background: var(--dark-color);
+            border-color: var(--dark-color);
+        }
+        
+        /* Enhanced navbar default styles */
+        .navbar-default {
+            background: var(--white-color);
+            border-color: var(--border-color);
         }
     </style>
+    
+    <!-- AI Assistant Styles -->
+    <link rel="stylesheet" href="{% static 'css/ai_assistant.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -396,43 +669,161 @@
 
     <!-- AI Assistant Modal -->
     <div class="modal fade" id="aiAssistantModal" tabindex="-1" aria-labelledby="aiAssistantModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="aiAssistantModalLabel">
                         <i class="bi bi-robot me-2"></i>AI Assistant
                     </h5>
+                    <div class="ai-header-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="ai-new-chat-btn" title="New Chat">
+                            <i class="bi bi-plus-circle"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="ai-settings-btn" title="Settings">
+                            <i class="bi bi-gear"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="ai-analytics-btn" title="Analytics">
+                            <i class="bi bi-graph-up"></i>
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Conversation History Sidebar -->
+                        <div class="col-md-3 border-end">
+                            <div class="ai-sidebar">
+                                <h6 class="ai-sidebar-title">Conversation History</h6>
+                                <div id="ai-conversation-list" class="ai-conversation-list">
+                                    <!-- Conversation items will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Chat Area -->
+                        <div class="col-md-9">
+                            <div class="ai-chat-container">
+                                <!-- Conversation Messages -->
+                                <div id="ai-conversation-container" class="ai-conversation-container">
+                                    <!-- Messages will be displayed here -->
+                                </div>
+                                
+                                <!-- Input Form -->
+                                <form id="ai-assistant-form" class="ai-input-form">
+                                    <div class="mb-3">
+                                        <label for="ai-question" class="form-label">Ask me anything about GRC, audit, risk, or compliance:</label>
+                                        <textarea class="form-control" id="ai-question" name="question" rows="3" 
+                                                placeholder="e.g., How do I conduct a risk assessment? What are the key components of an audit plan? (Ctrl+Enter to send)"></textarea>
+                                    </div>
+                                    
+                                    <div id="ai-loading" class="text-center d-none">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mt-2">Thinking...</p>
+                                    </div>
+                                    
+                                    <div id="ai-answer" class="d-none">
+                                        <h6>Answer:</h6>
+                                        <div class="alert alert-info">
+                                            <p id="ai-answer-text"></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-primary" id="ai-ask-btn">
+                                            <i class="bi bi-send me-1"></i>Ask AI
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div class="modal fade" id="aiSettingsModal" tabindex="-1" aria-labelledby="aiSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiSettingsModalLabel">
+                        <i class="bi bi-gear me-2"></i>AI Assistant Settings
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="ai-assistant-form">
+                    <form id="ai-settings-form">
                         <div class="mb-3">
-                            <label for="ai-question" class="form-label">Ask me anything about GRC, audit, risk, or compliance:</label>
-                            <textarea class="form-control" id="ai-question" name="question" rows="4" 
-                                    placeholder="e.g., How do I conduct a risk assessment? What are the key components of an audit plan?"></textarea>
+                            <label for="ai-preferred-model" class="form-label">Preferred Model</label>
+                            <select class="form-select" id="ai-preferred-model" name="preferred_model">
+                                <option value="llama3:8b">Llama 3 8B (Local)</option>
+                                <option value="openai">OpenAI GPT (Cloud)</option>
+                            </select>
                         </div>
                         
-                        <div id="ai-loading" class="text-center d-none">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                        <div class="mb-3">
+                            <label for="ai-max-tokens" class="form-label">Max Tokens</label>
+                            <input type="range" class="form-range" id="ai-max-tokens" name="max_tokens" min="512" max="4096" step="256" value="2048">
+                            <div class="form-text">Current: <span id="ai-max-tokens-value">2048</span></div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="ai-temperature" class="form-label">Temperature (Creativity)</label>
+                            <input type="range" class="form-range" id="ai-temperature" name="temperature" min="0" max="1" step="0.1" value="0.7">
+                            <div class="form-text">Current: <span id="ai-temperature-value">0.7</span></div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="ai-context-window" class="form-label">Context Window</label>
+                            <input type="range" class="form-range" id="ai-context-window" name="context_window" min="5" max="20" step="1" value="10">
+                            <div class="form-text">Current: <span id="ai-context-window-value">10</span> messages</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ai-auto-save" name="auto_save_conversations" checked>
+                                <label class="form-check-label" for="ai-auto-save">
+                                    Auto-save conversations
+                                </label>
                             </div>
-                            <p class="mt-2">Thinking...</p>
                         </div>
                         
-                        <div id="ai-answer" class="d-none">
-                            <h6>Answer:</h6>
-                            <div class="alert alert-info">
-                                <p id="ai-answer-text"></p>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ai-notifications" name="notifications_enabled" checked>
+                                <label class="form-check-label" for="ai-notifications">
+                                    Enable notifications
+                                </label>
                             </div>
-                        </div>
-                        
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary" id="ai-ask-btn">
-                                <i class="bi bi-send me-1"></i>Ask AI
-                            </button>
                         </div>
                     </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="ai-save-settings">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analytics Modal -->
+    <div class="modal fade" id="aiAnalyticsModal" tabindex="-1" aria-labelledby="aiAnalyticsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiAnalyticsModalLabel">
+                        <i class="bi bi-graph-up me-2"></i>AI Usage Analytics
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="ai-analytics-content">
+                        <!-- Analytics content will be loaded here -->
+                    </div>
                 </div>
             </div>
         </div>
