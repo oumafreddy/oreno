@@ -12,7 +12,7 @@ from .views import (
     WorkplanListView, WorkplanDetailView, WorkplanCreateView, WorkplanUpdateView,
     EngagementListView, EngagementDetailView, EngagementCreateView, EngagementUpdateView,
     IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
-    ApprovalCreateView, ApprovalDetailView, AuditDashboardView,
+    ApprovalCreateView, ApprovalDetailView, AuditDashboardView, AuditReportsView,
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
     ObjectiveModalCreateView, RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
     ProcedureListView, ProcedureDetailView, ProcedureCreateView,
@@ -69,6 +69,7 @@ app_name = 'audit'
 urlpatterns = [
     # ─── DASHBOARD ──────────────────────────────────────────────────────────
     path('dashboard/', AuditDashboardView.as_view(), name='dashboard'),
+    path('reports/', AuditReportsView.as_view(), name='reports'),
     
     # ─── WORKPLAN URLS ──────────────────────────────────────────────────────
     path('workplans/', WorkplanListView.as_view(), name='workplan-list'),

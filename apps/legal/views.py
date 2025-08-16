@@ -410,6 +410,36 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
         
         return context
 
+# ─── REPORTS VIEW ────────────────────────────────────────────────────────────
+class LegalReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'legal/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Get case statuses for filters
+        case_statuses = LegalCase.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['case_statuses'] = sorted(list(case_statuses))
+        
+        # Get case types for filters
+        case_types = CaseType.objects.filter(organization=organization).values_list('name', flat=True).distinct()
+        context['case_types'] = sorted(list(case_types))
+        
+        # Get legal parties for filters
+        legal_parties = LegalParty.objects.filter(organization=organization).values_list('name', flat=True).distinct()
+        context['legal_parties'] = sorted(list(legal_parties))
+        
+        # Get task statuses for filters
+        task_statuses = LegalTask.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['task_statuses'] = sorted(list(task_statuses))
+        
+        # Get document titles for filters (since there's no document_type field)
+        document_titles = LegalDocument.objects.filter(organization=organization).values_list('title', flat=True).distinct()
+        context['document_titles'] = sorted(list(document_titles))
+        
+        return context
+
 @login_required
 def api_case_status_data(request):
     org = request.user.organization

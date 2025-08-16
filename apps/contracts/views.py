@@ -133,6 +133,36 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         
         return context
 
+# ─── REPORTS VIEW ────────────────────────────────────────────────────────────
+class ContractsReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'contracts/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Get contract statuses for filters
+        contract_statuses = Contract.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['contract_statuses'] = sorted(list(contract_statuses))
+        
+        # Get contract types for filters
+        contract_types = ContractType.objects.filter(organization=organization).values_list('name', flat=True).distinct()
+        context['contract_types'] = sorted(list(contract_types))
+        
+        # Get parties for filters
+        parties = Party.objects.filter(organization=organization).values_list('name', flat=True).distinct()
+        context['parties'] = sorted(list(parties))
+        
+        # Get milestone types for filters
+        milestone_types = ContractMilestone.objects.filter(organization=organization).values_list('milestone_type', flat=True).distinct()
+        context['milestone_types'] = sorted(list(milestone_types))
+        
+        # Get milestone statuses for filters
+        milestone_statuses = ContractMilestone.objects.filter(organization=organization).values_list('is_completed', flat=True).distinct()
+        context['milestone_statuses'] = sorted(list(milestone_statuses))
+        
+        return context
+
 # --- ContractType Views ---
 class ContractTypeListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ContractType

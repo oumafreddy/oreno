@@ -1,7 +1,7 @@
 # apps/risk/views.py
 
 from django.shortcuts import render
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
@@ -541,6 +541,41 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
                 'url': '/reports/risk/pdf/'
             },
         ]
+        return context
+
+# ─── REPORTS VIEW ────────────────────────────────────────────────────────────
+class RiskReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'risk/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Get risk registers for dropdowns
+        risk_registers = RiskRegister.objects.filter(organization=organization)
+        context['risk_registers'] = list(risk_registers.values_list('register_name', flat=True).distinct())
+        
+        # Get risk categories for filters
+        risk_categories = Risk.objects.filter(organization=organization).values_list('category', flat=True).distinct()
+        context['risk_categories'] = sorted(list(risk_categories))
+        
+        # Get risk statuses for filters
+        risk_statuses = Risk.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['risk_statuses'] = sorted(list(risk_statuses))
+        
+        # Get risk owners for filters
+        risk_owners = Risk.objects.filter(organization=organization).values_list('risk_owner', flat=True).distinct()
+        context['risk_owners'] = sorted(list(risk_owners))
+        
+        # Get KRI statuses for filters (using the get_status method)
+        kris = KRI.objects.filter(risk__organization=organization)
+        kri_statuses = list(set([kri.get_status() for kri in kris]))
+        context['kri_statuses'] = sorted(kri_statuses)
+        
+        # Get control effectiveness ratings for filters
+        control_ratings = Control.objects.filter(organization=organization).values_list('effectiveness_rating', flat=True).distinct()
+        context['control_ratings'] = sorted(list(control_ratings))
+        
         return context
 
 # --- API Endpoints for Dashboard Widgets ---

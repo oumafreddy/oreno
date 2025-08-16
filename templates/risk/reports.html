@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Risk Reports{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Navigation Bar -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Risk Reports</h2>
+            <p class="text-muted mb-0">Generate and download comprehensive risk management reports</p>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'risk:dashboard' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Report Generation:</strong> All reports are scoped to your organization and support both PDF and Word export formats. 
+        Use the filters below to customize your reports before downloading.
+    </div>
+
+    <!-- Reports Grid -->
+    <div class="row g-4">
+        <!-- Risk Register Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Risk Register Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">High-level overview of risks with key metrics and status distribution.</p>
+                    <form method="get" action="{% url 'reports:risk_register_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in risk_statuses %}
+                                    <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Register Detailed Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-list-nested me-2"></i>Risk Register Detailed</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive risk information with all attributes and control details.</p>
+                    <form method="get" action="{% url 'reports:risk_register_detailed_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                {% for category in risk_categories %}
+                                    <option value="{{ category }}">{{ category|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risk Owner</label>
+                            <select name="owner" class="form-select">
+                                <option value="">All Owners</option>
+                                {% for owner in risk_owners %}
+                                    <option value="{{ owner }}">{{ owner }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Heatmap Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Risk Heatmap</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Visual risk matrix showing impact vs likelihood distribution.</p>
+                    <form method="get" action="{% url 'reports:risk_heatmap_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Trends Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Risk Trends</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Historical analysis of risk scores and assessment trends over time.</p>
+                    <form method="get" action="{% url 'reports:risk_trends_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Effectiveness Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Control Effectiveness</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Analysis of control effectiveness ratings and implementation status.</p>
+                    <form method="get" action="{% url 'reports:control_effectiveness_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Effectiveness Rating</label>
+                            <select name="rating" class="form-select">
+                                <option value="">All Ratings</option>
+                                {% for rating in control_ratings %}
+                                    <option value="{{ rating }}">{{ rating|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- KRI Status Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-activity me-2"></i>KRI Status</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Key Risk Indicator status and threshold monitoring report.</p>
+                    <form method="get" action="{% url 'reports:kri_status_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">KRI Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in kri_statuses %}
+                                    <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessment Timeline Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-timeline me-2"></i>Assessment Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Timeline of risk assessments with scores and trends.</p>
+                    <form method="get" action="{% url 'reports:assessment_timeline_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assessment Type</label>
+                            <select name="assessment_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="initial">Initial</option>
+                                <option value="periodic">Periodic</option>
+                                <option value="event_triggered">Event Triggered</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-dark">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Assessment Details Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Risk Assessment Details</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Detailed assessment information for specific risks.</p>
+                    <form method="get" action="{% url 'reports:risk_assessment_details_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Risk Register</label>
+                            <select name="register" class="form-select">
+                                <option value="">All Registers</option>
+                                {% for register in risk_registers %}
+                                    <option value="{{ register }}">{{ register }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assessment Type</label>
+                            <select name="assessment_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="initial">Initial</option>
+                                <option value="periodic">Periodic</option>
+                                <option value="event_triggered">Event Triggered</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Details Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-shield me-2"></i>Control Details</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive control information and effectiveness analysis.</p>
+                    <form method="get" action="{% url 'reports:control_details_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Effectiveness Rating</label>
+                            <select name="rating" class="form-select">
+                                <option value="">All Ratings</option>
+                                {% for rating in control_ratings %}
+                                    <option value="{{ rating }}">{{ rating|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- KRI Details Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>KRI Details</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Detailed KRI information with thresholds and monitoring data.</p>
+                    <form method="get" action="{% url 'reports:kri_details_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">KRI Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in kri_statuses %}
+                                    <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

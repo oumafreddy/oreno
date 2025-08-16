@@ -12,6 +12,9 @@
     <!-- Risk App Nav Links -->
     <div class="row mb-3">
         <div class="col-auto ms-auto">
+            <a href="{% url 'risk:reports' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
+            </a>
             <a href="{% url 'risk:risk_list' %}" class="btn btn-outline-primary me-2">All Risks</a>
             <a href="{% url 'risk:control_list' %}" class="btn btn-outline-secondary me-2">Controls</a>
             <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-success me-2">KRIs</a>
@@ -311,175 +314,48 @@
     <div class="row mt-5">
       <div class="col">
         <div class="card shadow">
-          <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Risk Reports</strong></div>
+          <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <strong><i class="bi bi-file-earmark-bar-graph"></i> Risk Reports</strong>
+              <a href="{% url 'risk:reports' %}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-right me-1"></i>View All Reports
+              </a>
+            </div>
+          </div>
           <div class="card-body">
             <div class="alert alert-info mb-4">
-              <i class="bi bi-info-circle"></i> Generate and download a wide range of intelligent, filterable risk management reports. All reports are scoped to your organization and support PDF export.
+              <i class="bi bi-info-circle"></i> 
+              <strong>Reports Dashboard:</strong> Access comprehensive risk management reports with advanced filtering capabilities. 
+              All reports support both PDF and Word export formats.
             </div>
             <div class="row g-4">
-              <!-- Risk Register Summary Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Risk Register Summary</h5>
-                    <form method="get" action="{% url 'reports:risk_register_summary_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Register Name</label>
-                        <select name="register" class="form-select">
-                          <option value="">All</option>
-                          {% for reg in riskregisters %}
-                            <option value="{{ reg.pk }}">{{ reg.register_name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" placeholder="All">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Owner</label>
-                        <input type="text" name="owner" class="form-control" placeholder="All">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                          <option value="">All</option>
-                          <option value="open">Open</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
+              <div class="col-md-4">
+                <div class="card h-100 border-primary">
+                  <div class="card-body text-center">
+                    <i class="bi bi-list-ul display-4 text-primary mb-3"></i>
+                    <h5 class="card-title">Risk Register Reports</h5>
+                    <p class="card-text">Generate risk register summaries, detailed reports, and heatmaps.</p>
+                    <a href="{% url 'risk:reports' %}" class="btn btn-outline-primary">View Reports</a>
                   </div>
                 </div>
               </div>
-              <!-- Risk Register Detailed Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Risk Register Detailed</h5>
-                    <form method="get" action="{% url 'reports:risk_register_detailed_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Register Name</label>
-                        <select name="register" class="form-select">
-                          <option value="">All</option>
-                          {% for reg in riskregisters %}
-                            <option value="{{ reg.pk }}">{{ reg.register_name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" placeholder="All">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Owner</label>
-                        <input type="text" name="owner" class="form-control" placeholder="All">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                          <option value="">All</option>
-                          <option value="open">Open</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
+              <div class="col-md-4">
+                <div class="card h-100 border-info">
+                  <div class="card-body text-center">
+                    <i class="bi bi-shield-check display-4 text-info mb-3"></i>
+                    <h5 class="card-title">Control Reports</h5>
+                    <p class="card-text">Control effectiveness analysis and detailed control information.</p>
+                    <a href="{% url 'risk:reports' %}" class="btn btn-outline-info">View Reports</a>
                   </div>
                 </div>
               </div>
-              <!-- Risk Heatmap Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Risk Heatmap</h5>
-                    <a href="{% url 'reports:risk_heatmap_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Risk Trends Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Risk Trends</h5>
-                    <a href="{% url 'reports:risk_trends_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Control Effectiveness Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Control Effectiveness</h5>
-                    <a href="{% url 'reports:control_effectiveness_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- KRI Status Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">KRI Status</h5>
-                    <a href="{% url 'reports:kri_status_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Assessment Timeline Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Assessment Timeline</h5>
-                    <form method="get" action="{% url 'reports:assessment_timeline_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Assessment Name</label>
-                        <select name="assessment" class="form-select">
-                          <option value="">All</option>
-                          {% for assessment in riskassessments %}
-                            <option value="{{ assessment.pk }}">{{ assessment.risk.risk_name }} ({{ assessment.get_assessment_type_display }})</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Risk Assessment Details Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Risk Assessment Details</h5>
-                    <form method="get" action="{% url 'reports:risk_assessment_details_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Assessment Name</label>
-                        <select name="assessment" class="form-select">
-                          <option value="">All</option>
-                          {% for assessment in riskassessments %}
-                            <option value="{{ assessment.pk }}">{{ assessment.risk.risk_name }} ({{ assessment.get_assessment_type_display }})</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Control Details Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Control Details</h5>
-                    <a href="{% url 'reports:control_details_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- KRI Details Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">KRI Details</h5>
-                    <a href="{% url 'reports:kri_details_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
+              <div class="col-md-4">
+                <div class="card h-100 border-warning">
+                  <div class="card-body text-center">
+                    <i class="bi bi-activity display-4 text-warning mb-3"></i>
+                    <h5 class="card-title">KRI Reports</h5>
+                    <p class="card-text">Key Risk Indicator status and detailed monitoring reports.</p>
+                    <a href="{% url 'risk:reports' %}" class="btn btn-outline-warning">View Reports</a>
                   </div>
                 </div>
               </div>

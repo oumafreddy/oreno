@@ -463,6 +463,40 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         
         return context
 
+# ─── REPORTS VIEW ────────────────────────────────────────────────────────────
+class ComplianceReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'compliance/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Get framework names for filters
+        frameworks = ComplianceFramework.objects.filter(organization=organization).values_list('name', flat=True).distinct()
+        context['frameworks'] = sorted(list(frameworks))
+        
+        # Get requirement jurisdictions for filters
+        jurisdictions = ComplianceRequirement.objects.filter(organization=organization).values_list('jurisdiction', flat=True).distinct()
+        context['jurisdictions'] = sorted(list(jurisdictions))
+        
+        # Get obligation statuses for filters
+        obligation_statuses = ComplianceObligation.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['obligation_statuses'] = sorted(list(obligation_statuses))
+        
+        # Get obligation owners for filters
+        obligation_owners = ComplianceObligation.objects.filter(organization=organization).values_list('owner__email', flat=True).distinct()
+        context['obligation_owners'] = sorted(list(obligation_owners))
+        
+        # Get evidence types for filters (using document titles instead since evidence_type doesn't exist)
+        evidence_documents = ComplianceEvidence.objects.filter(organization=organization).values_list('document__title', flat=True).distinct()
+        context['evidence_types'] = sorted(list(evidence_documents))
+        
+        # Get policy document titles for filters (since PolicyDocument doesn't have a status field)
+        policy_titles = PolicyDocument.objects.filter(organization=organization).values_list('title', flat=True).distinct()
+        context['policy_statuses'] = sorted(list(policy_titles))
+        
+        return context
+
 @login_required
 def api_framework_data(request):
     org = request.user.organization

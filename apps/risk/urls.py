@@ -1,15 +1,14 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from django.views.generic import TemplateView
 from . import views
-from .views import RiskDashboardView, api_heatmap_data, api_assessment_timeline
+from .views import RiskDashboardView, RiskReportsView, api_heatmap_data, api_assessment_timeline
 
 app_name = 'risk'
 
 # Basic URL patterns for risk app
 urlpatterns = [
     path('', RiskDashboardView.as_view(), name='dashboard'),
-    path('', TemplateView.as_view(template_name='risk/list.html'), name='list'),
+    path('reports/', RiskReportsView.as_view(), name='reports'),
     # RiskRegister
     path('registers/', views.RiskRegisterListView.as_view(), name='riskregister_list'),
     path('registers/create/', views.RiskRegisterCreateView.as_view(), name='riskregister_create'),

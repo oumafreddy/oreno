@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 from django.views.generic import TemplateView
 from . import views
+from .views import ContractsReportsView
 from rest_framework import viewsets
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, IsOrgStaffOrReadOnly
 from .models import ContractType, Party, Contract, ContractParty, ContractMilestone
@@ -13,6 +14,7 @@ app_name = 'contracts'
 # Basic URL patterns for contracts app
 urlpatterns = [
     path('', views.ContractsDashboardView.as_view(), name='dashboard'),
+    path('reports/', ContractsReportsView.as_view(), name='reports'),
 
     # ContractType
     path('contracttypes/', views.ContractTypeListView.as_view(), name='contracttype-list'),

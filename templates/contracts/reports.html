@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Contracts Reports{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Contracts Reports</h2>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-secondary me-2">Dashboard</a>
+            <a href="{% url 'contracts:contract-list' %}" class="btn btn-primary">Contract List</a>
+        </div>
+    </div>
+
+                    <!-- Info Alert -->
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Generate Professional Contract Reports</strong><br>
+                    Download comprehensive contract management reports in PDF format. All reports are filtered by your organization and include advanced filtering options. Additional report types will be available soon.
+                </div>
+
+    <!-- Reports Grid -->
+    <div class="row g-4">
+        <!-- Contract Register Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contract Register Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Summary overview of all contracts with key metrics and status information.</p>
+                    <form method="get" action="{% url 'reports:contract_register_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in contract_statuses %}
+                                <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select name="type" class="form-select">
+                                <option value="">All Types</option>
+                                {% for type in contract_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Party</label>
+                            <select name="party" class="form-select">
+                                <option value="">All Parties</option>
+                                {% for party in parties %}
+                                <option value="{{ party }}">{{ party }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="Filter by title">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contract Register Detailed Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contract Register Detailed</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Comprehensive detailed report with full contract information and terms.</p>
+                    <form method="get" action="{% url 'reports:contract_register_detailed_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in contract_statuses %}
+                                <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select name="type" class="form-select">
+                                <option value="">All Types</option>
+                                {% for type in contract_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Party</label>
+                            <select name="party" class="form-select">
+                                <option value="">All Parties</option>
+                                {% for party in parties %}
+                                <option value="{{ party }}">{{ party }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="Filter by title">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Milestone Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-calendar-check me-2"></i>Milestone Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Track and report on contract milestones, due dates, and completion status.</p>
+                    <form method="get" action="{% url 'reports:milestone_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select name="type" class="form-select">
+                                <option value="">All Types</option>
+                                {% for type in milestone_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in milestone_statuses %}
+                                <option value="{{ status }}">{{ status|yesno:"Completed,Pending" }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Party Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Party Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Comprehensive list of all contract parties with their roles and relationships.</p>
+                    <form method="get" action="{% url 'reports:party_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Party Name</label>
+                            <select name="party_name" class="form-select">
+                                <option value="">All Parties</option>
+                                {% for party in parties %}
+                                <option value="{{ party }}">{{ party }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <input type="text" name="role" class="form-control" placeholder="Filter by role">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contract Expiry Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-calendar-x me-2"></i>Contract Expiry</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Monitor contracts approaching expiration with renewal recommendations.</p>
+                    <form method="get" action="{% url 'reports:contract_expiry_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" name="expiry_date" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Detailed Reports</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Access detailed reports for specific contract components and analysis.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'reports:contract_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf me-2"></i>Contract Details
+                        </a>
+                        <a href="{% url 'reports:milestone_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf me-2"></i>Milestone Details
+                        </a>
+                        <a href="{% url 'reports:party_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf me-2"></i>Party Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

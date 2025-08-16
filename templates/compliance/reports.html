@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Compliance Reports{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Compliance Reports</h2>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'compliance:dashboard' %}" class="btn btn-outline-secondary me-2">Dashboard</a>
+            <a href="{% url 'compliance:requirement_list' %}" class="btn btn-primary">Requirements</a>
+        </div>
+    </div>
+
+                    <!-- Info Alert -->
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Generate Professional Compliance Reports</strong><br>
+                    Download comprehensive compliance management reports in PDF format. All reports are filtered by your organization and include advanced filtering options. Additional report types will be available soon.
+                </div>
+
+    <!-- Reports Grid -->
+    <div class="row g-4">
+        <!-- Compliance Requirement Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-list-check me-2"></i>Requirement Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Summary overview of all compliance requirements with key metrics and status information.</p>
+                    <form method="get" action="{% url 'reports:compliance_requirement_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Framework</label>
+                            <select name="framework" class="form-select">
+                                <option value="">All Frameworks</option>
+                                {% for framework in frameworks %}
+                                <option value="{{ framework }}">{{ framework }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jurisdiction</label>
+                            <select name="jurisdiction" class="form-select">
+                                <option value="">All Jurisdictions</option>
+                                {% for jurisdiction in jurisdictions %}
+                                <option value="{{ jurisdiction }}">{{ jurisdiction }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mandatory</label>
+                            <select name="mandatory" class="form-select">
+                                <option value="">All Requirements</option>
+                                <option value="true">Mandatory Only</option>
+                                <option value="false">Optional Only</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Obligation Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-flag me-2"></i>Obligation Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Track and report on compliance obligations, deadlines, and completion status.</p>
+                    <form method="get" action="{% url 'reports:compliance_obligation_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in obligation_statuses %}
+                                <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Owner</label>
+                            <select name="owner" class="form-select">
+                                <option value="">All Owners</option>
+                                {% for owner in obligation_owners %}
+                                <option value="{{ owner }}">{{ owner }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Evidence Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-check me-2"></i>Evidence Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Comprehensive list of all compliance evidence with metadata and verification status.</p>
+                    <form method="get" action="{% url 'reports:compliance_evidence_register_pdf' %}" target="_blank">
+                                                 <div class="mb-3">
+                             <label class="form-label">Evidence Document</label>
+                             <select name="evidence_document" class="form-select">
+                                 <option value="">All Documents</option>
+                                 {% for title in evidence_types %}
+                                 <option value="{{ title }}">{{ title }}</option>
+                                 {% endfor %}
+                             </select>
+                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Requirement</label>
+                            <input type="text" name="requirement" class="form-control" placeholder="Filter by requirement">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Policy Document Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Policy Document Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Track and report on policy documents with expiry dates and status information.</p>
+                    <form method="get" action="{% url 'reports:policy_document_register_pdf' %}" target="_blank">
+                                                 <div class="mb-3">
+                             <label class="form-label">Policy Document</label>
+                             <select name="policy_document" class="form-select">
+                                 <option value="">All Documents</option>
+                                 {% for title in policy_statuses %}
+                                 <option value="{{ title }}">{{ title }}</option>
+                                 {% endfor %}
+                             </select>
+                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" name="expiry_date" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                                                         <!-- Word download coming soon -->
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+                            <!-- Compliance Framework Report -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="card-title mb-0"><i class="bi bi-diagram-3 me-2"></i>Framework Report</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text text-muted small">Detailed report of compliance frameworks and their associated requirements.</p>
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Coming Soon</strong><br>
+                                    Framework reports will be available in the next update.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+        <!-- Detailed Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Detailed Reports</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Access detailed reports for specific compliance components and analysis.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'reports:compliance_requirement_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf me-2"></i>Requirement Details
+                        </a>
+                        <a href="{% url 'reports:compliance_obligation_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf me-2"></i>Obligation Details
+                        </a>
+                                                 <!-- Evidence Details coming soon -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

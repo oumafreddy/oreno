@@ -1282,62 +1282,50 @@ class AuditDashboardView(LoginRequiredMixin, TemplateView):
         # Approvals filtered by period
         approval_qs = Approval.objects.filter(organization=organization)
         if not filter_all:
-            approval_qs = approval_qs.filter(content_type__model='engagement', object_id__in=engagement_qs.values_list('id', flat=True))
+            approval_qs = approval_qs.filter(
+                Q(workplan__in=workplan_qs) | Q(engagement__in=engagement_qs) | Q(issue__in=issue_qs)
+            )
         context['approval_count'] = approval_qs.count()
-        context['approval_status_dist'] = dict(Counter(approval_qs.values_list('status', flat=True))) or {}
         context['pending_approvals'] = approval_qs.filter(status='pending').order_by('-created_at')[:8]
+        context['approval_status_dist'] = dict(Counter(approval_qs.values_list('status', flat=True))) or {}
         
-        # Recommendations: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
-        recommendation_qs = Recommendation.objects.filter(
-            organization=organization,
-            issue__procedure__risk__objective__engagement__in=engagement_qs
-        )
-        context['recommendation_count'] = recommendation_qs.count()
-        context['recent_recommendations'] = recommendation_qs.order_by('-created_at')[:8]
-        context['recommendation_status_dist'] = dict(Counter(recommendation_qs.values_list('implementation_status', flat=True))) or {}
-        
-        # Follow-up actions: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
-        followup_qs = FollowUpAction.objects.filter(
-            organization=organization,
-            issue__procedure__risk__objective__engagement__in=engagement_qs
-        )
-        context['followup_count'] = followup_qs.count()
-        context['recent_followups'] = followup_qs.order_by('-created_at')[:8]
-        context['followup_status_dist'] = dict(Counter(followup_qs.values_list('status', flat=True))) or {}
-        
-        # Issue retests: filter by issue__procedure__risk__objective__engagement__in=engagement_qs
-        retest_qs = IssueRetest.objects.filter(
-            organization=organization,
-            issue__procedure__risk__objective__engagement__in=engagement_qs
-        )
-        context['retest_count'] = retest_qs.count()
-        context['recent_retests'] = retest_qs.order_by('-created_at')[:8]
-        
-        # Procedures: filter by risk__objective__engagement__in=engagement_qs
-        procedure_qs = Procedure.objects.filter(
-            organization=organization,
-            risk__objective__engagement__in=engagement_qs
-        )
-        context['procedure_count'] = procedure_qs.count()
-        context['recent_procedures'] = procedure_qs.order_by('-created_at')[:8]
-        
-        # Notes: filter by content_type__model='engagement' and object_id__in=engagement_qs
-        note_qs = Note.objects.filter(
-            organization=organization,
-            content_type__model='engagement',
-            object_id__in=engagement_qs.values_list('id', flat=True)
-        )
-        context['note_count'] = note_qs.count()
-        context['recent_notes'] = note_qs.order_by('-created_at')[:8]
-        
+        # Period filter context
         context['available_years'] = years
         context['available_months'] = months
         context['selected_years'] = selected_years
         context['selected_months'] = selected_months
         context['filter_all'] = filter_all
         
-        # Add engagement names for dropdown filters
-        context['engagement_names'] = list(Engagement.objects.filter(organization=organization).values_list('title', flat=True).distinct().order_by('title'))
+        # Engagement names for reports
+        context['engagement_names'] = list(engagement_qs.values_list('title', flat=True).distinct())
+        
+        return context
+
+# ─── REPORTS VIEW ────────────────────────────────────────────────────────────
+class AuditReportsView(LoginRequiredMixin, TemplateView):
+    template_name = 'audit/reports.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.request.organization
+        
+        # Get engagement names for dropdowns
+        engagement_qs = Engagement.objects.filter(organization=organization)
+        context['engagement_names'] = list(engagement_qs.values_list('title', flat=True).distinct())
+        
+        # Get workplan years for filters
+        workplan_years = AuditWorkplan.objects.filter(organization=organization).values_list('fiscal_year', flat=True).distinct()
+        context['workplan_years'] = sorted(list(workplan_years), reverse=True)
+        
+        # Get issue statuses for filters
+        issue_statuses = Issue.objects.filter(organization=organization).values_list('issue_status', flat=True).distinct()
+        context['issue_statuses'] = sorted(list(issue_statuses))
+        
+        # Get approval statuses for filters
+        approval_statuses = Approval.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['approval_statuses'] = sorted(list(approval_statuses))
+        
+        return context
         
         return context
 

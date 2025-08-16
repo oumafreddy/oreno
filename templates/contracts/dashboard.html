@@ -8,6 +8,7 @@
             <h2 class="mb-0">Contracts Dashboard</h2>
         </div>
         <div class="col-auto ms-auto">
+            <a href="{% url 'contracts:reports' %}" class="btn btn-outline-warning me-2">Reports</a>
             <a href="{% url 'contracts:contract-list' %}" class="btn btn-primary me-2">Contract List</a>
             <a href="{% url 'contracts:party-list' %}" class="btn btn-outline-info me-2">Party List</a>
             <a href="{% url 'contracts:contracttype-list' %}" class="btn btn-outline-dark me-2">Contract Type List</a>
@@ -188,135 +189,18 @@
     <div class="row mt-5">
         <div class="col">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Contracts Reports</strong></div>
-                <div class="card-body">
+                <div class="card-header bg-warning text-dark">
+                    <strong><i class="bi bi-file-earmark-bar-graph"></i> Contracts Reports</strong>
+                </div>
+                <div class="card-body text-center">
                     <div class="alert alert-info mb-4">
-                        <i class="bi bi-info-circle"></i> Generate and download professional, filterable contract management reports. All reports are scoped to your organization and support PDF export.
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Access Professional Contract Reports</strong><br>
+                        Generate and download comprehensive contract management reports with advanced filtering options.
                     </div>
-                    <div class="row g-4">
-                        <!-- Contract Register Summary Report -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Contract Register Summary</h5>
-                                    <form method="get" action="{% url 'reports:contract_register_summary_pdf' %}" target="_blank">
-                                        <div class="mb-2">
-                                            <label class="form-label">Status</label>
-                                            <input type="text" name="status" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Type</label>
-                                            <input type="text" name="type" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Party</label>
-                                            <input type="text" name="party" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Title</label>
-                                            <input type="text" name="title" class="form-control" placeholder="All">
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Contract Register Detailed Report -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Contract Register Detailed</h5>
-                                    <form method="get" action="{% url 'reports:contract_register_detailed_pdf' %}" target="_blank">
-                                        <div class="mb-2">
-                                            <label class="form-label">Status</label>
-                                            <input type="text" name="status" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Type</label>
-                                            <input type="text" name="type" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Party</label>
-                                            <input type="text" name="party" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Title</label>
-                                            <input type="text" name="title" class="form-control" placeholder="All">
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Milestone Register Report -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Milestone Register</h5>
-                                    <form method="get" action="{% url 'reports:milestone_register_pdf' %}" target="_blank">
-                                        <div class="mb-2">
-                                            <label class="form-label">Type</label>
-                                            <input type="text" name="type" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Due Date</label>
-                                            <input type="date" name="due_date" class="form-control">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Status</label>
-                                            <input type="text" name="status" class="form-control" placeholder="All">
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Party Register Report -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Party Register</h5>
-                                    <form method="get" action="{% url 'reports:party_register_pdf' %}" target="_blank">
-                                        <div class="mb-2">
-                                            <label class="form-label">Party Name</label>
-                                            <input type="text" name="party_name" class="form-control" placeholder="All">
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Role</label>
-                                            <input type="text" name="role" class="form-control" placeholder="All">
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Contract Expiry Report -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Contract Expiry</h5>
-                                    <form method="get" action="{% url 'reports:contract_expiry_pdf' %}" target="_blank">
-                                        <div class="mb-2">
-                                            <label class="form-label">Expiry Date</label>
-                                            <input type="date" name="expiry_date" class="form-control">
-                                        </div>
-                                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Detailed Reports Links -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">Detailed Reports</h5>
-                                    <a href="{% url 'reports:contract_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100 mb-2">Contract Details</a>
-                                    <a href="{% url 'reports:milestone_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100 mb-2">Milestone Details</a>
-                                    <a href="{% url 'reports:party_details_pdf' %}" target="_blank" class="btn btn-outline-secondary w-100">Party Details</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <a href="{% url 'contracts:reports' %}" class="btn btn-warning btn-lg">
+                        <i class="bi bi-file-earmark-text me-2"></i>View All Reports
+                    </a>
                 </div>
             </div>
         </div>

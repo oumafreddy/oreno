@@ -4,6 +4,7 @@ from crispy_forms.layout import Submit, Layout, Row, Column
 from .models import RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
+from django_ckeditor_5.widgets import CKEditor5Widget
 
 class OrganizationScopedModelForm(forms.ModelForm):
     """Base form to filter organization-owned fields by current organization."""
@@ -34,17 +35,9 @@ class RiskRegisterForm(OrganizationScopedModelForm):
         model = RiskRegister
         exclude = ('organization', 'created_by', 'updated_by')
         widgets = {
+            'register_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'register_creation_date': forms.DateInput(attrs={'type': 'date'}),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure CKEditor5 fields are properly configured
-        for field_name, field in self.fields.items():
-            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
-                field.widget.attrs.update({
-                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
-                })
 
 class RiskMatrixConfigForm(OrganizationScopedModelForm):
     class Meta:
@@ -56,6 +49,14 @@ class RiskForm(OrganizationScopedModelForm):
         model = Risk
         exclude = ('organization', 'created_by', 'updated_by')
         widgets = {
+            'external_context': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'internal_context': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'risk_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'controls_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'action_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'kri_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'closure_justification': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'additional_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'date_identified': forms.DateInput(attrs={'type': 'date'}),
             'control_last_review_date': forms.DateInput(attrs={'type': 'date'}),
             'control_next_review_date': forms.DateInput(attrs={'type': 'date'}),
@@ -64,64 +65,33 @@ class RiskForm(OrganizationScopedModelForm):
             'last_reviewed_date': forms.DateInput(attrs={'type': 'date'}),
             'closure_date': forms.DateInput(attrs={'type': 'date'}),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure CKEditor5 fields are properly configured
-        for field_name, field in self.fields.items():
-            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
-                field.widget.attrs.update({
-                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
-                })
 
 class ControlForm(OrganizationScopedModelForm):
     class Meta:
         model = Control
         exclude = ('organization', 'created_by', 'updated_by')
         widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'last_review_date': forms.DateInput(attrs={'type': 'date'}),
             'next_review_date': forms.DateInput(attrs={'type': 'date'}),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure CKEditor5 fields are properly configured
-        for field_name, field in self.fields.items():
-            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
-                field.widget.attrs.update({
-                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
-                })
 
 class KRIForm(OrganizationScopedModelForm):
     class Meta:
         model = KRI
         exclude = ('organization',)
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure CKEditor5 fields are properly configured
-        for field_name, field in self.fields.items():
-            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
-                field.widget.attrs.update({
-                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
-                })
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
 
 class RiskAssessmentForm(OrganizationScopedModelForm):
     class Meta:
         model = RiskAssessment
         exclude = ('organization', 'created_by', 'updated_by')
         widgets = {
+            'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'assessment_date': forms.DateInput(attrs={'type': 'date'}),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Ensure CKEditor5 fields are properly configured
-        for field_name, field in self.fields.items():
-            if hasattr(field, 'widget') and 'CKEditor5Widget' in str(type(field.widget)):
-                field.widget.attrs.update({
-                    'class': 'django_ckeditor_5 ckeditor-richtext form-control'
-                })
 
 # If any risk forms add direct email/phone fields in the future, use the following pattern:
 # widgets = {'contact_email': EmailInput(attrs={'type': 'email'}), 'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'})} 

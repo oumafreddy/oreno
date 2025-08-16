@@ -1,2 +1,371 @@
-<!-- Removed inline <script> for audit reports logic. Now loaded from static/js/audit_reports.js with nonce. -->
-<script src="{% static 'js/audit_reports.js' %}" nonce="{{ request.csp_nonce }}"></script> 
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Audit Reports{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Navigation Bar -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Audit Reports</h2>
+            <p class="text-muted mb-0">Generate and download comprehensive audit management reports</p>
+        </div>
+        <div class="col-auto ms-auto">
+            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Report Generation:</strong> All reports are scoped to your organization and support both PDF and Word export formats. 
+        Use the filters below to customize your reports before downloading.
+    </div>
+
+    <!-- Reports Grid -->
+    <div class="row g-4">
+        <!-- Workplan Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Workplan Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive overview of audit workplans with status and progress tracking.</p>
+                    <form method="get" action="{% url 'reports:audit_workplan_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Fiscal Year</label>
+                            <select name="year" class="form-select">
+                                <option value="">All Years</option>
+                                {% for year in workplan_years %}
+                                    <option value="{{ year }}">{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="draft">Draft</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Engagement Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Detailed summary of audit engagements with status and assignment information.</p>
+                    <form method="get" action="{% url 'reports:audit_engagement_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="planning">Planning</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issue Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Issue Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive listing of audit issues with risk levels and status tracking.</p>
+                    <form method="get" action="{% url 'reports:audit_issue_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in issue_statuses %}
+                                    <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issue Follow-up Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Issue Follow-up</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Track follow-up actions and overdue issues requiring attention.</p>
+                    <form method="get" action="{% url 'reports:audit_issue_followup_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Overdue Only</label>
+                            <select name="overdue" class="form-select">
+                                <option value="">All Issues</option>
+                                <option value="1">Overdue Only</option>
+                                <option value="0">Not Overdue</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Workflow Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Approval Workflow</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive view of approval workflows and decision tracking.</p>
+                    <form method="get" action="{% url 'reports:audit_approval_workflow_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in approval_statuses %}
+                                    <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date From</label>
+                            <input type="date" name="date_from" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Engagement Progress Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Smart Engagement Progress</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Advanced progress tracking with analytics and performance metrics.</p>
+                    <form method="get" action="{% url 'reports:audit_engagement_progress_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Details Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Engagement Details</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Detailed engagement information including objectives, risks, and procedures.</p>
+                    <form method="get" action="{% url 'reports:audit_engagement_details_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-dark">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Details with Issues Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Engagement with Issues</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Complete engagement report including all identified issues and findings.</p>
+                    <form method="get" action="{% url 'reports:audit_engagement_with_issues_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Engagement Name</label>
+                            <select name="engagement_name" class="form-select">
+                                <option value="">All Engagements</option>
+                                {% for name in engagement_names %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Navigation -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-compass me-2"></i>Quick Navigation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'audit:workplan-list' %}" class="btn btn-outline-success w-100">
+                                <i class="bi bi-calendar-check me-2"></i>Workplans
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-info w-100">
+                                <i class="bi bi-clipboard-check me-2"></i>Engagements
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Issues
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize any form enhancements
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Generating...';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

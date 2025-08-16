@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.views.generic import TemplateView
 from . import views
+from .views import ComplianceReportsView
 from . import serializers
 from rest_framework import viewsets
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, IsOrgStaffOrReadOnly
@@ -70,6 +71,7 @@ router.register(r'evidences', ComplianceEvidenceViewSet, basename='evidence')
 urlpatterns = [
     # Dashboard
     path('', views.ComplianceDashboardView.as_view(), name='dashboard'),
+    path('reports/', ComplianceReportsView.as_view(), name='reports'),
     # ComplianceFramework
     path('frameworks/', views.ComplianceFrameworkListView.as_view(), name='framework_list'),
     path('frameworks/create/', views.ComplianceFrameworkCreateView.as_view(), name='framework_create'),

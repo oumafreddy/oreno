@@ -9,6 +9,7 @@
             <h2 class="mb-0">Legal Management Dashboard</h2>
         </div>
         <div class="col-auto ms-auto">
+            <a href="{% url 'legal:reports' %}" class="btn btn-outline-warning me-2">Reports</a>
             <a href="{% url 'legal:legalcase_list' %}" class="btn btn-primary me-2">Case List</a>
             <a href="{% url 'legal:legaldocument_list' %}" class="btn btn-outline-info me-2">Document List</a>
             <a href="{% url 'legal:legaltask_list' %}" class="btn btn-outline-success">Task List</a>
@@ -129,71 +130,18 @@
       <div class="row mt-5">
         <div class="col">
           <div class="card shadow">
-            <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Legal Reports</strong></div>
-            <div class="card-body">
+            <div class="card-header bg-warning text-dark">
+              <strong><i class="bi bi-file-earmark-bar-graph"></i> Legal Reports</strong>
+            </div>
+            <div class="card-body text-center">
               <div class="alert alert-info mb-4">
-                <i class="bi bi-info-circle"></i> Generate and download professional, filterable legal management reports. All reports are scoped to your organization and support PDF export.
+                <i class="bi bi-info-circle"></i> 
+                <strong>Access Professional Legal Reports</strong><br>
+                Generate and download comprehensive legal management reports with advanced filtering options.
               </div>
-              <div class="row g-4">
-                <!-- Legal Case Summary Report -->
-                <div class="col-md-6 col-lg-4">
-                  <div class="card h-100">
-                    <div class="card-body">
-                      <h5 class="card-title">Legal Case Summary</h5>
-                      <form method="get" action="{% url 'reports:legal_case_summary_pdf' %}" target="_blank">
-                        <div class="mb-2">
-                          <label class="form-label">Status</label>
-                          <input type="text" name="status" class="form-control" placeholder="All">
-                        </div>
-                        <div class="mb-2">
-                          <label class="form-label">Type</label>
-                          <input type="text" name="case_type" class="form-control" placeholder="All">
-                        </div>
-                        <div class="mb-2">
-                          <label class="form-label">Priority</label>
-                          <input type="text" name="priority" class="form-control" placeholder="All">
-                        </div>
-                        <div class="mb-2">
-                          <label class="form-label">Lead Attorney (email)</label>
-                          <input type="text" name="lead_attorney" class="form-control" placeholder="All">
-                        </div>
-                        <div class="mb-2">
-                          <label class="form-label">Case Name</label>
-                          <input type="text" name="case_name" class="form-control mb-1" placeholder="Type or select...">
-                          <select name="case_name" class="form-select">
-                            <option value="">All</option>
-                            {% for case in recent_cases %}
-                              <option value="{{ case.title }}">{{ case.title }}</option>
-                            {% endfor %}
-                          </select>
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-                <!-- Legal Case Details Report -->
-                <div class="col-md-6 col-lg-4">
-                  <div class="card h-100">
-                    <div class="card-body">
-                      <h5 class="card-title">Legal Case Details</h5>
-                      <form method="get" action="{% url 'reports:legal_case_details_pdf' %}" target="_blank">
-                        <div class="mb-2">
-                          <label class="form-label">Case Name</label>
-                          <input type="text" name="case_name" class="form-control mb-1" placeholder="Type or select...">
-                          <select name="case_name" class="form-select">
-                            <option value="">All</option>
-                            {% for case in recent_cases %}
-                              <option value="{{ case.title }}">{{ case.title }}</option>
-                            {% endfor %}
-                          </select>
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <a href="{% url 'legal:reports' %}" class="btn btn-warning btn-lg">
+                <i class="bi bi-file-earmark-text me-2"></i>View All Reports
+              </a>
             </div>
           </div>
         </div>

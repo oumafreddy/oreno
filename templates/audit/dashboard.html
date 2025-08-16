@@ -9,6 +9,9 @@
             <h2 class="mb-0">Audit Dashboard</h2>
         </div>
         <div class="col-auto ms-auto">
+            <a href="{% url 'audit:reports' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
+            </a>
             <a href="{% url 'audit:workplan-list' %}" class="btn btn-primary me-2">Workplan List</a>
             <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-success me-2">Engagement List</a>
             <a href="{% url 'audit:issue-list' %}" class="btn btn-outline-danger me-2">Issue List</a>
@@ -325,166 +328,48 @@
     <div class="row mt-5">
       <div class="col">
         <div class="card shadow">
-          <div class="card-header bg-primary text-white"><strong><i class="bi bi-file-earmark-bar-graph"></i> Audit Reports</strong></div>
+          <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <strong><i class="bi bi-file-earmark-bar-graph"></i> Audit Reports</strong>
+              <a href="{% url 'audit:reports' %}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-right me-1"></i>View All Reports
+              </a>
+            </div>
+          </div>
           <div class="card-body">
             <div class="alert alert-info mb-4">
-              <i class="bi bi-info-circle"></i> Generate and download a wide range of intelligent, filterable audit management reports. All reports are scoped to your organization and support PDF export.
+              <i class="bi bi-info-circle"></i> 
+              <strong>Reports Dashboard:</strong> Access comprehensive audit management reports with advanced filtering capabilities. 
+              All reports support both PDF and Word export formats.
             </div>
             <div class="row g-4">
-              <!-- Workplan Summary Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Workplan Summary</h5>
-                    <form method="get" action="{% url 'reports:audit_workplan_summary_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Fiscal Year</label>
-                        <input type="number" name="year" class="form-control" placeholder="All">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All">
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
+              <div class="col-md-4">
+                <div class="card h-100 border-primary">
+                  <div class="card-body text-center">
+                    <i class="bi bi-calendar-check display-4 text-primary mb-3"></i>
+                    <h5 class="card-title">Workplan Reports</h5>
+                    <p class="card-text">Generate workplan summaries, progress reports, and status overviews.</p>
+                    <a href="{% url 'audit:reports' %}" class="btn btn-outline-primary">View Reports</a>
                   </div>
                 </div>
               </div>
-              <!-- Engagement Summary Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Engagement Summary</h5>
-                    <form method="get" action="{% url 'reports:audit_engagement_summary_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All" value="{{ request.GET.status|default:'' }}">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Assigned To (email)</label>
-                        <input type="text" name="assigned_to" class="form-control" placeholder="All" value="{{ request.GET.assigned_to|default:'' }}">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Engagement Name</label>
-                        <select name="engagement_name" class="form-select engagement-select">
-                          <option value="">All</option>
-                          {% for name in engagement_names %}
-                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
+              <div class="col-md-4">
+                <div class="card h-100 border-info">
+                  <div class="card-body text-center">
+                    <i class="bi bi-clipboard-check display-4 text-info mb-3"></i>
+                    <h5 class="card-title">Engagement Reports</h5>
+                    <p class="card-text">Detailed engagement summaries, progress tracking, and issue analysis.</p>
+                    <a href="{% url 'audit:reports' %}" class="btn btn-outline-info">View Reports</a>
                   </div>
                 </div>
               </div>
-              <!-- Issue Register Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Issue Register</h5>
-                    <form method="get" action="{% url 'reports:audit_issue_register_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All" value="{{ request.GET.status|default:'' }}">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Severity</label>
-                        <input type="text" name="severity" class="form-control" placeholder="All" value="{{ request.GET.severity|default:'' }}">
-                      </div>
-                      <div class="mb-2">
-                        <label class="form-label">Engagement Name</label>
-                        <select name="engagement_name" class="form-select engagement-select">
-                          <option value="">All</option>
-                          {% for name in engagement_names %}
-                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Issue Follow-up Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Issue Follow-up</h5>
-                    <form method="get" action="{% url 'reports:audit_issue_followup_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Overdue Only</label>
-                        <select name="overdue" class="form-select">
-                          <option value="">No</option>
-                          <option value="1">Yes</option>
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Approval Workflow Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Approval Workflow</h5>
-                    <form method="get" action="{% url 'reports:audit_approval_workflow_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <input type="text" name="status" class="form-control" placeholder="All">
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Smart Engagement Progress Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Smart Engagement Progress</h5>
-                    <a href="{% url 'reports:audit_engagement_progress_pdf' %}" target="_blank" class="btn btn-outline-primary w-100">Download PDF</a>
-                  </div>
-                </div>
-              </div>
-              <!-- Engagement Details Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Engagement Details</h5>
-                    <form method="get" action="{% url 'reports:audit_engagement_details_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Engagement Name</label>
-                        <select name="engagement_name" class="form-select engagement-select">
-                          <option value="">All</option>
-                          {% for name in engagement_names %}
-                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <!-- Engagement Details with Issues Report -->
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">Engagement Details with Issues</h5>
-                    <form method="get" action="{% url 'reports:audit_engagement_with_issues_pdf' %}" target="_blank">
-                      <div class="mb-2">
-                        <label class="form-label">Engagement Name</label>
-                        <select name="engagement_name" class="form-select engagement-select">
-                          <option value="">All</option>
-                          {% for name in engagement_names %}
-                            <option value="{{ name }}" {% if request.GET.engagement_name == name %}selected{% endif %}>{{ name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                      <button type="submit" class="btn btn-outline-primary w-100">Download PDF</button>
-                    </form>
+              <div class="col-md-4">
+                <div class="card h-100 border-warning">
+                  <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                    <h5 class="card-title">Issue Reports</h5>
+                    <p class="card-text">Issue registers, follow-up tracking, and risk assessment reports.</p>
+                    <a href="{% url 'audit:reports' %}" class="btn btn-outline-warning">View Reports</a>
                   </div>
                 </div>
               </div>

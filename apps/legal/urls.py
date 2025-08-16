@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from .views import LegalReportsView
 
 app_name = 'legal'
 
@@ -54,6 +55,7 @@ urlpatterns = [
     path('archives/<int:pk>/delete/', views.LegalArchiveDeleteView.as_view(), name='legalarchive_delete'),
 
     path('', views.LegalDashboardView.as_view(), name='dashboard'),
+    path('reports/', LegalReportsView.as_view(), name='reports'),
 
     # path('api/', include(router.urls)),
     path('api/case-status-data/', views.api_case_status_data, name='api_case_status_data'),
