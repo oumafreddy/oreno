@@ -193,6 +193,20 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/ui-utils.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/public.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    
+    <!-- Back to Top Button -->
+    <button id="backToTopBtn" title="Back to top" aria-label="Back to top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    
+    <!-- Cookie Consent Banner -->
+    <div id="cookieConsent" class="cookie-consent">
+        <div class="cookie-content">
+            <p>We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies. <a href="{% url 'public-cookies' %}">Learn more</a></p>
+        </div>
+        <button id="acceptCookies" class="btn">Accept</button>
+    </div>
+    
     <script nonce="{{ request.csp_nonce }}">
     // Smooth scroll to #contact section from any page
     (function() {

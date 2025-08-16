@@ -14,7 +14,16 @@
         <p class="hero-atlassian-subtitle" id="animated-subtitle">
             Empowering organizations with enterprise-grade SaaS: <span class="highlight-animated" id="highlight-grc">GRC</span>, <span class="highlight-animated" id="highlight-learning">Learning</span>, and <span class="highlight-animated" id="highlight-digital">Digital Transformation</span>
         </p>
-        <a href="#services" class="btn btn-primary btn-atlassian">Get Started</a>
+        <div class="cta-buttons">
+            <a href="#services" class="btn btn-primary btn-atlassian">
+                <i class="fas fa-rocket"></i>
+                Explore Services
+            </a>
+            <a href="#contact" class="btn btn-secondary btn-atlassian">
+                <i class="fas fa-envelope"></i>
+                Get in Touch
+            </a>
+        </div>
     </div>
 </section>
 
@@ -46,7 +55,8 @@
                     </svg>
                 </div>
                 <h3>Data Analysis & Visualization</h3>
-                <p>Data analysis and visualization with scripting, Power BI, and Tableau.</p>
+                <p>Transform your data into actionable insights with advanced analytics, Power BI dashboards, and Tableau visualizations. We help you make data-driven decisions.</p>
+                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
             </div>
             <!-- Techno-functional Consultancy -->
             <div class="service-atlassian-item">
@@ -59,7 +69,8 @@
                     </svg>
                 </div>
                 <h3>Techno-functional Consultancy</h3>
-                <p>Consultancy for Microsoft Dynamics NAV & BC product line.</p>
+                <p>Expert consultancy for Microsoft Dynamics NAV & BC product line. We bridge the gap between technical implementation and business requirements.</p>
+                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
             </div>
             <!-- IT Systems Acquisitions, Audits & Reviews -->
             <div class="service-atlassian-item">
@@ -72,7 +83,8 @@
                     </svg>
                 </div>
                 <h3>IT Systems Acquisitions, Audits & Reviews</h3>
-                <p>Comprehensive IT systems acquisition, audits, and infrastructure reviews.</p>
+                <p>Comprehensive IT systems acquisition, audits, and infrastructure reviews. Ensure your technology investments align with business objectives.</p>
+                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
             </div>
             <!-- Information Security Programs -->
             <div class="service-atlassian-item">
@@ -84,7 +96,8 @@
                     </svg>
                 </div>
                 <h3>Information Security Programs</h3>
-                <p>Development and management of information security programs.</p>
+                <p>Develop and manage comprehensive information security programs. Protect your organization's data and maintain compliance with industry standards.</p>
+                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
             </div>
             <!-- Process Digitization & Automation -->
             <div class="service-atlassian-item">
@@ -96,7 +109,8 @@
                     </svg>
                 </div>
                 <h3>Process Digitization & Automation</h3>
-                <p>Digitization and automation using Python, Power Automate, and Power Apps.</p>
+                <p>Streamline operations with process digitization and automation using Python, Power Automate, and Power Apps. Increase efficiency and reduce manual work.</p>
+                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
             </div>
         </div>
         <!-- Floating Product Sections -->
@@ -104,24 +118,22 @@
             <div class="floating-product-card-wide">
                 <h3 class="floating-product-title">Web Apps Development</h3>
                 <div class="floating-product-content-wide">
-                    <p>Development of custom web applications using Django, Power Platform, and Airtable.</p>
+                    <p>Custom web application development using modern technologies like Django, Power Platform, and Airtable. We build scalable solutions that grow with your business.</p>
                 </div>
                 <div class="floating-product-images-wide floating-product-images-huge">
                     <img src="{% static 'img/Add Risk.png' %}" alt="Oreno GRC - Add Risk" class="floating-product-img-huge">
                     <img src="{% static 'img/Add Obj.png' %}" alt="Oreno GRC - Add Objective" class="floating-product-img-huge">
                     <img src="{% static 'img/Add Issue.png' %}" alt="Oreno GRC - Add Issue" class="floating-product-img-huge">
                 </div>
-
             </div>
             <div class="floating-product-card-wide">
                 <h3 class="floating-product-title">Udemy CISA Courses</h3>
                 <div class="floating-product-content-wide">
-                    <p>Online CISA preparation courses: <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener" style="color:#0052cc;font-weight:600;">View Course</a></p>
-            </div>
+                    <p>Professional CISA preparation courses designed to help you pass the exam with confidence. <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener" style="color:#0052cc;font-weight:600;">View Course</a></p>
+                </div>
                 <div class="floating-product-images-wide floating-product-images-huge">
                     <img src="{% static 'img/Udemy.png' %}" alt="Udemy CISA Course" class="floating-product-img-huge">
-        </div>
-
+                </div>
             </div>
         </div>
     </div>
@@ -156,25 +168,28 @@
             </div>
         </div>
         <div class="contact-atlassian-form">
-                <form id="contactForm" method="post" action="#">
-                    <div class="form-group">
-                        <label for="name">Your Name</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Your Email</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="subject">Subject</label>
-                        <input type="text" id="subject" name="subject" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="message">Your Message</label>
-                        <textarea id="message" name="message" required></textarea>
-                    </div>
-                <button type="submit" class="btn btn-primary btn-atlassian">Send Message</button>
-                </form>
+            <form id="contactForm" method="post" action="#">
+                <div class="form-group">
+                    <label for="name">Your Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Your Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject *</label>
+                    <input type="text" id="subject" name="subject" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">Your Message *</label>
+                    <textarea id="message" name="message" required placeholder="Tell us about your project or inquiry..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-atlassian">
+                    <i class="fas fa-paper-plane"></i>
+                    Send Message
+                </button>
+            </form>
         </div>
     </div>
 </section>
