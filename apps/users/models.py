@@ -285,3 +285,71 @@ class OTP(models.Model):
             [self.user.email],
             fail_silently=False
         )
+
+
+class PasswordHistory(models.Model):
+    """
+    Model to track password history for preventing password reuse.
+    """
+    user = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='password_history'
+    )
+    password_hash = models.CharField(
+        max_length=255,
+        verbose_name=_("Password Hash"),
+        help_text=_("Hashed version of the password")
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At"),
+        help_text=_("When this password was set")
+    )
+    
+    class Meta:
+        verbose_name = _("Password History")
+        verbose_name_plural = _("Password Histories")
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Password history for {self.user.email} at {self.created_at}"
+    
+    @classmethod
+    def store_password(cls, user, password):
+        """
+        Store a password hash in the history.
+        """
+        from django.contrib.auth.hashers import make_password
+        password_hash = make_password(password)
+        cls.objects.create(user=user, password_hash=password_hash)
+    
+    @classmethod
+    def is_password_reused(cls, user, password, history_count=5):
+        """
+        Check if a password has been used recently.
+        Returns True if the password is found in recent history.
+        """
+        from django.contrib.auth.hashers import check_password
+        
+        # Get the most recent password history entries
+        recent_passwords = cls.objects.filter(user=user).order_by('-created_at')[:history_count]
+        
+        for password_record in recent_passwords:
+            if check_password(password, password_record.password_hash):
+                return True
+        
+        return False
+    
+    @classmethod
+    def cleanup_old_passwords(cls, user, keep_count=10):
+        """
+        Remove old password history entries, keeping only the most recent ones.
+        """
+        all_passwords = cls.objects.filter(user=user).order_by('-created_at')
+        if all_passwords.count() > keep_count:
+            passwords_to_delete = all_passwords[keep_count:]
+            passwords_to_delete.delete()

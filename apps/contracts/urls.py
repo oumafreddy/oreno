@@ -53,6 +53,7 @@ urlpatterns = [
     path('api/type-data/', views.api_type_data, name='api_type_data'),
     path('api/party-data/', views.api_party_data, name='api_party_data'),
     path('api/milestone-type-data/', views.api_milestone_type_data, name='api_milestone_type_data'),
+    path('api/milestone-status-data/', views.api_milestone_status_data, name='api_milestone_status_data'),
     path('api/expiry-data/', views.api_expiry_data, name='api_expiry_data'),
 ]
 
@@ -69,9 +70,8 @@ class PartyViewSet(viewsets.ModelViewSet):
     queryset = Party.objects.all()
     serializer_class = PartySerializer
     permission_classes = [IsOrgStaffOrReadOnly]
-    # Party does not have organization field, but should be filtered if needed
-    # If Party is not org-owned, remove org filtering
-    # return Party.objects.filter(organization=self.request.tenant)
+    def get_queryset(self):
+        return Party.objects.filter(organization=self.request.user.organization)
 
 class ContractViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Contract.objects.all()
@@ -82,16 +82,15 @@ class ContractPartyViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSe
     queryset = ContractParty.objects.all()
     serializer_class = ContractPartySerializer
     permission_classes = [IsOrgManagerOrReadOnly]
-    # ContractParty links org-owned contracts, so filter by contract__organization
     def get_queryset(self):
-        return ContractParty.objects.filter(contract__organization=self.request.tenant)
+        return ContractParty.objects.filter(organization=self.request.user.organization)
 
 class ContractMilestoneViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = ContractMilestone.objects.all()
     serializer_class = ContractMilestoneSerializer
     permission_classes = [IsOrgManagerOrReadOnly]
     def get_queryset(self):
-        return ContractMilestone.objects.filter(organization=self.request.tenant)
+        return ContractMilestone.objects.filter(organization=self.request.user.organization)
 
 # Register your contracts API viewsets here
 router.register(r'contracttypes', ContractTypeViewSet, basename='contracttype')

@@ -38,8 +38,8 @@
             <div class="card text-bg-warning h-100 text-center">
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-people"></i></div>
-                    <h6 class="card-title">Top Parties</h6>
-                    <h3><a href="{% url 'contracts:party-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_party_dist|length }}</a></h3>
+                    <h6 class="card-title">Parties</h6>
+                    <h3><a href="{% url 'contracts:party-list' %}" class="stretched-link text-white text-decoration-none">{{ party_count }}</a></h3>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@
         </div>
         <div class="col-md-4">
             <div class="card h-100">
-                <div class="card-header bg-light"><strong>Contracts by Top Party</strong></div>
+                <div class="card-header bg-light"><strong>Contracts by Party</strong></div>
                 <div class="card-body">
                     <div id="contract-party-chart" style="height:250px;"></div>
                 </div>
@@ -355,7 +355,7 @@
      data-type-url="{% url 'contracts:api_type_data' %}"
      data-party-url="{% url 'contracts:api_party_data' %}"
      data-milestone-type-url="{% url 'contracts:api_milestone_type_data' %}"
-     data-milestone-status-url="{% url 'contracts:api_milestone_type_data' %}"
+     data-milestone-status-url="{% url 'contracts:api_milestone_status_data' %}"
      data-expiry-url="{% url 'contracts:api_expiry_data' %}">
 </div>
 {% endblock %}

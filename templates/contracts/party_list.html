@@ -3,9 +3,10 @@
 {% block title %}Parties{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Parties</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Parties</h2>
+        <div>
+            <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
             <a href="{% url 'contracts:party-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Party</a>
         </div>
     </div>
@@ -20,7 +21,8 @@
                     <tr>
                         <th>Name</th>
                         <th>Type</th>
-                        <th>Role</th>
+                        <th>Legal Entity</th>
+                        <th>Contact Person</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Actions</th>
@@ -30,10 +32,11 @@
                     {% for party in object_list %}
                     <tr>
                         <td><a href="{% url 'contracts:party-detail' party.pk %}">{{ party.name }}</a></td>
-                        <td>{{ party.party_type }}</td>
-                        <td>{{ party.role }}</td>
-                        <td>{{ party.email }}</td>
-                        <td>{{ party.phone }}</td>
+                        <td>{{ party.get_party_type_display }}</td>
+                        <td>{{ party.legal_entity_name }}</td>
+                        <td>{{ party.contact_person|default:"-" }}</td>
+                        <td>{{ party.contact_email|default:"-" }}</td>
+                        <td>{{ party.contact_phone|default:"-" }}</td>
                         <td>
                             <a href="{% url 'contracts:party-detail' party.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
                             <a href="{% url 'contracts:party-edit' party.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
@@ -41,7 +44,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted">No parties found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted">No parties found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

@@ -1,6 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Row, Column
+from django_ckeditor_5.widgets import CKEditor5Widget
 from .models import ContractType, Party, Contract, ContractParty, ContractMilestone
 from django.forms import DateInput, EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -19,11 +20,23 @@ class OrganizationScopedModelForm(forms.ModelForm):
             if hasattr(model_field, 'related_model') and hasattr(model_field.related_model, 'organization'):
                 if self.organization:
                     self.fields[field_name].queryset = model_field.related_model.objects.filter(organization=self.organization)
+        
+        # Filter user fields by organization
+        if self.organization:
+            from users.models import CustomUser
+            for field_name, field in self.fields.items():
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if model.__name__ in ['CustomUser', 'User']:
+                        field.queryset = field.queryset.filter(organization=self.organization)
 
 class ContractTypeForm(OrganizationScopedModelForm):
     class Meta:
         model = ContractType
         exclude = ('organization',)
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
 
 class PartyForm(OrganizationScopedModelForm):
     phone_validator = RegexValidator(r'^[\d\+\-]+$', 'Enter a valid phone number (digits, +, - only).')
@@ -31,9 +44,11 @@ class PartyForm(OrganizationScopedModelForm):
         model = Party
         exclude = ('created_by', 'updated_by', 'organization',)
         widgets = {
+            'address': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'contact_email': EmailInput(attrs={'type': 'email'}),
             'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'}),
         }
+    
     def clean_contact_phone(self):
         phone = self.cleaned_data.get('contact_phone')
         if phone:
@@ -45,6 +60,9 @@ class ContractForm(OrganizationScopedModelForm):
         model = Contract
         exclude = ('organization', 'created_by', 'updated_by',)
         widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'payment_terms': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'termination_clause': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'start_date': DateInput(attrs={'type': 'date'}),
             'end_date': DateInput(attrs={'type': 'date'}),
             'termination_date': DateInput(attrs={'type': 'date'}),
@@ -65,9 +83,15 @@ class ContractMilestoneForm(OrganizationScopedModelForm):
         }
 
 class PartyFilterForm(forms.Form):
-    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name', 'class': 'form-control'}))
-    party_type = forms.CharField(label='Type', required=False, widget=forms.TextInput(attrs={'placeholder': 'Type', 'class': 'form-control'}))
-    role = forms.CharField(label='Role', required=False, widget=forms.TextInput(attrs={'placeholder': 'Role', 'class': 'form-control'}))
+    q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Name or Legal Entity', 'class': 'form-control'}))
+    party_type = forms.ChoiceField(
+        label='Type', 
+        required=False, 
+        choices=[('', 'All Types')] + Party.PARTY_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    contact_person = forms.CharField(label='Contact Person', required=False, widget=forms.TextInput(attrs={'placeholder': 'Contact Person', 'class': 'form-control'}))
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -75,9 +99,9 @@ class PartyFilterForm(forms.Form):
         self.helper.form_show_labels = False
         self.helper.layout = Layout(
             Row(
-                Column('q', css_class='col-md-6'),
+                Column('q', css_class='col-md-4'),
                 Column('party_type', css_class='col-md-3'),
-                Column('role', css_class='col-md-3'),
+                Column('contact_person', css_class='col-md-3'),
                 Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
             )
         )

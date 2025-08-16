@@ -342,6 +342,7 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
             context['case_status_chart'] = {'Open': 0, 'Closed': 0, 'Archived': 0}
             context['task_status_chart'] = {'Completed': 0, 'Pending': 0, 'Overdue': 0}
             return context
+        
         # Case counts
         context['case_count'] = LegalCase.objects.filter(organization=org).count()
         context['open_cases'] = LegalCase.objects.filter(organization=org, status='intake').count() + \
@@ -350,24 +351,64 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
                                  LegalCase.objects.filter(organization=org, status='settlement_negotiation').count()
         context['closed_cases'] = LegalCase.objects.filter(organization=org, status='closed').count()
         context['archived_cases'] = LegalCase.objects.filter(organization=org, status='archived').count()
+        
         # Party, document, task counts
         context['party_count'] = LegalParty.objects.filter(organization=org).count()
         context['document_count'] = LegalDocument.objects.filter(organization=org).count()
         context['task_count'] = LegalTask.objects.filter(organization=org).count()
+        
         # Overdue tasks: status is 'overdue'
         context['overdue_tasks'] = LegalTask.objects.filter(organization=org, status='overdue').count()
+        
         # Task status chart data
         context['completed_tasks'] = LegalTask.objects.filter(organization=org, status='completed').count()
         context['pending_tasks'] = LegalTask.objects.filter(organization=org, status='pending').count() + \
                                    LegalTask.objects.filter(organization=org, status='in_progress').count()
+        
         # Recent activity (latest 8 cases, documents, or tasks)
         context['recent_cases'] = LegalCase.objects.filter(organization=org).order_by('-created_at')[:4]
         context['recent_documents'] = LegalDocument.objects.filter(organization=org).order_by('-id')[:2]
         context['recent_tasks'] = LegalTask.objects.filter(organization=org).order_by('-id')[:2]
-        # Chart data for Plotly
-        context['case_status_chart'] = context.get('case_status_chart', {'Open': 0, 'Closed': 0, 'Archived': 0})
-        context['task_status_chart'] = context.get('task_status_chart', {'Completed': 0, 'Pending': 0, 'Overdue': 0})
-        return context 
+        
+        # Chart data for Plotly - Case Status Distribution
+        from collections import Counter
+        case_status_qs = LegalCase.objects.filter(organization=org).values_list('status', flat=True)
+        case_status_counter = Counter(case_status_qs)
+        # Map status values to display names
+        status_mapping = {
+            'intake': 'Open',
+            'investigation': 'Open', 
+            'litigation': 'Open',
+            'settlement_negotiation': 'Open',
+            'closed': 'Closed',
+            'archived': 'Archived'
+        }
+        case_status_chart = {}
+        for status, count in case_status_counter.items():
+            display_name = status_mapping.get(status, status.title())
+            if display_name in case_status_chart:
+                case_status_chart[display_name] += count
+            else:
+                case_status_chart[display_name] = count
+        context['case_status_chart'] = case_status_chart or {'Open': 0, 'Closed': 0, 'Archived': 0}
+        
+        # Task Status Distribution
+        task_status_qs = LegalTask.objects.filter(organization=org).values_list('status', flat=True)
+        task_status_counter = Counter(task_status_qs)
+        # Map task status values to display names
+        task_status_mapping = {
+            'pending': 'Pending',
+            'in_progress': 'In Progress',
+            'completed': 'Completed',
+            'overdue': 'Overdue'
+        }
+        task_status_chart = {}
+        for status, count in task_status_counter.items():
+            display_name = task_status_mapping.get(status, status.title())
+            task_status_chart[display_name] = count
+        context['task_status_chart'] = task_status_chart or {'Pending': 0, 'In Progress': 0, 'Completed': 0, 'Overdue': 0}
+        
+        return context
 
 @login_required
 def api_case_status_data(request):

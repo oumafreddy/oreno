@@ -110,10 +110,7 @@ class UserRegisterSerializer(UserSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        # Create profile automatically
-        Profile.objects.create(user=user)
-        # Generate initial OTP
-        OTP.objects.create(user=user)
+        # Profile and OTP are automatically created by signals
         return user
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

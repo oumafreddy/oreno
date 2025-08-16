@@ -1,6 +1,6 @@
 # apps/users/forms.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm, SetPasswordForm
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth import password_validation
@@ -9,6 +9,7 @@ from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, ButtonHol
 from crispy_bootstrap5.bootstrap5 import FloatingField
 
 from users.models import CustomUser, Profile, OrganizationRole
+from users.validators import validate_password_strength
 
 class BaseUserForm(forms.ModelForm):
     """Base form with common functionality for user-related forms"""
@@ -223,3 +224,28 @@ class OrganizationRoleForm(forms.ModelForm):
                 raise ValidationError(_("This user already has this role in the organization."))
         
         return cleaned_data
+
+
+class CustomSetPasswordForm(SetPasswordForm):
+    """
+    Custom password reset form that includes enhanced password validation.
+    """
+    
+    def clean_new_password1(self):
+        password = self.cleaned_data.get('new_password1')
+        if password:
+            # Validate password strength
+            try:
+                validate_password_strength(password)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+            
+            # Check password history if user exists
+            if hasattr(self, 'user') and self.user:
+                from users.models import PasswordHistory
+                if PasswordHistory.is_password_reused(self.user, password):
+                    raise ValidationError(
+                        _("This password has been used recently. Please choose a different password.")
+                    )
+        
+        return password

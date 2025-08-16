@@ -5,9 +5,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
-from users.models import CustomUser, Profile, OTP, OrganizationRole
+from users.models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin, VersionAdmin):
@@ -92,7 +93,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         return True
 
     def admin_delete_help(self, obj=None):
-        return (
+        return mark_safe(
             '<div style="color: #b94a48; font-weight: bold;">'
             'User deletion and tenant data cleanup must be performed via the '
             '<b>management command</b> or a <b>custom view</b>.<br>'
@@ -100,16 +101,14 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
             '</div>'
         )
     admin_delete_help.short_description = 'Delete User (Important Notice)'
-    admin_delete_help.allow_tags = True
 
     def setup_status(self, obj):
         """Display setup status with color coding."""
         if obj.is_first_time_setup_complete:
-            return '<span style="color: green;">✓ Complete</span>'
+            return mark_safe('<span style="color: green;">✓ Complete</span>')
         else:
-            return '<span style="color: orange;">⚠ Pending</span>'
+            return mark_safe('<span style="color: orange;">⚠ Pending</span>')
     setup_status.short_description = 'Setup Status'
-    setup_status.allow_tags = True
 
     def save_model(self, request, obj, form, change):
         """Override to automatically set admin_created flag for new users."""
@@ -186,3 +185,29 @@ class OrganizationRoleAdmin(VersionAdmin):
         if request.user.is_superuser:
             return True
         return obj.organization == request.user.organization
+
+
+@admin.register(PasswordHistory)
+class PasswordHistoryAdmin(VersionAdmin):
+    """
+    Admin interface for password history with version control.
+    """
+    list_display = ('user', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__email',)
+    readonly_fields = ('password_hash', 'created_at')
+    ordering = ('-created_at',)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            return qs.filter(user__organization=request.user.organization)
+        return qs
+    
+    def has_add_permission(self, request):
+        """Prevent manual creation of password history entries"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Prevent editing of password history entries"""
+        return False

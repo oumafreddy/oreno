@@ -3,9 +3,10 @@
 {% block title %}Contract Milestones{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Contract Milestones</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Contract Milestones</h2>
+        <div>
+            <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
             <a href="{% url 'contracts:contractmilestone-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Milestone</a>
         </div>
     </div>
@@ -28,7 +29,7 @@
                 <tbody>
                     {% for ms in object_list %}
                     <tr>
-                        <td><a href="{% url 'contracts:contractmilestone-detail' ms.pk %}">{{ ms.name }}</a></td>
+                        <td><a href="{% url 'contracts:contractmilestone-detail' ms.pk %}">{{ ms.title }}</a></td>
                         <td>{{ ms.description|truncatechars:40 }}</td>
                         <td>{% if ms.is_completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}</td>
                         <td>{{ ms.due_date }}</td>

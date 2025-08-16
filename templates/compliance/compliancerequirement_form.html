@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 {% block title %}{{ view.object|default:'New' }} Compliance Requirement{% endblock %}
+{% block extra_head %}
+  {{ form.media }}
+{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <h2>{% if view.object %}Edit{% else %}Add{% endif %} Compliance Requirement</h2>

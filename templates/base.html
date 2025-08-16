@@ -43,6 +43,9 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    
+    <!-- Plotly.js for charts - Load before custom scripts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 
     <!-- Core Custom JavaScript - Load first -->
     <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>
@@ -52,6 +55,9 @@
 
     <!-- Feature-specific JavaScript - Load after core -->
     <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    
+    <!-- Dashboard charts - Load after Plotly -->
+    <script src="{% static 'js/dashboard_charts.js' %}" nonce="{{ request.csp_nonce }}"></script>
 
     <!-- Custom Styles -->
     <style nonce="{{ request.csp_nonce }}">
@@ -64,6 +70,54 @@
           --clr-bg-dark:   #1e293b;
           --clr-footer:    #111827;
           --clr-text-light:#adb5bd;
+        }
+
+        /* Dashboard animations */
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideIn {
+          from { transform: translateX(-20px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .card {
+          animation: fadeIn 0.5s ease-out;
+          transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .dashboard-chart {
+          animation: slideIn 0.6s ease-out;
+        }
+        
+        .alert-warning {
+          animation: pulse 2s infinite;
+        }
+        
+        /* Chart container improvements */
+        [id$="-chart"] {
+          min-height: 250px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        [id$="-chart"]:empty::before {
+          content: "Loading chart...";
+          color: #6c757d;
+          font-style: italic;
         }
 
 

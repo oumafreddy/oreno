@@ -19,6 +19,15 @@ class OrganizationScopedModelForm(forms.ModelForm):
             if hasattr(model_field, 'related_model') and hasattr(model_field.related_model, 'organization'):
                 if self.organization:
                     self.fields[field_name].queryset = model_field.related_model.objects.filter(organization=self.organization)
+        
+        # Filter user fields by organization
+        if self.organization:
+            from users.models import CustomUser
+            for field_name, field in self.fields.items():
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if model.__name__ in ['CustomUser', 'User']:
+                        field.queryset = field.queryset.filter(organization=self.organization)
 
 class RiskRegisterForm(OrganizationScopedModelForm):
     class Meta:

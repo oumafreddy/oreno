@@ -634,6 +634,16 @@ class ProcedureForm(BaseAuditForm):
     def __init__(self, *args, **kwargs):
         risk_id = kwargs.pop('risk_id', None)
         super().__init__(*args, **kwargs)
+        
+        # Filter users by organization
+        if self.organization:
+            self.fields['tested_by'].queryset = CustomUser.objects.filter(
+                organization=self.organization
+            )
+            self.fields['reviewed_by'].queryset = CustomUser.objects.filter(
+                organization=self.organization
+            )
+        
         if risk_id:
             self.fields['risk'].initial = risk_id
             self.fields['risk'].widget = forms.HiddenInput()
@@ -663,7 +673,12 @@ class RiskForm(BaseAuditForm):
         objective_pk = kwargs.pop('objective_pk', None)
         engagement_pk = kwargs.pop('engagement_pk', None)
         super().__init__(*args, **kwargs)
+        
+        # Filter users by organization
         if self.organization:
+            self.fields['assigned_to'].queryset = CustomUser.objects.filter(
+                organization=self.organization
+            )
             objective_queryset = self.fields['objective'].queryset.filter(
                 engagement__organization=self.organization
             )

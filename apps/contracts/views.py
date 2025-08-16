@@ -14,6 +14,8 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
+from django.db import models
+from collections import Counter
 
 # --- Dashboard View ---
 class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
@@ -21,36 +23,114 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        org = self.request.tenant
-        from collections import Counter
+        
+        # Ensure we have the correct organization from the request
+        org = self.request.user.organization
+        if not org:
+            # Try to get from request.organization (set by middleware)
+            org = getattr(self.request, 'organization', None)
+        
+        if not org:
+            # Try to get from request.tenant
+            org = getattr(self.request, 'tenant', None)
+        
+        if not org:
+            # Fallback to get organization from user's organization
+            from organizations.models import Organization
+            org = Organization.objects.first()
+        
+        # Final safety check
+        if not org:
+            # Return empty context if no organization found
+            context.update({
+                'contract_count': 0,
+                'party_count': 0,
+                'milestone_count': 0,
+                'recent_contracts': [],
+                'contract_status_dist': {'Draft': 0, 'Active': 0, 'Expired': 0},
+                'contract_type_dist': {'General': 0},
+                'milestone_type_dist': {'Payment': 0, 'Delivery': 0},
+                'milestone_status_dist': {'Completed': 0, 'Pending': 0},
+                'contract_party_dist': {'No Parties': 0},
+                'contract_expiry_dist': {'2024': 0, '2025': 0},
+            })
+            return context
+        
         from contracts.models import Contract, ContractMilestone, Party, ContractType
-        # Summary counts
-        context['contract_count'] = Contract.objects.filter(organization=org).count()
-        # Only parties linked to contracts for this org
-        context['party_count'] = Party.objects.filter(contracts__organization=org).distinct().count()
-        context['milestone_count'] = ContractMilestone.objects.filter(organization=org).count()
+        from django.db.models import Count, Q
+        from django.db.models.functions import ExtractYear
+        
+        # Summary counts with explicit organization filtering
+        contract_count = Contract.objects.filter(organization=org).count()
+        party_count = Party.objects.filter(organization=org).count()
+        milestone_count = ContractMilestone.objects.filter(organization=org).count()
+        
+        context['contract_count'] = contract_count
+        context['party_count'] = party_count
+        context['milestone_count'] = milestone_count
+        
+        # Debugging: Print counts for verification
+        print(f"ContractsDashboardView: Organization: {org.name} (ID: {org.id})")
+        print(f"ContractsDashboardView: Contract count: {contract_count}")
+        print(f"ContractsDashboardView: Party count: {party_count}")
+        print(f"ContractsDashboardView: Milestone count: {milestone_count}")
+        
         # Recent contracts
         context['recent_contracts'] = Contract.objects.filter(organization=org).order_by('-start_date')[:8]
+        
         # Contract status distribution
         status_dist = Contract.objects.filter(organization=org).values_list('status', flat=True)
-        context['contract_status_dist'] = dict(Counter(status_dist)) or {}
+        status_counter = Counter(status_dist)
+        # Map status values to display names
+        status_mapping = {
+            'draft': 'Draft',
+            'active': 'Active',
+            'expired': 'Expired',
+            'terminated': 'Terminated',
+            'pending': 'Pending'
+        }
+        contract_status_chart = {}
+        for status, count in status_counter.items():
+            display_name = status_mapping.get(status, status.title())
+            contract_status_chart[display_name] = count
+        context['contract_status_dist'] = contract_status_chart or {'Draft': 0, 'Active': 0, 'Expired': 0}
+        
         # Contract type distribution
         type_dist = Contract.objects.filter(organization=org).values_list('contract_type__name', flat=True)
-        context['contract_type_dist'] = dict(Counter(type_dist)) or {}
-        # Milestone type distribution
+        type_counter = Counter(type_dist)
+        context['contract_type_dist'] = dict(type_counter) or {'General': 0}
+        
+        # Milestone type distribution - with explicit organization filtering
         milestone_type_dist = ContractMilestone.objects.filter(organization=org).values_list('milestone_type', flat=True)
-        context['milestone_type_dist'] = dict(Counter(milestone_type_dist)) or {}
-        # Milestone status distribution (using is_completed)
+        milestone_type_counter = Counter(milestone_type_dist)
+        context['milestone_type_dist'] = dict(milestone_type_counter) or {'Payment': 0, 'Delivery': 0}
+        
+        # Milestone status distribution (using is_completed) - with explicit organization filtering
         milestone_status_dist = ContractMilestone.objects.filter(organization=org).values_list('is_completed', flat=True)
-        status_map = {True: 'Completed', False: 'Pending'}
-        milestone_status_dist = [status_map.get(val, 'Unknown') for val in milestone_status_dist]
-        context['milestone_status_dist'] = dict(Counter(milestone_status_dist)) or {}
-        # Contracts by party (top 10)
-        party_dist = Party.objects.filter(contracts__organization=org).annotate(num_contracts=Count('contracts', filter=Q(contracts__organization=org))).order_by('-num_contracts').distinct()[:10]
-        context['contract_party_dist'] = dict(Counter()) or {}
+        # Convert boolean values to human-readable strings for charting
+        milestone_status_mapped = [
+            'Completed' if status else 'Pending' for status in milestone_status_dist
+        ]
+        milestone_status_counter = Counter(milestone_status_mapped)
+        context['milestone_status_dist'] = dict(milestone_status_counter) or {'Pending': 0}
+        
+        # Debugging: Print milestone status distribution
+        print(f"ContractsDashboardView: Milestone status distribution: {context['milestone_status_dist']}")
+        
+        # Contracts by party (all parties with contracts)
+        party_dist = Party.objects.filter(organization=org).annotate(
+            num_contracts=Count('contracts', filter=Q(contracts__organization=org))
+        ).filter(num_contracts__gt=0).order_by('-num_contracts')
+        contract_party_chart = {party.name: party.num_contracts for party in party_dist}
+        context['contract_party_dist'] = contract_party_chart or {'No Parties': 0}
+        
         # Contract expiry distribution (by year)
-        expiry_dist = Contract.objects.filter(organization=org).annotate(expiry_year=ExtractYear('end_date')).values('expiry_year').annotate(count=Count('id')).order_by('expiry_year')
-        context['contract_expiry_dist'] = dict(Counter()) or {}
+        expiry_dist = Contract.objects.filter(organization=org, end_date__isnull=False).annotate(
+            expiry_year=ExtractYear('end_date')
+        ).values('expiry_year').annotate(count=Count('id')).order_by('expiry_year')
+        contract_expiry_chart = {str(item['expiry_year']): item['count'] for item in expiry_dist}
+        context['contract_expiry_dist'] = contract_expiry_chart or {'2024': 0, '2025': 0}
+        
         return context
 
 # --- ContractType Views ---
@@ -119,18 +199,21 @@ class PartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     context_object_name = 'parties'
     paginate_by = 20
     def get_queryset(self):
-        qs = Party.objects.all()
+        qs = Party.objects.filter(organization=self.request.user.organization)
         form = PartyFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
             if q:
-                qs = qs.filter(name__icontains=q)
+                qs = qs.filter(
+                    models.Q(name__icontains=q) | 
+                    models.Q(legal_entity_name__icontains=q)
+                )
             party_type = form.cleaned_data.get('party_type')
             if party_type:
-                qs = qs.filter(party_type__icontains=party_type)
-            role = form.cleaned_data.get('role')
-            if role:
-                qs = qs.filter(role__icontains=role)
+                qs = qs.filter(party_type=party_type)
+            contact_person = form.cleaned_data.get('contact_person')
+            if contact_person:
+                qs = qs.filter(contact_person__icontains=contact_person)
         return qs
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -142,7 +225,7 @@ class PartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailVie
     template_name = 'contracts/party_detail.html'
     context_object_name = 'party'
     def get_queryset(self):
-        return Party.objects.all()
+        return Party.objects.filter(organization=self.request.user.organization)
 
 class PartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = Party
@@ -150,6 +233,7 @@ class PartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateVie
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
     def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
@@ -164,6 +248,7 @@ class PartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateVie
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
     def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
@@ -175,6 +260,8 @@ class PartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteVie
     model = Party
     template_name = 'contracts/party_confirm_delete.html'
     success_url = reverse_lazy('contracts:party-list')
+    def get_queryset(self):
+        return Party.objects.filter(organization=self.request.user.organization)
 
 # --- Contract Views ---
 class ContractListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -233,31 +320,47 @@ class ContractPartyListView(OrganizationPermissionMixin, LoginRequiredMixin, Lis
     template_name = 'contracts/contractparty_list.html'
     context_object_name = 'contractparties'
     def get_queryset(self):
-        return ContractParty.objects.all()
+        return ContractParty.objects.filter(organization=self.request.user.organization)
 
 class ContractPartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ContractParty
     template_name = 'contracts/contractparty_detail.html'
     context_object_name = 'contractparty'
     def get_queryset(self):
-        return ContractParty.objects.all()
+        return ContractParty.objects.filter(organization=self.request.user.organization)
 
 class ContractPartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ContractParty
     form_class = ContractPartyForm
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
 
 class ContractPartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
     model = ContractParty
     form_class = ContractPartyForm
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
+    def form_valid(self, form):
+        form.instance.organization = self.request.user.organization
+        return super().form_valid(form)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.user.organization
+        return kwargs
 
 class ContractPartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = ContractParty
     template_name = 'contracts/contractparty_confirm_delete.html'
     success_url = reverse_lazy('contracts:contractparty-list')
+    def get_queryset(self):
+        return ContractParty.objects.filter(organization=self.request.user.organization)
 
 # --- ContractMilestone Views ---
 class ContractMilestoneListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -328,7 +431,14 @@ class ContractMilestoneDeleteView(OrganizationPermissionMixin, LoginRequiredMixi
 
 @login_required
 def api_status_data(request):
+    # Ensure we have the correct organization
     org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
+    
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
     from .models import Contract
     from django.db.models import Count
     status_qs = Contract.objects.filter(organization=org).values('status').annotate(count=Count('id'))
@@ -337,7 +447,14 @@ def api_status_data(request):
 
 @login_required
 def api_type_data(request):
+    # Ensure we have the correct organization
     org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
+    
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
     from .models import Contract
     from django.db.models import Count
     type_qs = Contract.objects.filter(organization=org).values('contract_type').annotate(count=Count('id'))
@@ -346,7 +463,14 @@ def api_type_data(request):
 
 @login_required
 def api_party_data(request):
+    # Ensure we have the correct organization
     org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
+    
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
     from .models import Party
     from django.db.models import Count
     party_qs = Party.objects.filter(organization=org).values('party_type').annotate(count=Count('id'))
@@ -356,23 +480,35 @@ def api_party_data(request):
 @login_required
 def api_milestone_type_data(request):
     """API endpoint for milestone type data used in dashboards."""
-    milestones = ContractMilestone.objects.filter(
-        contract__organization=request.user.organization
-    )
+    # Ensure we have the correct organization
+    org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
     
-    data = {
-        'total': milestones.count(),
-        'completed': milestones.filter(is_completed=True).count(),
-        'pending': milestones.filter(is_completed=False).count(),
-        'overdue': milestones.filter(is_completed=False, due_date__lt=timezone.now().date()).count(),
-        'upcoming': milestones.filter(is_completed=False, due_date__gte=timezone.now().date()).count(),
-    }
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
+    milestones = ContractMilestone.objects.filter(organization=org)
+    
+    # Get milestone type distribution
+    milestone_type_dist = milestones.values_list('milestone_type', flat=True)
+    milestone_type_counter = Counter(milestone_type_dist)
+    
+    data = dict(milestone_type_counter) or {'Payment': 0, 'Delivery': 0}
     return JsonResponse(data)
 
 @login_required
 def api_expiry_data(request):
     """API endpoint for contract expiry data used in dashboards."""
-    contracts = Contract.objects.filter(organization=request.user.organization)
+    # Ensure we have the correct organization
+    org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
+    
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
+    contracts = Contract.objects.filter(organization=org)
     today = timezone.now().date()
     
     data = {
@@ -393,15 +529,22 @@ def api_expiry_data(request):
 @login_required
 def api_milestone_status_data(request):
     """API endpoint for milestone status data used in dashboards."""
-    milestones = ContractMilestone.objects.filter(
-        contract__organization=request.user.organization
-    )
+    # Ensure we have the correct organization
+    org = request.user.organization
+    if not org:
+        org = getattr(request, 'organization', None)
     
-    data = {
-        'total': milestones.count(),
-        'completed': milestones.filter(is_completed=True).count(),
-        'pending': milestones.filter(is_completed=False).count(),
-        'overdue': milestones.filter(is_completed=False, due_date__lt=timezone.now().date()).count(),
-        'upcoming': milestones.filter(is_completed=False, due_date__gte=timezone.now().date()).count(),
-    }
+    if not org:
+        return JsonResponse({'error': 'No organization found'}, status=400)
+    
+    milestones = ContractMilestone.objects.filter(organization=org)
+    
+    # Convert boolean values to human-readable strings for charting
+    milestone_status_dist = milestones.values_list('is_completed', flat=True)
+    milestone_status_mapped = [
+        'Completed' if status else 'Pending' for status in milestone_status_dist
+    ]
+    milestone_status_counter = Counter(milestone_status_mapped)
+    
+    data = dict(milestone_status_counter) or {'Pending': 0}
     return JsonResponse(data)

@@ -359,47 +359,90 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         org = self.request.tenant
+        
+        # Basic counts
         context['framework_count'] = ComplianceFramework.objects.filter(organization=org).count()
         context['requirement_count'] = ComplianceRequirement.objects.filter(organization=org).count()
         context['obligation_count'] = ComplianceObligation.objects.filter(organization=org).count()
         context['evidence_count'] = ComplianceEvidence.objects.filter(organization=org).count()
         context['policydocument_count'] = PolicyDocument.objects.filter(organization=org).count()
 
-        # Obligation status distribution for chart
-        status_qs = ComplianceObligation.objects.filter(organization=org).values_list('status', flat=True)
-        status_counter = Counter(status_qs)
-        context['obligation_status_chart'] = status_counter
-
-        # Requirement jurisdiction distribution for chart
-        jurisdiction_qs = ComplianceRequirement.objects.filter(organization=org).values_list('jurisdiction', flat=True)
-        jurisdiction_counter = Counter(jurisdiction_qs)
-        context['requirement_jurisdiction_chart'] = jurisdiction_counter
-
         # Advanced analytics: Requirement counts by framework, jurisdiction, mandatory
         framework_dist = ComplianceRequirement.objects.filter(organization=org).values_list('regulatory_framework__name', flat=True)
-        context['requirement_framework_dist'] = dict(Counter(framework_dist)) or {}
+        framework_counter = Counter(framework_dist)
+        context['requirement_framework_dist'] = dict(framework_counter) or {'General': 0}
+        
+        # Jurisdiction distribution
+        jurisdiction_qs = ComplianceRequirement.objects.filter(organization=org).values_list('jurisdiction', flat=True)
+        jurisdiction_counter = Counter(jurisdiction_qs)
+        context['requirement_jurisdiction_chart'] = dict(jurisdiction_counter) or {'General': 0}
+        
+        # Mandatory vs Optional distribution
         mandatory_dist = ComplianceRequirement.objects.filter(organization=org).values_list('mandatory', flat=True)
-        context['requirement_mandatory_dist'] = {'Mandatory': sum(1 for m in mandatory_dist if m), 'Optional': sum(1 for m in mandatory_dist if not m)}
+        mandatory_count = sum(1 for m in mandatory_dist if m)
+        optional_count = sum(1 for m in mandatory_dist if not m)
+        context['requirement_mandatory_dist'] = {'Mandatory': mandatory_count, 'Optional': optional_count}
 
         # Obligation overdue vs. on-time, completion rates, owner workload
         obligations = ComplianceObligation.objects.filter(organization=org)
         today = timezone.now().date()
-        overdue_count = obligations.filter(status__in=['open', 'in_progress'], due_date__lt=today).count()
-        ontime_count = obligations.filter(status__in=['completed'], due_date__gte=today).count()
+        
+        # Overdue obligations (status is open/in_progress and due_date is past)
+        overdue_count = obligations.filter(
+            status__in=['open', 'in_progress'], 
+            due_date__lt=today
+        ).count()
+        
+        # On-time obligations (status is completed and due_date is in future or today)
+        ontime_count = obligations.filter(
+            status='completed', 
+            due_date__gte=today
+        ).count()
+        
+        context['obligation_overdue_ontime'] = {
+            'Overdue': overdue_count, 
+            'On Time': ontime_count
+        } if (overdue_count or ontime_count) else {'Overdue': 0, 'On Time': 0}
+        
+        # Completion rates
         completed_count = obligations.filter(status='completed').count()
         total_obligations = obligations.count()
-        context['obligation_overdue_ontime'] = {'Overdue': overdue_count, 'On Time': ontime_count} if overdue_count or ontime_count else {'Overdue': 0, 'On Time': 0}
-        context['obligation_completion_rate'] = {'Completed': completed_count, 'Total': total_obligations}
+        context['obligation_completion_rate'] = {
+            'Completed': completed_count, 
+            'Total': total_obligations
+        }
+        
+        # Owner workload
         owner_workload = obligations.values_list('owner__email', flat=True)
-        context['obligation_owner_workload'] = dict(Counter(owner_workload)) or {}
+        owner_counter = Counter(owner_workload)
+        context['obligation_owner_workload'] = dict(owner_counter) or {'No Owner': 0}
 
         # Policy document expiry distribution
-        expiring_soon = PolicyDocument.objects.filter(organization=org, expiration_date__gte=today, expiration_date__lte=today.replace(year=today.year+1)).count()
-        expired = PolicyDocument.objects.filter(organization=org, expiration_date__lt=today).count()
-        no_expiry = PolicyDocument.objects.filter(organization=org, expiration_date__isnull=True).count()
-        context['policy_expiry_dist'] = {'Expiring Soon': expiring_soon, 'Expired': expired, 'No Expiry': no_expiry} if expiring_soon or expired or no_expiry else {'Expiring Soon': 0, 'Expired': 0, 'No Expiry': 0}
+        expiring_soon = PolicyDocument.objects.filter(
+            organization=org, 
+            expiration_date__gte=today, 
+            expiration_date__lte=today.replace(year=today.year+1)
+        ).count()
+        expired = PolicyDocument.objects.filter(
+            organization=org, 
+            expiration_date__lt=today
+        ).count()
+        no_expiry = PolicyDocument.objects.filter(
+            organization=org, 
+            expiration_date__isnull=True
+        ).count()
+        
+        context['policy_expiry_dist'] = {
+            'Expiring Soon': expiring_soon, 
+            'Expired': expired, 
+            'No Expiry': no_expiry
+        } if (expiring_soon or expired or no_expiry) else {
+            'Expiring Soon': 0, 
+            'Expired': 0, 
+            'No Expiry': 0
+        }
 
-        # Recent activity: last 5 created/updated items from all main models
+        # Recent activity: last 10 created/updated items from all main models
         recent = []
         for model, label, icon in [
             (ComplianceFramework, 'Framework', 'bi-diagram-3'),
@@ -414,8 +457,10 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
                     'timestamp': getattr(obj, 'updated_at', timezone.now()),
                     'icon': icon,
                 })
+        
         # Sort by timestamp, most recent first, and limit to 10
         context['recent_activity'] = sorted(recent, key=lambda x: x['timestamp'], reverse=True)[:10]
+        
         return context
 
 @login_required

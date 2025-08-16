@@ -1,6 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Row, Column
+from django_ckeditor_5.widgets import CKEditor5Widget
 from .models import (
     ComplianceFramework,
     PolicyDocument,
@@ -26,11 +27,23 @@ class OrganizationScopedModelForm(forms.ModelForm):
             if hasattr(model_field, 'related_model') and hasattr(model_field.related_model, 'organization'):
                 if self.organization:
                     self.fields[field_name].queryset = model_field.related_model.objects.filter(organization=self.organization)
+        
+        # Filter user fields by organization
+        if self.organization:
+            from users.models import CustomUser
+            for field_name, field in self.fields.items():
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if model.__name__ in ['CustomUser', 'User']:
+                        field.queryset = field.queryset.filter(organization=self.organization)
 
 class ComplianceFrameworkForm(OrganizationScopedModelForm):
     class Meta:
         model = ComplianceFramework
         fields = ['name', 'description', 'version', 'regulatory_body']
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
 
 class PolicyDocumentForm(OrganizationScopedModelForm):
     class Meta:
@@ -54,6 +67,9 @@ class ComplianceRequirementForm(OrganizationScopedModelForm):
     class Meta:
         model = ComplianceRequirement
         fields = ['requirement_id', 'title', 'description', 'regulatory_framework', 'policy_document', 'policy_section', 'jurisdiction', 'mandatory', 'tags']
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
 
 class ComplianceObligationForm(OrganizationScopedModelForm):
     phone_validator = RegexValidator(r'^[\d\+\-]+$', 'Enter a valid phone number (digits, +, - only).')
@@ -61,6 +77,7 @@ class ComplianceObligationForm(OrganizationScopedModelForm):
         model = ComplianceObligation
         fields = ['obligation_id', 'requirement', 'description', 'due_period', 'evidence_required', 'owner', 'owner_email', 'priority', 'status', 'due_date', 'completion_date', 'is_active', 'risk']
         widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'due_date': forms.DateInput(attrs={'type': 'date'}),
             'completion_date': forms.DateInput(attrs={'type': 'date'}),
             'owner_email': EmailInput(attrs={'type': 'email'}),
@@ -76,6 +93,7 @@ class ComplianceEvidenceForm(OrganizationScopedModelForm):
         model = ComplianceEvidence
         fields = ['obligation', 'document', 'validity_start', 'validity_end', 'notes']
         widgets = {
+            'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'validity_start': forms.DateInput(attrs={'type': 'date'}),
             'validity_end': forms.DateInput(attrs={'type': 'date'}),
         }

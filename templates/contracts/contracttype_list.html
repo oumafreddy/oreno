@@ -3,9 +3,10 @@
 {% block title %}Contract Types{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Contract Types</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Contract Types</h2>
+        <div>
+            <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
             <a href="{% url 'contracts:contracttype-add' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Add Contract Type</a>
         </div>
     </div>
@@ -27,7 +28,7 @@
                     {% for ct in object_list %}
                     <tr>
                         <td><a href="{% url 'contracts:contracttype-detail' ct.pk %}">{{ ct.name }}</a></td>
-                        <td>{{ ct.description|truncatechars:40 }}</td>
+                        <td>{{ ct.description|striptags|truncatechars:40 }}</td>
                         <td>
                             <a href="{% url 'contracts:contracttype-detail' ct.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
                             <a href="{% url 'contracts:contracttype-edit' ct.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>

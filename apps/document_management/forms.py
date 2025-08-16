@@ -19,6 +19,15 @@ class OrganizationScopedModelForm(forms.ModelForm):
             if hasattr(model_field, 'related_model') and hasattr(model_field.related_model, 'organization'):
                 if self.organization:
                     self.fields[field_name].queryset = model_field.related_model.objects.filter(organization=self.organization)
+        
+        # Filter user fields by organization
+        if self.organization:
+            from users.models import CustomUser
+            for field_name, field in self.fields.items():
+                if hasattr(field, 'queryset') and field.queryset is not None:
+                    model = field.queryset.model
+                    if model.__name__ in ['CustomUser', 'User']:
+                        field.queryset = field.queryset.filter(organization=self.organization)
 
 class DocumentRequestForm(OrganizationScopedModelForm):
     class Meta:
@@ -32,10 +41,6 @@ class DocumentRequestForm(OrganizationScopedModelForm):
 
     def __init__(self, *args, organization=None, request=None, **kwargs):
         super().__init__(*args, organization=organization, request=request, **kwargs)
-        # Only show users from this organization for request_owner/requestee
-        if self.organization:
-            self.fields['request_owner'].queryset = CustomUser.objects.filter(organization=self.organization)
-            self.fields['requestee'].queryset = CustomUser.objects.filter(organization=self.organization)
 
     def clean_requestee_email(self):
         email = self.cleaned_data.get('requestee_email')
@@ -53,8 +58,6 @@ class DocumentForm(OrganizationScopedModelForm):
 
     def __init__(self, *args, organization=None, request=None, **kwargs):
         super().__init__(*args, organization=organization, request=request, **kwargs)
-        if self.organization:
-            self.fields['uploaded_by'].queryset = CustomUser.objects.filter(organization=self.organization)
 
 class DocumentRequestFilterForm(forms.Form):
     q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Request Name or Requestee', 'class': 'form-control'}))

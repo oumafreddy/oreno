@@ -173,26 +173,42 @@ class DocumentDeleteView(OrganizationPermissionMixin, DeleteView):
 class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
     template_name = 'document_management/dashboard.html'
     context_object_name = 'dashboard'
+    
     def get_queryset(self):
         return []
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         org = self.request.user.organization
+        
+        # Basic counts
         context['request_count'] = DocumentRequest.objects.filter(organization=org).count()
         context['document_count'] = Document.objects.filter(organization=org).count()
         context['pending_count'] = DocumentRequest.objects.filter(organization=org, status='pending').count()
         context['recent_uploads'] = Document.objects.filter(organization=org).order_by('-uploaded_at')[:5]
+        
         # Analytics: Requests by status
         status_qs = DocumentRequest.objects.filter(organization=org).values('status').annotate(count=Count('id'))
         status_data = {s['status']: s['count'] for s in status_qs}
-        context['status_chart'] = json.dumps(status_data or {})
+        # Ensure we have default values for common statuses
+        default_statuses = {'pending': 0, 'approved': 0, 'rejected': 0, 'completed': 0}
+        for status in default_statuses:
+            if status not in status_data:
+                status_data[status] = 0
+        context['status_chart'] = json.dumps(status_data or default_statuses)
+        
         # Analytics: Uploads over last 7 days
         today = now().date()
         days = [today - timedelta(days=i) for i in range(6, -1, -1)]
-        uploads_qs = Document.objects.filter(organization=org, uploaded_at__date__gte=days[0]).values('uploaded_at__date').annotate(count=Count('id'))
+        uploads_qs = Document.objects.filter(
+            organization=org, 
+            uploaded_at__date__gte=days[0]
+        ).values('uploaded_at__date').annotate(count=Count('id'))
+        
         uploads_map = {str(u['uploaded_at__date']): u['count'] for u in uploads_qs}
         uploads_data = {str(day): uploads_map.get(str(day), 0) for day in days}
-        context['uploads_chart'] = json.dumps(uploads_data or {})
+        context['uploads_chart'] = json.dumps(uploads_data or {str(today): 0})
+        
         return context
 
 class DocumentRequestViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):

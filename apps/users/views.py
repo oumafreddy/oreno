@@ -15,7 +15,7 @@ from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q, Prefetch
 from django.utils.translation import gettext_lazy as _
@@ -29,8 +29,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
-from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm
-from .models import CustomUser, Profile, OTP, OrganizationRole
+from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm, CustomSetPasswordForm
+from .models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory
 from .serializers import (
     UserRegisterSerializer,
     OTPVerifySerializer,
@@ -39,6 +39,7 @@ from .serializers import (
     ProfileSerializer,
     UserSerializer,
 )
+from .validators import FirstTimeSetupPasswordValidator, validate_password_strength
 from organizations.mixins import OrganizationContextMixin, OrganizationPermissionMixin
 from organizations.models import Organization
 from .permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
@@ -72,9 +73,7 @@ class UserRegisterAPIView(generics.CreateAPIView):
     def perform_create(self, serializer):
         with transaction.atomic():
             user = serializer.save()
-            # Create profile and initial OTP
-            Profile.objects.create(user=user)
-            OTP.objects.create(user=user)
+            # Profile and OTP are automatically created by signals
 
 @method_decorator(skip_org_check, name='dispatch')
 class UserLoginAPIView(TokenObtainPairView):
@@ -170,8 +169,7 @@ class UserRegisterView(SuccessMessageMixin, CreateView):
     def form_valid(self, form):
         with transaction.atomic():
             user = form.save()
-            Profile.objects.create(user=user)
-            OTP.objects.create(user=user)
+            # Profile and OTP are automatically created by signals
             return super().form_valid(form)
 
 @method_decorator(skip_org_check, name='dispatch')
@@ -307,14 +305,35 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                         messages.error(request, _("Passwords do not match."))
                         return self.get(request, *args, **kwargs)
                     
-                    if len(new_password) < 8:
-                        messages.error(request, _("Password must be at least 8 characters long."))
+                    # Validate password strength
+                    try:
+                        validate_password_strength(new_password)
+                    except ValidationError as e:
+                        for error in e.messages:
+                            messages.error(request, error)
                         return self.get(request, *args, **kwargs)
+                    
+                    # Check if password is being reused (first-time setup validation)
+                    first_time_validator = FirstTimeSetupPasswordValidator()
+                    try:
+                        first_time_validator.validate(new_password, user)
+                    except ValidationError as e:
+                        messages.error(request, e.message)
+                        return self.get(request, *args, **kwargs)
+                    
+                    # Store current password in history before changing it
+                    PasswordHistory.store_password(user, user.password)
                     
                     # Set new password and mark setup as complete
                     user.set_password(new_password)
                     user.is_first_time_setup_complete = True
                     user.save()
+                    
+                    # Store new password in history
+                    PasswordHistory.store_password(user, new_password)
+                    
+                    # Cleanup old password history
+                    PasswordHistory.cleanup_old_passwords(user)
                     
                     # Clear session data
                     request.session.pop('first_time_setup_user_id', None)
@@ -551,9 +570,11 @@ class AdminUserCreateView(UserPermissionMixin, SuccessMessageMixin, CreateView):
         
         response = super().form_valid(form)
         
-        # Create profile and OTP for the new user
-        Profile.objects.create(user=form.instance)
-        OTP.objects.create(user=form.instance)
+        # Store the initial password in history
+        PasswordHistory.store_password(form.instance, form.instance.password)
+        
+        # Profile and OTP are automatically created by signals
+        # No need to create them manually here
         
         # Send welcome email
         try:
@@ -576,7 +597,20 @@ class UserPasswordChangeView(PasswordChangeView):
     success_url = reverse_lazy('users:password_change_done')
 
     def form_valid(self, form):
+        user = self.request.user
+        new_password = form.cleaned_data['new_password1']
+        
+        # Store current password in history before changing it
+        PasswordHistory.store_password(user, user.password)
+        
         response = super().form_valid(form)
+        
+        # Store new password in history
+        PasswordHistory.store_password(user, new_password)
+        
+        # Cleanup old password history
+        PasswordHistory.cleanup_old_passwords(user)
+        
         if self.request.user.is_authenticated:
             try:
                 for token in OutstandingToken.objects.filter(user=self.request.user):
@@ -594,6 +628,68 @@ class UserPasswordResetView(PasswordResetView):
     email_template_name = 'users/password_reset_email.html'
     subject_template_name = 'users/password_reset_subject.txt'
     success_url = reverse_lazy('users:password_reset_done')
+    
+    def get_queryset(self):
+        """
+        Only allow password resets for users in the current organization
+        and only for properly set up accounts (not admin-created accounts)
+        """
+        # Get the current organization from the request
+        current_organization = getattr(self.request, 'organization', None)
+        
+        if not current_organization:
+            # If no organization context, return empty queryset
+            return CustomUser.objects.none()
+        
+        # Only allow resets for users in the current organization
+        # AND only for users who have completed first-time setup (not admin-created accounts)
+        return CustomUser.objects.filter(
+            organization=current_organization,
+            is_admin_created=False,  # Only allow resets for properly set up accounts
+            is_active=True  # Only allow resets for active accounts
+        )
+    
+    def get_email_context(self, user):
+        """
+        Override to ensure reset links go to the correct tenant domain
+        """
+        context = super().get_email_context(user)
+        
+        # Get the user's organization domain
+        user_organization = user.organization
+        if user_organization and hasattr(user_organization, 'domain'):
+            # Use the user's organization domain for the reset link
+            # This ensures the reset link goes to the correct tenant
+            context['domain'] = user_organization.domain
+            context['site_name'] = user_organization.name
+        
+        return context
+    
+    def form_valid(self, form):
+        """
+        Override to add additional security checks
+        """
+        email = form.cleaned_data['email']
+        
+        # Check if the email belongs to a user in the current organization
+        current_organization = getattr(self.request, 'organization', None)
+        
+        if current_organization:
+            try:
+                user = CustomUser.objects.get(
+                    email=email,
+                    organization=current_organization,
+                    is_admin_created=False,  # Only allow resets for properly set up accounts
+                    is_active=True  # Only allow resets for active accounts
+                )
+            except CustomUser.DoesNotExist:
+                # Don't reveal whether the email exists or not for security
+                # Just show the success message regardless
+                messages.success(self.request, _("If an account with that email exists, you will receive password reset instructions."))
+                return super().form_valid(form)
+        
+        # If we get here, the user exists and is valid for password reset
+        return super().form_valid(form)
 
 class UserPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'users/password_reset_done.html'
@@ -601,6 +697,47 @@ class UserPasswordResetDoneView(PasswordResetDoneView):
 class UserPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'users/password_reset_confirm.html'
     success_url = reverse_lazy('users:password_reset_complete')
+    form_class = CustomSetPasswordForm
+    
+    def get_user(self, uidb64):
+        """
+        Override to ensure only users from the correct organization can reset passwords
+        """
+        try:
+            # Get the user from the token
+            user = super().get_user(uidb64)
+            
+            # Get the current organization from the request
+            current_organization = getattr(self.request, 'organization', None)
+            
+            # If we have organization context, verify the user belongs to this organization
+            if current_organization and user.organization != current_organization:
+                # User doesn't belong to the current organization
+                # Return None to indicate invalid user
+                return None
+            
+            # Also verify the user is properly set up and active
+            if user.is_admin_created or not user.is_active:
+                # User is not properly set up or not active
+                return None
+            
+            return user
+            
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return None
+    
+    def form_valid(self, form):
+        # Get the user from the form
+        user = form.save()
+        
+        # Store the new password in history
+        new_password = form.cleaned_data['new_password1']
+        PasswordHistory.store_password(user, new_password)
+        
+        # Cleanup old password history
+        PasswordHistory.cleanup_old_passwords(user)
+        
+        return super().form_valid(form)
 
 class UserPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = 'users/password_reset_complete.html'

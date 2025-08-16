@@ -44,7 +44,7 @@ class ContractType(OrganizationOwnedModel):
     def __str__(self):
         return f"{self.name} ({self.organization.code})"
 
-class Party(AuditableModel):
+class Party(OrganizationOwnedModel, AuditableModel):
     PARTY_TYPES = [
         ('internal', 'Internal Entity'),
         ('external', 'External Counterparty'),
@@ -61,8 +61,19 @@ class Party(AuditableModel):
     contact_email = models.EmailField(blank=True, null=True)
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     
+    class Meta:
+        unique_together = ['organization', 'name']
+        indexes = [models.Index(fields=['organization', 'party_type'])]
+        app_label = "contracts"
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(organization__isnull=False),
+                name='organization_required_party'
+            )
+        ]
+    
     def __str__(self):
-        return f"{self.name} ({self.get_party_type_display()})"
+        return f"{self.name} ({self.get_party_type_display()}) - {self.organization.code}"
 
 class Contract(OrganizationOwnedModel, AuditableModel):
     STATUS_CHOICES = [

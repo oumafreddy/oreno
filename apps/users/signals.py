@@ -94,21 +94,6 @@ def handle_otp_creation(sender, instance, created, **kwargs):
     if created:
         # Cleanup old OTPs asynchronously
         cleanup_old_otps.delay(instance.user.id)
-        
-        # Send OTP via email
-        subject = _("Your OTP Code")
-        message = render_to_string('users/email/otp.txt', {
-            'user': instance.user,
-            'otp': instance.otp,
-            'expires_at': instance.expires_at
-        })
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [instance.user.email],
-            fail_silently=False
-        )
 
 @receiver(post_save, sender=OrganizationRole)
 def handle_role_changes(sender, instance, created, **kwargs):

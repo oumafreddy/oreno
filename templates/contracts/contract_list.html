@@ -62,7 +62,7 @@
                 <td>{{ contract.start_date }}</td>
                 <td>{{ contract.end_date }}</td>
                 <td>
-                    <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'contracts:contract-detail' contract.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>
                     <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
                     <a href="{% url 'contracts:contract-delete' contract.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
                 </td>

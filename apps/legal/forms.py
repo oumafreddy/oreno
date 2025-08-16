@@ -1,6 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
+from django_ckeditor_5.widgets import CKEditor5Widget
 from .models import CaseType, LegalParty, LegalCase, CaseParty, LegalTask, LegalDocument, LegalArchive, CustomUser
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -9,6 +10,9 @@ class CaseTypeForm(forms.ModelForm):
     class Meta:
         model = CaseType
         fields = ['name', 'description', 'default_priority']
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
 
 class LegalPartyForm(forms.ModelForm):
     phone_validator = RegexValidator(r'^[\d\+\-]+$', 'Enter a valid phone number (digits, +, - only).')
@@ -17,6 +21,7 @@ class LegalPartyForm(forms.ModelForm):
         # organization is now a ForeignKey and should not be exposed in the form
         fields = ['name', 'party_type', 'contact_person', 'contact_email', 'contact_phone', 'address']
         widgets = {
+            'address': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'contact_email': EmailInput(attrs={'type': 'email'}),
             'contact_phone': TextInput(attrs={'pattern': r'^[\\d\\+\\-]+$', 'title': 'Enter a valid phone number (digits, +, - only).'}),
         }
@@ -37,6 +42,10 @@ class LegalCaseForm(forms.ModelForm):
             'status', 'priority', 'lead_attorney', 'attorneys', 'internal_notes'
         ]
         widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'risk_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'compliance_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'internal_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'opened_date': forms.DateInput(attrs={'type': 'date'}),
             'closed_date': forms.DateInput(attrs={'type': 'date'}),
             'estimated_resolution_date': forms.DateInput(attrs={'type': 'date'}),
@@ -82,6 +91,7 @@ class LegalArchiveForm(forms.ModelForm):
         model = LegalArchive
         fields = ['case', 'archive_date', 'retention_period_years', 'archive_reason', 'destruction_date']
         widgets = {
+            'archive_reason': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'archive_date': forms.DateInput(attrs={'type': 'date'}),
             'destruction_date': forms.DateInput(attrs={'type': 'date'}),
         } 

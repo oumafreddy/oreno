@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 {% block title %}{{ view.title|default:'Legal Party Form' }}{% endblock %}
+{% block extra_head %}
+  {{ form.media }}
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-10">
