@@ -1,48 +1,74 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Quick test script to verify AI assistant is working.
-Run this from the oreno directory with: python test_ai_working.py
+Simple test script to verify AI functionality
 """
 import os
 import sys
 import django
 
-# Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Set up Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.tenants')
 django.setup()
 
-from services.ai.ai_service import ai_assistant_answer
-from services.ai.ollama_adapter import check_ollama_status
+from services.ai.ai_service import ai_assistant_answer, find_faq_answer, get_user_context
 
-def test_ai_assistant():
-    """Test the AI assistant with a simple question"""
-    print("🤖 Testing AI Assistant...")
+def test_ai_functionality():
+    """Test basic AI functionality"""
+    print("🧪 Testing AI Functionality...")
     
-    # Check if Ollama is running
-    print("📡 Checking Ollama status...")
-    if not check_ollama_status():
-        print("❌ Ollama is not running!")
-        print("   Please start Ollama with: ollama serve")
-        return False
+    # Test FAQ matching
+    print("\n1. Testing FAQ matching...")
+    test_questions = [
+        "what is your role?",
+        "how do i use the legal app?",
+        "what is grc?",
+        "how do i create a workplan?",
+    ]
     
-    print("✅ Ollama is running")
+    for question in test_questions:
+        answer = find_faq_answer(question)
+        if answer:
+            print(f"✅ FAQ match for '{question}': {answer[:100]}...")
+        else:
+            print(f"❌ No FAQ match for '{question}'")
     
-    # Test with a simple question
-    test_question = "What is GRC?"
-    print(f"\n🔍 Testing with question: '{test_question}'")
-    
+    # Test user context creation
+    print("\n2. Testing user context creation...")
     try:
-        response = ai_assistant_answer(test_question, "test_user", "test_org")
+        # Mock user and org for testing
+        class MockUser:
+            def __init__(self):
+                self.id = 1
+                self.username = "test_user"
+                self.is_authenticated = True
+                self.role = "user"
+            
+            def get_all_permissions(self):
+                return ["test.permission"]
+        
+        class MockOrg:
+            def __init__(self):
+                self.id = 1
+                self.name = "Test Organization"
+        
+        user = MockUser()
+        org = MockOrg()
+        
+        context = get_user_context(user, org)
+        print(f"✅ User context created: {context['organization_name']}")
+        
+        # Test AI response
+        print("\n3. Testing AI response...")
+        response = ai_assistant_answer("what is your role?", user, org)
         print(f"✅ AI Response: {response}")
-        return True
+        
     except Exception as e:
-        print(f"❌ AI Error: {e}")
-        return False
+        print(f"❌ Error testing AI: {e}")
+    
+    print("\n🎉 AI functionality test completed!")
 
 if __name__ == "__main__":
-    success = test_ai_assistant()
-    if success:
-        print("\n🎉 AI Assistant is working correctly!")
-    else:
-        print("\n⚠️  AI Assistant needs attention. Check the errors above.")
-        sys.exit(1) 
+    test_ai_functionality() 

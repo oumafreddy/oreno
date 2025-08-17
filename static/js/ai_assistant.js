@@ -61,6 +61,31 @@ document.addEventListener('DOMContentLoaded', function() {
         return cookieValue;
     }
 
+    function sanitizeInput(input) {
+        // Basic input sanitization
+        return input.replace(/<[^>]*>/g, '').trim();
+    }
+
+    function showError(message) {
+        answerText.textContent = message;
+        answerDiv.classList.remove('d-none');
+        answerDiv.classList.remove('alert-info');
+        answerDiv.classList.add('alert-danger');
+    }
+
+    function showSuccess(message) {
+        answerText.textContent = message;
+        answerDiv.classList.remove('d-none');
+        answerDiv.classList.remove('alert-danger');
+        answerDiv.classList.add('alert-info');
+    }
+
+    function resetForm() {
+        questionInput.value = '';
+        answerDiv.classList.add('d-none');
+        askBtn.disabled = false;
+    }
+
     // Only add click handler if both button and modal exist
     if (aiButton && aiModal) {
         aiButton.addEventListener('click', function(e) {
@@ -77,14 +102,37 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form && questionInput && answerDiv && answerText && loadingDiv && askBtn) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            const question = questionInput.value.trim();
-            if (!question) return;
+            
+            const rawQuestion = questionInput.value.trim();
+            if (!rawQuestion) {
+                showError('Please enter a question.');
+                return;
+            }
+            
+            // Sanitize input
+            const question = sanitizeInput(rawQuestion);
+            if (question.length < 3) {
+                showError('Question must be at least 3 characters long.');
+                return;
+            }
+            
+            if (question.length > 1000) {
+                showError('Question must be less than 1000 characters.');
+                return;
+            }
             
             // Hide answer and show loading
             answerDiv.classList.add('d-none');
             answerText.textContent = '';
             loadingDiv.classList.remove('d-none');
             askBtn.disabled = true;
+
+            // Add timeout for request
+            const timeoutId = setTimeout(() => {
+                loadingDiv.classList.add('d-none');
+                askBtn.disabled = false;
+                showError('Request timed out. Please try again.');
+            }, 30000); // 30 second timeout
 
             fetch('/api/ai/ask/', {
                 method: 'POST',
@@ -95,8 +143,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ question })
             })
             .then(response => {
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    if (response.status === 429) {
+                        throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
+                    } else if (response.status === 401) {
+                        throw new Error('Please log in to use the AI assistant.');
+                    } else if (response.status === 400) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Invalid request.');
+                        });
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                 }
                 return response.json();
             })
@@ -106,32 +166,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (data.response) {
                     // Success - show the AI response
-                    answerText.textContent = data.response;
-                    answerDiv.classList.remove('d-none');
+                    showSuccess(data.response);
                 } else if (data.error) {
                     // Error from the server
-                    answerText.textContent = `Error: ${data.error}`;
-                    answerDiv.classList.remove('d-none');
+                    showError(`Error: ${data.error}`);
                 } else {
                     // Unexpected response format
-                    answerText.textContent = 'Sorry, I received an unexpected response format.';
-                    answerDiv.classList.remove('d-none');
+                    showError('Sorry, I received an unexpected response format.');
                 }
             })
             .catch(error => {
+                clearTimeout(timeoutId);
                 loadingDiv.classList.add('d-none');
                 askBtn.disabled = false;
                 console.error('AI Assistant error:', error);
                 
-                if (error.message.includes('401')) {
-                    answerText.textContent = 'Please log in to use the AI assistant.';
+                if (error.message.includes('Rate limit')) {
+                    showError(error.message);
+                } else if (error.message.includes('401')) {
+                    showError('Please log in to use the AI assistant.');
                 } else if (error.message.includes('500')) {
-                    answerText.textContent = 'The AI service is temporarily unavailable. Please try again later.';
+                    showError('The AI service is temporarily unavailable. Please try again later.');
                 } else {
-                    answerText.textContent = 'Sorry, there was a problem contacting the AI assistant. Please try again.';
+                    showError(error.message || 'Sorry, there was a problem contacting the AI assistant. Please try again.');
                 }
-                answerDiv.classList.remove('d-none');
             });
+        });
+
+        // Add input validation on typing
+        questionInput.addEventListener('input', function() {
+            const question = this.value.trim();
+            if (question.length > 1000) {
+                this.setCustomValidity('Question must be less than 1000 characters.');
+            } else if (question.length > 0 && question.length < 3) {
+                this.setCustomValidity('Question must be at least 3 characters long.');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // Reset form when modal is hidden
+        aiModalEl.addEventListener('hidden.bs.modal', function () {
+            resetForm();
         });
     }
 }); 

@@ -19,7 +19,6 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from common.views import service_paused
-from core.views import AIAssistantAPIView
 from audit import views as audit_views
 
 # Define a simple home view
@@ -56,7 +55,8 @@ urlpatterns = [
     path('api/contracts/', include(('contracts.urls', 'contracts'), namespace='contracts-api')),
     path('api/risk/', include(('risk.urls', 'risk'), namespace='risk-api')),
     path('api/legal/', include(('legal.urls', 'legal'), namespace='legal-api')),
-    path('api/ai/ask/', AIAssistantAPIView.as_view(), name='ai-assistant-ask'),
+    # Remove duplicate AI endpoint - keep only the services.ai one
+    # path('api/ai/ask/', AIAssistantAPIView.as_view(), name='ai-assistant-ask'),
     path('api/engagements/', audit_views.api_engagements, name='api-engagements'),
     path('api/objectives/', audit_views.api_objectives, name='api-objectives'),
     path('api/issues/', audit_views.api_issues, name='api-issues'),
@@ -91,8 +91,8 @@ urlpatterns = [
     # Service Info Page
     path('service-info/', TemplateView.as_view(template_name='service_info.html'), name='service_info'),
 
-    # AI Assistant API
-    path('services/ai/', include('services.ai.urls')),
+    # AI Assistant API - Keep this one
+    path('api/ai/', include('services.ai.urls')),
 ]
 
 # Debug-specific URL patterns

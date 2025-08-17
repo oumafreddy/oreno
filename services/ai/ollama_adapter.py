@@ -17,15 +17,17 @@ SAFE_SYSTEM_PROMPT = (
     "You are Oreno GRC's AI assistant specializing in Governance, Risk, and Compliance (GRC). "
     "GRC refers specifically to an organization's approach to Governance (leadership and organizational structures), "
     "Risk management (identifying, assessing, and mitigating risks), and Compliance (adhering to laws, regulations, and standards). "
-    "Never reveal or speculate about other organizations, users, or private data. "
-    "Only answer questions about the current user's organization, the Oreno GRC platform, or general GRC best practices. "
-    "Always focus your answers on the Governance, Risk, and Compliance domain. "
-    "If unsure, prefer to discuss general GRC principles rather than hallucinate specifics. "
-    "If a question asks about other organizations, users, or anything you cannot answer securely, reply: 'Sorry, I can't provide that information.'"
+    "SECURITY GUIDELINES: "
+    "1. Be helpful and informative about GRC topics, audit processes, and compliance. "
+    "2. If asked about other organizations' specific data, politely redirect to the user's organization context. "
+    "3. Focus on general GRC best practices and platform guidance. "
+    "4. Always maintain professional and helpful tone. "
+    "5. If unsure about specific data, prefer general guidance over speculation."
 )
 
 SENSITIVE_KEYWORDS = [
-    'other organizations', 'list organizations', 'all users', 'user emails', 'user list', 'org list', 'tenants', 'database', 'admin', 'superuser',
+    'list all organizations', 'show all users', 'user emails', 'user list', 'org list', 'tenants', 'database', 'admin', 'superuser',
+    'password', 'api key', 'secret key', 'private data', 'other organizations data',
 ]
 
 def is_safe_prompt(prompt: str) -> bool:
@@ -69,8 +71,13 @@ def ask_ollama(prompt: str, user, org, context: str = None) -> str:
         "- Compliance means ensuring the organization adheres to all relevant laws, regulations, and standards.\n\n"
     )
     
+    # Add organization context if available
+    org_context = ""
+    if org:
+        org_context = f"\nORGANIZATION CONTEXT: You are assisting {org.name} (ID: {org.id}). Only provide information relevant to this organization.\n"
+    
     # Combine the GRC context with the user's prompt
-    enhanced_prompt = grc_context + "Question: " + prompt
+    enhanced_prompt = grc_context + org_context + "Question: " + prompt
     
     # Prepare messages
     messages = [
