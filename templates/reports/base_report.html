@@ -1,24 +1,399 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <title>{{ title }} - {{ organization.name }}</title>
   <style>
-    body { font-family: Arial, sans-serif; }
-    .logo { width: 120px; }
-    .header { text-align: center; margin-bottom: 20px; }
-    .desc { font-size: 1.1em; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-    th { background: #f5f5f5; }
+    /* Professional Report Styling - Enhanced to match reference images */
+    @page {
+      size: A4;
+      margin: 2cm 1.5cm;
+      @bottom-center {
+        content: "Generated: {{ generation_timestamp|default:'' }} | {{ organization.name }}";
+        font-size: 10pt;
+        color: #666;
+      }
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Enhanced Header Design - Matching reference images */
+    .report-header {
+      background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      padding: 1cm 0;
+      margin-bottom: 1cm;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1cm;
+    }
+    
+    .header-left {
+      font-size: 10pt;
+      opacity: 0.9;
+    }
+    
+    .header-right {
+      text-align: right;
+    }
+    
+    .organization-logo {
+      max-height: 80px;
+      max-width: 200px;
+    }
+    
+    .header-separator {
+      height: 3px;
+      background: #2563eb;
+      margin: 0.5cm 0;
+    }
+    
+    /* Cover Page Styling */
+    .cover-page {
+      text-align: center;
+      padding: 4cm 2cm;
+      min-height: 25cm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    
+    .cover-logo-section {
+      margin-bottom: 2cm;
+    }
+    
+    .cover-organization-logo {
+      max-height: 120px;
+      max-width: 300px;
+      margin: 0 auto 1cm;
+    }
+    
+    .default-logo-placeholder {
+      background: #f8f9fa;
+      border: 2px dashed #dee2e6;
+      padding: 2cm;
+      margin: 0 auto 1cm;
+      border-radius: 8px;
+      color: #6b7280;
+    }
+    
+    .report-title {
+      font-size: 28pt;
+      color: #1e3a8a;
+      margin: 1cm 0;
+      font-weight: 700;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .report-subtitle {
+      font-size: 14pt;
+      color: #6b7280;
+      margin-bottom: 2cm;
+      font-weight: 400;
+    }
+    
+    .report-meta {
+      text-align: left;
+      margin-top: 2cm;
+      padding: 1cm;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .page-break {
+      page-break-after: always;
+    }
+    
+    /* Enhanced Section Headers - Matching reference images */
+    .section-header {
+      font-size: 16pt;
+      color: white;
+      background: #1e3a8a;
+      padding: 0.5cm 1cm;
+      margin: 1.5cm 0 0.5cm;
+      font-weight: 600;
+      border-radius: 4px 4px 0 0;
+    }
+    
+    .section-subheader {
+      font-size: 14pt;
+      color: white;
+      background: #2563eb;
+      padding: 0.4cm 1cm;
+      margin: 1cm 0 0.5cm;
+      margin-left: 1cm;
+      font-weight: 600;
+      border-radius: 4px 4px 0 0;
+      width: calc(100% - 2cm);
+    }
+    
+    .section-subsubheader {
+      font-size: 12pt;
+      color: white;
+      background: #3b82f6;
+      padding: 0.3cm 1cm;
+      margin: 0.8cm 0 0.3cm;
+      margin-left: 2cm;
+      font-weight: 600;
+      border-radius: 4px 4px 0 0;
+      width: calc(100% - 4cm);
+    }
+    
+    /* Priority Indicators - Matching reference images */
+    .priority-indicator {
+      display: inline-block;
+      background: #fbbf24;
+      color: #000;
+      padding: 0.2cm 0.5cm;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 10pt;
+      margin-left: 1cm;
+    }
+    
+    /* Enhanced Table Styling */
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1cm 0;
+      font-size: 10pt;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .report-table th {
+      background: #1e3a8a;
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #2563eb;
+    }
+    
+    .report-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+    
+    .report-table tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    
+    .report-table tr:hover {
+      background: #f3f4f6;
+    }
+    
+    /* Content Wrapping */
+    .content-wrapper {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    .truncate-text {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Enhanced Status Indicators */
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 9pt;
+      font-weight: 600;
+      display: inline-block;
+      text-align: center;
+      min-width: 80px;
+    }
+    
+    .status-active { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .status-inactive { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .status-pending { background: #fef3c7; color: #92400e; border: 1px solid #fed7aa; }
+    .status-draft { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+    .status-approved { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .status-rejected { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    
+    /* Enhanced Risk Level Indicators */
+    .risk-level {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 9pt;
+      font-weight: 600;
+      display: inline-block;
+      text-align: center;
+      min-width: 80px;
+    }
+    
+    .risk-high { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .risk-medium { background: #fef3c7; color: #d97706; border: 1px solid #fed7aa; }
+    .risk-low { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    
+    /* Report Cards */
+    .report-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1.5cm;
+      margin: 1cm 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .report-card h3 {
+      color: #1e3a8a;
+      font-size: 14pt;
+      margin-bottom: 0.5cm;
+      padding-bottom: 0.3cm;
+      border-bottom: 2px solid #2563eb;
+    }
+    
+    /* Summary Statistics */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1cm;
+      margin: 1cm 0;
+    }
+    
+    .stat-item {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1cm;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-number {
+      font-size: 24pt;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 0.3cm;
+    }
+    
+    .stat-label {
+      font-size: 10pt;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    
+    /* Field Labels and Values */
+    .field-label {
+      font-weight: 600;
+      color: #374151;
+      background: #f9fafb;
+      padding: 0.3cm 0.5cm;
+      border-left: 4px solid #2563eb;
+      margin-bottom: 0.2cm;
+    }
+    
+    .field-value {
+      background: #f8fafc;
+      padding: 0.5cm;
+      border-radius: 4px;
+      margin-bottom: 0.5cm;
+      border-left: 4px solid #e2e8f0;
+    }
+    
+    /* Alert Messages */
+    .alert {
+      padding: 0.8cm;
+      border-radius: 6px;
+      margin: 0.5cm 0;
+      border-left: 4px solid;
+    }
+    
+    .alert-info {
+      background: #eff6ff;
+      color: #1e40af;
+      border-left-color: #3b82f6;
+    }
+    
+    .alert-warning {
+      background: #fffbeb;
+      color: #92400e;
+      border-left-color: #f59e0b;
+    }
+    
+    .alert-success {
+      background: #f0fdf4;
+      color: #166534;
+      border-left-color: #22c55e;
+    }
+    
+    .alert-danger {
+      background: #fef2f2;
+      color: #991b1b;
+      border-left-color: #ef4444;
+    }
+    
+    /* Print-specific styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      
+      .page-break {
+        page-break-after: always;
+      }
+      
+      .report-card {
+        break-inside: avoid;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    {% if organization.logo and organization.logo.url %}
-      <img src="{{ organization.logo.url }}" class="logo" alt="Logo">
-    {% endif %}
-    <h1>{{ title }}</h1>
-    <div class="desc">{{ description }}</div>
+  {% block cover_page %}
+  <!-- Cover Page -->
+  <div class="cover-page">
+    <div class="cover-logo-section">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" 
+             class="cover-organization-logo" />
+      {% else %}
+        <div class="default-logo-placeholder">
+          <h2>{{ organization.name }}</h2>
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="report-title-section">
+      <h1 class="report-title">{{ title|default:"Report" }}</h1>
+      {% if description %}
+        <p class="report-subtitle">{{ description }}</p>
+      {% endif %}
+    </div>
+    
+    <div class="report-meta">
+      <p><strong>Generated:</strong> {{ generation_timestamp|default:"Not specified" }}</p>
+      <p><strong>Organization:</strong> {{ organization.name }}</p>
+      {% if filters_summary %}
+        <p><strong>Filters Applied:</strong> {{ filters_summary }}</p>
+      {% endif %}
+    </div>
   </div>
+  <div class="page-break"></div>
+  {% endblock %}
+  
   {% block content %}{% endblock %}
 </body>
 </html> 

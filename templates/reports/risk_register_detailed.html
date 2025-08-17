@@ -1,59 +1,128 @@
 {% extends "reports/base_report.html" %}
 {% load crispy_forms_tags %}
+
 {% block content %}
-<!-- PAGE 1: Logo and Title -->
-<div style="text-align:center; margin-top: 80px;">
-  {% if organization.logo and organization.logo.url %}
-    <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
-  {% endif %}
-  <h1 style="margin-top: 30px; color: #2563eb;">Risk Register - Detailed Report</h1>
-</div>
-<div style="page-break-after: always;"></div>
-<!-- PAGE 2: Filter Form (shown only in HTML, not in PDF) -->
+<!-- Filter Form (shown only in HTML, not in PDF) -->
 {% if not for_pdf %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="get" class="mb-0">
-        {% if filter_form %}
-          {% crispy filter_form %}
-        {% endif %}
-        <button type="submit" class="btn btn-primary">Apply Filter</button>
-        <a href="?download=pdf{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.code %}&code={{ request.GET.code }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-success ms-2">Download PDF</a>
-      </form>
-    </div>
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.code %}&code={{ request.GET.code }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}{% if request.GET.register %}&register={{ request.GET.register }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
   </div>
 {% endif %}
-<!-- PAGE 2+: Risk Details -->
-{% for risk in risks %}
-  <div class="risk-card mb-4">
-    <table class="table table-sm risk-meta-table mb-3">
-      <tr><th>Status</th><td>{{ risk.status }}</td></tr>
-      <tr><th>Category</th><td>{{ risk.category }}</td></tr>
-      <tr><th>Date Identified</th><td>{{ risk.date_identified }}</td></tr>
-      <tr><th>Register</th><td>{{ risk.risk_register.register_name }}</td></tr>
-      <tr><th>Risk Code</th><td>{{ risk.code }}</td></tr>
-      <tr><th>Name</th><td>{{ risk.risk_name }}</td></tr>
-      <tr><th>Owner</th><td>{{ risk.risk_owner }}</td></tr>
-      <tr><th>Inherent Score</th><td>{{ risk.inherent_risk_score }}</td></tr>
-      <tr><th>Residual Score</th><td>{{ risk.residual_risk_score }}</td></tr>
-      <tr><th>Appetite</th><td>{{ risk.risk_appetite }}</td></tr>
-    </table>
-    <span class="risk-label">Description:</span>
-    <div class="truncate">{{ risk.description|striptags|default:'-'|truncatechars:400 }}</div>
-    <span class="risk-label">Root Cause:</span>
-    <div class="truncate">{{ risk.root_cause|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="risk-label">Impact:</span>
-    <div class="truncate">{{ risk.impact|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="risk-label">Likelihood:</span>
-    <div class="truncate">{{ risk.likelihood|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="risk-label">Mitigation:</span>
-    <div class="truncate">{{ risk.mitigation|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="risk-label">Action Plan:</span>
-    <div class="truncate">{{ risk.action_plan|striptags|default:'-'|truncatechars:400 }}</div>
-    <span class="risk-label">Notes:</span>
-    <div class="truncate">{{ risk.notes|striptags|default:'-'|truncatechars:200 }}</div>
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Risk Register Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
   </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Risk Register Analysis</h2>
+
+<!-- Summary Statistics -->
+<div class="report-card">
+  <h3>Risk Summary</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ risks.count }}</div>
+      <div class="stat-label">Total Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ risks|dictsort:"status"|length }}</div>
+      <div class="stat-label">Active Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ risks|dictsort:"risk_score"|length }}</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+  </div>
+</div>
+
+<!-- Individual Risk Details -->
+{% for risk in risks %}
+<div class="report-card">
+  <h3>Risk {{ forloop.counter }}: {{ risk.title }}</h3>
+  <div class="priority-indicator">Risk Level: {{ risk.get_risk_impact_display }}</div>
+  
+  <table class="report-table">
+    <tr>
+      <th>Risk Code</th>
+      <td>{{ risk.code|default:"Not specified" }}</td>
+      <th>Category</th>
+      <td>{{ risk.get_risk_category_display }}</td>
+    </tr>
+    <tr>
+      <th>Impact</th>
+      <td><span class="risk-level risk-{{ risk.risk_impact|lower }}">{{ risk.get_risk_impact_display }}</span></td>
+      <th>Likelihood</th>
+      <td><span class="risk-level risk-{{ risk.risk_likelihood|lower }}">{{ risk.get_risk_likelihood_display }}</span></td>
+    </tr>
+    <tr>
+      <th>Risk Score</th>
+      <td>{{ risk.risk_score|default:"Not calculated" }}</td>
+      <th>Residual Risk</th>
+      <td>{{ risk.residual_risk_score|default:"Not calculated" }}</td>
+    </tr>
+    <tr>
+      <th>Owner</th>
+      <td>{% if risk.risk_owner %}{{ risk.risk_owner|default:"Not specified" }}{% else %}Not specified{% endif %}</td>
+      <th>Status</th>
+      <td><span class="status-badge status-{{ risk.status|lower }}">{{ risk.get_status_display }}</span></td>
+    </tr>
+  </table>
+
+  <div class="field-label">Risk Description</div>
+  <div class="field-value">
+    {{ risk.description|safe }}
+  </div>
+
+  {% if risk.existing_controls %}
+  <div class="field-label">Existing Controls</div>
+  <div class="field-value">
+    {{ risk.existing_controls|safe }}
+  </div>
+  {% endif %}
+
+  {% if risk.mitigation_strategy %}
+  <div class="field-label">Mitigation Strategy</div>
+  <div class="field-value">
+    {{ risk.mitigation_strategy|safe }}
+  </div>
+  {% endif %}
+
+  {% if risk.action_plan %}
+  <div class="field-label">Action Plan</div>
+  <div class="field-value">
+    {{ risk.action_plan|safe }}
+  </div>
+  {% endif %}
+
+  {% if risk.additional_notes %}
+  <div class="field-label">Additional Notes</div>
+  <div class="field-value">
+    {{ risk.additional_notes|safe }}
+  </div>
+  {% endif %}
+</div>
 {% empty %}
-  <div class="alert alert-info">No risks found.</div>
+<div class="alert alert-info">
+  <strong>No Risks Found:</strong> No risks match the current filter criteria.
+</div>
 {% endfor %}
 {% endblock %} 

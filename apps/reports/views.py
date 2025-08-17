@@ -15,6 +15,7 @@ from django.db.models.functions import TruncYear
 from legal.models import LegalCase
 from compliance.models import ComplianceRequirement, ComplianceFramework, PolicyDocument, ComplianceObligation, ComplianceEvidence
 from contracts.models import Contract, Party, ContractMilestone
+from django.utils import timezone
 
 def risk_report_pdf(request):
     org = request.tenant
@@ -224,6 +225,16 @@ def risk_register_detailed_pdf(request):
     html_string = render_to_string('reports/risk_register_detailed.html', {
         'organization': org,
         'risks': risks,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Risk Register - Detailed Report',
+        'description': f'Comprehensive risk analysis with {risks.count()} risks identified',
+        'filters': {
+            'category': category,
+            'owner': owner,
+            'status': status,
+            'register': register
+        },
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'category': category, 'owner': owner, 'status': status, 'register': register}.items() if v])
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -355,6 +366,10 @@ def issue_register_pdf(request):
         'issues': issues,
         'filters': {'status': status, 'severity': severity, 'engagement_name': engagement_name},
         'engagement_names': engagement_names,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Issue Register Report',
+        'description': f'Comprehensive audit issues analysis with {issues.count()} issues identified',
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'status': status, 'severity': severity, 'engagement_name': engagement_name}.items() if v])
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -446,6 +461,9 @@ def engagement_details_pdf(request):
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
         'for_pdf': True,  # Always set for PDF context
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Engagement Details Report',
+        'description': f'Detailed analysis of engagement: {engagement.title if engagement else "Not found"}',
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

@@ -1,44 +1,250 @@
 {% extends "reports/base_report.html" %}
 {% load crispy_forms_tags %}
+
 {% block content %}
-<!-- PAGE 1: Logo and Title -->
-<div style="text-align:center; margin-top: 80px;">
-  {% if organization.logo and organization.logo.url %}
-    <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
-  {% endif %}
-  <h1 style="margin-top: 30px; color: #2563eb;">Audit Engagement Details Report</h1>
-</div>
-<div style="page-break-after: always;"></div>
-<!-- PAGE 2+: Engagement Details -->
 {% if engagement %}
-  <h2 class="section-title">Engagement Details</h2>
-  <table class="table table-sm">
-    <tr><th>Status</th><td>{{ engagement.get_project_status_display }}</td></tr>
-    <tr><th>Type</th><td>{{ engagement.engagement_type }}</td></tr>
-    <tr><th>Start Date</th><td>{{ engagement.project_start_date }}</td></tr>
-    <tr><th>End Date</th><td>{{ engagement.target_end_date }}</td></tr>
-    <tr><th>Engagement</th><td class="truncate">{{ engagement.title }}</td></tr>
-    <tr><th>Code</th><td>{{ engagement.code }}</td></tr>
-    <tr><th>Workplan</th><td class="truncate">{{ engagement.audit_workplan.name }} ({{ engagement.audit_workplan.fiscal_year }})</td></tr>
-    <tr><th>Assigned To</th><td>{{ engagement.assigned_to.email }}</td></tr>
-  </table>
-  <span class="label">Executive Summary:</span>
-  <div class="truncate">{{ engagement.executive_summary|striptags|truncatechars:300 }}</div>
-  <span class="label">Purpose:</span>
-  <div class="truncate">{{ engagement.purpose|striptags|truncatechars:300 }}</div>
-  <span class="label">Background:</span>
-  <div class="truncate">{{ engagement.background|striptags|truncatechars:300 }}</div>
-  <span class="label">Scope:</span>
-  <div class="truncate">{{ engagement.scope|striptags|truncatechars:300 }}</div>
-  <span class="label">Objectives:</span>
-  <div class="truncate">{{ engagement.project_objectives|striptags|truncatechars:300 }}</div>
-  <span class="label">Conclusion:</span>
-  <div>{{ engagement.get_conclusion_display }}</div>
-  <span class="label">Conclusion Description:</span>
-  <div class="truncate">{{ engagement.conclusion_description|striptags|truncatechars:300 }}</div>
-  <h4 class="section-title">Issues</h4>
-  <p>No issues linked to this engagement.</p>
+  <!-- Report Header -->
+  <div class="report-header">
+    <div class="header-content">
+      <div class="header-left">
+        Report ID: {{ engagement.code|default:"N/A" }}
+      </div>
+      <div class="header-right">
+        {% if organization.logo and organization.logo.url %}
+          <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+        {% else %}
+          <span>{{ organization.name }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="header-separator"></div>
+
+  <h2 class="section-header">A. Engagement Details</h2>
+  
+  <div class="report-card">
+    <h3>Basic Information</h3>
+    <table class="report-table">
+      <tr>
+        <th>Engagement Code</th>
+        <td>{{ engagement.code }}</td>
+        <th>Status</th>
+        <td><span class="status-badge status-{{ engagement.project_status|lower }}">{{ engagement.get_project_status_display }}</span></td>
+      </tr>
+      <tr>
+        <th>Engagement Title</th>
+        <td colspan="3">{{ engagement.title }}</td>
+      </tr>
+      <tr>
+        <th>Engagement Type</th>
+        <td>{{ engagement.get_engagement_type_display }}</td>
+        <th>Assigned To</th>
+        <td>{% if engagement.assigned_to %}{{ engagement.assigned_to.get_full_name|default:"Not specified" }}{% else %}Not assigned{% endif %}</td>
+      </tr>
+      <tr>
+        <th>Start Date</th>
+        <td>{{ engagement.project_start_date|date:"F j, Y" }}</td>
+        <th>Target End Date</th>
+        <td>{{ engagement.target_end_date|date:"F j, Y" }}</td>
+      </tr>
+      <tr>
+        <th>Estimated Hours</th>
+        <td>{{ engagement.estimated_hours|default:"Not specified" }}</td>
+        <th>Assigned By</th>
+        <td>{% if engagement.assigned_by %}{{ engagement.assigned_by.get_full_name|default:"Not specified" }}{% else %}Not specified{% endif %}</td>
+      </tr>
+    </table>
+  </div>
+
+  {% if engagement.executive_summary %}
+  <div class="report-card">
+    <h3>Executive Summary</h3>
+    <div class="field-value">
+      {{ engagement.executive_summary|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  <h2 class="section-subheader">1. Purpose and Background</h2>
+  
+  {% if engagement.purpose %}
+  <div class="report-card">
+    <h3>Purpose</h3>
+    <div class="field-value">
+      {{ engagement.purpose|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if engagement.background %}
+  <div class="report-card">
+    <h3>Background</h3>
+    <div class="field-value">
+      {{ engagement.background|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  <h2 class="section-subheader">2. Scope and Objectives</h2>
+  
+  {% if engagement.scope %}
+  <div class="report-card">
+    <h3>Scope</h3>
+    <div class="field-value">
+      {{ engagement.scope|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if engagement.criteria %}
+  <div class="report-card">
+    <h3>Criteria</h3>
+    <div class="field-value">
+      {{ engagement.criteria|safe }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if engagement.objectives.all %}
+  <div class="report-card">
+    <h3>Audit Objectives</h3>
+    {% for objective in engagement.objectives.all %}
+    <div class="field-label">{{ forloop.counter }}. {{ objective.title }}</div>
+    <div class="field-value">
+      {{ objective.description|safe }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <h2 class="section-subheader">3. Conclusion</h2>
+  
+  <div class="report-card">
+    <h3>Audit Conclusion</h3>
+    <table class="report-table">
+      <tr>
+        <th>Conclusion</th>
+        <td><span class="status-badge status-{{ engagement.conclusion|lower }}">{{ engagement.get_conclusion_display }}</span></td>
+      </tr>
+      {% if engagement.conclusion_description %}
+      <tr>
+        <th>Conclusion Description</th>
+        <td>{{ engagement.conclusion_description|safe }}</td>
+      </tr>
+      {% endif %}
+    </table>
+  </div>
+
+  {% if engagement.all_issues %}
+  <h2 class="section-subheader">4. Issues and Findings</h2>
+  
+  <div class="report-card">
+    <h3>Issues Summary</h3>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number">{{ engagement.all_issues.count }}</div>
+        <div class="stat-label">Total Issues</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">{{ engagement.all_issues|dictsort:"severity_status"|length }}</div>
+        <div class="stat-label">High Priority</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">{{ engagement.all_issues|dictsort:"issue_status"|length }}</div>
+        <div class="stat-label">Open Issues</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <h3>Detailed Issues</h3>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>Issue Code</th>
+          <th>Title</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Owner</th>
+          <th>Date Identified</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in engagement.all_issues %}
+        <tr>
+          <td>{{ issue.code }}</td>
+          <td>{{ issue.issue_title }}</td>
+          <td><span class="risk-level risk-{{ issue.severity_status|lower }}">{{ issue.get_severity_status_display }}</span></td>
+          <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
+          <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
+          <td>{{ issue.date_identified|date:"M j, Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% for issue in engagement.all_issues %}
+  <div class="report-card">
+    <h3>Issue {{ forloop.counter }}: {{ issue.issue_title }}</h3>
+    <div class="priority-indicator">Priority: {{ issue.get_severity_status_display }}</div>
+    
+    <table class="report-table">
+      <tr>
+        <th>Issue Code</th>
+        <td>{{ issue.code }}</td>
+        <th>Status</th>
+        <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
+      </tr>
+      <tr>
+        <th>Category</th>
+        <td>{{ issue.get_issue_category_display }}</td>
+        <th>Date Identified</th>
+        <td>{{ issue.date_identified|date:"F j, Y" }}</td>
+      </tr>
+      <tr>
+        <th>Owner</th>
+        <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
+        <th>Owner Title</th>
+        <td>{{ issue.issue_owner_title|default:"Not specified" }}</td>
+      </tr>
+    </table>
+
+    <div class="field-label">Issue Description</div>
+    <div class="field-value">
+      {{ issue.issue_description|safe }}
+    </div>
+
+    {% if issue.root_cause %}
+    <div class="field-label">Root Cause</div>
+    <div class="field-value">
+      {{ issue.root_cause|safe }}
+    </div>
+    {% endif %}
+
+    {% if issue.escalated %}
+    <div class="alert alert-danger">
+      <strong>Escalated Issue:</strong> This issue has been escalated due to high severity and overdue status.
+      {% if issue.escalated_date %}
+      <br>Escalated on: {{ issue.escalated_date|date:"F j, Y" }}
+      {% endif %}
+      {% if issue.escalated_to %}
+      <br>Escalated to: {{ issue.escalated_to }}
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
 {% else %}
-  <div class="alert alert-warning">No engagement found for the selected name.</div>
+  <div class="alert alert-warning">
+    <strong>No Engagement Found:</strong> 
+    {% if filters.engagement_name %}
+      No engagement found matching "{{ filters.engagement_name }}"
+    {% else %}
+      Please select an engagement to view details
+    {% endif %}
+  </div>
 {% endif %}
 {% endblock %} 

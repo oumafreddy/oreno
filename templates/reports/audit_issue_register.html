@@ -1,37 +1,164 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-}
-</style>
-<h2>Audit Issue Register</h2>
-<form method="get" class="mb-2">
-  <label for="engagement_name">Engagement Name:</label>
-  <select name="engagement_name" id="engagement_name" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
-    <option value="">All</option>
-    {% for name in engagement_names %}
-      <option value="{{ name }}" {% if filters.engagement_name == name %}selected{% endif %}>{{ name }}</option>
-    {% endfor %}
-  </select>
-</form>
-<p>Filters: Status: {{ filters.status|default:'All' }}, Risk Level: {{ filters.severity|default:'All' }}, Engagement: {{ filters.engagement_name|default:'All' }}</p>
-<table class="table table-sm">
-  <tr>
-    <th>Code</th><th>Title</th><th>Status</th><th>Risk Level</th><th>Owner</th><th>Date Identified</th><th>Remediation Deadline</th>
-  </tr>
-  {% for issue in issues %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-2">
+      <label for="engagement_name">Engagement Name:</label>
+      <select name="engagement_name" id="engagement_name" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+        <option value="">All</option>
+        {% for name in engagement_names %}
+          <option value="{{ name }}" {% if filters.engagement_name == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      
+      <label for="status" class="ms-3">Status:</label>
+      <select name="status" id="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+        <option value="">All</option>
+        <option value="Open" {% if filters.status == 'Open' %}selected{% endif %}>Open</option>
+        <option value="In Progress" {% if filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+        <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
+      </select>
+      
+      <label for="severity" class="ms-3">Severity:</label>
+      <select name="severity" id="severity" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+        <option value="">All</option>
+        <option value="High" {% if filters.severity == 'High' %}selected{% endif %}>High</option>
+        <option value="Medium" {% if filters.severity == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="Low" {% if filters.severity == 'Low' %}selected{% endif %}>Low</option>
+      </select>
+      
+      <a href="?download=pdf{% if filters.engagement_name %}&engagement_name={{ filters.engagement_name }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}{% if filters.severity %}&severity={{ filters.severity }}{% endif %}" class="btn btn-success ms-3">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Audit Issue Register
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Audit Issue Register</h2>
+
+<!-- Summary Statistics -->
+<div class="report-card">
+  <h3>Issues Summary</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ issues.count }}</div>
+      <div class="stat-label">Total Issues</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ issues|dictsort:"issue_status"|length }}</div>
+      <div class="stat-label">Open Issues</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ issues|dictsort:"severity_status"|length }}</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+  </div>
+</div>
+
+<!-- Issues Summary Table -->
+<div class="report-card">
+  <h3>Issues Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Issue Code</th>
+        <th>Title</th>
+        <th>Engagement</th>
+        <th>Severity</th>
+        <th>Status</th>
+        <th>Owner</th>
+        <th>Date Identified</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for issue in issues %}
+      <tr>
+        <td>{{ issue.code }}</td>
+        <td>{{ issue.issue_title }}</td>
+        <td>{{ issue.procedure.risk.objective.engagement.title|default:"Not specified" }}</td>
+        <td><span class="risk-level risk-{{ issue.severity_status|lower }}">{{ issue.get_severity_status_display }}</span></td>
+        <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
+        <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
+        <td>{{ issue.date_identified|date:"M j, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Detailed Issue Information -->
+{% for issue in issues %}
+<div class="report-card">
+  <h3>Issue {{ forloop.counter }}: {{ issue.issue_title }}</h3>
+  <div class="priority-indicator">Priority: {{ issue.get_severity_status_display }}</div>
+  
+  <table class="report-table">
     <tr>
+      <th>Issue Code</th>
       <td>{{ issue.code }}</td>
-      <td>{{ issue.issue_title }}</td>
-      <td>{{ issue.get_issue_status_display }}</td>
-      <td>{{ issue.get_risk_level_display }}</td>
-      <td>{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td>
-      <td>{{ issue.date_identified }}</td>
-      <td>{{ issue.target_date|default:'-' }}</td>
+      <th>Status</th>
+      <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
     </tr>
-  {% endfor %}
-</table>
+    <tr>
+      <th>Category</th>
+      <td>{{ issue.get_issue_category_display }}</td>
+      <th>Date Identified</th>
+      <td>{{ issue.date_identified|date:"F j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>Engagement</th>
+      <td>{{ issue.procedure.risk.objective.engagement.title|default:"Not specified" }}</td>
+      <th>Owner</th>
+      <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
+    </tr>
+  </table>
+
+  <div class="field-label">Issue Description</div>
+  <div class="field-value">
+    {{ issue.issue_description|safe }}
+  </div>
+
+  {% if issue.root_cause %}
+  <div class="field-label">Root Cause</div>
+  <div class="field-value">
+    {{ issue.root_cause|safe }}
+  </div>
+  {% endif %}
+
+  {% if issue.escalated %}
+  <div class="alert alert-danger">
+    <strong>Escalated Issue:</strong> This issue has been escalated due to high severity and overdue status.
+    {% if issue.escalated_date %}
+    <br>Escalated on: {{ issue.escalated_date|date:"F j, Y" }}
+    {% endif %}
+    {% if issue.escalated_to %}
+    <br>Escalated to: {{ issue.escalated_to }}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Issues Found:</strong> No issues match the current filter criteria.
+</div>
+{% endfor %}
 {% endblock %} 
