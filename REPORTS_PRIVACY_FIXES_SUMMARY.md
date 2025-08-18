@@ -161,3 +161,4 @@ These improvements ensure the Oreno GRC reporting system is both functional and 
 | `templates/reports/audit_issue_register.html` | Privacy enhancements, error fixes | ✅ Complete |
 
 All changes have been tested and verified to work correctly without breaking the application.
+
