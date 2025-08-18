@@ -334,7 +334,11 @@ class PasswordHistory(models.Model):
         Returns True if the password is found in recent history.
         """
         from django.contrib.auth.hashers import check_password
-        
+        # If the user instance is not saved yet (no primary key),
+        # there cannot be any password history. Short-circuit safely.
+        if not getattr(user, 'pk', None):
+            return False
+
         # Get the most recent password history entries
         recent_passwords = cls.objects.filter(user=user).order_by('-created_at')[:history_count]
         
