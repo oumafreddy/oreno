@@ -3157,16 +3157,13 @@ class RecommendationListView(AuditPermissionMixin, ListView):
     def get_queryset(self):
         # Check if we have an issue_pk in kwargs (for issue-specific recommendations)
         issue_pk = self.kwargs.get("issue_pk")
+        base_qs = Recommendation.objects.filter(
+            organization=self.request.organization
+        )
         if issue_pk:
-            return Recommendation.objects.filter(
-                issue_id=issue_pk, 
-                organization=self.request.organization
-            ).select_related('issue', 'issue__engagement')
-        else:
-            # Return all recommendations for the organization
-            return Recommendation.objects.filter(
-                organization=self.request.organization
-            ).select_related('issue', 'issue__engagement')
+            base_qs = base_qs.filter(issue_id=issue_pk)
+        # Only select related Issue (Issue has no direct FK named 'engagement')
+        return base_qs.select_related('issue')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
