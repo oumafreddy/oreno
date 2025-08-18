@@ -29,16 +29,22 @@ class BaseAuditForm(forms.ModelForm):
     """Base form class with common functionality for all audit forms"""
     
     def __init__(self, *args, **kwargs):
-        # Pop all possible context keys to prevent TypeError in all forms
+        # Capture organization and request FIRST (do not pop them later)
+        organization = kwargs.pop('organization', None)
+        request = kwargs.pop('request', None)
+        # Pop other context keys to prevent TypeError in all forms
         context_keys = [
-            'organization', 'procedure_pk', 'procedure_result_pk', 'engagement_pk', 'objective_pk', 'issue_pk',
+            'procedure_pk', 'procedure_result_pk', 'engagement_pk', 'objective_pk', 'issue_pk',
             # Add more as needed for future-proofing
         ]
         for key in context_keys:
             kwargs.pop(key, None)
-        self.organization = kwargs.pop('organization', None)
-        self.issue_pk = kwargs.pop('issue_pk', None)
         super().__init__(*args, **kwargs)
+
+        # Resolve organization from explicit arg or request fallback
+        self.organization = organization or (getattr(request, 'organization', None) if request else None)
+        self.issue_pk = kwargs.pop('issue_pk', None) if 'issue_pk' in kwargs else None
+
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
@@ -51,15 +57,18 @@ class BaseAuditForm(forms.ModelForm):
         # Apply organization filtering to all foreign key fields
         if self.organization:
             for field_name, field in self.fields.items():
-                # Filter FK fields by organization
                 if hasattr(field, 'queryset') and field.queryset is not None:
                     model = field.queryset.model
-                    if hasattr(model, 'organization'):
+                    # Filter any FK whose model has an 'organization' field
+                    try:
+                        model_field_names = {f.name for f in model._meta.get_fields()}
+                    except Exception:
+                        model_field_names = set()
+                    if 'organization' in model_field_names:
                         field.queryset = field.queryset.filter(organization=self.organization)
         # Apply organization filtering to all user-related foreign key fields
         if self.organization:
             for field_name, field in self.fields.items():
-                # Filter FK fields by organization for user fields
                 if hasattr(field, 'queryset') and field.queryset is not None:
                     model = field.queryset.model
                     if model.__name__ in ['CustomUser', 'User']:
@@ -78,13 +87,13 @@ class BaseAuditForm(forms.ModelForm):
         # Set organization on the form instance
         if hasattr(self.instance, 'organization') and self.organization:
             self.instance.organization = self.organization
-            
+        
         # If procedure_result is set but procedure is not, set procedure to match
         pr = cleaned_data.get('procedure_result')
         if pr and not cleaned_data.get('procedure'):
             cleaned_data['procedure'] = pr.procedure
             self.instance.procedure = pr.procedure
-            
+        
         # Set issue if issue_pk was provided
         if self.issue_pk and 'issue' in cleaned_data:
             try:
