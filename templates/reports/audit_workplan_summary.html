@@ -1,15 +1,180 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<h2>Audit Workplan Summary</h2>
-<p>Filters: Year: {{ filters.year|default:'All' }}, Status: {{ filters.status|default:'All' }}</p>
-<table class="table table-sm">
-  <tr><th>Fiscal Year</th><th>Status</th><th>Count</th></tr>
-  {% for row in summary %}
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">&nbsp;</div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}<span>{{ organization.name }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Audit Workplan Summary</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Workplan Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_workplans|default:summary|length }}</div>
+      <div class="stat-label">Total Workplans</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ active_workplans|default:summary|dictsort:"state"|length }}</div>
+      <div class="stat-label">Active Workplans</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ fiscal_years|default:summary|dictsort:"fiscal_year"|length }}</div>
+      <div class="stat-label">Fiscal Years</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
     <tr>
-      <td>{{ row.fiscal_year }}</td>
-      <td>{{ row.state|title }}</td>
-      <td>{{ row.count }}</td>
+      <th style="width:25%">Fiscal Year</th>
+      <td>{{ filters.year|default:"All Years" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
     </tr>
-  {% endfor %}
-</table>
+    <tr>
+      <th>Organization</th>
+      <td colspan="3">{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Workplan Summary Table -->
+<div class="report-card">
+  <h3>Workplan Summary by Fiscal Year and Status</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Fiscal Year</th>
+        <th>Status</th>
+        <th>Count</th>
+        <th>Percentage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in summary %}
+      <tr>
+        <td><strong>{{ row.fiscal_year }}</strong></td>
+        <td><span class="status-badge status-{{ row.state|lower }}">{{ row.state|title }}</span></td>
+        <td><strong>{{ row.count }}</strong></td>
+        <td>{{ row.count|floatformat:1 }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Detailed Analysis -->
+<div class="report-card">
+  <h3>Detailed Analysis</h3>
+  
+  <!-- By Fiscal Year -->
+  <h4 class="section-subsubheader">By Fiscal Year</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Fiscal Year</th>
+        <th>Total Workplans</th>
+        <th>Draft</th>
+        <th>Submitted</th>
+        <th>Approved</th>
+        <th>Rejected</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% regroup summary by fiscal_year as year_list %}
+      {% for year in year_list %}
+      <tr>
+        <td><strong>{{ year.grouper }}</strong></td>
+        <td><strong>{{ year.list|length }}</strong></td>
+        {% for status in year.list %}
+          <td>{{ status.count }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- By Status -->
+  <h4 class="section-subsubheader">By Status</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% regroup summary by state as status_list %}
+      {% for status in status_list %}
+      <tr>
+        <td><span class="status-badge status-{{ status.grouper|lower }}">{{ status.grouper|title }}</span></td>
+        <td><strong>{{ status.list|length }}</strong></td>
+        <td>{{ status.list|length|floatformat:1 }}%</td>
+        <td>
+          {% if status.grouper == 'draft' %}
+            Workplans in initial planning phase
+          {% elif status.grouper == 'submitted' %}
+            Workplans submitted for approval
+          {% elif status.grouper == 'approved' %}
+            Workplans approved and active
+          {% elif status.grouper == 'rejected' %}
+            Workplans rejected and requiring revision
+          {% else %}
+            {{ status.grouper|title }} status workplans
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  <div class="field-label">Summary Analysis</div>
+  <div class="field-value">
+    <p>This report provides a comprehensive overview of audit workplans across {{ fiscal_years|default:summary|dictsort:"fiscal_year"|length }} fiscal years. 
+    The data shows the distribution of workplans by status, helping identify trends in planning and approval processes.</p>
+    
+    <p><strong>Key Findings:</strong></p>
+    <ul>
+      <li>Total workplans analyzed: <strong>{{ total_workplans|default:summary|length }}</strong></li>
+      <li>Fiscal years covered: <strong>{{ fiscal_years|default:summary|dictsort:"fiscal_year"|length }}</strong></li>
+      <li>Status categories: <strong>{{ summary|dictsort:"state"|length }}</strong></li>
+    </ul>
+  </div>
+
+  {% if summary %}
+  <div class="field-label">Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Monitor Approval Rates:</strong> Track the percentage of approved vs rejected workplans to identify potential bottlenecks in the approval process.</li>
+      <li><strong>Fiscal Year Planning:</strong> Analyze trends across fiscal years to improve future planning cycles.</li>
+      <li><strong>Status Management:</strong> Ensure timely progression of workplans from draft to approved status.</li>
+      <li><strong>Quality Assurance:</strong> Review rejected workplans to identify common issues and improve submission quality.</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+{% if not summary %}
+<div class="alert alert-info">
+  <strong>No Workplans Found:</strong> No workplans match the current filter criteria. Please adjust your filters or create new workplans.
+</div>
+{% endif %}
 {% endblock %} 

@@ -302,10 +302,23 @@ def workplan_summary_pdf(request):
     if status:
         workplans = workplans.filter(state=status)
     summary = workplans.values('fiscal_year', 'state').annotate(count=Count('id')).order_by('-fiscal_year')
+    
+    # Calculate additional statistics
+    total_workplans = workplans.count()
+    active_workplans = workplans.exclude(state='cancelled').count()
+    fiscal_years = workplans.values('fiscal_year').distinct().count()
+    
     html_string = render_to_string('reports/audit_workplan_summary.html', {
         'organization': org,
         'summary': summary,
         'filters': {'year': year, 'status': status},
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Workplan Summary Report',
+        'description': f'Comprehensive workplan analysis with {total_workplans} workplans across {fiscal_years} fiscal years',
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'year': year, 'status': status}.items() if v]),
+        'total_workplans': total_workplans,
+        'active_workplans': active_workplans,
+        'fiscal_years': fiscal_years,
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -333,11 +346,24 @@ def engagement_summary_pdf(request):
             engagements = engagements.filter(title__icontains=engagement_name)
     summary = engagements.values('project_status', 'assigned_to__email').annotate(count=Count('id')).order_by('project_status')
     engagement_names = get_engagement_names(org)
+    
+    # Calculate additional statistics
+    total_engagements = engagements.count()
+    active_engagements = engagements.exclude(project_status__in=['completed', 'cancelled']).count()
+    assigned_auditors = engagements.values('assigned_to__email').distinct().count()
+    
     html_string = render_to_string('reports/audit_engagement_summary.html', {
         'organization': org,
         'summary': summary,
         'filters': {'status': status, 'assigned_to': assigned_to, 'engagement_name': engagement_name},
         'engagement_names': engagement_names,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Engagement Summary Report',
+        'description': f'Comprehensive engagement analysis with {total_engagements} engagements and {assigned_auditors} assigned auditors',
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'status': status, 'assigned_to': assigned_to, 'engagement_name': engagement_name}.items() if v]),
+        'total_engagements': total_engagements,
+        'active_engagements': active_engagements,
+        'assigned_auditors': assigned_auditors,
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -361,6 +387,13 @@ def issue_register_pdf(request):
         else:
             issues = issues.filter(procedure__risk__objective__engagement__title__icontains=engagement_name)
     engagement_names = get_engagement_names(org)
+    
+    # Calculate additional statistics
+    total_issues = issues.count()
+    open_issues = issues.exclude(issue_status='closed').count()
+    high_priority_issues = issues.filter(risk_level__in=['high', 'critical']).count()
+    escalated_issues = issues.filter(issue_status='escalated').count()
+    
     html_string = render_to_string('reports/audit_issue_register.html', {
         'organization': org,
         'issues': issues,
@@ -368,8 +401,12 @@ def issue_register_pdf(request):
         'engagement_names': engagement_names,
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Audit Issue Register Report',
-        'description': f'Comprehensive audit issues analysis with {issues.count()} issues identified',
-        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'status': status, 'severity': severity, 'engagement_name': engagement_name}.items() if v])
+        'description': f'Comprehensive audit issues analysis with {total_issues} issues identified',
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'status': status, 'severity': severity, 'engagement_name': engagement_name}.items() if v]),
+        'total_issues': total_issues,
+        'open_issues': open_issues,
+        'high_priority_issues': high_priority_issues,
+        'escalated_issues': escalated_issues,
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

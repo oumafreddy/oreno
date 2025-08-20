@@ -21,7 +21,7 @@
     <h3>Basic Information</h3>
     <table class="report-table">
       <tr>
-        <th style="width:30%">Engagement Title</th>
+        <th style="width:25%">Engagement Title</th>
         <td colspan="3">{{ engagement.title }}</td>
       </tr>
       <tr>
@@ -41,22 +41,30 @@
         <td colspan="3">{{ engagement.estimated_hours|default:"Not specified" }}</td>
       </tr>
     </table>
+    
+    {% if engagement.executive_summary %}
+    <div style="margin-top: 0.5cm;">
+      <div class="field-label">Executive Summary</div>
+      <div class="field-value">{{ engagement.executive_summary|safe }}</div>
+    </div>
+    {% endif %}
   </div>
-
-  {% if engagement.executive_summary %}
-  <div class="report-card">
-    <h3>Executive Summary</h3>
-    <div class="field-value">{{ engagement.executive_summary|safe }}</div>
-  </div>
-  {% endif %}
 
   <h2 class="section-subheader">1. Purpose and Background</h2>
-  {% if engagement.purpose %}
-  <div class="report-card"><h3>Purpose</h3><div class="field-value">{{ engagement.purpose|safe }}</div></div>
-  {% endif %}
-  {% if engagement.background %}
-  <div class="report-card"><h3>Background</h3><div class="field-value">{{ engagement.background|safe }}</div></div>
-  {% endif %}
+  <div class="report-card">
+    {% if engagement.purpose %}
+    <div class="field-group">
+      <div class="field-label">Purpose</div>
+      <div class="field-value">{{ engagement.purpose|safe }}</div>
+    </div>
+    {% endif %}
+    {% if engagement.background %}
+    <div class="field-group">
+      <div class="field-label">Background</div>
+      <div class="field-value">{{ engagement.background|safe }}</div>
+    </div>
+    {% endif %}
+  </div>
 
   <h2 class="section-subheader">2. Audit Objectives</h2>
   {% if engagement.objectives.all %}

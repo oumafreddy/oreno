@@ -18,17 +18,20 @@
       <label for="status" class="ms-3">Status:</label>
       <select name="status" id="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
         <option value="">All</option>
-        <option value="Open" {% if filters.status == 'Open' %}selected{% endif %}>Open</option>
-        <option value="In Progress" {% if filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-        <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
+        <option value="open" {% if filters.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="in_progress" {% if filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+        <option value="closed" {% if filters.status == 'closed' %}selected{% endif %}>Closed</option>
+        <option value="pending_review" {% if filters.status == 'pending_review' %}selected{% endif %}>Pending Review</option>
+        <option value="pending_approval" {% if filters.status == 'pending_approval' %}selected{% endif %}>Pending Approval</option>
       </select>
       
       <label for="severity" class="ms-3">Severity:</label>
       <select name="severity" id="severity" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
         <option value="">All</option>
-        <option value="High" {% if filters.severity == 'High' %}selected{% endif %}>High</option>
-        <option value="Medium" {% if filters.severity == 'Medium' %}selected{% endif %}>Medium</option>
-        <option value="Low" {% if filters.severity == 'Low' %}selected{% endif %}>Low</option>
+        <option value="high" {% if filters.severity == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if filters.severity == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if filters.severity == 'low' %}selected{% endif %}>Low</option>
+        <option value="critical" {% if filters.severity == 'critical' %}selected{% endif %}>Critical</option>
       </select>
       
       <a href="?download=pdf{% if filters.engagement_name %}&engagement_name={{ filters.engagement_name }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}{% if filters.severity %}&severity={{ filters.severity }}{% endif %}" class="btn btn-success ms-3">Download PDF</a>
@@ -39,15 +42,11 @@
 <!-- Report Header -->
 <div class="report-header">
   <div class="header-content">
-    <div class="header-left">
-      Report ID: Audit Issue Register
-    </div>
+    <div class="header-left">&nbsp;</div>
     <div class="header-right">
       {% if organization.logo and organization.logo.url %}
         <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
-      {% else %}
-        <span>{{ organization.name }}</span>
-      {% endif %}
+      {% else %}<span>{{ organization.name }}</span>{% endif %}
     </div>
   </div>
 </div>
@@ -55,23 +54,42 @@
 
 <h2 class="section-header">A. Audit Issue Register</h2>
 
-<!-- Summary Statistics -->
+<!-- Summary Statistics & Filters -->
 <div class="report-card">
-  <h3>Issues Summary</h3>
+  <h3>Issues Overview & Filters</h3>
   <div class="stats-grid">
     <div class="stat-item">
-      <div class="stat-number">{{ issues.count }}</div>
+      <div class="stat-number">{{ total_issues|default:issues.count }}</div>
       <div class="stat-label">Total Issues</div>
     </div>
     <div class="stat-item">
-      <div class="stat-number">{{ issues|dictsort:"issue_status"|length }}</div>
+      <div class="stat-number">{{ open_issues|default:issues|dictsort:"issue_status"|length }}</div>
       <div class="stat-label">Open Issues</div>
     </div>
     <div class="stat-item">
-      <div class="stat-number">{{ issues|dictsort:"severity_status"|length }}</div>
+      <div class="stat-number">{{ high_priority_issues|default:issues|dictsort:"risk_level"|length }}</div>
       <div class="stat-label">High Priority</div>
     </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ escalated_issues|default:0 }}</div>
+      <div class="stat-label">Escalated</div>
+    </div>
   </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
+      <th style="width:25%">Severity</th>
+      <td>{{ filters.severity|default:"All Severities" }}</td>
+    </tr>
+    <tr>
+      <th>Engagement Name</th>
+      <td>{{ filters.engagement_name|default:"All Engagements" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
 </div>
 
 <!-- Issues Summary Table -->
@@ -87,6 +105,7 @@
         <th>Status</th>
         <th>Owner</th>
         <th>Date Identified</th>
+        <th>Days Open</th>
       </tr>
     </thead>
     <tbody>
@@ -95,10 +114,106 @@
         <td>{{ issue.code }}</td>
         <td>{{ issue.issue_title }}</td>
         <td>{{ issue.procedure.risk.objective.engagement.title|default:"Not specified" }}</td>
-        <td><span class="risk-level risk-{{ issue.severity_status|lower }}">{{ issue.get_severity_status_display }}</span></td>
+        <td><span class="risk-level risk-{{ issue.risk_level|lower }}">{{ issue.get_risk_level_display }}</span></td>
         <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
         <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
         <td>{{ issue.date_identified|date:"M j, Y" }}</td>
+        <td>
+          {% if issue.issue_status != 'closed' %}
+            {{ issue.date_identified|timesince }}
+          {% else %}
+            Closed
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Risk Analysis -->
+<div class="report-card">
+  <h3>Risk Analysis</h3>
+  
+  <!-- By Severity -->
+  <h4 class="section-subsubheader">By Severity Level</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Average Days Open</th>
+        <th>Escalation Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% regroup issues by risk_level as severity_list %}
+      {% for severity in severity_list %}
+      <tr>
+        <td><span class="risk-level risk-{{ severity.grouper|lower }}">{{ severity.grouper|title }}</span></td>
+        <td><strong>{{ severity.list|length }}</strong></td>
+        <td>{{ severity.list|length|floatformat:1 }}%</td>
+        <td>
+          {% for item in severity.list %}
+            {% if item.issue_status != 'closed' %}
+              {{ item.date_identified|timesince }}
+            {% endif %}
+          {% endfor %}
+        </td>
+        <td>
+          {% for item in severity.list %}
+            {% if item.issue_status == 'escalated' %}
+              <span class="status-badge status-pending">Escalated</span>
+            {% else %}
+              Normal
+            {% endif %}
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- By Status -->
+  <h4 class="section-subsubheader">By Status</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Average Age</th>
+        <th>Trend</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% regroup issues by issue_status as status_list %}
+      {% for status in status_list %}
+      <tr>
+        <td><span class="status-badge status-{{ status.grouper|lower }}">{{ status.grouper|title }}</span></td>
+        <td><strong>{{ status.list|length }}</strong></td>
+        <td>{{ status.list|length|floatformat:1 }}%</td>
+        <td>
+          {% for item in status.list %}
+            {% if item.issue_status != 'closed' %}
+              {{ item.date_identified|timesince }}
+            {% else %}
+              Resolved
+            {% endif %}
+          {% endfor %}
+        </td>
+        <td>
+          {% if status.grouper == 'open' %}
+            <span class="status-badge status-pending">Needs Attention</span>
+          {% elif status.grouper == 'in_progress' %}
+            <span class="status-badge status-active">Being Addressed</span>
+          {% elif status.grouper == 'closed' %}
+            <span class="status-badge status-approved">Resolved</span>
+          {% else %}
+            <span class="status-badge status-draft">Pending</span>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -108,9 +223,12 @@
 <!-- Detailed Issue Information -->
 {% for issue in issues %}
 <div class="report-card">
-  <h3>Issue {{ forloop.counter }}: {{ issue.issue_title }}</h3>
-  <div class="priority-indicator">Priority: {{ issue.get_severity_status_display }}</div>
-  
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Issue {{ forloop.counter }}: {{ issue.issue_title }}</h3>
+    <span class="priority-indicator">Severity: {{ issue.get_risk_level_display|default:issue.risk_level }}</span>
+  </div>
+
+  <!-- Issue Metadata -->
   <table class="report-table">
     <tr>
       <th>Issue Code</th>
@@ -120,7 +238,7 @@
     </tr>
     <tr>
       <th>Category</th>
-      <td>{{ issue.get_issue_category_display }}</td>
+      <td>{{ issue.get_issue_type_display|default:"Not specified" }}</td>
       <th>Date Identified</th>
       <td>{{ issue.date_identified|date:"F j, Y" }}</td>
     </tr>
@@ -130,35 +248,135 @@
       <th>Owner</th>
       <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
     </tr>
+    <tr>
+      <th>Remediation Status</th>
+      <td><span class="status-badge status-{{ issue.remediation_status|lower }}">{{ issue.get_remediation_status_display }}</span></td>
+      <th>Target Date</th>
+      <td>{{ issue.target_date|date:"F j, Y"|default:"Not specified" }}</td>
+    </tr>
   </table>
 
+  <!-- Issue Description -->
+  {% if issue.issue_description %}
   <div class="field-label">Issue Description</div>
-  <div class="field-value">
-    {{ issue.issue_description|safe }}
-  </div>
+  <div class="field-value">{{ issue.issue_description|safe }}</div>
+  {% endif %}
 
+  <!-- Root Cause -->
   {% if issue.root_cause %}
   <div class="field-label">Root Cause</div>
-  <div class="field-value">
-    {{ issue.root_cause|safe }}
+  <div class="field-value">{{ issue.root_cause|safe }}</div>
+  {% endif %}
+
+  <!-- Business Impact -->
+  {% if issue.business_impact %}
+  <div class="field-label">Business Impact</div>
+  <div class="field-value">{{ issue.business_impact|safe }}</div>
+  {% endif %}
+
+  <!-- Financial Impact -->
+  {% if issue.financial_impact %}
+  <div class="field-label">Financial Impact</div>
+  <div class="field-value">${{ issue.financial_impact|floatformat:2 }}</div>
+  {% endif %}
+
+  <!-- Recommendations -->
+  {% with recs=issue.recommendations.all %}
+    {% if recs %}
+    <div class="field-label">Recommendations</div>
+    <div class="field-value">
+      <ol style="margin:0; padding-left:1.2em;">
+        {% for rec in recs %}
+          <li>
+            <div><strong>{{ rec.title }}</strong></div>
+            {% if rec.description %}<div>{{ rec.description|safe }}</div>{% endif %}
+            {% if rec.priority %}<div><em>Priority: {{ rec.get_priority_display }}</em></div>{% endif %}
+            {% if rec.target_date %}<div><em>Target: {{ rec.target_date|date:"M j, Y" }}</em></div>{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Management Action Plan -->
+  {% if issue.management_action_plan %}
+  <div class="field-label">Management Action Plan</div>
+  <div class="field-value">{{ issue.management_action_plan|safe }}</div>
+  {% endif %}
+
+  <!-- Escalation Alert -->
+  {% if issue.issue_status == 'escalated' %}
+  <div class="alert alert-danger">
+    <strong>⚠️ ESCALATED ISSUE:</strong> This issue has been escalated due to high severity and overdue status.
+    {% if issue.days_overdue %}
+    <br><strong>Days Overdue:</strong> {{ issue.days_overdue }} days
+    {% endif %}
   </div>
   {% endif %}
 
-  {% if issue.escalated %}
-  <div class="alert alert-danger">
-    <strong>Escalated Issue:</strong> This issue has been escalated due to high severity and overdue status.
-    {% if issue.escalated_date %}
-    <br>Escalated on: {{ issue.escalated_date|date:"F j, Y" }}
+  <!-- Follow-up Actions -->
+  {% with actions=issue.followup_actions.all %}
+    {% if actions %}
+    <div class="field-label">Follow-up Actions</div>
+    <div class="field-value">
+      <ul style="margin:0; padding-left:1.2em;">
+        {% for action in actions %}
+          <li>
+            <div><strong>{{ action.title }}</strong></div>
+            {% if action.description %}<div>{{ action.description|safe }}</div>{% endif %}
+            <div><em>Status: {{ action.get_status_display }} | Due: {{ action.due_date|date:"M j, Y"|default:"Not specified" }}</em></div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
     {% endif %}
-    {% if issue.escalated_to %}
-    <br>Escalated to: {{ issue.escalated_to }}
-    {% endif %}
-  </div>
-  {% endif %}
+  {% endwith %}
 </div>
 {% empty %}
 <div class="alert alert-info">
-  <strong>No Issues Found:</strong> No issues match the current filter criteria.
+  <strong>No Issues Found:</strong> No issues match the current filter criteria. Please adjust your filters or create new issues.
 </div>
 {% endfor %}
+
+<!-- Key Insights & Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  <div class="field-label">Issue Analysis Summary</div>
+  <div class="field-value">
+    <p>This comprehensive issue register provides detailed analysis of {{ issues.count }} audit issues across the organization. 
+    The report highlights critical areas requiring immediate attention and provides actionable insights for risk management.</p>
+    
+    <p><strong>Key Findings:</strong></p>
+    <ul>
+      <li><strong>Total Issues:</strong> {{ total_issues|default:issues.count }} issues identified across all engagements</li>
+      <li><strong>Open Issues:</strong> {{ open_issues|default:issues|dictsort:"issue_status"|length }} issues requiring attention</li>
+      <li><strong>High Priority:</strong> {{ high_priority_issues|default:issues|dictsort:"risk_level"|length }} high-severity issues</li>
+      <li><strong>Escalated Issues:</strong> {{ escalated_issues|default:0 }} issues requiring escalation</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Priority Management:</strong> Focus resources on high-severity issues that pose the greatest risk to the organization.</li>
+      <li><strong>Timely Resolution:</strong> Establish clear timelines and accountability for issue resolution to prevent escalation.</li>
+      <li><strong>Root Cause Analysis:</strong> Conduct thorough root cause analysis to prevent similar issues from recurring.</li>
+      <li><strong>Resource Allocation:</strong> Ensure adequate resources are allocated to address open issues based on severity and business impact.</li>
+      <li><strong>Monitoring & Reporting:</strong> Implement regular monitoring and reporting mechanisms to track issue resolution progress.</li>
+      <li><strong>Training & Awareness:</strong> Provide training to staff on identifying and addressing potential issues early.</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Management Actions</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Immediate Actions:</strong> Address all escalated issues within 48 hours</li>
+      <li><strong>Weekly Reviews:</strong> Conduct weekly reviews of open high-priority issues</li>
+      <li><strong>Monthly Reporting:</strong> Generate monthly issue trend reports for management review</li>
+      <li><strong>Quarterly Assessment:</strong> Conduct quarterly assessments of issue patterns and root causes</li>
+    </ul>
+  </div>
+</div>
 {% endblock %} 
