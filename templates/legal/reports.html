@@ -9,16 +9,16 @@
         </div>
         <div class="col-auto ms-auto">
             <a href="{% url 'legal:dashboard' %}" class="btn btn-outline-secondary me-2">Dashboard</a>
-            <a href="{% url 'legal:legalcase_list' %}" class="btn btn-primary">Case List</a>
+            <a href="{% url 'legal:legalcase_list' %}" class="btn btn-primary">Cases</a>
         </div>
     </div>
 
-         <!-- Info Alert -->
-     <div class="alert alert-info mb-4">
-         <i class="bi bi-info-circle me-2"></i>
-         <strong>Generate Professional Legal Reports</strong><br>
-         Download comprehensive legal management reports in PDF format. All reports are filtered by your organization and include advanced filtering options. Additional report types will be available soon.
-     </div>
+    <!-- Info Alert -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Generate Professional Legal Reports</strong><br>
+        Download comprehensive legal case management reports in PDF format. All reports are filtered by your organization and include advanced filtering options. Additional report types will be available soon.
+    </div>
 
     <!-- Reports Grid -->
     <div class="row g-4">
@@ -26,57 +26,20 @@
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Legal Case Summary</h5>
+                    <h5 class="card-title mb-0"><i class="bi bi-briefcase me-2"></i>Case Summary</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text text-muted small">Summary overview of all legal cases with key metrics and status information.</p>
+                    <p class="card-text text-muted small">Summary overview of all legal cases with key metrics, status information, and case type distribution.</p>
                     <form method="get" action="{% url 'reports:legal_case_summary_pdf' %}" target="_blank">
                         <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
-                                <option value="">All Statuses</option>
-                                {% for status in case_statuses %}
-                                <option value="{{ status }}">{{ status|title }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
                             <label class="form-label">Case Type</label>
                             <select name="case_type" class="form-select">
-                                <option value="">All Types</option>
-                                {% for type in case_types %}
-                                <option value="{{ type }}">{{ type }}</option>
+                                <option value="">All Case Types</option>
+                                {% for case_type in case_types %}
+                                <option value="{{ case_type }}">{{ case_type }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Party</label>
-                            <select name="party" class="form-select">
-                                <option value="">All Parties</option>
-                                {% for party in legal_parties %}
-                                <option value="{{ party }}">{{ party }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                                                 <div class="d-grid gap-2">
-                             <button type="submit" class="btn btn-outline-primary">
-                                 <i class="bi bi-file-pdf me-2"></i>Download PDF
-                             </button>
-                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Legal Case Details Report -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Legal Case Details</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text text-muted small">Comprehensive detailed report with full case information and proceedings.</p>
-                    <form method="get" action="{% url 'reports:legal_case_details_pdf' %}" target="_blank">
                         <div class="mb-3">
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select">
@@ -87,80 +50,137 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Case Type</label>
-                            <select name="case_type" class="form-select">
-                                <option value="">All Types</option>
-                                {% for type in case_types %}
-                                <option value="{{ type }}">{{ type }}</option>
-                                {% endfor %}
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="">All Priorities</option>
+                                <option value="1">Low</option>
+                                <option value="2">Medium-Low</option>
+                                <option value="3">Medium</option>
+                                <option value="4">Medium-High</option>
+                                <option value="5">High</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Party</label>
-                            <select name="party" class="form-select">
-                                <option value="">All Parties</option>
-                                {% for party in legal_parties %}
-                                <option value="{{ party }}">{{ party }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
                         </div>
-                                                 <div class="d-grid gap-2">
-                             <button type="submit" class="btn btn-outline-primary">
-                                 <i class="bi bi-file-pdf me-2"></i>Download PDF
-                             </button>
-                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- Legal Task Report -->
+        <!-- Legal Task Register Report -->
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-list-task me-2"></i>Legal Task Report</h5>
+                    <h5 class="card-title mb-0"><i class="bi bi-list-task me-2"></i>Task Register</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text text-muted small">Track and report on legal tasks, deadlines, and completion status.</p>
-                                         <div class="alert alert-warning">
-                         <i class="bi bi-exclamation-triangle me-2"></i>
-                         <strong>Coming Soon</strong><br>
-                         Legal task reports will be available in the next update.
-                     </div>
+                    <p class="card-text text-muted small">Track and report on legal tasks, deadlines, completion status, and assigned attorneys.</p>
+                    <form method="get" action="{% url 'reports:legal_task_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Task Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for status in task_statuses %}
+                                <option value="{{ status }}">{{ status|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assigned To</label>
+                            <select name="assigned_to" class="form-select">
+                                <option value="">All Attorneys</option>
+                                {% for attorney in attorneys %}
+                                <option value="{{ attorney }}">{{ attorney }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Legal Document Report -->
+        <!-- Legal Document Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Document Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Comprehensive list of all legal documents with metadata, versions, and confidentiality status.</p>
+                    <form method="get" action="{% url 'reports:legal_document_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Document Title</label>
+                            <select name="document_title" class="form-select">
+                                <option value="">All Documents</option>
+                                {% for title in document_titles %}
+                                <option value="{{ title }}">{{ title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confidentiality</label>
+                            <select name="is_confidential" class="form-select">
+                                <option value="">All Documents</option>
+                                <option value="true">Confidential Only</option>
+                                <option value="false">Non-Confidential Only</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legal Party Register Report -->
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Legal Document Report</h5>
+                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Party Register</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text text-muted small">Comprehensive list of all legal documents with metadata and status.</p>
-                                         <div class="alert alert-warning">
-                         <i class="bi bi-exclamation-triangle me-2"></i>
-                         <strong>Coming Soon</strong><br>
-                         Legal document reports will be available in the next update.
-                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Legal Party Report -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Legal Party Report</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text text-muted small">Detailed report of all legal parties with their roles and relationships.</p>
-                                         <div class="alert alert-warning">
-                         <i class="bi bi-exclamation-triangle me-2"></i>
-                         <strong>Coming Soon</strong><br>
-                         Legal party reports will be available in the next update.
-                     </div>
+                    <p class="card-text text-muted small">Track and report on legal parties (plaintiffs, defendants, witnesses) with contact information.</p>
+                    <form method="get" action="{% url 'reports:legal_party_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Party Type</label>
+                            <select name="party_type" class="form-select">
+                                <option value="">All Party Types</option>
+                                <option value="plaintiff">Plaintiff</option>
+                                <option value="defendant">Defendant</option>
+                                <option value="witness">Witness</option>
+                                <option value="third_party">Third Party</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Party Name</label>
+                            <select name="party_name" class="form-select">
+                                <option value="">All Parties</option>
+                                {% for party in legal_parties %}
+                                <option value="{{ party }}">{{ party }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -168,16 +188,87 @@
         <!-- Legal Archive Report -->
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-archive me-2"></i>Legal Archive Report</h5>
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-archive me-2"></i>Archive Report</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text text-muted small">Access archived legal cases and documents with retention information.</p>
-                                         <div class="alert alert-warning">
-                         <i class="bi bi-exclamation-triangle me-2"></i>
-                         <strong>Coming Soon</strong><br>
-                         Legal archive reports will be available in the next update.
-                     </div>
+                    <p class="card-text text-muted small">Detailed report of archived cases with retention policies and destruction dates.</p>
+                    <form method="get" action="{% url 'reports:legal_archive_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Archive Date</label>
+                            <input type="date" name="archive_date" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Retention Period</label>
+                            <select name="retention_period" class="form-select">
+                                <option value="">All Periods</option>
+                                <option value="3">3 Years</option>
+                                <option value="5">5 Years</option>
+                                <option value="7">7 Years</option>
+                                <option value="10">10 Years</option>
+                                <option value="15">15 Years</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-2"></i>Download PDF
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text me-2"></i>Detailed Reports</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Access detailed reports for specific legal components and analysis.</p>
+                    
+                    <!-- Case Details Report -->
+                    <div class="mb-4">
+                        <h6 class="text-dark mb-2">Case Details Report</h6>
+                        <form method="get" action="{% url 'reports:legal_case_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Case Title</label>
+                                <select name="title" class="form-select">
+                                    <option value="">All Cases</option>
+                                    {% for case in cases %}
+                                    <option value="{{ case.title }}">{{ case.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Task Details Report -->
+                    <div class="mb-3">
+                        <h6 class="text-dark mb-2">Task Details Report</h6>
+                        <form method="get" action="{% url 'reports:legal_task_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Task Title</label>
+                                <select name="title" class="form-select">
+                                    <option value="">All Tasks</option>
+                                    {% for task in tasks %}
+                                    <option value="{{ task.title }}">{{ task.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

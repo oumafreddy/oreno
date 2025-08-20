@@ -3,6 +3,7 @@
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from core.mixins.permissions import OrganizationPermissionMixin
+from django.core.exceptions import PermissionDenied
 from .models import (
     ComplianceFramework,
     PolicyDocument,
@@ -29,6 +30,13 @@ from django.contrib.auth.decorators import login_required
 from datetime import timedelta
 from django.db import models
 
+class OrganizationPermissionMixin:
+    """Mixin to ensure the user has access to the current organization."""
+    def dispatch(self, request, *args, **kwargs):
+        if not hasattr(request, 'organization') or request.organization is None:
+            raise PermissionDenied("No organization context found.")
+        return super().dispatch(request, *args, **kwargs)
+
 # ComplianceFramework Views
 class ComplianceFrameworkListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = ComplianceFramework
@@ -37,6 +45,7 @@ class ComplianceFrameworkListView(OrganizationPermissionMixin, LoginRequiredMixi
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(Q(name__icontains=q) | Q(version__icontains=q))
@@ -48,6 +57,9 @@ class ComplianceFrameworkListView(OrganizationPermissionMixin, LoginRequiredMixi
 class ComplianceFrameworkDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceFramework
     template_name = 'compliance/complianceframework_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ComplianceFrameworkCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ComplianceFramework
@@ -55,11 +67,11 @@ class ComplianceFrameworkCreateView(OrganizationPermissionMixin, LoginRequiredMi
     template_name = 'compliance/complianceframework_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:framework_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceFrameworkUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -67,18 +79,25 @@ class ComplianceFrameworkUpdateView(OrganizationPermissionMixin, LoginRequiredMi
     form_class = ComplianceFrameworkForm
     template_name = 'compliance/complianceframework_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:framework_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+        
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceFrameworkDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = ComplianceFramework
     template_name = 'compliance/complianceframework_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:framework_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # PolicyDocument Views
 class PolicyDocumentListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -88,7 +107,7 @@ class PolicyDocumentListView(OrganizationPermissionMixin, LoginRequiredMixin, Li
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(organization=self.request.tenant)
+        qs = qs.filter(organization=self.request.organization)
         form = PolicyDocumentFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
@@ -108,6 +127,9 @@ class PolicyDocumentListView(OrganizationPermissionMixin, LoginRequiredMixin, Li
 class PolicyDocumentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = PolicyDocument
     template_name = 'compliance/policydocument_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class PolicyDocumentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = PolicyDocument
@@ -115,11 +137,11 @@ class PolicyDocumentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     template_name = 'compliance/policydocument_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:policydocument_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class PolicyDocumentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -128,26 +150,35 @@ class PolicyDocumentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     template_name = 'compliance/policydocument_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:policydocument_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class PolicyDocumentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = PolicyDocument
     template_name = 'compliance/policydocument_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # DocumentProcessing Views
 class DocumentProcessingListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     model = DocumentProcessing
     template_name = 'compliance/documentprocessing_list.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentProcessingDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = DocumentProcessing
     template_name = 'compliance/documentprocessing_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentProcessingCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = DocumentProcessing
@@ -155,11 +186,11 @@ class DocumentProcessingCreateView(OrganizationPermissionMixin, LoginRequiredMix
     template_name = 'compliance/documentprocessing_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class DocumentProcessingUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -168,17 +199,20 @@ class DocumentProcessingUpdateView(OrganizationPermissionMixin, LoginRequiredMix
     template_name = 'compliance/documentprocessing_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class DocumentProcessingDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = DocumentProcessing
     template_name = 'compliance/documentprocessing_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:documentprocessing_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # ComplianceRequirement Views
 class ComplianceRequirementListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -188,6 +222,7 @@ class ComplianceRequirementListView(OrganizationPermissionMixin, LoginRequiredMi
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(requirement_id__icontains=q))
@@ -207,6 +242,9 @@ class ComplianceRequirementListView(OrganizationPermissionMixin, LoginRequiredMi
 class ComplianceRequirementDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceRequirement
     template_name = 'compliance/compliancerequirement_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ComplianceRequirementCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ComplianceRequirement
@@ -214,11 +252,11 @@ class ComplianceRequirementCreateView(OrganizationPermissionMixin, LoginRequired
     template_name = 'compliance/compliancerequirement_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:requirement_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceRequirementUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -227,17 +265,20 @@ class ComplianceRequirementUpdateView(OrganizationPermissionMixin, LoginRequired
     template_name = 'compliance/compliancerequirement_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:requirement_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceRequirementDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = ComplianceRequirement
     template_name = 'compliance/compliancerequirement_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:requirement_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # ComplianceObligation Views
 class ComplianceObligationListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -247,6 +288,7 @@ class ComplianceObligationListView(OrganizationPermissionMixin, LoginRequiredMix
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
         requirement = self.request.GET.get('requirement')
         if requirement:
             qs = qs.filter(requirement__title__icontains=requirement)
@@ -264,6 +306,9 @@ class ComplianceObligationListView(OrganizationPermissionMixin, LoginRequiredMix
 class ComplianceObligationDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceObligation
     template_name = 'compliance/complianceobligation_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ComplianceObligationCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ComplianceObligation
@@ -271,11 +316,11 @@ class ComplianceObligationCreateView(OrganizationPermissionMixin, LoginRequiredM
     template_name = 'compliance/complianceobligation_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:obligation_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceObligationUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -284,17 +329,20 @@ class ComplianceObligationUpdateView(OrganizationPermissionMixin, LoginRequiredM
     template_name = 'compliance/complianceobligation_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:obligation_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceObligationDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = ComplianceObligation
     template_name = 'compliance/complianceobligation_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:obligation_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # ComplianceEvidence Views
 class ComplianceEvidenceListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -304,6 +352,7 @@ class ComplianceEvidenceListView(OrganizationPermissionMixin, LoginRequiredMixin
     paginate_by = 20
     def get_queryset(self):
         qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
         obligation = self.request.GET.get('obligation')
         if obligation:
             qs = qs.filter(obligation__icontains=obligation)
@@ -321,6 +370,9 @@ class ComplianceEvidenceListView(OrganizationPermissionMixin, LoginRequiredMixin
 class ComplianceEvidenceDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ComplianceEvidence
     template_name = 'compliance/complianceevidence_detail.html'  # TODO: create template
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ComplianceEvidenceCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ComplianceEvidence
@@ -328,11 +380,11 @@ class ComplianceEvidenceCreateView(OrganizationPermissionMixin, LoginRequiredMix
     template_name = 'compliance/complianceevidence_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:evidence_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceEvidenceUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -341,24 +393,27 @@ class ComplianceEvidenceUpdateView(OrganizationPermissionMixin, LoginRequiredMix
     template_name = 'compliance/complianceevidence_form.html'  # TODO: create template
     success_url = reverse_lazy('compliance:evidence_list')
     def form_valid(self, form):
-        form.instance.organization = self.request.tenant
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.tenant
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ComplianceEvidenceDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = ComplianceEvidence
     template_name = 'compliance/complianceevidence_confirm_delete.html'  # TODO: create template
     success_url = reverse_lazy('compliance:evidence_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
     template_name = 'compliance/dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        org = self.request.tenant
+        org = self.request.organization
         
         # Basic counts
         context['framework_count'] = ComplianceFramework.objects.filter(organization=org).count()
@@ -494,6 +549,14 @@ class ComplianceReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Tem
         # Get policy document titles for filters (since PolicyDocument doesn't have a status field)
         policy_titles = PolicyDocument.objects.filter(organization=organization).values_list('title', flat=True).distinct()
         context['policy_statuses'] = sorted(list(policy_titles))
+        
+        # Get requirements for detailed reports filter
+        requirements = ComplianceRequirement.objects.filter(organization=organization).order_by('title')
+        context['requirements'] = requirements
+        
+        # Get obligations for detailed reports filter
+        obligations = ComplianceObligation.objects.filter(organization=organization).order_by('obligation_id')
+        context['obligations'] = obligations
         
         return context
 

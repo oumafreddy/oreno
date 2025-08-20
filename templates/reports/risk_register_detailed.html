@@ -35,9 +35,9 @@
 
 <h2 class="section-header">A. Risk Register Analysis</h2>
 
-<!-- Summary Statistics -->
+<!-- Summary Statistics & Filters -->
 <div class="report-card">
-  <h3>Risk Summary</h3>
+  <h3>Risk Overview & Filters</h3>
   <div class="stats-grid">
     <div class="stat-item">
       <div class="stat-number">{{ risks.count }}</div>
@@ -48,75 +48,164 @@
       <div class="stat-label">Active Risks</div>
     </div>
     <div class="stat-item">
-      <div class="stat-number">{{ risks|dictsort:"risk_score"|length }}</div>
+      <div class="stat-number">{{ risks|dictsort:"residual_risk_score"|length }}</div>
       <div class="stat-label">High Priority</div>
     </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ risks|dictsort:"category"|length }}</div>
+      <div class="stat-label">Categories</div>
+    </div>
   </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Category</th>
+      <td>{{ filters.category|default:"All Categories" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
+    </tr>
+    <tr>
+      <th>Risk Owner</th>
+      <td>{{ filters.owner|default:"All Owners" }}</td>
+      <th>Register</th>
+      <td>{{ filters.register|default:"All Registers" }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Risk Summary Table -->
+<div class="report-card">
+  <h3>Risk Summary by Category and Status</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-12">Risk Code</th>
+        <th class="col-20">Risk Name</th>
+        <th class="col-15">Category</th>
+        <th class="col-15">Owner</th>
+        <th class="col-12 text-center">Inherent Risk</th>
+        <th class="col-12 text-center">Residual Risk</th>
+        <th class="col-10 text-center">Status</th>
+        <th class="col-14">Response Strategy</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for risk in risks %}
+      <tr>
+        <td class="text-center"><strong>{{ risk.code }}</strong></td>
+        <td>{{ risk.risk_name }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ risk.get_category_display }}</span></td>
+        <td>{{ risk.risk_owner|default:"Not specified" }}</td>
+        <td class="text-center"><span class="risk-level risk-{% if risk.inherent_risk_score >= 15 %}high{% elif risk.inherent_risk_score >= 8 %}medium{% else %}low{% endif %}">{{ risk.inherent_risk_score }}</span></td>
+        <td class="text-center"><span class="risk-level risk-{% if risk.residual_risk_score >= 15 %}high{% elif risk.residual_risk_score >= 8 %}medium{% else %}low{% endif %}">{{ risk.residual_risk_score }}</span></td>
+        <td class="text-center"><span class="status-badge status-{{ risk.status|lower }}">{{ risk.get_status_display }}</span></td>
+        <td>{{ risk.get_risk_response_strategy_display }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <!-- Individual Risk Details -->
 {% for risk in risks %}
 <div class="report-card">
-  <h3>Risk {{ forloop.counter }}: {{ risk.title }}</h3>
-  <div class="priority-indicator">Risk Level: {{ risk.get_risk_impact_display }}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Risk {{ forloop.counter }}: {{ risk.risk_name }}</h3>
+    <span class="priority-indicator">Risk Level: {% if risk.residual_risk_score >= 15 %}High{% elif risk.residual_risk_score >= 8 %}Medium{% else %}Low{% endif %}</span>
+  </div>
   
   <table class="report-table">
     <tr>
-      <th>Risk Code</th>
-      <td>{{ risk.code|default:"Not specified" }}</td>
-      <th>Category</th>
-      <td>{{ risk.get_risk_category_display }}</td>
+      <th style="width:20%">Risk Code</th>
+      <td>{{ risk.code }}</td>
+      <th style="width:20%">Category</th>
+      <td>{{ risk.get_category_display }}</td>
     </tr>
     <tr>
-      <th>Impact</th>
-      <td><span class="risk-level risk-{{ risk.risk_impact|lower }}">{{ risk.get_risk_impact_display }}</span></td>
-      <th>Likelihood</th>
-      <td><span class="risk-level risk-{{ risk.risk_likelihood|lower }}">{{ risk.get_risk_likelihood_display }}</span></td>
+      <th>Inherent Impact</th>
+      <td><span class="risk-level risk-{% if risk.inherent_impact_score >= 4 %}high{% elif risk.inherent_impact_score >= 3 %}medium{% else %}low{% endif %}">{{ risk.inherent_impact_score }}/5</span></td>
+      <th>Inherent Likelihood</th>
+      <td><span class="risk-level risk-{% if risk.inherent_likelihood_score >= 4 %}high{% elif risk.inherent_likelihood_score >= 3 %}medium{% else %}low{% endif %}">{{ risk.inherent_likelihood_score }}/5</span></td>
     </tr>
     <tr>
-      <th>Risk Score</th>
-      <td>{{ risk.risk_score|default:"Not calculated" }}</td>
-      <th>Residual Risk</th>
-      <td>{{ risk.residual_risk_score|default:"Not calculated" }}</td>
+      <th>Residual Impact</th>
+      <td><span class="risk-level risk-{% if risk.residual_impact_score >= 4 %}high{% elif risk.residual_impact_score >= 3 %}medium{% else %}low{% endif %}">{{ risk.residual_impact_score }}/5</span></td>
+      <th>Residual Likelihood</th>
+      <td><span class="risk-level risk-{% if risk.residual_likelihood_score >= 4 %}high{% elif risk.residual_likelihood_score >= 3 %}medium{% else %}low{% endif %}">{{ risk.residual_likelihood_score }}/5</span></td>
     </tr>
     <tr>
-      <th>Owner</th>
-      <td>{% if risk.risk_owner %}{{ risk.risk_owner|default:"Not specified" }}{% else %}Not specified{% endif %}</td>
+      <th>Risk Owner</th>
+      <td>{{ risk.risk_owner|default:"Not specified" }}</td>
+      <th>Department</th>
+      <td>{{ risk.department|default:"Not specified" }}</td>
+    </tr>
+    <tr>
       <th>Status</th>
       <td><span class="status-badge status-{{ risk.status|lower }}">{{ risk.get_status_display }}</span></td>
+      <th>Response Strategy</th>
+      <td>{{ risk.get_risk_response_strategy_display }}</td>
+    </tr>
+    <tr>
+      <th>Date Identified</th>
+      <td>{{ risk.date_identified|date:"M j, Y" }}</td>
+      <th>Next Review</th>
+      <td>{{ risk.next_review_date|date:"M j, Y"|default:"Not scheduled" }}</td>
     </tr>
   </table>
 
-  <div class="field-label">Risk Description</div>
-  <div class="field-value">
-    {{ risk.description|safe }}
-  </div>
-
-  {% if risk.existing_controls %}
-  <div class="field-label">Existing Controls</div>
-  <div class="field-value">
-    {{ risk.existing_controls|safe }}
+  {% if risk.risk_description %}
+  <div class="field-group">
+    <div class="field-label">Risk Description</div>
+    <div class="field-value">{{ risk.risk_description|safe }}</div>
   </div>
   {% endif %}
 
-  {% if risk.mitigation_strategy %}
-  <div class="field-label">Mitigation Strategy</div>
-  <div class="field-value">
-    {{ risk.mitigation_strategy|safe }}
+  {% if risk.external_context or risk.internal_context %}
+  <div class="field-group">
+    <div class="field-label">Context Information</div>
+    <div class="field-value">
+      {% if risk.external_context %}
+        <strong>External Context:</strong><br>
+        {{ risk.external_context|safe }}<br><br>
+      {% endif %}
+      {% if risk.internal_context %}
+        <strong>Internal Context:</strong><br>
+        {{ risk.internal_context|safe }}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if risk.controls_description %}
+  <div class="field-group">
+    <div class="field-label">Controls Description</div>
+    <div class="field-value">{{ risk.controls_description|safe }}</div>
   </div>
   {% endif %}
 
   {% if risk.action_plan %}
-  <div class="field-label">Action Plan</div>
-  <div class="field-value">
-    {{ risk.action_plan|safe }}
+  <div class="field-group">
+    <div class="field-label">Action Plan</div>
+    <div class="field-value">{{ risk.action_plan|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if risk.kri_description %}
+  <div class="field-group">
+    <div class="field-label">Key Risk Indicators</div>
+    <div class="field-value">
+      {{ risk.kri_description|safe }}
+      {% if risk.kri_threshold %}
+        <br><strong>Threshold:</strong> {{ risk.kri_threshold }}%
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 
   {% if risk.additional_notes %}
-  <div class="field-label">Additional Notes</div>
-  <div class="field-value">
-    {{ risk.additional_notes|safe }}
+  <div class="field-group">
+    <div class="field-label">Additional Notes</div>
+    <div class="field-value">{{ risk.additional_notes|safe }}</div>
   </div>
   {% endif %}
 </div>
@@ -125,4 +214,52 @@
   <strong>No Risks Found:</strong> No risks match the current filter criteria.
 </div>
 {% endfor %}
+
+<!-- Risk Analysis & Insights -->
+<div class="report-card">
+  <h3>Risk Analysis & Insights</h3>
+  
+  <div class="field-label">Risk Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive risk register analysis provides insights into the organization's risk landscape, 
+    covering {{ risks.count }} identified risks across multiple categories and ownership structures.</p>
+    
+    <p><strong>Key Risk Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Risks Analyzed:</strong> {{ risks.count }} risks across all categories</li>
+      <li><strong>Risk Categories:</strong> {{ risks|dictsort:"category"|length }} different risk categories identified</li>
+      <li><strong>Risk Owners:</strong> {{ risks|dictsort:"risk_owner"|length }} different risk owners assigned</li>
+      <li><strong>High Priority Risks:</strong> Risks with residual risk scores ≥ 15 requiring immediate attention</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Management Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Risk Appetite Alignment:</strong> Monitor risks that exceed the organization's risk appetite threshold</li>
+      <li><strong>Control Effectiveness:</strong> Assess the effectiveness of existing controls in reducing inherent to residual risk</li>
+      <li><strong>Response Strategy Distribution:</strong> Analyze the distribution of risk response strategies (mitigate, accept, transfer, avoid)</li>
+      <li><strong>Review Cycle Management:</strong> Ensure timely reviews of risks based on next review dates</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if risks %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>High-Risk Focus:</strong> Prioritize attention on risks with residual risk scores ≥ 15, ensuring adequate controls and monitoring</li>
+      <li><strong>Control Enhancement:</strong> Review risks where inherent to residual risk reduction is minimal, indicating potential control gaps</li>
+      <li><strong>Owner Accountability:</strong> Ensure all risks have clearly assigned owners with appropriate authority and resources</li>
+      <li><strong>KRI Monitoring:</strong> Implement and monitor Key Risk Indicators for high-priority risks to enable early warning systems</li>
+      <li><strong>Review Cycle:</strong> Establish regular review cycles for all risks, with more frequent reviews for high-priority items</li>
+      <li><strong>Response Strategy Optimization:</strong> Evaluate the effectiveness of current response strategies and adjust as needed</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
 {% endblock %} 

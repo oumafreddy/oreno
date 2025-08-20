@@ -24,20 +24,8 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Ensure we have the correct organization from the request
-        org = self.request.user.organization
-        if not org:
-            # Try to get from request.organization (set by middleware)
-            org = getattr(self.request, 'organization', None)
-        
-        if not org:
-            # Try to get from request.tenant
-            org = getattr(self.request, 'tenant', None)
-        
-        if not org:
-            # Fallback to get organization from user's organization
-            from organizations.models import Organization
-            org = Organization.objects.first()
+        # Use organization from request
+        org = self.request.organization
         
         # Final safety check
         if not org:
@@ -170,7 +158,7 @@ class ContractTypeListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     context_object_name = 'contracttypes'
     paginate_by = 20
     def get_queryset(self):
-        qs = ContractType.objects.filter(organization=self.request.user.organization)
+        qs = super().get_queryset().filter(organization=self.request.organization)
         form = ContractTypeFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
@@ -187,7 +175,7 @@ class ContractTypeDetailView(OrganizationPermissionMixin, LoginRequiredMixin, De
     template_name = 'contracts/contracttype_detail.html'
     context_object_name = 'contracttype'
     def get_queryset(self):
-        return ContractType.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractTypeCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ContractType
@@ -195,11 +183,11 @@ class ContractTypeCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Cr
     template_name = 'contracts/contracttype_form.html'
     success_url = reverse_lazy('contracts:contracttype-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractTypeUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -208,11 +196,11 @@ class ContractTypeUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Up
     template_name = 'contracts/contracttype_form.html'
     success_url = reverse_lazy('contracts:contracttype-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractTypeDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -220,7 +208,7 @@ class ContractTypeDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, De
     template_name = 'contracts/contracttype_confirm_delete.html'
     success_url = reverse_lazy('contracts:contracttype-list')
     def get_queryset(self):
-        return ContractType.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # --- Party Views ---
 class PartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -229,7 +217,7 @@ class PartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     context_object_name = 'parties'
     paginate_by = 20
     def get_queryset(self):
-        qs = Party.objects.filter(organization=self.request.user.organization)
+        qs = super().get_queryset().filter(organization=self.request.organization)
         form = PartyFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
@@ -255,7 +243,7 @@ class PartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailVie
     template_name = 'contracts/party_detail.html'
     context_object_name = 'party'
     def get_queryset(self):
-        return Party.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class PartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = Party
@@ -263,13 +251,13 @@ class PartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateVie
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class PartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -278,12 +266,12 @@ class PartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateVie
     template_name = 'contracts/party_form.html'
     success_url = reverse_lazy('contracts:party-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class PartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -291,7 +279,7 @@ class PartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteVie
     template_name = 'contracts/party_confirm_delete.html'
     success_url = reverse_lazy('contracts:party-list')
     def get_queryset(self):
-        return Party.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # --- Contract Views ---
 class ContractListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -299,14 +287,14 @@ class ContractListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView
     template_name = 'contracts/contract_list.html'
     context_object_name = 'contracts'
     def get_queryset(self):
-        return Contract.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = Contract
     template_name = 'contracts/contract_detail.html'
     context_object_name = 'contract'
     def get_queryset(self):
-        return Contract.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = Contract
@@ -314,13 +302,13 @@ class ContractCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Create
     template_name = 'contracts/contract_form.html'
     success_url = reverse_lazy('contracts:contract-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -329,12 +317,12 @@ class ContractUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Update
     template_name = 'contracts/contract_form.html'
     success_url = reverse_lazy('contracts:contract-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -342,7 +330,7 @@ class ContractDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, Delete
     template_name = 'contracts/contract_confirm_delete.html'
     success_url = reverse_lazy('contracts:contract-list')
     def get_queryset(self):
-        return Contract.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # --- ContractParty Views ---
 class ContractPartyListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -350,14 +338,14 @@ class ContractPartyListView(OrganizationPermissionMixin, LoginRequiredMixin, Lis
     template_name = 'contracts/contractparty_list.html'
     context_object_name = 'contractparties'
     def get_queryset(self):
-        return ContractParty.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractPartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ContractParty
     template_name = 'contracts/contractparty_detail.html'
     context_object_name = 'contractparty'
     def get_queryset(self):
-        return ContractParty.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractPartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ContractParty
@@ -365,11 +353,11 @@ class ContractPartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, C
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractPartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -378,11 +366,11 @@ class ContractPartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, U
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractPartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -390,7 +378,7 @@ class ContractPartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, D
     template_name = 'contracts/contractparty_confirm_delete.html'
     success_url = reverse_lazy('contracts:contractparty-list')
     def get_queryset(self):
-        return ContractParty.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 # --- ContractMilestone Views ---
 class ContractMilestoneListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -421,7 +409,7 @@ class ContractMilestoneDetailView(OrganizationPermissionMixin, LoginRequiredMixi
     template_name = 'contracts/contractmilestone_detail.html'
     context_object_name = 'contractmilestone'
     def get_queryset(self):
-        return ContractMilestone.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class ContractMilestoneCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ContractMilestone
@@ -429,13 +417,13 @@ class ContractMilestoneCreateView(OrganizationPermissionMixin, LoginRequiredMixi
     template_name = 'contracts/contractmilestone_form.html'
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractMilestoneUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
@@ -444,12 +432,12 @@ class ContractMilestoneUpdateView(OrganizationPermissionMixin, LoginRequiredMixi
     template_name = 'contracts/contractmilestone_form.html'
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
         return super().form_valid(form)
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class ContractMilestoneDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
@@ -457,14 +445,12 @@ class ContractMilestoneDeleteView(OrganizationPermissionMixin, LoginRequiredMixi
     template_name = 'contracts/contractmilestone_confirm_delete.html'
     success_url = reverse_lazy('contracts:contractmilestone-list')
     def get_queryset(self):
-        return ContractMilestone.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 @login_required
 def api_status_data(request):
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)
@@ -478,9 +464,7 @@ def api_status_data(request):
 @login_required
 def api_type_data(request):
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)
@@ -494,9 +478,7 @@ def api_type_data(request):
 @login_required
 def api_party_data(request):
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)
@@ -511,9 +493,7 @@ def api_party_data(request):
 def api_milestone_type_data(request):
     """API endpoint for milestone type data used in dashboards."""
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)
@@ -531,9 +511,7 @@ def api_milestone_type_data(request):
 def api_expiry_data(request):
     """API endpoint for contract expiry data used in dashboards."""
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)
@@ -560,9 +538,7 @@ def api_expiry_data(request):
 def api_milestone_status_data(request):
     """API endpoint for milestone status data used in dashboards."""
     # Ensure we have the correct organization
-    org = request.user.organization
-    if not org:
-        org = getattr(request, 'organization', None)
+    org = request.organization
     
     if not org:
         return JsonResponse({'error': 'No organization found'}, status=400)

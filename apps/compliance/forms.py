@@ -42,8 +42,28 @@ class ComplianceFrameworkForm(OrganizationScopedModelForm):
         model = ComplianceFramework
         fields = ['name', 'description', 'version', 'regulatory_body']
         widgets = {
-            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'description': CKEditor5Widget(
+                config_name='extends', 
+                attrs={
+                    'class': 'django_ckeditor_5',
+                }
+            ),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure the description field is properly configured
+        if 'description' in self.fields:
+            self.fields['description'].widget.config_name = 'extends'
+            self.fields['description'].required = False
+    
+    def clean_description(self):
+        """Ensure description field is properly handled"""
+        description = self.cleaned_data.get('description')
+        # If description is empty string, convert to None to match model field
+        if description == '' or description is None:
+            return None
+        return description
 
 class PolicyDocumentForm(OrganizationScopedModelForm):
     class Meta:

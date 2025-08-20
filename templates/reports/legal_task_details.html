@@ -1,0 +1,321 @@
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Task Details Report</h1>
+            <p class="report-subtitle">Comprehensive Analysis of Legal Task Information</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.task_title %}
+                <span><strong>Task:</strong> {{ filters.task_title }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_tasks }}</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ pending_tasks }}</div>
+                <div class="stat-label">Pending Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ in_progress_tasks }}</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ completed_tasks }}</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ overdue_tasks }}</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Information -->
+    {% if task %}
+    <div class="section">
+        <h2 class="section-header">Task Information</h2>
+        <div class="info-grid">
+            <div class="field-group">
+                <div class="field-label">Task Title</div>
+                <div class="field-value">{{ task.title }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Status</div>
+                <div class="field-value">
+                    <span class="status-badge status-{{ task.status }}">
+                        {{ task.status|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Priority</div>
+                <div class="field-value">
+                    <span class="priority-badge priority-{{ task.priority }}">
+                        {{ task.priority|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Description</div>
+                <div class="field-value">{{ task.description|default:"No description provided" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Assigned To</div>
+                <div class="field-value">{{ task.assigned_to.get_full_name|default:task.assigned_to.email|default:"Not assigned" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Assigned By</div>
+                <div class="field-value">{{ task.assigned_by.get_full_name|default:task.assigned_by.email|default:"Not specified" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Due Date</div>
+                <div class="field-value">{{ task.due_date|date:"M j, Y"|default:"Not specified" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Created Date</div>
+                <div class="field-value">{{ task.created_at|date:"M j, Y" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Completed Date</div>
+                <div class="field-value">{{ task.completed_at|date:"M j, Y"|default:"Not completed" }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Associated Case -->
+    {% if task and task.case %}
+    <div class="section">
+        <h2 class="section-header">Associated Case</h2>
+        <div class="info-grid">
+            <div class="field-group">
+                <div class="field-label">Case Title</div>
+                <div class="field-value">{{ task.case.title }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Case Type</div>
+                <div class="field-value">
+                    <span class="case-type-badge case-{{ task.case.case_type }}">
+                        {{ task.case.case_type|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Case Status</div>
+                <div class="field-value">
+                    <span class="status-badge status-{{ task.case.status }}">
+                        {{ task.case.status|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Case Priority</div>
+                <div class="field-value">
+                    <span class="priority-badge priority-{{ task.case.priority }}">
+                        {{ task.case.priority|title }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Task Timeline -->
+    <div class="section">
+        <h2 class="section-header">Task Timeline</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Date</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Task Created</td>
+                        <td>{{ task.created_at|date:"M j, Y" }}</td>
+                        <td>Task was created and assigned</td>
+                    </tr>
+                    {% if task.due_date %}
+                    <tr>
+                        <td>Due Date</td>
+                        <td>{{ task.due_date|date:"M j, Y" }}</td>
+                        <td>Original due date for task completion</td>
+                    </tr>
+                    {% endif %}
+                    {% if task.completed_at %}
+                    <tr>
+                        <td>Task Completed</td>
+                        <td>{{ task.completed_at|date:"M j, Y" }}</td>
+                        <td>Task was marked as completed</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Related Tasks -->
+    {% if related_tasks %}
+    <div class="section">
+        <h2 class="section-header">Related Tasks</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Task Title</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Created Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for related_task in related_tasks %}
+                    <tr>
+                        <td>{{ related_task.title }}</td>
+                        <td>
+                            <span class="status-badge status-{{ related_task.status }}">
+                                {{ related_task.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="priority-badge priority-{{ related_task.priority }}">
+                                {{ related_task.priority|title }}
+                            </span>
+                        </td>
+                        <td>{{ related_task.assigned_to.get_full_name|default:related_task.assigned_to.email|default:"Not assigned" }}</td>
+                        <td>{{ related_task.due_date|date:"M j, Y"|default:"Not specified" }}</td>
+                        <td>{{ related_task.created_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Task Analysis -->
+    <div class="section">
+        <h2 class="section-header">Task Analysis & Insights</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Task Overview</h4>
+                <p>
+                    {% if task %}
+                    <strong>Task Status:</strong> {{ task.status|title }} task with {{ task.priority|title }} priority.
+                    {% if task.due_date %}
+                    <strong>Timeline:</strong> Due on {{ task.due_date|date:"M j, Y" }}, 
+                    {% if task.status == 'pending' %}
+                    currently pending assignment or initiation.
+                    {% elif task.status == 'in_progress' %}
+                    currently being worked on.
+                    {% elif task.status == 'completed' %}
+                    task has been completed.
+                    {% endif %}
+                    {% endif %}
+                    {% else %}
+                    <strong>Task Selection:</strong> Please select a specific task to view detailed analysis.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Assignment Analysis</h4>
+                <p>
+                    {% if task %}
+                    <strong>Assignment:</strong> 
+                    {% if task.assigned_to %}
+                    Task assigned to {{ task.assigned_to.get_full_name|default:task.assigned_to.email }}.
+                    {% else %}
+                    Task not yet assigned to any team member.
+                    {% endif %}
+                    {% if task.assigned_by %}
+                    <strong>Assigned By:</strong> {{ task.assigned_by.get_full_name|default:task.assigned_by.email }}.
+                    {% endif %}
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Case Context</h4>
+                <p>
+                    {% if task and task.case %}
+                    <strong>Case Context:</strong> This task is associated with case "{{ task.case.title }}" 
+                    ({{ task.case.case_type|title }} case, {{ task.case.status|title }} status).
+                    {% else %}
+                    <strong>Case Context:</strong> This task is not associated with any specific case.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Workload Management</h4>
+                <p>
+                    {% if total_tasks > 0 %}
+                    <strong>Overall Workload:</strong> {{ total_tasks }} total tasks in the system.
+                    <strong>Status Distribution:</strong> {{ pending_tasks }} pending, {{ in_progress_tasks }} in progress, 
+                    {{ completed_tasks }} completed, {{ overdue_tasks }} overdue.
+                    {% if overdue_tasks > 0 %}
+                    <strong>Attention Required:</strong> {{ overdue_tasks }} overdue tasks need immediate attention.
+                    {% endif %}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        {% if task %}
+        <p><strong>Task Analyzed:</strong> {{ task.title }}</p>
+        {% else %}
+        <p><strong>Total Tasks Available:</strong> {{ total_tasks }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .case-type-badge, .status-badge, .priority-badge {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+    .case-civil { background: #dbeafe; color: #1e40af; }
+    .case-criminal { background: #fecaca; color: #7f1d1d; }
+    .case-family { background: #fef3c7; color: #92400e; }
+    .case-corporate { background: #d1fae5; color: #065f46; }
+    .case-other { background: #e5e7eb; color: #374151; }
+    
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-in_progress { background: #dbeafe; color: #1e40af; }
+    .status-completed { background: #d1fae5; color: #065f46; }
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-closed { background: #fecaca; color: #7f1d1d; }
+    
+    .priority-high { background: #fecaca; color: #7f1d1d; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-low { background: #d1fae5; color: #065f46; }
+</style>
+{% endblock %}

@@ -61,7 +61,7 @@ class DocumentRequestListView(OrganizationPermissionMixin, ListView):
     context_object_name = 'document_requests'
     paginate_by = 20
     def get_queryset(self):
-        qs = DocumentRequest.objects.filter(organization=self.request.user.organization)
+        qs = super().get_queryset().filter(organization=self.request.organization)
         form = DocumentRequestFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
@@ -86,7 +86,7 @@ class DocumentRequestDetailView(OrganizationPermissionMixin, DetailView):
     template_name = 'document_management/documentrequest_detail.html'
     context_object_name = 'document_request'
     def get_queryset(self):
-        return DocumentRequest.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentRequestCreateView(OrganizationPermissionMixin, CreateView):
     model = DocumentRequest
@@ -95,10 +95,10 @@ class DocumentRequestCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('document_management:documentrequest-list')
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.request_owner = self.request.user
         response = super().form_valid(form)
         self.object.send_email_to_requestee()
@@ -111,31 +111,31 @@ class DocumentRequestUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('document_management:documentrequest-list')
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     def get_queryset(self):
-        return DocumentRequest.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentRequestDeleteView(OrganizationPermissionMixin, DeleteView):
     model = DocumentRequest
     template_name = 'document_management/documentrequest_confirm_delete.html'
     success_url = reverse_lazy('document_management:documentrequest-list')
     def get_queryset(self):
-        return DocumentRequest.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentListView(OrganizationPermissionMixin, ListView):
     model = Document
     template_name = 'document_management/document_list.html'
     context_object_name = 'documents'
     def get_queryset(self):
-        return Document.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentDetailView(OrganizationPermissionMixin, DetailView):
     model = Document
     template_name = 'document_management/document_detail.html'
     context_object_name = 'document'
     def get_queryset(self):
-        return Document.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentCreateView(OrganizationPermissionMixin, CreateView):
     model = Document
@@ -144,10 +144,10 @@ class DocumentCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('document_management:document-list')
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         form.instance.uploaded_by = self.request.user
         return super().form_valid(form)
 
@@ -158,17 +158,17 @@ class DocumentUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('document_management:document-list')
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
     def get_queryset(self):
-        return Document.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentDeleteView(OrganizationPermissionMixin, DeleteView):
     model = Document
     template_name = 'document_management/document_confirm_delete.html'
     success_url = reverse_lazy('document_management:document-list')
     def get_queryset(self):
-        return Document.objects.filter(organization=self.request.user.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
     template_name = 'document_management/dashboard.html'
@@ -179,7 +179,7 @@ class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        org = self.request.user.organization
+        org = self.request.organization
         
         # Basic counts
         context['request_count'] = DocumentRequest.objects.filter(organization=org).count()
@@ -215,17 +215,17 @@ class DocumentRequestViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelView
     serializer_class = DocumentRequestSerializer
     permission_classes = [IsOrgManagerOrReadOnly]
     def perform_create(self, serializer):
-        serializer.save(organization=self.request.tenant, request_owner=self.request.user)
+        serializer.save(organization=self.request.organization, request_owner=self.request.user)
 
 class DocumentViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsOrgManagerOrReadOnly]
     def perform_create(self, serializer):
-        serializer.save(organization=self.request.tenant, uploaded_by=self.request.user)
+        serializer.save(organization=self.request.organization, uploaded_by=self.request.user)
 
 @login_required
 def api_status_data(request):
-    org = request.user.organization
+    org = request.organization
     from .models import DocumentRequest
     from django.db.models import Count
     status_qs = DocumentRequest.objects.filter(organization=org).values('status').annotate(count=Count('id'))
@@ -234,7 +234,7 @@ def api_status_data(request):
 
 @login_required
 def api_uploads_data(request):
-    org = request.user.organization
+    org = request.organization
     from .models import Document
     from django.db.models import Count
     from django.utils import timezone

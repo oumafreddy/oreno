@@ -1,0 +1,299 @@
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Task Register Report</h1>
+            <p class="report-subtitle">Comprehensive Overview of Legal Task Management</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.status or filters.assigned_to or filters.due_date %}
+                <span><strong>Filters Applied:</strong> 
+                    {% if filters.status %}Status: {{ filters.status }}{% endif %}
+                    {% if filters.assigned_to %}{% if filters.status %} | {% endif %}Assigned To: {{ filters.assigned_to }}{% endif %}
+                    {% if filters.due_date %}{% if filters.status or filters.assigned_to %} | {% endif %}Due Date: {{ filters.due_date }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_tasks }}</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ pending_tasks }}</div>
+                <div class="stat-label">Pending Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ in_progress_tasks }}</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ completed_tasks }}</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ overdue_tasks }}</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Status Distribution -->
+    <div class="section">
+        <h2 class="section-header">Task Status Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in status_distribution %}
+                    <tr>
+                        <td>
+                            <span class="status-badge status-{{ item.status }}">
+                                {{ item.status|title }}
+                            </span>
+                        </td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_tasks 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No status data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Attorney Workload Distribution -->
+    <div class="section">
+        <h2 class="section-header">Attorney Workload Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Attorney</th>
+                        <th>Task Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in attorney_distribution %}
+                    <tr>
+                        <td>{{ item.assigned_to__email|default:"Unassigned" }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_tasks 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No attorney assignment data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Overdue Tasks -->
+    <div class="section">
+        <h2 class="section-header">Overdue Tasks</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Task Title</th>
+                        <th>Case</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Days Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in overdue_tasks_list %}
+                    <tr>
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.case.title }}</td>
+                        <td>{{ task.assigned_to.get_full_name|default:"Unassigned" }}</td>
+                        <td>{{ task.due_date|date:"M j, Y" }}</td>
+                        <td>
+                            <span class="overdue-badge">
+                                {{ task.due_date|timesince }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="no-data">No overdue tasks</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Upcoming Tasks -->
+    <div class="section">
+        <h2 class="section-header">Upcoming Tasks (Next 10)</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Task Title</th>
+                        <th>Case</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in upcoming_tasks %}
+                    <tr>
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.case.title }}</td>
+                        <td>{{ task.assigned_to.get_full_name|default:"Unassigned" }}</td>
+                        <td>{{ task.due_date|date:"M j, Y" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ task.status }}">
+                                {{ task.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="no-data">No upcoming tasks</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Tasks -->
+    <div class="section">
+        <h2 class="section-header">All Tasks</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Task Title</th>
+                        <th>Case</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Completion Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.case.title }}</td>
+                        <td>{{ task.assigned_to.get_full_name|default:"Unassigned" }}</td>
+                        <td>{{ task.due_date|date:"M j, Y" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ task.status }}">
+                                {{ task.status|title }}
+                            </span>
+                        </td>
+                        <td>{{ task.completion_date|date:"M j, Y"|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="no-data">No tasks found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="section">
+        <h2 class="section-header">Key Insights & Recommendations</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Task Completion Rate</h4>
+                <p>
+                    {% if completed_tasks > 0 %}
+                    <strong>Current Performance:</strong> {{ completed_tasks }} out of {{ total_tasks }} tasks completed 
+                    ({% widthratio completed_tasks total_tasks 100 %}% completion rate).
+                    {% else %}
+                    <strong>No Completed Tasks:</strong> All tasks are still in progress or pending.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Overdue Task Management</h4>
+                <p>
+                    {% if overdue_tasks > 0 %}
+                    <strong>Action Required:</strong> {{ overdue_tasks }} task(s) are overdue. 
+                    Immediate attention needed to prevent case delays and potential legal consequences.
+                    {% else %}
+                    <strong>Excellent:</strong> No overdue tasks. All tasks are progressing within expected timelines.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Workload Distribution</h4>
+                <p>
+                    {% for item in attorney_distribution|slice:":1" %}
+                    <strong>Primary Attorney:</strong> {{ item.assigned_to__email|default:"Unassigned" }} has the highest workload 
+                    with {{ item.count }} tasks ({% widthratio item.count total_tasks 100 %}% of total tasks).
+                    {% empty %}
+                    <strong>Workload Analysis:</strong> Task assignments should be reviewed for balanced distribution.
+                    {% endfor %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Task Status Analysis</h4>
+                <p>
+                    {% if pending_tasks > in_progress_tasks %}
+                    <strong>Bottleneck Alert:</strong> More tasks are pending ({{ pending_tasks }}) than in progress ({{ in_progress_tasks }}). 
+                    Consider resource allocation and task prioritization.
+                    {% else %}
+                    <strong>Good Flow:</strong> Task progression is healthy with {{ in_progress_tasks }} tasks currently being worked on.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        <p><strong>Total Tasks Analyzed:</strong> {{ total_tasks }}</p>
+    </div>
+</div>
+
+<style>
+    .overdue-badge {
+        background: #fecaca;
+        color: #7f1d1d;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

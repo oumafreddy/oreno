@@ -1,0 +1,266 @@
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Document Register Report</h1>
+            <p class="report-subtitle">Comprehensive Overview of Legal Document Management</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.document_title or filters.is_confidential %}
+                <span><strong>Filters Applied:</strong> 
+                    {% if filters.document_title %}Document Title: {{ filters.document_title }}{% endif %}
+                    {% if filters.is_confidential %}{% if filters.document_title %} | {% endif %}Confidentiality: {{ filters.is_confidential }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_documents }}</div>
+                <div class="stat-label">Total Documents</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ confidential_documents }}</div>
+                <div class="stat-label">Confidential</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ non_confidential_documents }}</div>
+                <div class="stat-label">Non-Confidential</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ recent_documents|length }}</div>
+                <div class="stat-label">Recent Documents</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Distribution by Case -->
+    <div class="section">
+        <h2 class="section-header">Document Distribution by Case</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Case</th>
+                        <th>Document Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in case_distribution %}
+                    <tr>
+                        <td>{{ item.case__title|default:"Unspecified" }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_documents 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No case distribution data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Version Analysis -->
+    <div class="section">
+        <h2 class="section-header">Document Version Analysis</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Version</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in version_distribution %}
+                    <tr>
+                        <td>{{ item.version }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_documents 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No version data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Documents -->
+    <div class="section">
+        <h2 class="section-header">Recent Documents</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Document Title</th>
+                        <th>Case</th>
+                        <th>Version</th>
+                        <th>Confidentiality</th>
+                        <th>Created Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in recent_documents %}
+                    <tr>
+                        <td>{{ document.title }}</td>
+                        <td>{{ document.case.title }}</td>
+                        <td>{{ document.version }}</td>
+                        <td>
+                            {% if document.is_confidential %}
+                            <span class="confidential-badge">Confidential</span>
+                            {% else %}
+                            <span class="public-badge">Public</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ document.created_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="no-data">No recent documents</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Documents -->
+    <div class="section">
+        <h2 class="section-header">All Documents</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Document Title</th>
+                        <th>Case</th>
+                        <th>Description</th>
+                        <th>Version</th>
+                        <th>Confidentiality</th>
+                        <th>Created Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr>
+                        <td>{{ document.title }}</td>
+                        <td>{{ document.case.title }}</td>
+                        <td>{{ document.description|default:"-"|truncatechars:50 }}</td>
+                        <td>{{ document.version }}</td>
+                        <td>
+                            {% if document.is_confidential %}
+                            <span class="confidential-badge">Confidential</span>
+                            {% else %}
+                            <span class="public-badge">Public</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ document.created_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="no-data">No documents found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="section">
+        <h2 class="section-header">Key Insights & Recommendations</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Document Management Overview</h4>
+                <p>
+                    <strong>Total Documents:</strong> {{ total_documents }} documents managed across all cases.
+                    {% if confidential_documents > 0 %}
+                    <strong>Confidentiality:</strong> {{ confidential_documents }} confidential documents 
+                    ({% widthratio confidential_documents total_documents 100 %}% of total) require special handling.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Document Distribution</h4>
+                <p>
+                    {% for item in case_distribution|slice:":1" %}
+                    <strong>Primary Case:</strong> {{ item.case__title }} has the most documents 
+                    ({{ item.count }} documents, {% widthratio item.count total_documents 100 %}% of total).
+                    {% empty %}
+                    <strong>Distribution:</strong> Document distribution across cases should be reviewed for balance.
+                    {% endfor %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Version Control</h4>
+                <p>
+                    {% for item in version_distribution %}
+                    {% if item.version == "1.0" %}
+                    <strong>Version Analysis:</strong> {{ item.count }} documents are at version 1.0 
+                    ({% widthratio item.count total_documents 100 %}% of total), indicating initial versions.
+                    {% endif %}
+                    {% empty %}
+                    <strong>Version Management:</strong> Version control should be consistently maintained.
+                    {% endfor %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Document Security</h4>
+                <p>
+                    {% if confidential_documents > 0 %}
+                    <strong>Security Focus:</strong> {{ confidential_documents }} confidential documents require 
+                    enhanced security measures and access controls.
+                    {% else %}
+                    <strong>Security Status:</strong> All documents are currently marked as non-confidential.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        <p><strong>Total Documents Analyzed:</strong> {{ total_documents }}</p>
+    </div>
+</div>
+
+<style>
+    .confidential-badge {
+        background: #fecaca;
+        color: #7f1d1d;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+    .public-badge {
+        background: #d1fae5;
+        color: #065f46;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

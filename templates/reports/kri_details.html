@@ -1,22 +1,224 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<h2>KRI Details</h2>
-<table class="table table-sm">
-  <tr>
-    <th>Risk</th><th>Name</th><th>Value</th><th>Unit</th><th>Status</th><th>Timestamp</th><th>Direction</th><th>Warning Threshold</th><th>Critical Threshold</th>
-  </tr>
-  {% for k in kris %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.risk %}&risk={{ request.GET.risk }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.direction %}&direction={{ request.GET.direction }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Key Risk Indicators Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Key Risk Indicators Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>KRI Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ kris.count }}</div>
+      <div class="stat-label">Total KRIs</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ kris|dictsort:"status"|length }}</div>
+      <div class="stat-label">Active KRIs</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ kris|dictsort:"risk"|length }}</div>
+      <div class="stat-label">Monitored Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ kris|dictsort:"direction"|length }}</div>
+      <div class="stat-label">Directions</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
     <tr>
-      <td>{{ k.risk.risk_name }}</td>
-      <td>{{ k.name }}</td>
-      <td>{{ k.value }}</td>
-      <td>{{ k.unit }}</td>
-      <td>{{ k.get_status|title }}</td>
-      <td>{{ k.timestamp }}</td>
-      <td>{{ k.get_direction_display }}</td>
-      <td>{{ k.threshold_warning }}</td>
-      <td>{{ k.threshold_critical }}</td>
+      <th style="width:25%">Risk</th>
+      <td>{{ filters.risk|default:"All Risks" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
     </tr>
-  {% endfor %}
-</table>
+    <tr>
+      <th>Direction</th>
+      <td>{{ filters.direction|default:"All Directions" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- KRI Summary Table -->
+<div class="report-card">
+  <h3>KRI Summary by Risk and Status</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Risk</th>
+        <th class="col-15">KRI Name</th>
+        <th class="col-10 text-center">Value</th>
+        <th class="col-8 text-center">Unit</th>
+        <th class="col-10 text-center">Status</th>
+        <th class="col-15">Direction</th>
+        <th class="col-12 text-center">Warning Threshold</th>
+        <th class="col-12 text-center">Critical Threshold</th>
+        <th class="col-13 text-center">Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for kri in kris %}
+      <tr>
+        <td><strong>{{ kri.risk.risk_name }}</strong></td>
+        <td>{{ kri.name }}</td>
+        <td class="text-center"><span class="risk-level risk-{% if kri.get_status == 'critical' %}high{% elif kri.get_status == 'warning' %}medium{% else %}low{% endif %}">{{ kri.value }}</span></td>
+        <td class="text-center">{{ kri.unit|default:"N/A" }}</td>
+        <td class="text-center"><span class="status-badge status-{% if kri.get_status == 'critical' %}pending{% elif kri.get_status == 'warning' %}active{% else %}draft{% endif %}">{{ kri.get_status|title }}</span></td>
+        <td>{{ kri.get_direction_display }}</td>
+        <td class="text-center">{{ kri.threshold_warning }}</td>
+        <td class="text-center">{{ kri.threshold_critical }}</td>
+        <td class="text-center">{{ kri.timestamp|date:"M j, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual KRI Details -->
+{% for kri in kris %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">KRI {{ forloop.counter }}: {{ kri.name }}</h3>
+    <span class="priority-indicator">Status: {{ kri.get_status|title }}</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Associated Risk</th>
+      <td>{{ kri.risk.risk_name }}</td>
+      <th style="width:20%">KRI Code</th>
+      <td>{{ kri.risk.code }}-KRI</td>
+    </tr>
+    <tr>
+      <th>Current Value</th>
+      <td><span class="risk-level risk-{% if kri.get_status == 'critical' %}high{% elif kri.get_status == 'warning' %}medium{% else %}low{% endif %}">{{ kri.value }} {{ kri.unit|default:"" }}</span></td>
+      <th>Direction</th>
+      <td>{{ kri.get_direction_display }}</td>
+    </tr>
+    <tr>
+      <th>Warning Threshold</th>
+      <td>{{ kri.threshold_warning }} {{ kri.unit|default:"" }}</td>
+      <th>Critical Threshold</th>
+      <td>{{ kri.threshold_critical }} {{ kri.unit|default:"" }}</td>
+    </tr>
+    <tr>
+      <th>Data Source</th>
+      <td>{{ kri.data_source|default:"Not specified" }}</td>
+      <th>Collection Frequency</th>
+      <td>{{ kri.collection_frequency|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Last Updated</th>
+      <td>{{ kri.timestamp|date:"F j, Y H:i" }}</td>
+      <th>Risk Owner</th>
+      <td>{{ kri.risk.risk_owner|default:"Not specified" }}</td>
+    </tr>
+  </table>
+
+  {% if kri.description %}
+  <div class="field-group">
+    <div class="field-label">KRI Description</div>
+    <div class="field-value">{{ kri.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if kri.get_status == 'critical' %}
+  <div class="alert alert-danger">
+    <strong>⚠️ CRITICAL ALERT:</strong> This KRI has exceeded the critical threshold and requires immediate attention.
+    <br><strong>Current Value:</strong> {{ kri.value }} {{ kri.unit|default:"" }} (Threshold: {{ kri.threshold_critical }} {{ kri.unit|default:"" }})
+  </div>
+  {% elif kri.get_status == 'warning' %}
+  <div class="alert alert-warning">
+    <strong>⚠️ WARNING:</strong> This KRI has exceeded the warning threshold and should be monitored closely.
+    <br><strong>Current Value:</strong> {{ kri.value }} {{ kri.unit|default:"" }} (Threshold: {{ kri.threshold_warning }} {{ kri.unit|default:"" }})
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No KRIs Found:</strong> No Key Risk Indicators match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- KRI Analysis & Insights -->
+<div class="report-card">
+  <h3>KRI Analysis & Insights</h3>
+  
+  <div class="field-label">Monitoring Analysis</div>
+  <div class="field-value">
+    <p>This Key Risk Indicators analysis provides insights into the organization's risk monitoring capabilities, 
+    covering {{ kris.count }} KRIs across multiple risk categories.</p>
+    
+    <p><strong>Key Monitoring Metrics:</strong></p>
+    <ul>
+      <li><strong>Total KRIs:</strong> {{ kris.count }} indicators being monitored</li>
+      <li><strong>Monitored Risks:</strong> {{ kris|dictsort:"risk"|length }} different risks with KRI monitoring</li>
+      <li><strong>Alert Status:</strong> KRIs with warning or critical status requiring attention</li>
+      <li><strong>Data Quality:</strong> KRIs with complete data sources and collection frequencies</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Monitoring Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Threshold Management:</strong> Monitor KRIs approaching or exceeding thresholds to enable proactive risk management</li>
+      <li><strong>Data Quality:</strong> Ensure all KRIs have proper data sources and collection frequencies</li>
+      <li><strong>Alert Response:</strong> Establish clear response procedures for KRI threshold breaches</li>
+      <li><strong>Trend Analysis:</strong> Monitor KRI trends over time to identify emerging risk patterns</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if kris %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Critical KRI Management:</strong> Immediately address KRIs in critical status with appropriate risk mitigation actions</li>
+      <li><strong>Warning KRI Monitoring:</strong> Closely monitor KRIs in warning status to prevent escalation to critical levels</li>
+      <li><strong>Threshold Optimization:</strong> Review and adjust KRI thresholds based on historical performance and risk appetite</li>
+      <li><strong>Data Quality Enhancement:</strong> Ensure all KRIs have complete data sources and appropriate collection frequencies</li>
+      <li><strong>Response Procedures:</strong> Establish clear escalation and response procedures for KRI threshold breaches</li>
+      <li><strong>Trend Analysis:</strong> Implement regular trend analysis to identify emerging risk patterns and adjust monitoring accordingly</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
 {% endblock %} 

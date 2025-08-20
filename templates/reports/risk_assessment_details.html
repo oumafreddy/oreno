@@ -1,28 +1,268 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-}
-</style>
-<h2>Risk Assessment Details</h2>
-<table class="table table-sm">
-  <tr>
-    <th>Risk</th><th>Date</th><th>Assessor</th><th>Type</th><th>Impact</th><th>Likelihood</th><th>Score</th><th>Notes</th>
-  </tr>
-  {% for a in assessments %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.risk %}&risk={{ request.GET.risk }}{% endif %}{% if request.GET.assessment_type %}&assessment_type={{ request.GET.assessment_type }}{% endif %}{% if request.GET.assessor %}&assessor={{ request.GET.assessor }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Risk Assessment Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Risk Assessment Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Assessment Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ assessments.count }}</div>
+      <div class="stat-label">Total Assessments</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ assessments|dictsort:"risk"|length }}</div>
+      <div class="stat-label">Assessed Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ assessments|dictsort:"assessor"|length }}</div>
+      <div class="stat-label">Assessors</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ assessments|dictsort:"assessment_type"|length }}</div>
+      <div class="stat-label">Assessment Types</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
     <tr>
-      <td>{{ a.risk.risk_name }}</td>
-      <td>{{ a.assessment_date }}</td>
-      <td>{{ a.assessor }}</td>
-      <td>{{ a.get_assessment_type_display }}</td>
-      <td>{{ a.impact_score }}</td>
-      <td>{{ a.likelihood_score }}</td>
-      <td>{{ a.risk_score }}</td>
-      <td>{{ a.notes|striptags|truncatechars:50 }}</td>
+      <th style="width:25%">Risk</th>
+      <td>{{ filters.risk|default:"All Risks" }}</td>
+      <th style="width:25%">Assessment Type</th>
+      <td>{{ filters.assessment_type|default:"All Types" }}</td>
     </tr>
-  {% endfor %}
-</table>
+    <tr>
+      <th>Assessor</th>
+      <td>{{ filters.assessor|default:"All Assessors" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Assessment Summary Table -->
+<div class="report-card">
+  <h3>Risk Assessment Summary</h3>
+  <style>
+    /* Compact styling specifically for Risk Assessment Summary table */
+    .risk-assessment-summary-table {
+      font-size: 7pt !important;
+      margin: 0.3cm 0 !important;
+    }
+    .risk-assessment-summary-table th,
+    .risk-assessment-summary-table td {
+      padding: 4px 3px !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
+    }
+    .risk-assessment-summary-table th {
+      font-size: 7pt !important;
+      font-weight: 600 !important;
+    }
+    .risk-assessment-summary-table .status-badge,
+    .risk-assessment-summary-table .risk-level {
+      font-size: 6pt !important;
+      padding: 2px 4px !important;
+      min-width: 50px !important;
+    }
+    .risk-assessment-summary-table strong {
+      font-size: 7pt !important;
+    }
+    /* Specific column widths for better fit */
+    .risk-assessment-summary-table .col-risk { width: 18%; }
+    .risk-assessment-summary-table .col-date { width: 12%; }
+    .risk-assessment-summary-table .col-assessor { width: 12%; }
+    .risk-assessment-summary-table .col-type { width: 12%; }
+    .risk-assessment-summary-table .col-impact { width: 10%; }
+    .risk-assessment-summary-table .col-likelihood { width: 10%; }
+    .risk-assessment-summary-table .col-score { width: 8%; }
+    .risk-assessment-summary-table .col-level { width: 8%; }
+    .risk-assessment-summary-table .col-status { width: 10%; }
+  </style>
+  <table class="report-table risk-assessment-summary-table">
+    <thead>
+      <tr>
+        <th class="col-risk">Risk</th>
+        <th class="col-date text-center">Assessment Date</th>
+        <th class="col-assessor">Assessor</th>
+        <th class="col-type text-center">Type</th>
+        <th class="col-impact text-center">Impact</th>
+        <th class="col-likelihood text-center">Likelihood</th>
+        <th class="col-score text-center">Score</th>
+        <th class="col-level text-center">Level</th>
+        <th class="col-status text-center">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for assessment in assessments %}
+      <tr>
+        <td><strong>{{ assessment.risk.risk_name|truncatechars:25 }}</strong></td>
+        <td class="text-center">{{ assessment.assessment_date|date:"M j, Y" }}</td>
+        <td>{{ assessment.assessor|truncatechars:15 }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ assessment.get_assessment_type_display|truncatechars:12 }}</span></td>
+        <td class="text-center"><span class="risk-level risk-{% if assessment.impact_score >= 4 %}high{% elif assessment.impact_score >= 3 %}medium{% else %}low{% endif %}">{{ assessment.impact_score }}/5</span></td>
+        <td class="text-center"><span class="risk-level risk-{% if assessment.likelihood_score >= 4 %}high{% elif assessment.likelihood_score >= 3 %}medium{% else %}low{% endif %}">{{ assessment.likelihood_score }}/5</span></td>
+        <td class="text-center"><span class="risk-level risk-{% if assessment.risk_score >= 15 %}high{% elif assessment.risk_score >= 8 %}medium{% else %}low{% endif %}">{{ assessment.risk_score }}</span></td>
+        <td class="text-center">
+          {% if assessment.risk_score >= 15 %}
+            <span class="status-badge status-pending">High</span>
+          {% elif assessment.risk_score >= 8 %}
+            <span class="status-badge status-active">Medium</span>
+          {% else %}
+            <span class="status-badge status-draft">Low</span>
+          {% endif %}
+        </td>
+        <td class="text-center"><span class="status-badge status-{{ assessment.risk.status|lower }}">{{ assessment.risk.get_status_display|truncatechars:8 }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Assessment Details -->
+{% for assessment in assessments %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Assessment {{ forloop.counter }}: {{ assessment.risk.risk_name }}</h3>
+    <span class="priority-indicator">Risk Level: {% if assessment.risk_score >= 15 %}High{% elif assessment.risk_score >= 8 %}Medium{% else %}Low{% endif %}</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Risk Code</th>
+      <td>{{ assessment.risk.code }}</td>
+      <th style="width:20%">Assessment Type</th>
+      <td>{{ assessment.get_assessment_type_display }}</td>
+    </tr>
+    <tr>
+      <th>Assessment Date</th>
+      <td>{{ assessment.assessment_date|date:"F j, Y" }}</td>
+      <th>Assessor</th>
+      <td>{{ assessment.assessor }}</td>
+    </tr>
+    <tr>
+      <th>Impact Score</th>
+      <td><span class="risk-level risk-{% if assessment.impact_score >= 4 %}high{% elif assessment.impact_score >= 3 %}medium{% else %}low{% endif %}">{{ assessment.impact_score }}/5</span></td>
+      <th>Likelihood Score</th>
+      <td><span class="risk-level risk-{% if assessment.likelihood_score >= 4 %}high{% elif assessment.likelihood_score >= 3 %}medium{% else %}low{% endif %}">{{ assessment.likelihood_score }}/5</span></td>
+    </tr>
+    <tr>
+      <th>Risk Score</th>
+      <td><span class="risk-level risk-{% if assessment.risk_score >= 15 %}high{% elif assessment.risk_score >= 8 %}medium{% else %}low{% endif %}">{{ assessment.risk_score }}</span></td>
+      <th>Risk Category</th>
+      <td>{{ assessment.risk.get_category_display }}</td>
+    </tr>
+    <tr>
+      <th>Risk Owner</th>
+      <td>{{ assessment.risk.risk_owner|default:"Not specified" }}</td>
+      <th>Risk Status</th>
+      <td><span class="status-badge status-{{ assessment.risk.status|lower }}">{{ assessment.risk.get_status_display }}</span></td>
+    </tr>
+  </table>
+
+  {% if assessment.notes %}
+  <div class="field-group">
+    <div class="field-label">Assessment Notes</div>
+    <div class="field-value">{{ assessment.notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if assessment.risk_score >= 15 %}
+  <div class="alert alert-danger">
+    <strong>⚠️ HIGH RISK ASSESSMENT:</strong> This risk has been assessed as high risk (score: {{ assessment.risk_score }}) and requires immediate attention.
+    <br><strong>Recommendation:</strong> Implement immediate mitigation strategies and enhance monitoring.
+  </div>
+  {% elif assessment.risk_score >= 8 %}
+  <div class="alert alert-warning">
+    <strong>⚠️ MEDIUM RISK ASSESSMENT:</strong> This risk has been assessed as medium risk (score: {{ assessment.risk_score }}) and should be monitored closely.
+    <br><strong>Recommendation:</strong> Consider implementing additional controls or mitigation strategies.
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Assessments Found:</strong> No risk assessments match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Assessment Analysis & Insights -->
+<div class="report-card">
+  <h3>Assessment Analysis & Insights</h3>
+  
+  <div class="field-label">Assessment Analysis</div>
+  <div class="field-value">
+    <p>This risk assessment analysis provides insights into the organization's risk evaluation processes, 
+    covering {{ assessments.count }} assessments across multiple risks and assessors.</p>
+    
+    <p><strong>Key Assessment Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Assessments:</strong> {{ assessments.count }} risk assessments conducted</li>
+      <li><strong>Assessed Risks:</strong> {{ assessments|dictsort:"risk"|length }} different risks evaluated</li>
+      <li><strong>Assessors:</strong> {{ assessments|dictsort:"assessor"|length }} different assessors involved</li>
+      <li><strong>Assessment Types:</strong> {{ assessments|dictsort:"assessment_type"|length }} different assessment methodologies used</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Assessment Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Risk Level Distribution:</strong> Monitor the distribution of risk scores to identify concentration of high-risk areas</li>
+      <li><strong>Assessment Consistency:</strong> Review assessment consistency across different assessors and time periods</li>
+      <li><strong>Score Trends:</strong> Analyze risk score trends to identify improving or deteriorating risk conditions</li>
+      <li><strong>Assessment Coverage:</strong> Ensure comprehensive coverage of all identified risks</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if assessments %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>High-Risk Management:</strong> Immediately address risks assessed as high risk with appropriate mitigation strategies</li>
+      <li><strong>Assessment Consistency:</strong> Ensure consistent assessment methodologies across all assessors</li>
+      <li><strong>Regular Assessments:</strong> Establish regular assessment cycles to monitor risk changes over time</li>
+      <li><strong>Assessor Training:</strong> Provide training to assessors to ensure consistent and accurate risk evaluations</li>
+      <li><strong>Score Validation:</strong> Review and validate risk scores to ensure accuracy and consistency</li>
+      <li><strong>Trend Analysis:</strong> Implement trend analysis to identify emerging risk patterns</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
 {% endblock %} 

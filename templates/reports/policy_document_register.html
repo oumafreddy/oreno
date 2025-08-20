@@ -1,38 +1,373 @@
-{% extends 'reports/base_report.html' %}
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<div class="container mt-3">
-  <h2>Policy Document Register</h2>
-  <p><strong>Organization:</strong> {{ organization.name }}</p>
-  <p><strong>Filters:</strong> {{ filters }}</p>
-  <table class="table table-striped table-sm">
-    <thead class="table-light">
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}{% if request.GET.effective_date %}&effective_date={{ request.GET.effective_date }}{% endif %}{% if request.GET.expiration_date %}&expiration_date={{ request.GET.expiration_date }}{% endif %}{% if request.GET.title %}&title={{ request.GET.title }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Policy Document Register
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Policy Document Register</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Policy Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ documents.count }}</div>
+      <div class="stat-label">Total Policies</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ active_policies }}</div>
+      <div class="stat-label">Active Policies</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expiring_policies }}</div>
+      <div class="stat-label">Expiring Soon</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expired_policies }}</div>
+      <div class="stat-label">Expired Policies</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Owner</th>
+      <td>{{ filters.owner|default:"All Owners" }}</td>
+      <th style="width:25%">Effective Date</th>
+      <td>{{ filters.effective_date|default:"All Dates" }}</td>
+    </tr>
+    <tr>
+      <th>Expiration Date</th>
+      <td>{{ filters.expiration_date|default:"All Dates" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Policy Documents Summary Table -->
+<div class="report-card">
+  <h3>Policy Documents Summary</h3>
+  <style>
+    /* Compact styling specifically for Policy Documents Summary table */
+    .policy-summary-table {
+      font-size: 7pt !important;
+      margin: 0.3cm 0 !important;
+    }
+    .policy-summary-table th,
+    .policy-summary-table td {
+      padding: 4px 3px !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
+    }
+    .policy-summary-table th {
+      font-size: 7pt !important;
+      font-weight: 600 !important;
+    }
+    .policy-summary-table .status-badge,
+    .policy-summary-table .version-badge {
+      font-size: 6pt !important;
+      padding: 2px 4px !important;
+      min-width: 50px !important;
+    }
+    .policy-summary-table strong {
+      font-size: 7pt !important;
+    }
+    /* Specific column widths for better fit */
+    .policy-summary-table .col-title { width: 30%; }
+    .policy-summary-table .col-owner { width: 15%; }
+    .policy-summary-table .col-version { width: 8%; }
+    .policy-summary-table .col-effective { width: 12%; }
+    .policy-summary-table .col-expiration { width: 12%; }
+    .policy-summary-table .col-status { width: 13%; }
+  </style>
+  <table class="report-table policy-summary-table">
+    <thead>
       <tr>
-        <th>Title</th>
-        <th>Owner</th>
-        <th>Effective Date</th>
-        <th>Expiration Date</th>
-        <th>Version</th>
+        <th class="col-title">Policy Title</th>
+        <th class="col-owner">Owner</th>
+        <th class="col-version text-center">Version</th>
+        <th class="col-effective text-center">Effective Date</th>
+        <th class="col-expiration text-center">Expiration Date</th>
+        <th class="col-status text-center">Status</th>
       </tr>
     </thead>
     <tbody>
-      {% for doc in documents %}
+      {% for document in documents %}
       <tr>
-        <td>{{ doc.title|truncatechars:40 }}</td>
+        <td>{{ document.title|truncatechars:40 }}</td>
         <td>
-          {% if doc.owner %}
-            {{ doc.owner.email }}
+          {% if document.owner %}
+            {{ document.owner.get_full_name|default:document.owner.email|truncatechars:15 }}
           {% else %}
-            {{ doc.owner_email }}
+            {{ document.owner_email|truncatechars:15|default:"Not assigned" }}
           {% endif %}
         </td>
-        <td>{{ doc.effective_date }}</td>
-        <td>{{ doc.expiration_date|default:'-' }}</td>
-        <td>{{ doc.version }}</td>
+        <td class="text-center">
+          <span class="version-badge status-active">{{ document.version }}</span>
+        </td>
+        <td class="text-center">{{ document.effective_date|date:"M j, Y" }}</td>
+        <td class="text-center">{{ document.expiration_date|date:"M j, Y"|default:"No expiry" }}</td>
+        <td class="text-center">
+          {% if document.expiration_date and document.expiration_date|date:"Y-m-d" < today|date:"Y-m-d" %}
+            <span class="status-badge status-inactive">Expired</span>
+          {% elif document.expiration_date and document.expiration_date|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+            <span class="status-badge status-pending">Expiring</span>
+          {% else %}
+            <span class="status-badge status-active">Active</span>
+          {% endif %}
+        </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="5" class="text-center text-muted">No policy documents found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Policy Status Distribution -->
+<div class="report-card">
+  <h3>Policy Status Distribution</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Status</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-15 text-center">Owners</th>
+        <th class="col-30 text-center">Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for status in policy_status_distribution %}
+      <tr>
+        <td><strong>{{ status.name }}</strong></td>
+        <td class="text-center">{{ status.count }}</td>
+        <td class="text-center">{{ status.percentage|floatformat:1 }}%</td>
+        <td class="text-center">{{ status.owners_count }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if status.name == 'Expired' %}high{% elif status.name == 'Expiring' %}medium{% else %}low{% endif %}">
+            {% if status.name == 'Expired' %}High Risk{% elif status.name == 'Expiring' %}Medium Risk{% else %}Low Risk{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Owner Analysis -->
+<div class="report-card">
+  <h3>Policy Owner Analysis</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-30">Owner</th>
+        <th class="col-15 text-center">Policies</th>
+        <th class="col-15 text-center">Active</th>
+        <th class="col-15 text-center">Expired</th>
+        <th class="col-25 text-center">Management Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for owner in owner_analysis %}
+      <tr>
+        <td><strong>{{ owner.name }}</strong></td>
+        <td class="text-center">{{ owner.total_policies }}</td>
+        <td class="text-center">{{ owner.active_policies }}</td>
+        <td class="text-center">{{ owner.expired_policies }}</td>
+        <td class="text-center">
+          {% if owner.expired_policies > 0 %}
+            <span class="status-badge status-inactive">Needs Attention</span>
+          {% elif owner.active_policies > 0 %}
+            <span class="status-badge status-active">Well Managed</span>
+          {% else %}
+            <span class="status-badge status-pending">No Policies</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Policy Details -->
+{% for document in documents %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Policy {{ forloop.counter }}: {{ document.title }}</h3>
+    <span class="priority-indicator">
+      {% if document.expiration_date and document.expiration_date|date:"Y-m-d" < today|date:"Y-m-d" %}
+        Expired
+      {% elif document.expiration_date and document.expiration_date|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+        Expiring Soon
+      {% else %}
+        Active
+      {% endif %}
+    </span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Policy Title</th>
+      <td colspan="3">{{ document.title }}</td>
+    </tr>
+    <tr>
+      <th>Owner</th>
+      <td>
+        {% if document.owner %}
+          {{ document.owner.get_full_name|default:document.owner.email }}
+        {% else %}
+          {{ document.owner_email|default:"Not assigned" }}
+        {% endif %}
+      </td>
+      <th>Version</th>
+      <td>{{ document.version }}</td>
+    </tr>
+    <tr>
+      <th>Effective Date</th>
+      <td>{{ document.effective_date|date:"M j, Y" }}</td>
+      <th>Expiration Date</th>
+      <td>{{ document.expiration_date|date:"M j, Y"|default:"No expiration date" }}</td>
+    </tr>
+    <tr>
+      <th>File</th>
+      <td colspan="3">{{ document.file.name|default:"No file uploaded" }}</td>
+    </tr>
+    <tr>
+      <th>Anonymized</th>
+      <td>
+        <span class="status-badge {% if document.is_anonymized %}status-active{% else %}status-inactive{% endif %}">
+          {{ document.is_anonymized|yesno:"Yes,No" }}
+        </span>
+      </td>
+      <th>Status</th>
+      <td>
+        {% if document.expiration_date and document.expiration_date|date:"Y-m-d" < today|date:"Y-m-d" %}
+          <span class="status-badge status-inactive">Expired</span>
+        {% elif document.expiration_date and document.expiration_date|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+          <span class="status-badge status-pending">Expiring Soon</span>
+        {% else %}
+          <span class="status-badge status-active">Active</span>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  {% if document.expiration_date and document.expiration_date|date:"Y-m-d" < today|date:"Y-m-d" %}
+  <div class="alert alert-danger">
+    <strong>⚠️ EXPIRED POLICY:</strong> This policy has expired and is no longer in effect.
+    <br><strong>Action Required:</strong> Review and update the policy or set a new expiration date.
+  </div>
+  {% elif document.expiration_date and document.expiration_date|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+  <div class="alert alert-warning">
+    <strong>⚠️ EXPIRING POLICY:</strong> This policy will expire soon and requires attention.
+    <br><strong>Action Required:</strong> Review and extend the policy or plan for replacement.
+  </div>
+  {% endif %}
+
+  {% if not document.owner and not document.owner_email %}
+  <div class="alert alert-warning">
+    <strong>⚠️ NO OWNER ASSIGNED:</strong> This policy has no assigned owner.
+    <br><strong>Action Required:</strong> Assign an owner to ensure proper policy management.
+  </div>
+  {% endif %}
+
+  {% if document.is_anonymized %}
+  <div class="alert alert-info">
+    <strong>ℹ️ ANONYMIZED POLICY:</strong> This policy contains anonymized data for privacy protection.
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Policies Found:</strong> No policy documents match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Policy Analysis & Insights -->
+<div class="report-card">
+  <h3>Policy Analysis & Insights</h3>
+  
+  <div class="field-label">Policy Management Analysis</div>
+  <div class="field-value">
+    <p>This policy document analysis provides comprehensive insights into the organization's policy management, 
+    covering {{ documents.count }} policies across various owners and validity periods.</p>
+    
+    <p><strong>Key Policy Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Policies:</strong> {{ documents.count }} policy documents identified</li>
+      <li><strong>Active Policies:</strong> {{ active_policies }} policies currently in effect</li>
+      <li><strong>Expiring Policies:</strong> {{ expiring_policies }} policies expiring within 30 days</li>
+      <li><strong>Expired Policies:</strong> {{ expired_policies }} policies that have expired</li>
+      <li><strong>Policy Coverage:</strong> {{ policy_coverage_percentage|floatformat:1 }}% of policies are currently active</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Policy Risk Assessment</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Expired Policy Risk:</strong> {{ expired_policies }} expired policies pose compliance risk</li>
+      <li><strong>Expiring Policy Risk:</strong> {{ expiring_policies }} policies require renewal attention</li>
+      <li><strong>Owner Accountability:</strong> {{ unassigned_policies }} policies without assigned owners</li>
+      <li><strong>Version Control:</strong> {{ outdated_versions }} policies may need version updates</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if documents %}
+  <div class="field-label">Strategic Policy Management Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Expired Policy Remediation:</strong> Immediately address {{ expired_policies }} expired policies to restore compliance</li>
+      <li><strong>Policy Renewal Planning:</strong> Plan renewal for {{ expiring_policies }} policies expiring soon</li>
+      <li><strong>Owner Assignment:</strong> Assign owners to {{ unassigned_policies }} policies currently without responsible parties</li>
+      <li><strong>Version Management:</strong> Review and update {{ outdated_versions }} policies that may need version updates</li>
+      <li><strong>Policy Review Cycle:</strong> Implement regular policy review and update cycles</li>
+      <li><strong>Document Control:</strong> Ensure proper document versioning and control for all policies</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Mitigation Strategies</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Automated Expiry Alerts:</strong> Implement automated alerts for policies approaching expiration</li>
+      <li><strong>Policy Review Procedures:</strong> Establish standardized procedures for policy review and updates</li>
+      <li><strong>Owner Training:</strong> Provide training to policy owners on policy management requirements</li>
+      <li><strong>Regular Audits:</strong> Conduct regular policy audits to ensure compliance and currency</li>
+      <li><strong>Document Management:</strong> Implement robust document management processes for policy control</li>
+    </ul>
+  </div>
+  {% endif %}
 </div>
 {% endblock %} 

@@ -201,15 +201,50 @@
                 </div>
                 <div class="card-body">
                     <p class="card-text text-muted small">Access detailed reports for specific compliance components and analysis.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'reports:compliance_requirement_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf me-2"></i>Requirement Details
-                        </a>
-                        <a href="{% url 'reports:compliance_obligation_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf me-2"></i>Obligation Details
-                        </a>
-                                                 <!-- Evidence Details coming soon -->
+                    
+                    <!-- Requirement Details Report -->
+                    <div class="mb-4">
+                        <h6 class="text-dark mb-2">Requirement Details Report</h6>
+                        <form method="get" action="{% url 'reports:compliance_requirement_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Requirement Title</label>
+                                <select name="title" class="form-select">
+                                    <option value="">All Requirements</option>
+                                    {% for requirement in requirements %}
+                                    <option value="{{ requirement.title }}">{{ requirement.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
                     </div>
+                    
+                    <!-- Obligation Details Report -->
+                    <div class="mb-3">
+                        <h6 class="text-dark mb-2">Obligation Details Report</h6>
+                        <form method="get" action="{% url 'reports:compliance_obligation_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Obligation ID</label>
+                                <select name="obligation_id" class="form-select">
+                                    <option value="">All Obligations</option>
+                                    {% for obligation in obligations %}
+                                    <option value="{{ obligation.obligation_id }}">{{ obligation.obligation_id }} - {{ obligation.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Evidence Details coming soon -->
                 </div>
             </div>
         </div>

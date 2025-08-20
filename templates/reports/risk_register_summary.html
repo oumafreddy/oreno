@@ -1,45 +1,261 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<h2>Risk Register Summary</h2>
-<p>Filters: Category: {{ filters.category|default:'All' }}, Owner: {{ filters.owner|default:'All' }}, Status: {{ filters.status|default:'All' }}, Register: {{ filters.register|default:'All' }}</p>
-<div class="row">
-  <div class="col-md-6">
-    <h4>By Status</h4>
-    <table class="table table-sm">
-      <tr><th>Status</th><th>Count</th></tr>
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.register %}&register={{ request.GET.register }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Risk Register Summary
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Risk Register Summary</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Risk Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ summary.total_risks|default:0 }}</div>
+      <div class="stat-label">Total Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ summary.active_risks|default:0 }}</div>
+      <div class="stat-label">Active Risks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ summary.high_priority|default:0 }}</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ summary.categories|default:0 }}</div>
+      <div class="stat-label">Categories</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Category</th>
+      <td>{{ filters.category|default:"All Categories" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
+    </tr>
+    <tr>
+      <th>Risk Owner</th>
+      <td>{{ filters.owner|default:"All Owners" }}</td>
+      <th>Register</th>
+      <td>{{ filters.register|default:"All Registers" }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Risk Distribution Analysis -->
+<div class="report-card">
+  <h3>Risk Distribution Analysis</h3>
+  
+  <!-- By Status -->
+  <h4 class="section-subsubheader">By Status</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-20 text-center">Status</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-50">Description</th>
+      </tr>
+    </thead>
+    <tbody>
       {% for row in summary.by_status %}
-        <tr><td>{{ row.status|title }}</td><td>{{ row.count }}</td></tr>
+      <tr>
+        <td class="text-center"><span class="status-badge status-{{ row.status|lower }}">{{ row.status|title }}</span></td>
+        <td class="text-center"><strong>{{ row.count }}</strong></td>
+        <td class="text-center">{{ row.count|floatformat:1 }}%</td>
+        <td>
+          {% if row.status == 'open' %}
+            Risks that are identified and being monitored
+          {% elif row.status == 'in-progress' %}
+            Risks with active mitigation efforts
+          {% elif row.status == 'closed' %}
+            Risks that have been successfully addressed
+          {% elif row.status == 'archived' %}
+            Historical risks no longer relevant
+          {% else %}
+            {{ row.status|title }} status risks
+          {% endif %}
+        </td>
+      </tr>
       {% endfor %}
-    </table>
-  </div>
-  <div class="col-md-6">
-    <h4>By Category</h4>
-    <table class="table table-sm">
-      <tr><th>Category</th><th>Count</th></tr>
+    </tbody>
+  </table>
+
+  <!-- By Category -->
+  <h4 class="section-subsubheader">By Category</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-20 text-center">Category</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-50 text-center">Risk Level Distribution</th>
+      </tr>
+    </thead>
+    <tbody>
       {% for row in summary.by_category %}
-        <tr><td>{{ row.category|title }}</td><td>{{ row.count }}</td></tr>
+      <tr>
+        <td class="text-center"><span class="status-badge status-active">{{ row.category|title }}</span></td>
+        <td class="text-center"><strong>{{ row.count }}</strong></td>
+        <td class="text-center">{{ row.count|floatformat:1 }}%</td>
+        <td class="text-center">
+          {% if row.count > 5 %}
+            <span class="status-badge status-pending">High Concentration</span>
+          {% elif row.count > 2 %}
+            <span class="status-badge status-active">Moderate</span>
+          {% else %}
+            <span class="status-badge status-draft">Low</span>
+          {% endif %}
+        </td>
+      </tr>
       {% endfor %}
-    </table>
-  </div>
-</div>
-<div class="row">
-  <div class="col-md-6">
-    <h4>By Owner</h4>
-    <table class="table table-sm">
-      <tr><th>Owner</th><th>Count</th></tr>
+    </tbody>
+  </table>
+
+  <!-- By Owner -->
+  <h4 class="section-subsubheader">By Owner</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Owner</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-45 text-center">Workload Assessment</th>
+      </tr>
+    </thead>
+    <tbody>
       {% for row in summary.by_owner %}
-        <tr><td>{{ row.risk_owner }}</td><td>{{ row.count }}</td></tr>
+      <tr>
+        <td><strong>{{ row.risk_owner|default:"Unassigned" }}</strong></td>
+        <td class="text-center"><strong>{{ row.count }}</strong></td>
+        <td class="text-center">{{ row.count|floatformat:1 }}%</td>
+        <td class="text-center">
+          {% if row.count > 5 %}
+            <span class="status-badge status-pending">High Workload</span>
+          {% elif row.count > 2 %}
+            <span class="status-badge status-active">Moderate</span>
+          {% else %}
+            <span class="status-badge status-draft">Light</span>
+          {% endif %}
+        </td>
+      </tr>
       {% endfor %}
-    </table>
-  </div>
-  <div class="col-md-6">
-    <h4>By Register</h4>
-    <table class="table table-sm">
-      <tr><th>Register</th><th>Count</th></tr>
+    </tbody>
+  </table>
+
+  <!-- By Register -->
+  <h4 class="section-subsubheader">By Register</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Register</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-45 text-center">Management Focus</th>
+      </tr>
+    </thead>
+    <tbody>
       {% for row in summary.by_register %}
-        <tr><td>{{ row.risk_register__register_name }}</td><td>{{ row.count }}</td></tr>
+      <tr>
+        <td><strong>{{ row.risk_register__register_name|default:"Unassigned" }}</strong></td>
+        <td class="text-center"><strong>{{ row.count }}</strong></td>
+        <td class="text-center">{{ row.count|floatformat:1 }}%</td>
+        <td class="text-center">
+          {% if row.count > 10 %}
+            <span class="status-badge status-pending">High Priority</span>
+          {% elif row.count > 5 %}
+            <span class="status-badge status-active">Medium Priority</span>
+          {% else %}
+            <span class="status-badge status-draft">Standard</span>
+          {% endif %}
+        </td>
+      </tr>
       {% endfor %}
-    </table>
+    </tbody>
+  </table>
+</div>
+
+<!-- Risk Management Insights -->
+<div class="report-card">
+  <h3>Risk Management Insights</h3>
+  
+  <div class="field-label">Summary Analysis</div>
+  <div class="field-value">
+    <p>This risk register summary provides a comprehensive overview of the organization's risk landscape, 
+    covering {{ summary.total_risks|default:0 }} identified risks across multiple dimensions.</p>
+    
+    <p><strong>Key Findings:</strong></p>
+    <ul>
+      <li><strong>Total Risks:</strong> {{ summary.total_risks|default:0 }} risks identified across all categories</li>
+      <li><strong>Active Risks:</strong> {{ summary.active_risks|default:0 }} risks currently being managed</li>
+      <li><strong>High Priority Risks:</strong> {{ summary.high_priority|default:0 }} risks requiring immediate attention</li>
+      <li><strong>Risk Categories:</strong> {{ summary.categories|default:0 }} different risk categories represented</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Management Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Workload Distribution:</strong> Monitor risk owner workload to ensure balanced distribution and effective risk management</li>
+      <li><strong>Category Concentration:</strong> Review categories with high risk concentrations to identify systemic issues</li>
+      <li><strong>Status Progression:</strong> Ensure risks progress through appropriate status transitions in a timely manner</li>
+      <li><strong>Register Management:</strong> Focus management attention on registers with high risk counts</li>
+    </ul>
   </div>
 </div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if summary %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Risk Concentration Management:</strong> Address categories with high risk concentrations through targeted mitigation strategies</li>
+      <li><strong>Owner Workload Optimization:</strong> Redistribute risks to balance workload across risk owners</li>
+      <li><strong>Status Management:</strong> Implement processes to ensure timely progression of risks through their lifecycle</li>
+      <li><strong>Register Prioritization:</strong> Allocate resources based on register risk counts and priorities</li>
+      <li><strong>Monitoring and Reporting:</strong> Establish regular monitoring and reporting mechanisms for high-priority risks</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+{% if not summary %}
+<div class="alert alert-info">
+  <strong>No Risk Data Found:</strong> No risk data matches the current filter criteria. Please adjust your filters or create new risks.
+</div>
+{% endif %}
 {% endblock %} 

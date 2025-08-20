@@ -1,82 +1,341 @@
-{% extends "reports/base_report.html" %}
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-  vertical-align: top;
-}
-table.table-sm tr:nth-child(even) { background: #f8f9fa; }
-tr, td, th { page-break-inside: avoid; }
-h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
-.truncate { max-width: 400px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
-.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
-.label { font-weight: bold; color: #2563eb; margin-top: 0.5em; display: block; }
-</style>
-<h2 class="section-title">Legal Case Details</h2>
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Case Details Report</h1>
+            <p class="report-subtitle">Comprehensive Analysis of Legal Case Information</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.case_title %}
+                <span><strong>Case:</strong> {{ filters.case_title }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_cases }}</div>
+                <div class="stat-label">Total Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ active_cases }}</div>
+                <div class="stat-label">Active Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ closed_cases }}</div>
+                <div class="stat-label">Closed Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ high_priority_cases }}</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_tasks }}</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Case Information -->
 {% if case %}
-  <table class="table table-sm">
-    <tr><th>Title</th><td class="truncate">{{ case.title }}</td></tr>
-    <tr><th>Status</th><td>{{ case.get_status_display }}</td></tr>
-    <tr><th>Type</th><td>{{ case.case_type.name }}</td></tr>
-    <tr><th>Priority</th><td>{{ case.get_priority_display }}</td></tr>
-    <tr><th>Lead Attorney</th><td>{{ case.lead_attorney.email|default:'-' }}</td></tr>
-    <tr><th>Opened</th><td>{{ case.opened_date }}</td></tr>
-    <tr><th>Closed</th><td>{{ case.closed_date|default:'-' }}</td></tr>
-    <tr><th>Estimated Resolution</th><td>{{ case.estimated_resolution_date|default:'-' }}</td></tr>
-  </table>
-  <span class="label">Description:</span>
-  <div class="truncate">{{ case.description|striptags|truncatechars:300 }}</div>
-  <span class="label">Risk Description:</span>
-  <div class="truncate">{{ case.risk_description|striptags|truncatechars:200 }}</div>
-  <span class="label">Compliance Description:</span>
-  <div class="truncate">{{ case.compliance_description|striptags|truncatechars:200 }}</div>
-  <span class="label">Internal Notes:</span>
-  <div class="truncate">{{ case.internal_notes|striptags|truncatechars:200 }}</div>
-  <h4 class="section-title">Parties</h4>
-  <table class="table table-sm">
-    <tr><th>Name</th><th>Type</th><th>Organization</th><th>Contact</th></tr>
-    {% for party in parties %}
-      <tr>
-        <td class="truncate">{{ party.name }}</td>
-        <td>{{ party.get_party_type_display }}</td>
-        <td>{{ party.organization|default:'-' }}</td>
-        <td>{{ party.contact_email|default:'-' }}</td>
+    <div class="section">
+        <h2 class="section-header">Case Information</h2>
+        <div class="info-grid">
+            <div class="field-group">
+                <div class="field-label">Case Title</div>
+                <div class="field-value">{{ case.title }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Case Type</div>
+                <div class="field-value">
+                    <span class="case-type-badge case-{{ case.case_type }}">
+                        {{ case.case_type|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Status</div>
+                <div class="field-value">
+                    <span class="status-badge status-{{ case.status }}">
+                        {{ case.status|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Priority</div>
+                <div class="field-value">
+                    <span class="priority-badge priority-{{ case.priority }}">
+                        {{ case.priority|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Description</div>
+                <div class="field-value">{{ case.description|default:"No description provided" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Filing Date</div>
+                <div class="field-value">{{ case.filing_date|date:"M j, Y"|default:"Not specified" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Court</div>
+                <div class="field-value">{{ case.court|default:"Not specified" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Case Number</div>
+                <div class="field-value">{{ case.case_number|default:"Not specified" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Assigned Attorney</div>
+                <div class="field-value">{{ case.assigned_attorney.get_full_name|default:case.assigned_attorney.email|default:"Not assigned" }}</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">Created Date</div>
+                <div class="field-value">{{ case.created_at|date:"M j, Y" }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Associated Tasks -->
+    <div class="section">
+        <h2 class="section-header">Associated Tasks</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Task Title</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Created Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in case_tasks %}
+                    <tr>
+                        <td>{{ task.title }}</td>
+                        <td>
+                            <span class="status-badge status-{{ task.status }}">
+                                {{ task.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="priority-badge priority-{{ task.priority }}">
+                                {{ task.priority|title }}
+                            </span>
+                        </td>
+                        <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.email|default:"Not assigned" }}</td>
+                        <td>{{ task.due_date|date:"M j, Y"|default:"Not specified" }}</td>
+                        <td>{{ task.created_at|date:"M j, Y" }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="4" class="text-muted">No parties linked to this case.</td></tr>
+                    <tr>
+                        <td colspan="6" class="no-data">No tasks associated with this case</td>
+                    </tr>
     {% endfor %}
+                </tbody>
   </table>
-  <h4 class="section-title">Tasks</h4>
-  <table class="table table-sm">
-    <tr><th>Title</th><th>Status</th><th>Due</th><th>Assigned To</th></tr>
-    {% for task in tasks %}
-      <tr>
-        <td class="truncate">{{ task.title }}</td>
-        <td>{{ task.get_status_display }}</td>
-        <td>{{ task.due_date }}</td>
-        <td>{{ task.assigned_to.email|default:'-' }}</td>
+        </div>
+    </div>
+
+    <!-- Associated Documents -->
+    <div class="section">
+        <h2 class="section-header">Associated Documents</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Document Title</th>
+                        <th>Type</th>
+                        <th>Version</th>
+                        <th>Uploaded By</th>
+                        <th>Upload Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in case_documents %}
+                    <tr>
+                        <td>{{ document.title }}</td>
+                        <td>{{ document.document_type|default:"Not specified" }}</td>
+                        <td>{{ document.version|default:"1.0" }}</td>
+                        <td>{{ document.uploaded_by.get_full_name|default:document.uploaded_by.email|default:"-" }}</td>
+                        <td>{{ document.uploaded_at|date:"M j, Y" }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="4" class="text-muted">No tasks linked to this case.</td></tr>
+                    <tr>
+                        <td colspan="5" class="no-data">No documents associated with this case</td>
+                    </tr>
     {% endfor %}
+                </tbody>
   </table>
-  <h4 class="section-title">Documents</h4>
-  <table class="table table-sm">
-    <tr><th>Title</th><th>Description</th><th>Version</th><th>Confidential?</th></tr>
-    {% for doc in documents %}
-      <tr>
-        <td class="truncate">{{ doc.title }}</td>
-        <td class="truncate">{{ doc.description|truncatechars:100 }}</td>
-        <td>{{ doc.version }}</td>
-        <td>{% if doc.is_confidential %}Yes{% else %}No{% endif %}</td>
+        </div>
+    </div>
+
+    <!-- Associated Parties -->
+    <div class="section">
+        <h2 class="section-header">Associated Parties</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Party Name</th>
+                        <th>Type</th>
+                        <th>Contact Person</th>
+                        <th>Contact Email</th>
+                        <th>Contact Phone</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for party in case_parties %}
+                    <tr>
+                        <td>{{ party.name }}</td>
+                        <td>
+                            <span class="party-type-badge party-{{ party.party_type }}">
+                                {{ party.party_type|title }}
+                            </span>
+                        </td>
+                        <td>{{ party.contact_person|default:"-" }}</td>
+                        <td>{{ party.contact_email|default:"-" }}</td>
+                        <td>{{ party.contact_phone|default:"-" }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="4" class="text-muted">No documents linked to this case.</td></tr>
+                    <tr>
+                        <td colspan="5" class="no-data">No parties associated with this case</td>
+                    </tr>
     {% endfor %}
+                </tbody>
   </table>
+        </div>
+    </div>
+
+    <!-- Case Analysis -->
+    <div class="section">
+        <h2 class="section-header">Case Analysis & Insights</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Case Overview</h4>
+                <p>
+                    {% if case %}
+                    <strong>Case Status:</strong> {{ case.status|title }} case with {{ case.priority|title }} priority.
+                    {% if case.filing_date %}
+                    <strong>Timeline:</strong> Filed on {{ case.filing_date|date:"M j, Y" }}, 
+                    {% if case.status == 'active' %}
+                    currently active and ongoing.
+                    {% elif case.status == 'closed' %}
+                    case has been closed.
+                    {% elif case.status == 'pending' %}
+                    case is pending resolution.
+                    {% endif %}
+                    {% endif %}
+                    {% else %}
+                    <strong>Case Selection:</strong> Please select a specific case to view detailed analysis.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Task Management</h4>
+                <p>
+                    {% if case_tasks %}
+                    <strong>Task Overview:</strong> {{ case_tasks.count }} tasks associated with this case.
+                    {% for task in case_tasks %}
+                    {% if forloop.first %}
+                    <strong>Task Status:</strong> 
+                    {% endif %}
+                    {{ task.title }} ({{ task.status|title }}){% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    <strong>Task Status:</strong> No tasks currently associated with this case. 
+                    Consider creating task assignments for case management.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Document Management</h4>
+                <p>
+                    {% if case_documents %}
+                    <strong>Documentation:</strong> {{ case_documents.count }} documents uploaded for this case.
+                    {% for document in case_documents %}
+                    {% if forloop.first %}
+                    <strong>Document Types:</strong> 
+                    {% endif %}
+                    {{ document.document_type|default:"General" }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    <strong>Documentation:</strong> No documents currently uploaded. 
+                    Consider uploading relevant case materials and evidence.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Party Involvement</h4>
+                <p>
+                    {% if case_parties %}
+                    <strong>Parties:</strong> {{ case_parties.count }} parties involved in this case.
+                    {% for party in case_parties %}
+                    {% if forloop.first %}
+                    <strong>Party Types:</strong> 
+                    {% endif %}
+                    {{ party.party_type|title }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    <strong>Parties:</strong> No parties currently associated with this case. 
+                    Consider adding relevant parties (plaintiffs, defendants, witnesses).
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        {% if case %}
+        <p><strong>Case Analyzed:</strong> {{ case.title }}</p>
 {% else %}
-  <div class="alert alert-warning">No case found for the selected name.</div>
+        <p><strong>Total Cases Available:</strong> {{ total_cases }}</p>
 {% endif %}
+    </div>
+</div>
+
+<style>
+    .case-type-badge, .status-badge, .priority-badge, .party-type-badge {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+    .case-civil { background: #dbeafe; color: #1e40af; }
+    .case-criminal { background: #fecaca; color: #7f1d1d; }
+    .case-family { background: #fef3c7; color: #92400e; }
+    .case-corporate { background: #d1fae5; color: #065f46; }
+    .case-other { background: #e5e7eb; color: #374151; }
+    
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-closed { background: #fecaca; color: #7f1d1d; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    
+    .priority-high { background: #fecaca; color: #7f1d1d; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-low { background: #d1fae5; color: #065f46; }
+    
+    .party-plaintiff { background: #dbeafe; color: #1e40af; }
+    .party-defendant { background: #fecaca; color: #7f1d1d; }
+    .party-witness { background: #fef3c7; color: #92400e; }
+    .party-third_party { background: #d1fae5; color: #065f46; }
+</style>
 {% endblock %} 

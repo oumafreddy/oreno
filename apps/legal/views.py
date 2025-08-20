@@ -12,21 +12,20 @@ from django.utils import timezone
 from django.db.models import Q
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from users.models import CustomUser
 
 # CaseType Views
 class CaseTypeListView(OrganizationPermissionMixin, ListView):
     model = CaseType
     template_name = 'legal/casetype_list.html'
     def get_queryset(self):
-        org = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
-        return CaseType.objects.filter(organization=org)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class CaseTypeDetailView(OrganizationPermissionMixin, DetailView):
     model = CaseType
     template_name = 'legal/casetype_detail.html'
     def get_queryset(self):
-        org = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
-        return CaseType.objects.filter(organization=org)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class CaseTypeCreateView(OrganizationPermissionMixin, CreateView):
     model = CaseType
@@ -36,7 +35,7 @@ class CaseTypeCreateView(OrganizationPermissionMixin, CreateView):
 
     def form_valid(self, form):
         # Set organization automatically
-        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class CaseTypeUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -72,6 +71,9 @@ class LegalPartyListView(OrganizationPermissionMixin, ListView):
 class LegalPartyDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalParty
     template_name = 'legal/legalparty_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalPartyCreateView(OrganizationPermissionMixin, CreateView):
     model = LegalParty
@@ -81,7 +83,7 @@ class LegalPartyCreateView(OrganizationPermissionMixin, CreateView):
 
     def form_valid(self, form):
         # Set organization as ForeignKey
-        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalPartyUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -92,7 +94,7 @@ class LegalPartyUpdateView(OrganizationPermissionMixin, UpdateView):
 
     def form_valid(self, form):
         # Set organization as ForeignKey
-        form.instance.organization = self.request.tenant if hasattr(self.request, 'tenant') else self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalPartyDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -125,6 +127,9 @@ class LegalCaseListView(OrganizationPermissionMixin, ListView):
 class LegalCaseDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalCase
     template_name = 'legal/legalcase_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalCaseCreateView(OrganizationPermissionMixin, CreateView):
     model = LegalCase
@@ -133,12 +138,12 @@ class LegalCaseCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('legal:legalcase_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class LegalCaseUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -148,12 +153,12 @@ class LegalCaseUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('legal:legalcase_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class LegalCaseDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -209,6 +214,9 @@ class LegalTaskListView(OrganizationPermissionMixin, ListView):
 class LegalTaskDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalTask
     template_name = 'legal/legaltask_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalTaskCreateView(OrganizationPermissionMixin, CreateView):
     model = LegalTask
@@ -217,12 +225,12 @@ class LegalTaskCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('legal:legaltask_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class LegalTaskUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -232,12 +240,12 @@ class LegalTaskUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('legal:legaltask_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['organization'] = self.request.user.organization
+        kwargs['organization'] = self.request.organization
         return kwargs
 
 class LegalTaskDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -267,6 +275,9 @@ class LegalDocumentListView(OrganizationPermissionMixin, ListView):
 class LegalDocumentDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalDocument
     template_name = 'legal/legaldocument_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalDocumentCreateView(OrganizationPermissionMixin, CreateView):
     model = LegalDocument
@@ -275,7 +286,7 @@ class LegalDocumentCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('legal:legaldocument_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalDocumentUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -285,7 +296,7 @@ class LegalDocumentUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('legal:legaldocument_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalDocumentDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -301,6 +312,9 @@ class LegalArchiveListView(OrganizationPermissionMixin, ListView):
 class LegalArchiveDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalArchive
     template_name = 'legal/legalarchive_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalArchiveCreateView(OrganizationPermissionMixin, CreateView):
     model = LegalArchive
@@ -309,7 +323,7 @@ class LegalArchiveCreateView(OrganizationPermissionMixin, CreateView):
     success_url = reverse_lazy('legal:legalarchive_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalArchiveUpdateView(OrganizationPermissionMixin, UpdateView):
@@ -319,7 +333,7 @@ class LegalArchiveUpdateView(OrganizationPermissionMixin, UpdateView):
     success_url = reverse_lazy('legal:legalarchive_list')
 
     def form_valid(self, form):
-        form.instance.organization = self.request.user.organization
+        form.instance.organization = self.request.organization
         return super().form_valid(form)
 
 class LegalArchiveDeleteView(OrganizationPermissionMixin, DeleteView):
@@ -331,8 +345,8 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'legal/dashboard.html'
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Robust fallback for organization context
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        # Use organization from request
+        org = self.request.organization
         if not org:
             context['dashboard_error'] = 'Organization context is missing. Please contact support.'
             # Set all variables to safe defaults
@@ -437,6 +451,18 @@ class LegalReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Template
         # Get document titles for filters (since there's no document_type field)
         document_titles = LegalDocument.objects.filter(organization=organization).values_list('title', flat=True).distinct()
         context['document_titles'] = sorted(list(document_titles))
+        
+        # Get attorneys for task filters
+        attorneys = CustomUser.objects.filter(organization=organization).values_list('email', flat=True).distinct()
+        context['attorneys'] = sorted(list(attorneys))
+        
+        # Get cases for detailed reports filter
+        cases = LegalCase.objects.filter(organization=organization).order_by('title')
+        context['cases'] = cases
+        
+        # Get tasks for detailed reports filter
+        tasks = LegalTask.objects.filter(organization=organization).order_by('title')
+        context['tasks'] = tasks
         
         return context
 

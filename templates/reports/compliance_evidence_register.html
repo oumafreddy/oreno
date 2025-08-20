@@ -1,32 +1,359 @@
-{% extends 'reports/base_report.html' %}
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<div class="container mt-3">
-  <h2>Compliance Evidence Register</h2>
-  <p><strong>Organization:</strong> {{ organization.name }}</p>
-  <p><strong>Filters:</strong> {{ filters }}</p>
-  <table class="table table-striped table-sm">
-    <thead class="table-light">
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.obligation %}&obligation={{ request.GET.obligation }}{% endif %}{% if request.GET.document %}&document={{ request.GET.document }}{% endif %}{% if request.GET.validity_start %}&validity_start={{ request.GET.validity_start }}{% endif %}{% if request.GET.validity_end %}&validity_end={{ request.GET.validity_end }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Compliance Evidence Register
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Compliance Evidence Register</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Evidence Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ evidences.count }}</div>
+      <div class="stat-label">Total Evidence</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ valid_evidence }}</div>
+      <div class="stat-label">Valid Evidence</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expiring_evidence }}</div>
+      <div class="stat-label">Expiring Soon</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expired_evidence }}</div>
+      <div class="stat-label">Expired Evidence</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Obligation</th>
+      <td>{{ filters.obligation|default:"All Obligations" }}</td>
+      <th style="width:25%">Document</th>
+      <td>{{ filters.document|default:"All Documents" }}</td>
+    </tr>
+    <tr>
+      <th>Validity Period</th>
+      <td>{{ filters.validity_start|default:"All Start Dates" }} to {{ filters.validity_end|default:"All End Dates" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Evidence Summary Table -->
+<div class="report-card">
+  <h3>Compliance Evidence Summary</h3>
+  <style>
+    /* Compact styling specifically for Evidence Summary table */
+    .evidence-summary-table {
+      font-size: 7pt !important;
+      margin: 0.3cm 0 !important;
+    }
+    .evidence-summary-table th,
+    .evidence-summary-table td {
+      padding: 4px 3px !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
+    }
+    .evidence-summary-table th {
+      font-size: 7pt !important;
+      font-weight: 600 !important;
+    }
+    .evidence-summary-table .status-badge,
+    .evidence-summary-table .validity-badge {
+      font-size: 6pt !important;
+      padding: 2px 4px !important;
+      min-width: 50px !important;
+    }
+    .evidence-summary-table strong {
+      font-size: 7pt !important;
+    }
+    /* Specific column widths for better fit */
+    .evidence-summary-table .col-obligation { width: 15%; }
+    .evidence-summary-table .col-document { width: 25%; }
+    .evidence-summary-table .col-validity-start { width: 12%; }
+    .evidence-summary-table .col-validity-end { width: 12%; }
+    .evidence-summary-table .col-status { width: 12%; }
+    .evidence-summary-table .col-notes { width: 24%; }
+  </style>
+  <table class="report-table evidence-summary-table">
+    <thead>
       <tr>
-        <th>Obligation</th>
-        <th>Document</th>
-        <th>Validity Start</th>
-        <th>Validity End</th>
-        <th>Notes</th>
+        <th class="col-obligation">Obligation</th>
+        <th class="col-document">Document</th>
+        <th class="col-validity-start text-center">Valid From</th>
+        <th class="col-validity-end text-center">Valid Until</th>
+        <th class="col-status text-center">Status</th>
+        <th class="col-notes">Notes</th>
       </tr>
     </thead>
     <tbody>
-      {% for ev in evidences %}
+      {% for evidence in evidences %}
       <tr>
-        <td>{{ ev.obligation.obligation_id }}</td>
-        <td>{{ ev.document.title|truncatechars:40 }}</td>
-        <td>{{ ev.validity_start }}</td>
-        <td>{{ ev.validity_end }}</td>
-        <td>{{ ev.notes|striptags|truncatechars:40 }}</td>
+        <td>{{ evidence.obligation.obligation_id|truncatechars:12 }}</td>
+        <td>{{ evidence.document.title|truncatechars:30 }}</td>
+        <td class="text-center">{{ evidence.validity_start|date:"M j, Y" }}</td>
+        <td class="text-center">{{ evidence.validity_end|date:"M j, Y" }}</td>
+        <td class="text-center">
+          {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+            <span class="validity-badge status-inactive">Expired</span>
+          {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+            <span class="validity-badge status-pending">Expiring</span>
+          {% else %}
+            <span class="validity-badge status-active">Valid</span>
+          {% endif %}
+        </td>
+        <td>{{ evidence.notes|truncatechars:25|default:"-" }}</td>
       </tr>
-      {% empty %}
-      <tr><td colspan="5" class="text-center text-muted">No evidence found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Evidence Status Distribution -->
+<div class="report-card">
+  <h3>Evidence Status Distribution</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Status</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-15 text-center">Obligations</th>
+        <th class="col-30 text-center">Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for status in evidence_status_distribution %}
+      <tr>
+        <td><strong>{{ status.name }}</strong></td>
+        <td class="text-center">{{ status.count }}</td>
+        <td class="text-center">{{ status.percentage|floatformat:1 }}%</td>
+        <td class="text-center">{{ status.obligations_count }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if status.name == 'Expired' %}high{% elif status.name == 'Expiring' %}medium{% else %}low{% endif %}">
+            {% if status.name == 'Expired' %}High Risk{% elif status.name == 'Expiring' %}Medium Risk{% else %}Low Risk{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Obligation Evidence Coverage -->
+<div class="report-card">
+  <h3>Obligation Evidence Coverage</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Obligation</th>
+        <th class="col-20">Requirement</th>
+        <th class="col-15 text-center">Evidence Count</th>
+        <th class="col-15 text-center">Valid Evidence</th>
+        <th class="col-25 text-center">Coverage Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for obligation in obligation_evidence_coverage %}
+      <tr>
+        <td><strong>{{ obligation.obligation_id }}</strong></td>
+        <td>{{ obligation.requirement_title|truncatechars:25 }}</td>
+        <td class="text-center">{{ obligation.evidence_count }}</td>
+        <td class="text-center">{{ obligation.valid_evidence_count }}</td>
+        <td class="text-center">
+          {% if obligation.valid_evidence_count > 0 %}
+            <span class="status-badge status-active">Covered</span>
+          {% else %}
+            <span class="status-badge status-inactive">No Evidence</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Evidence Details -->
+{% for evidence in evidences %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Evidence {{ forloop.counter }}: {{ evidence.obligation.obligation_id }}</h3>
+    <span class="priority-indicator">
+      {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+        Expired
+      {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+        Expiring Soon
+      {% else %}
+        Valid
+      {% endif %}
+    </span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Obligation ID</th>
+      <td>{{ evidence.obligation.obligation_id }}</td>
+      <th style="width:20%">Evidence Status</th>
+      <td>
+        {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+          <span class="status-badge status-inactive">Expired</span>
+        {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+          <span class="status-badge status-pending">Expiring Soon</span>
+        {% else %}
+          <span class="status-badge status-active">Valid</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Requirement</th>
+      <td colspan="3">{{ evidence.obligation.requirement.title }}</td>
+    </tr>
+    <tr>
+      <th>Document Title</th>
+      <td colspan="3">{{ evidence.document.title }}</td>
+    </tr>
+    <tr>
+      <th>Validity Start</th>
+      <td>{{ evidence.validity_start|date:"M j, Y" }}</td>
+      <th>Validity End</th>
+      <td>{{ evidence.validity_end|date:"M j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>Document Owner</th>
+      <td>
+        {% if evidence.document.owner %}
+          {{ evidence.document.owner.get_full_name|default:evidence.document.owner.email }}
+        {% else %}
+          {{ evidence.document.owner_email|default:"Not specified" }}
+        {% endif %}
+      </td>
+      <th>Document Version</th>
+      <td>{{ evidence.document.version }}</td>
+    </tr>
+  </table>
+
+  {% if evidence.notes %}
+  <div class="field-group">
+    <div class="field-label">Evidence Notes</div>
+    <div class="field-value">{{ evidence.notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+  <div class="alert alert-danger">
+    <strong>⚠️ EXPIRED EVIDENCE:</strong> This evidence has expired and is no longer valid for compliance purposes.
+    <br><strong>Action Required:</strong> Collect new evidence or renew existing evidence to maintain compliance.
+  </div>
+  {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+  <div class="alert alert-warning">
+    <strong>⚠️ EXPIRING EVIDENCE:</strong> This evidence will expire soon and requires attention.
+    <br><strong>Action Required:</strong> Plan for evidence renewal or replacement before expiration.
+  </div>
+  {% endif %}
+
+  {% if evidence.obligation.evidence_required and evidence.obligation.obligation_set.count == 1 %}
+  <div class="alert alert-info">
+    <strong>ℹ️ SINGLE EVIDENCE:</strong> This is the only evidence for this obligation. Consider collecting additional evidence for redundancy.
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Evidence Found:</strong> No compliance evidence matches the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Evidence Analysis & Insights -->
+<div class="report-card">
+  <h3>Evidence Analysis & Insights</h3>
+  
+  <div class="field-label">Evidence Management Analysis</div>
+  <div class="field-value">
+    <p>This compliance evidence analysis provides comprehensive insights into the organization's evidence management, 
+    covering {{ evidences.count }} evidence items across various obligations and validity periods.</p>
+    
+    <p><strong>Key Evidence Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Evidence:</strong> {{ evidences.count }} evidence items collected</li>
+      <li><strong>Valid Evidence:</strong> {{ valid_evidence }} evidence items currently valid</li>
+      <li><strong>Expiring Evidence:</strong> {{ expiring_evidence }} evidence items expiring within 30 days</li>
+      <li><strong>Expired Evidence:</strong> {{ expired_evidence }} evidence items that have expired</li>
+      <li><strong>Evidence Coverage:</strong> {{ evidence_coverage_percentage|floatformat:1 }}% of obligations have valid evidence</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Compliance Risk Assessment</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Expired Evidence Risk:</strong> {{ expired_evidence }} expired evidence items pose compliance risk</li>
+      <li><strong>Expiring Evidence Risk:</strong> {{ expiring_evidence }} evidence items require renewal attention</li>
+      <li><strong>Coverage Gaps:</strong> {{ coverage_gaps }} obligations lack valid evidence</li>
+      <li><strong>Single Evidence Risk:</strong> {{ single_evidence_obligations }} obligations rely on single evidence items</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if evidences %}
+  <div class="field-label">Strategic Evidence Management Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Expired Evidence Remediation:</strong> Immediately address {{ expired_evidence }} expired evidence items to restore compliance</li>
+      <li><strong>Evidence Renewal Planning:</strong> Plan renewal for {{ expiring_evidence }} evidence items expiring soon</li>
+      <li><strong>Coverage Improvement:</strong> Collect evidence for {{ coverage_gaps }} obligations currently without valid evidence</li>
+      <li><strong>Evidence Redundancy:</strong> Consider additional evidence for {{ single_evidence_obligations }} obligations with single evidence items</li>
+      <li><strong>Validity Monitoring:</strong> Implement proactive monitoring of evidence validity periods</li>
+      <li><strong>Document Management:</strong> Ensure proper document versioning and control for evidence items</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Mitigation Strategies</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Automated Expiry Alerts:</strong> Implement automated alerts for evidence approaching expiration</li>
+      <li><strong>Evidence Collection Procedures:</strong> Establish standardized procedures for evidence collection and validation</li>
+      <li><strong>Document Control:</strong> Implement robust document control processes for evidence management</li>
+      <li><strong>Regular Reviews:</strong> Conduct regular evidence validity reviews and updates</li>
+      <li><strong>Backup Evidence:</strong> Maintain backup evidence for critical compliance obligations</li>
+    </ul>
+  </div>
+  {% endif %}
 </div>
 {% endblock %} 

@@ -1,42 +1,266 @@
-{% extends "reports/base_report.html" %}
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-  vertical-align: top;
-}
-table.table-sm tr:nth-child(even) { background: #f8f9fa; }
-tr, td, th { page-break-inside: avoid; }
-h2, h3, h4 { page-break-after: avoid; margin-top: 1.5em; }
-.truncate { max-width: 300px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
-.section-title { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 4px; margin-top: 1.5em; }
-</style>
-<h2 class="section-title">Legal Case Summary</h2>
-<p>Filters:
-  Status: {{ filters.status|default:'All' }},
-  Type: {{ filters.case_type|default:'All' }},
-  Priority: {{ filters.priority|default:'All' }},
-  Lead Attorney: {{ filters.lead_attorney|default:'All' }},
-  Case Name: {{ filters.case_name|default:'All' }}
-</p>
-<table class="table table-sm">
-  <tr>
-    <th>Title</th><th>Type</th><th>Status</th><th>Priority</th><th>Lead Attorney</th><th>Opened</th><th>Closed</th>
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Case Summary Report</h1>
+            <p class="report-subtitle">Comprehensive Overview of Legal Case Management</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.case_type or filters.status or filters.priority %}
+                <span><strong>Filters Applied:</strong> 
+                    {% if filters.case_type %}Case Type: {{ filters.case_type }}{% endif %}
+                    {% if filters.status %}{% if filters.case_type %} | {% endif %}Status: {{ filters.status }}{% endif %}
+                    {% if filters.priority %}{% if filters.case_type or filters.status %} | {% endif %}Priority: {{ filters.priority }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_cases }}</div>
+                <div class="stat-label">Total Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ open_cases }}</div>
+                <div class="stat-label">Open Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ closed_cases }}</div>
+                <div class="stat-label">Closed Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ archived_cases }}</div>
+                <div class="stat-label">Archived Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ overdue_cases }}</div>
+                <div class="stat-label">Overdue Cases</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Case Type Distribution -->
+    <div class="section">
+        <h2 class="section-header">Case Type Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Case Type</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in case_type_distribution %}
+                    <tr>
+                        <td>{{ item.case_type__name|default:"Unspecified" }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_cases 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No case type data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Status Distribution -->
+    <div class="section">
+        <h2 class="section-header">Case Status Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in status_distribution %}
+                    <tr>
+                        <td>{{ item.status|title }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_cases 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No status data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Priority Distribution -->
+    <div class="section">
+        <h2 class="section-header">Case Priority Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in priority_distribution %}
+                    <tr>
+                        <td>
+                            {% if item.priority == 1 %}Low
+                            {% elif item.priority == 2 %}Medium-Low
+                            {% elif item.priority == 3 %}Medium
+                            {% elif item.priority == 4 %}Medium-High
+                            {% elif item.priority == 5 %}High
+                            {% else %}{{ item.priority }}
+                            {% endif %}
+                        </td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_cases 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No priority data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Cases -->
+    <div class="section">
+        <h2 class="section-header">Recent Cases</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Case Title</th>
+                        <th>Case Type</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Opened Date</th>
+                        <th>Lead Attorney</th>
   </tr>
-  {% for case in cases %}
+                </thead>
+                <tbody>
+                    {% for case in recent_cases %}
     <tr>
-      <td class="truncate">{{ case.title }}</td>
+                        <td>{{ case.title }}</td>
       <td>{{ case.case_type.name }}</td>
-      <td>{{ case.get_status_display }}</td>
-      <td>{{ case.get_priority_display }}</td>
-      <td>{{ case.lead_attorney.email|default:'-' }}</td>
-      <td>{{ case.opened_date }}</td>
-      <td>{{ case.closed_date|default:'-' }}</td>
+                        <td>
+                            <span class="status-badge status-{{ case.status }}">
+                                {{ case.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if case.priority == 1 %}<span class="priority-badge priority-low">Low</span>
+                            {% elif case.priority == 2 %}<span class="priority-badge priority-medium-low">Medium-Low</span>
+                            {% elif case.priority == 3 %}<span class="priority-badge priority-medium">Medium</span>
+                            {% elif case.priority == 4 %}<span class="priority-badge priority-medium-high">Medium-High</span>
+                            {% elif case.priority == 5 %}<span class="priority-badge priority-high">High</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ case.opened_date|date:"M j, Y" }}</td>
+                        <td>{{ case.lead_attorney.get_full_name|default:"Not assigned" }}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="7" class="text-muted">No cases found for the selected filters.</td></tr>
+                    <tr>
+                        <td colspan="6" class="no-data">No recent cases available</td>
+                    </tr>
   {% endfor %}
+                </tbody>
 </table>
+        </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="section">
+        <h2 class="section-header">Key Insights & Recommendations</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Case Management Efficiency</h4>
+                <p>
+                    {% if open_cases > closed_cases %}
+                    <strong>Attention Required:</strong> There are more open cases ({{ open_cases }}) than closed cases ({{ closed_cases }}). 
+                    Consider reviewing case progression and resource allocation.
+                    {% else %}
+                    <strong>Good Progress:</strong> Case closure rate is healthy with {{ closed_cases }} closed cases.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Overdue Cases</h4>
+                <p>
+                    {% if overdue_cases > 0 %}
+                    <strong>Action Required:</strong> {{ overdue_cases }} case(s) are overdue. 
+                    Immediate attention needed to prevent further delays and potential legal consequences.
+                    {% else %}
+                    <strong>Excellent:</strong> No overdue cases. All cases are progressing within expected timelines.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Case Type Analysis</h4>
+                <p>
+                    {% for item in case_type_distribution|slice:":1" %}
+                    <strong>Primary Focus:</strong> {{ item.case_type__name }} cases represent the largest category 
+                    ({{ item.count }} cases, {% widthratio item.count total_cases 100 %}% of total).
+                    {% empty %}
+                    <strong>Data Needed:</strong> Case type information should be consistently maintained for better analysis.
+                    {% endfor %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Resource Allocation</h4>
+                <p>
+                    {% if total_cases > 0 %}
+                    <strong>Current Load:</strong> Managing {{ total_cases }} total cases with {{ open_cases }} currently active. 
+                    Consider workload distribution among legal team members.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        <p><strong>Total Cases Analyzed:</strong> {{ total_cases }}</p>
+    </div>
+</div>
+
+<style>
+    .priority-badge {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+    .priority-low { background: #d1fae5; color: #065f46; }
+    .priority-medium-low { background: #fef3c7; color: #92400e; }
+    .priority-medium { background: #fbbf24; color: #92400e; }
+    .priority-medium-high { background: #fca5a5; color: #991b1b; }
+    .priority-high { background: #fecaca; color: #7f1d1d; }
+</style>
 {% endblock %} 

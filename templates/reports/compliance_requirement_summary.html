@@ -1,48 +1,345 @@
-{% extends 'reports/base_report.html' %}
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<div class="container mt-3">
-  <h2>Compliance Requirement Summary</h2>
-  <p><strong>Organization:</strong> {{ organization.name }}</p>
-  <p><strong>Filters:</strong> {{ filters }}</p>
-  <table class="table table-striped table-sm">
-    <thead class="table-light">
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.framework %}&framework={{ request.GET.framework }}{% endif %}{% if request.GET.jurisdiction %}&jurisdiction={{ request.GET.jurisdiction }}{% endif %}{% if request.GET.mandatory %}&mandatory={{ request.GET.mandatory }}{% endif %}{% if request.GET.policy %}&policy={{ request.GET.policy }}{% endif %}{% if request.GET.title %}&title={{ request.GET.title }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Compliance Requirement Summary
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Compliance Requirement Summary</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Compliance Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ requirements.count }}</div>
+      <div class="stat-label">Total Requirements</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ mandatory_requirements }}</div>
+      <div class="stat-label">Mandatory Requirements</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ frameworks_count }}</div>
+      <div class="stat-label">Regulatory Frameworks</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ jurisdictions_count }}</div>
+      <div class="stat-label">Jurisdictions</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Framework</th>
+      <td>{{ filters.framework|default:"All Frameworks" }}</td>
+      <th style="width:25%">Jurisdiction</th>
+      <td>{{ filters.jurisdiction|default:"All Jurisdictions" }}</td>
+    </tr>
+    <tr>
+      <th>Mandatory Status</th>
+      <td>{{ filters.mandatory|yesno:"Mandatory Only,Optional Only,All Requirements"|default:"All Requirements" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Requirements Summary Table -->
+<div class="report-card">
+  <h3>Compliance Requirements Summary</h3>
+  <style>
+    /* Compact styling specifically for Requirements Summary table */
+    .requirements-summary-table {
+      font-size: 7pt !important;
+      margin: 0.3cm 0 !important;
+    }
+    .requirements-summary-table th,
+    .requirements-summary-table td {
+      padding: 4px 3px !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
+    }
+    .requirements-summary-table th {
+      font-size: 7pt !important;
+      font-weight: 600 !important;
+    }
+    .requirements-summary-table .status-badge,
+    .requirements-summary-table .mandatory-badge {
+      font-size: 6pt !important;
+      padding: 2px 4px !important;
+      min-width: 50px !important;
+    }
+    .requirements-summary-table strong {
+      font-size: 7pt !important;
+    }
+    /* Specific column widths for better fit */
+    .requirements-summary-table .col-id { width: 8%; }
+    .requirements-summary-table .col-title { width: 25%; }
+    .requirements-summary-table .col-framework { width: 15%; }
+    .requirements-summary-table .col-jurisdiction { width: 12%; }
+    .requirements-summary-table .col-mandatory { width: 10%; }
+    .requirements-summary-table .col-policy { width: 20%; }
+    .requirements-summary-table .col-tags { width: 10%; }
+  </style>
+  <table class="report-table requirements-summary-table">
+    <thead>
       <tr>
-        <th>ID</th>
-        <th>Title</th>
-        <th>Framework</th>
-        <th>Jurisdiction</th>
-        <th>Mandatory</th>
-        <th>Policy</th>
-        <th>Tags</th>
+        <th class="col-id">Req ID</th>
+        <th class="col-title">Title</th>
+        <th class="col-framework">Framework</th>
+        <th class="col-jurisdiction text-center">Jurisdiction</th>
+        <th class="col-mandatory text-center">Mandatory</th>
+        <th class="col-policy">Policy Document</th>
+        <th class="col-tags text-center">Tags</th>
       </tr>
     </thead>
     <tbody>
-      {% for req in requirements %}
+      {% for requirement in requirements %}
       <tr>
-        <td>{{ req.requirement_id }}</td>
-        <td>{{ req.title|truncatechars:40 }}</td>
-        <td>
-          {% if req.regulatory_framework %}
-            {{ req.regulatory_framework.name }}
+        <td class="text-center"><strong>{{ requirement.requirement_id|truncatechars:8 }}</strong></td>
+        <td>{{ requirement.title|truncatechars:35 }}</td>
+        <td>{{ requirement.regulatory_framework.name|default:"Internal"|truncatechars:15 }}</td>
+        <td class="text-center">{{ requirement.jurisdiction|truncatechars:12 }}</td>
+        <td class="text-center">
+          <span class="mandatory-badge {% if requirement.mandatory %}status-active{% else %}status-inactive{% endif %}">
+            {{ requirement.mandatory|yesno:"Yes,No" }}
+          </span>
+        </td>
+        <td>{{ requirement.policy_document.title|default:"Not linked"|truncatechars:20 }}</td>
+        <td class="text-center">
+          {% if requirement.tags %}
+            {% for key, value in requirement.tags.items %}
+              {% if forloop.counter <= 2 %}
+                <span class="status-badge status-pending">{{ key }}: {{ value|truncatechars:8 }}</span>
+              {% endif %}
+            {% endfor %}
           {% else %}
-            &nbsp;
+            -
           {% endif %}
         </td>
-        <td>{{ req.jurisdiction }}</td>
-        <td>{{ req.mandatory|yesno:'Yes,No' }}</td>
-        <td>
-          {% if req.policy_document %}
-            {{ req.policy_document.title }}
-          {% else %}
-            &nbsp;
-          {% endif %}
-        </td>
-        <td>{{ req.tags|default:'-' }}</td>
       </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-center text-muted">No requirements found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Framework Distribution Analysis -->
+<div class="report-card">
+  <h3>Framework Distribution Analysis</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-30">Framework</th>
+        <th class="col-15 text-center">Requirements</th>
+        <th class="col-15 text-center">Mandatory</th>
+        <th class="col-15 text-center">Optional</th>
+        <th class="col-25 text-center">Coverage Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for framework in framework_distribution %}
+      <tr>
+        <td><strong>{{ framework.name|default:"Internal Requirements" }}</strong></td>
+        <td class="text-center">{{ framework.total_requirements }}</td>
+        <td class="text-center">{{ framework.mandatory_count }}</td>
+        <td class="text-center">{{ framework.optional_count }}</td>
+        <td class="text-center">
+          <span class="status-badge status-active">
+            {{ framework.coverage_percentage|floatformat:1 }}% Coverage
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Jurisdiction Analysis -->
+<div class="report-card">
+  <h3>Jurisdiction Analysis</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Jurisdiction</th>
+        <th class="col-15 text-center">Requirements</th>
+        <th class="col-15 text-center">Mandatory</th>
+        <th class="col-15 text-center">Optional</th>
+        <th class="col-30 text-center">Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for jurisdiction in jurisdiction_distribution %}
+      <tr>
+        <td><strong>{{ jurisdiction.name }}</strong></td>
+        <td class="text-center">{{ jurisdiction.total_requirements }}</td>
+        <td class="text-center">{{ jurisdiction.mandatory_count }}</td>
+        <td class="text-center">{{ jurisdiction.optional_count }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if jurisdiction.mandatory_count > 10 %}high{% elif jurisdiction.mandatory_count > 5 %}medium{% else %}low{% endif %}">
+            {% if jurisdiction.mandatory_count > 10 %}High Risk{% elif jurisdiction.mandatory_count > 5 %}Medium Risk{% else %}Low Risk{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Requirement Details -->
+{% for requirement in requirements %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Requirement {{ forloop.counter }}: {{ requirement.requirement_id }}</h3>
+    <span class="priority-indicator">
+      {% if requirement.mandatory %}Mandatory{% else %}Optional{% endif %}
+    </span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Requirement ID</th>
+      <td>{{ requirement.requirement_id }}</td>
+      <th style="width:20%">Mandatory Status</th>
+      <td>
+        <span class="status-badge {% if requirement.mandatory %}status-active{% else %}status-inactive{% endif %}">
+          {{ requirement.mandatory|yesno:"Mandatory,Optional" }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Title</th>
+      <td colspan="3">{{ requirement.title }}</td>
+    </tr>
+    <tr>
+      <th>Regulatory Framework</th>
+      <td>{{ requirement.regulatory_framework.name|default:"Internal Policy" }}</td>
+      <th>Jurisdiction</th>
+      <td>{{ requirement.jurisdiction }}</td>
+    </tr>
+    <tr>
+      <th>Policy Document</th>
+      <td>{{ requirement.policy_document.title|default:"Not linked to policy" }}</td>
+      <th>Policy Section</th>
+      <td>{{ requirement.policy_section|default:"Not specified" }}</td>
+    </tr>
+  </table>
+
+  {% if requirement.description %}
+  <div class="field-group">
+    <div class="field-label">Description</div>
+    <div class="field-value">{{ requirement.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if requirement.tags %}
+  <div class="field-group">
+    <div class="field-label">Tags & Categories</div>
+    <div class="field-value">
+      {% for key, value in requirement.tags.items %}
+        <span class="status-badge status-pending">{{ key }}: {{ value }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if requirement.mandatory %}
+  <div class="alert alert-warning">
+    <strong>⚠️ MANDATORY REQUIREMENT:</strong> This is a mandatory compliance requirement that must be met.
+    <br><strong>Risk:</strong> Non-compliance may result in regulatory penalties or legal consequences.
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Requirements Found:</strong> No compliance requirements match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Compliance Analysis & Insights -->
+<div class="report-card">
+  <h3>Compliance Analysis & Insights</h3>
+  
+  <div class="field-label">Regulatory Landscape Analysis</div>
+  <div class="field-value">
+    <p>This compliance requirement analysis provides comprehensive insights into the organization's regulatory landscape, 
+    covering {{ requirements.count }} requirements across {{ frameworks_count }} frameworks and {{ jurisdictions_count }} jurisdictions.</p>
+    
+    <p><strong>Key Compliance Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Requirements:</strong> {{ requirements.count }} compliance requirements identified</li>
+      <li><strong>Mandatory Requirements:</strong> {{ mandatory_requirements }} requirements that must be met</li>
+      <li><strong>Regulatory Frameworks:</strong> {{ frameworks_count }} different frameworks represented</li>
+      <li><strong>Jurisdictions:</strong> {{ jurisdictions_count }} different jurisdictions covered</li>
+      <li><strong>Policy Coverage:</strong> {{ policy_coverage_percentage|floatformat:1 }}% of requirements linked to policies</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Compliance Risk Assessment</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>High-Risk Jurisdictions:</strong> {{ high_risk_jurisdictions }} jurisdictions with significant mandatory requirements</li>
+      <li><strong>Framework Gaps:</strong> {{ framework_gaps }} frameworks requiring additional attention</li>
+      <li><strong>Policy Gaps:</strong> {{ policy_gaps }} requirements not linked to specific policies</li>
+      <li><strong>Compliance Maturity:</strong> Overall compliance maturity assessment based on requirement coverage</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if requirements %}
+  <div class="field-label">Strategic Compliance Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Mandatory Requirement Prioritization:</strong> Prioritize implementation of {{ mandatory_requirements }} mandatory requirements to ensure regulatory compliance</li>
+      <li><strong>Policy Development:</strong> Develop policies for {{ policy_gaps }} requirements currently not linked to specific policies</li>
+      <li><strong>Framework Alignment:</strong> Ensure alignment across {{ frameworks_count }} regulatory frameworks to avoid conflicts</li>
+      <li><strong>Jurisdiction Management:</strong> Establish dedicated compliance programs for high-risk jurisdictions</li>
+      <li><strong>Tagging Strategy:</strong> Implement consistent tagging strategy for better requirement categorization and tracking</li>
+      <li><strong>Compliance Monitoring:</strong> Establish regular compliance monitoring and reporting mechanisms</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Mitigation Strategies</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Regulatory Change Management:</strong> Implement processes to track and respond to regulatory changes</li>
+      <li><strong>Compliance Training:</strong> Develop training programs for staff on key compliance requirements</li>
+      <li><strong>Audit Readiness:</strong> Maintain audit-ready documentation for all mandatory requirements</li>
+      <li><strong>Cross-Functional Coordination:</strong> Establish cross-functional teams to address complex compliance requirements</li>
+    </ul>
+  </div>
+  {% endif %}
 </div>
 {% endblock %} 

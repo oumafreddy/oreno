@@ -98,27 +98,27 @@
   <table class="report-table">
     <thead>
       <tr>
-        <th>Issue Code</th>
-        <th>Title</th>
-        <th>Engagement</th>
-        <th>Severity</th>
-        <th>Status</th>
-        <th>Owner</th>
-        <th>Date Identified</th>
-        <th>Days Open</th>
+        <th class="col-10 text-center">Issue Code</th>
+        <th class="col-20">Title</th>
+        <th class="col-15">Engagement</th>
+        <th class="col-10 text-center">Severity</th>
+        <th class="col-10 text-center">Status</th>
+        <th class="col-12">Owner</th>
+        <th class="col-12 text-center">Date Identified</th>
+        <th class="col-11 text-center">Days Open</th>
       </tr>
     </thead>
     <tbody>
       {% for issue in issues %}
       <tr>
-        <td>{{ issue.code }}</td>
+        <td class="text-center">{{ issue.code }}</td>
         <td>{{ issue.issue_title }}</td>
         <td>{{ issue.procedure.risk.objective.engagement.title|default:"Not specified" }}</td>
-        <td><span class="risk-level risk-{{ issue.risk_level|lower }}">{{ issue.get_risk_level_display }}</span></td>
-        <td><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
+        <td class="text-center"><span class="risk-level risk-{{ issue.risk_level|lower }}">{{ issue.get_risk_level_display }}</span></td>
+        <td class="text-center"><span class="status-badge status-{{ issue.issue_status|lower }}">{{ issue.get_issue_status_display }}</span></td>
         <td>{% if issue.issue_owner %}{{ issue.issue_owner.get_full_name|default:"Not specified" }}{% else %}{{ issue.issue_owner_title|default:"Not specified" }}{% endif %}</td>
-        <td>{{ issue.date_identified|date:"M j, Y" }}</td>
-        <td>
+        <td class="text-center">{{ issue.date_identified|date:"M j, Y" }}</td>
+        <td class="text-center">
           {% if issue.issue_status != 'closed' %}
             {{ issue.date_identified|timesince }}
           {% else %}
@@ -140,28 +140,28 @@
   <table class="report-table">
     <thead>
       <tr>
-        <th>Severity</th>
-        <th>Count</th>
-        <th>Percentage</th>
-        <th>Average Days Open</th>
-        <th>Escalation Rate</th>
+        <th class="col-20 text-center">Severity</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-25 text-center">Average Days Open</th>
+        <th class="col-25 text-center">Escalation Rate</th>
       </tr>
     </thead>
     <tbody>
       {% regroup issues by risk_level as severity_list %}
       {% for severity in severity_list %}
       <tr>
-        <td><span class="risk-level risk-{{ severity.grouper|lower }}">{{ severity.grouper|title }}</span></td>
-        <td><strong>{{ severity.list|length }}</strong></td>
-        <td>{{ severity.list|length|floatformat:1 }}%</td>
-        <td>
+        <td class="text-center"><span class="risk-level risk-{{ severity.grouper|lower }}">{{ severity.grouper|title }}</span></td>
+        <td class="text-center"><strong>{{ severity.list|length }}</strong></td>
+        <td class="text-center">{{ severity.list|length|floatformat:1 }}%</td>
+        <td class="text-center">
           {% for item in severity.list %}
             {% if item.issue_status != 'closed' %}
               {{ item.date_identified|timesince }}
             {% endif %}
           {% endfor %}
         </td>
-        <td>
+        <td class="text-center">
           {% for item in severity.list %}
             {% if item.issue_status == 'escalated' %}
               <span class="status-badge status-pending">Escalated</span>
@@ -180,11 +180,11 @@
   <table class="report-table">
     <thead>
       <tr>
-        <th>Status</th>
-        <th>Count</th>
-        <th>Percentage</th>
-        <th>Average Age</th>
-        <th>Trend</th>
+        <th class="col-20 text-center">Status</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-25 text-center">Average Age</th>
+        <th class="col-25 text-center">Trend</th>
       </tr>
     </thead>
     <tbody>

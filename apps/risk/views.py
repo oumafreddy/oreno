@@ -170,6 +170,8 @@ class RiskRegisterDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, De
     model = RiskRegister
     template_name = 'risk/riskregister_confirm_delete.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 # --- RiskMatrixConfig Views ---
@@ -232,16 +234,17 @@ class RiskMatrixConfigUpdateView(OrganizationPermissionMixin, LoginRequiredMixin
 class RiskMatrixConfigDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = RiskMatrixConfig
     template_name = 'risk/riskmatrixconfig_detail.html'
-    context_object_name = 'matrixconfig'
+    context_object_name = 'matrix'
     def get_queryset(self):
-        qs = super().get_queryset()
-        return qs.filter(organization=self.request.organization)
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 class RiskMatrixConfigDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
     model = RiskMatrixConfig
     template_name = 'risk/riskmatrixconfig_confirm_delete.html'
     success_url = reverse_lazy('risk:riskmatrixconfig_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 # --- Risk Views ---
@@ -280,6 +283,8 @@ class RiskDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView
     model = Risk
     template_name = 'risk/risk_confirm_delete.html'
     success_url = reverse_lazy('risk:risk_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 # --- Control Views ---
@@ -347,6 +352,8 @@ class ControlDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteV
     model = Control
     template_name = 'risk/control_confirm_delete.html'
     success_url = reverse_lazy('risk:control_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 # --- KRI Views ---
@@ -407,6 +414,8 @@ class KRIDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView)
     model = KRI
     template_name = 'risk/kri_confirm_delete.html'
     success_url = reverse_lazy('risk:kri_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(risk__organization=self.request.organization)
 
 
 # --- RiskAssessment Views ---
@@ -468,6 +477,8 @@ class RiskAssessmentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, 
     model = RiskAssessment
     template_name = 'risk/riskassessment_confirm_delete.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 
 def get_active_matrix_config(org):

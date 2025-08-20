@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')  # Set non-interactive backend to prevent GUI errors
+
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -12,8 +15,9 @@ from datetime import datetime
 from django.db.models.functions import TruncMonth
 from audit.models import AuditWorkplan, Engagement, Issue, Approval
 from django.db.models.functions import TruncYear
-from legal.models import LegalCase
+from legal.models import LegalCase, LegalTask, LegalDocument, LegalParty, LegalArchive
 from compliance.models import ComplianceRequirement, ComplianceFramework, PolicyDocument, ComplianceObligation, ComplianceEvidence
+from datetime import timedelta
 from contracts.models import Contract, Party, ContractMilestone
 from django.utils import timezone
 
@@ -55,7 +59,7 @@ def risk_register_summary_pdf(request):
     if status:
         risks = risks.filter(status=status)
     if register:
-        risks = risks.filter(risk_register_id=register)
+        risks = risks.filter(risk_register__register_name__icontains=register)
     summary = {
         'by_status': risks.values('status').annotate(count=Count('id')),
         'by_category': risks.values('category').annotate(count=Count('id')),
@@ -221,22 +225,34 @@ def risk_register_detailed_pdf(request):
     if status:
         risks = risks.filter(status=status)
     if register:
-        risks = risks.filter(risk_register_id=register)
+        risks = risks.filter(risk_register__register_name__icontains=register)
+    
+    # Calculate additional statistics
+    total_risks = risks.count()
+    high_priority_risks = risks.filter(residual_risk_score__gte=15).count()
+    active_risks = risks.exclude(status='closed').exclude(status='archived').count()
+    categories_count = risks.values('category').distinct().count()
+    
     html_string = render_to_string('reports/risk_register_detailed.html', {
         'organization': org,
         'risks': risks,
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Risk Register - Detailed Report',
-        'description': f'Comprehensive risk analysis with {risks.count()} risks identified',
+        'description': f'Comprehensive risk analysis with {total_risks} risks identified',
         'filters': {
             'category': category,
             'owner': owner,
             'status': status,
             'register': register
         },
-        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'category': category, 'owner': owner, 'status': status, 'register': register}.items() if v])
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'category': category, 'owner': owner, 'status': status, 'register': register}.items() if v]),
+        'total_risks': total_risks,
+        'high_priority_risks': high_priority_risks,
+        'active_risks': active_risks,
+        'categories_count': categories_count,
+        'for_pdf': True
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_risk_register_detailed.pdf"'
     return response
@@ -259,11 +275,34 @@ def risk_assessment_details_pdf(request):
         assessments = assessments.filter(risk_score__gte=min_score)
     if max_score:
         assessments = assessments.filter(risk_score__lte=max_score)
+    
+    # Calculate additional statistics
+    total_assessments = assessments.count()
+    high_risk_assessments = assessments.filter(risk_score__gte=15).count()
+    medium_risk_assessments = assessments.filter(risk_score__range=(5, 14)).count()
+    assessors = assessments.values('assessor').distinct().count()
+    
     html_string = render_to_string('reports/risk_assessment_details.html', {
         'organization': org,
         'assessments': assessments,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Risk Assessment Analysis',
+        'description': f'Risk assessment analysis with {total_assessments} assessments',
+        'filters': {
+            'risk': risk_id,
+            'assessment_type': assessment_type,
+            'assessor': assessor,
+            'min_score': min_score,
+            'max_score': max_score
+        },
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'risk': risk_id, 'assessment_type': assessment_type, 'assessor': assessor, 'min_score': min_score, 'max_score': max_score}.items() if v]),
+        'total_assessments': total_assessments,
+        'high_risk_assessments': high_risk_assessments,
+        'medium_risk_assessments': medium_risk_assessments,
+        'assessors': assessors,
+        'for_pdf': True
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_risk_assessment_details.pdf"'
     return response
@@ -271,11 +310,42 @@ def risk_assessment_details_pdf(request):
 def control_details_pdf(request):
     org = request.tenant
     controls = Control.objects.filter(organization=org)
+    control_type_filter = request.GET.get('control_type')
+    status_filter = request.GET.get('status')
+    owner_filter = request.GET.get('owner')
+    
+    if control_type_filter:
+        controls = controls.filter(control_type=control_type_filter)
+    if status_filter:
+        controls = controls.filter(status=status_filter)
+    if owner_filter:
+        controls = controls.filter(control_owner__icontains=owner_filter)
+    
+    # Calculate additional statistics
+    total_controls = controls.count()
+    effective_controls = controls.filter(effectiveness_rating='effective').count()
+    ineffective_controls = controls.filter(effectiveness_rating='ineffective').count()
+    control_owners = controls.values('control_owner').distinct().count()
+    
     html_string = render_to_string('reports/control_details.html', {
         'organization': org,
         'controls': controls,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Control Effectiveness Analysis',
+        'description': f'Control effectiveness analysis with {total_controls} controls',
+        'filters': {
+            'control_type': control_type_filter,
+            'status': status_filter,
+            'owner': owner_filter
+        },
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'control_type': control_type_filter, 'status': status_filter, 'owner': owner_filter}.items() if v]),
+        'total_controls': total_controls,
+        'effective_controls': effective_controls,
+        'ineffective_controls': ineffective_controls,
+        'control_owners': control_owners,
+        'for_pdf': True
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_control_details.pdf"'
     return response
@@ -283,11 +353,42 @@ def control_details_pdf(request):
 def kri_details_pdf(request):
     org = request.tenant
     kris = KRI.objects.filter(risk__organization=org)
+    risk_filter = request.GET.get('risk')
+    status_filter = request.GET.get('status')
+    direction_filter = request.GET.get('direction')
+    
+    if risk_filter:
+        kris = kris.filter(risk__risk_name__icontains=risk_filter)
+    if status_filter:
+        kris = kris.filter(status=status_filter)
+    if direction_filter:
+        kris = kris.filter(direction=direction_filter)
+    
+    # Calculate additional statistics
+    total_kris = kris.count()
+    critical_kris = sum(1 for kri in kris if kri.get_status() == 'critical')
+    warning_kris = sum(1 for kri in kris if kri.get_status() == 'warning')
+    monitored_risks = kris.values('risk').distinct().count()
+    
     html_string = render_to_string('reports/kri_details.html', {
         'organization': org,
         'kris': kris,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Key Risk Indicators Analysis',
+        'description': f'KRI monitoring analysis with {total_kris} indicators',
+        'filters': {
+            'risk': risk_filter,
+            'status': status_filter,
+            'direction': direction_filter
+        },
+        'filters_summary': ', '.join([f"{k}: {v}" for k, v in {'risk': risk_filter, 'status': status_filter, 'direction': direction_filter}.items() if v]),
+        'total_kris': total_kris,
+        'critical_kris': critical_kris,
+        'warning_kris': warning_kris,
+        'monitored_risks': monitored_risks,
+        'for_pdf': True
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_kri_details.pdf"'
     return response
@@ -603,12 +704,71 @@ def compliance_requirement_summary_pdf(request):
         requirements = requirements.filter(policy_document__title__icontains=policy)
     if title:
         requirements = requirements.filter(title__icontains=title)
+    
+    # Calculate enriched context data
+    mandatory_requirements = requirements.filter(mandatory=True).count()
+    frameworks_count = requirements.values('regulatory_framework').distinct().count()
+    jurisdictions_count = requirements.values('jurisdiction').distinct().count()
+    
+    # Framework distribution analysis
+    framework_distribution = []
+    for req in requirements.values('regulatory_framework__name').annotate(
+        total_requirements=Count('id'),
+        mandatory_count=Count('id', filter=Q(mandatory=True)),
+        optional_count=Count('id', filter=Q(mandatory=False))
+    ):
+        total = req['total_requirements']
+        mandatory = req['mandatory_count']
+        optional = req['optional_count']
+        coverage_percentage = (mandatory / total * 100) if total > 0 else 0
+        
+        framework_distribution.append({
+            'name': req['regulatory_framework__name'] or 'Internal Requirements',
+            'total_requirements': total,
+            'mandatory_count': mandatory,
+            'optional_count': optional,
+            'coverage_percentage': coverage_percentage
+        })
+    
+    # Jurisdiction distribution analysis
+    jurisdiction_distribution = []
+    for req in requirements.values('jurisdiction').annotate(
+        total_requirements=Count('id'),
+        mandatory_count=Count('id', filter=Q(mandatory=True)),
+        optional_count=Count('id', filter=Q(mandatory=False))
+    ):
+        jurisdiction_distribution.append({
+            'name': req['jurisdiction'],
+            'total_requirements': req['total_requirements'],
+            'mandatory_count': req['mandatory_count'],
+            'optional_count': req['optional_count']
+        })
+    
+    # Calculate additional metrics
+    policy_coverage_percentage = (requirements.exclude(policy_document__isnull=True).count() / requirements.count() * 100) if requirements.count() > 0 else 0
+    high_risk_jurisdictions = sum(1 for j in jurisdiction_distribution if j['mandatory_count'] > 10)
+    framework_gaps = sum(1 for f in framework_distribution if f['mandatory_count'] == 0)
+    policy_gaps = requirements.filter(policy_document__isnull=True).count()
+    
     html_string = render_to_string('reports/compliance_requirement_summary.html', {
         'organization': org,
         'requirements': requirements,
         'filters': {'framework': framework, 'jurisdiction': jurisdiction, 'mandatory': mandatory, 'policy': policy, 'title': title},
+        'mandatory_requirements': mandatory_requirements,
+        'frameworks_count': frameworks_count,
+        'jurisdictions_count': jurisdictions_count,
+        'framework_distribution': framework_distribution,
+        'jurisdiction_distribution': jurisdiction_distribution,
+        'policy_coverage_percentage': policy_coverage_percentage,
+        'high_risk_jurisdictions': high_risk_jurisdictions,
+        'framework_gaps': framework_gaps,
+        'policy_gaps': policy_gaps,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Compliance Requirement Summary Report',
+        'description': 'Comprehensive analysis of compliance requirements across regulatory frameworks and jurisdictions',
+        'filters_summary': f"Framework: {framework or 'All'}, Jurisdiction: {jurisdiction or 'All'}, Mandatory: {mandatory or 'All'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_requirement_summary.pdf"'
     return response
@@ -634,12 +794,67 @@ def compliance_obligation_register_pdf(request):
         obligations = obligations.filter(requirement__title__icontains=requirement)
     if obligation_id:
         obligations = obligations.filter(obligation_id__icontains=obligation_id)
+    
+    # Calculate enriched context data
+    open_obligations = obligations.filter(status='open').count()
+    overdue_obligations = obligations.filter(due_date__lt=timezone.now().date()).count()
+    high_priority_obligations = obligations.filter(priority__gte=4).count()
+    
+    # Status distribution analysis
+    status_distribution = []
+    for obl in obligations.values('status').annotate(
+        count=Count('id'),
+        overdue_count=Count('id', filter=Q(due_date__lt=timezone.now().date()))
+    ):
+        total = obl['count']
+        percentage = (total / obligations.count() * 100) if obligations.count() > 0 else 0
+        
+        status_distribution.append({
+            'name': obl['status'].title(),
+            'count': total,
+            'percentage': percentage,
+            'overdue_count': obl['overdue_count']
+        })
+    
+    # Priority distribution analysis
+    priority_distribution = []
+    for obl in obligations.values('priority').annotate(
+        count=Count('id'),
+        overdue_count=Count('id', filter=Q(due_date__lt=timezone.now().date()))
+    ):
+        total = obl['count']
+        percentage = (total / obligations.count() * 100) if obligations.count() > 0 else 0
+        
+        priority_distribution.append({
+            'level': obl['priority'],
+            'count': total,
+            'percentage': percentage,
+            'overdue_count': obl['overdue_count']
+        })
+    
+    # Calculate additional metrics
+    completion_rate = (obligations.filter(status='completed').count() / obligations.count() * 100) if obligations.count() > 0 else 0
+    unassigned_obligations = obligations.filter(owner__isnull=True, owner_email__isnull=True).count()
+    evidence_required_count = obligations.filter(evidence_required=True).count()
+    
     html_string = render_to_string('reports/compliance_obligation_register.html', {
         'organization': org,
         'obligations': obligations,
         'filters': {'status': status, 'owner': owner, 'due_date': due_date, 'priority': priority, 'requirement': requirement, 'obligation_id': obligation_id},
+        'open_obligations': open_obligations,
+        'overdue_obligations': overdue_obligations,
+        'high_priority_obligations': high_priority_obligations,
+        'status_distribution': status_distribution,
+        'priority_distribution': priority_distribution,
+        'completion_rate': completion_rate,
+        'unassigned_obligations': unassigned_obligations,
+        'evidence_required_count': evidence_required_count,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Compliance Obligation Register Report',
+        'description': 'Comprehensive analysis of compliance obligations and their management status',
+        'filters_summary': f"Status: {status or 'All'}, Owner: {owner or 'All'}, Priority: {priority or 'All'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_obligation_register.pdf"'
     return response
@@ -659,12 +874,84 @@ def compliance_evidence_register_pdf(request):
         evidences = evidences.filter(validity_start__gte=validity_start)
     if validity_end:
         evidences = evidences.filter(validity_end__lte=validity_end)
+    
+    # Calculate enriched context data
+    today = timezone.now().date()
+    thirty_days_from_now = today + timedelta(days=30)
+    
+    valid_evidence = evidences.filter(validity_end__gte=today).count()
+    expiring_evidence = evidences.filter(validity_end__lte=thirty_days_from_now, validity_end__gte=today).count()
+    expired_evidence = evidences.filter(validity_end__lt=today).count()
+    
+    # Evidence status distribution analysis
+    evidence_status_distribution = []
+    total_evidences = evidences.count()
+    
+    # Valid evidence
+    valid_count = valid_evidence
+    evidence_status_distribution.append({
+        'name': 'Valid',
+        'count': valid_count,
+        'percentage': (valid_count / total_evidences * 100) if total_evidences > 0 else 0,
+        'obligations_count': evidences.filter(validity_end__gte=today).values('obligation').distinct().count()
+    })
+    
+    # Expiring evidence
+    expiring_count = expiring_evidence
+    evidence_status_distribution.append({
+        'name': 'Expiring',
+        'count': expiring_count,
+        'percentage': (expiring_count / total_evidences * 100) if total_evidences > 0 else 0,
+        'obligations_count': evidences.filter(validity_end__lte=thirty_days_from_now, validity_end__gte=today).values('obligation').distinct().count()
+    })
+    
+    # Expired evidence
+    expired_count = expired_evidence
+    evidence_status_distribution.append({
+        'name': 'Expired',
+        'count': expired_count,
+        'percentage': (expired_count / total_evidences * 100) if total_evidences > 0 else 0,
+        'obligations_count': evidences.filter(validity_end__lt=today).values('obligation').distinct().count()
+    })
+    
+    # Obligation evidence coverage analysis
+    obligation_evidence_coverage = []
+    for obl in evidences.values('obligation__obligation_id', 'obligation__requirement__title').annotate(
+        evidence_count=Count('id'),
+        valid_evidence_count=Count('id', filter=Q(validity_end__gte=today))
+    ):
+        obligation_evidence_coverage.append({
+            'obligation_id': obl['obligation__obligation_id'],
+            'requirement_title': obl['obligation__requirement__title'],
+            'evidence_count': obl['evidence_count'],
+            'valid_evidence_count': obl['valid_evidence_count']
+        })
+    
+    # Calculate additional metrics
+    evidence_coverage_percentage = (valid_evidence / evidences.count() * 100) if evidences.count() > 0 else 0
+    coverage_gaps = evidences.values('obligation').distinct().count() - len([o for o in obligation_evidence_coverage if o['valid_evidence_count'] > 0])
+    single_evidence_obligations = len([o for o in obligation_evidence_coverage if o['evidence_count'] == 1])
+    
     html_string = render_to_string('reports/compliance_evidence_register.html', {
         'organization': org,
         'evidences': evidences,
         'filters': {'obligation': obligation, 'document': document, 'validity_start': validity_start, 'validity_end': validity_end},
+        'valid_evidence': valid_evidence,
+        'expiring_evidence': expiring_evidence,
+        'expired_evidence': expired_evidence,
+        'evidence_status_distribution': evidence_status_distribution,
+        'obligation_evidence_coverage': obligation_evidence_coverage,
+        'evidence_coverage_percentage': evidence_coverage_percentage,
+        'coverage_gaps': coverage_gaps,
+        'single_evidence_obligations': single_evidence_obligations,
+        'today': today,
+        'thirty_days_from_now': thirty_days_from_now,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Compliance Evidence Register Report',
+        'description': 'Comprehensive analysis of compliance evidence and its validity status',
+        'filters_summary': f"Obligation: {obligation or 'All'}, Document: {document or 'All'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_evidence_register.pdf"'
     return response
@@ -684,12 +971,86 @@ def policy_document_register_pdf(request):
         documents = documents.filter(expiration_date=expiration_date)
     if title:
         documents = documents.filter(title__icontains=title)
+    
+    # Calculate enriched context data
+    today = timezone.now().date()
+    thirty_days_from_now = today + timedelta(days=30)
+    
+    active_policies = documents.filter(expiration_date__isnull=True) | documents.filter(expiration_date__gte=today)
+    expiring_policies = documents.filter(expiration_date__lte=thirty_days_from_now, expiration_date__gte=today)
+    expired_policies = documents.filter(expiration_date__lt=today)
+    
+    # Policy status distribution analysis
+    policy_status_distribution = []
+    total_policies = documents.count()
+    
+    # Active policies
+    active_count = active_policies.count()
+    policy_status_distribution.append({
+        'name': 'Active',
+        'count': active_count,
+        'percentage': (active_count / total_policies * 100) if total_policies > 0 else 0,
+        'owners_count': active_policies.values('owner').distinct().count()
+    })
+    
+    # Expiring policies
+    expiring_count = expiring_policies.count()
+    policy_status_distribution.append({
+        'name': 'Expiring',
+        'count': expiring_count,
+        'percentage': (expiring_count / total_policies * 100) if total_policies > 0 else 0,
+        'owners_count': expiring_policies.values('owner').distinct().count()
+    })
+    
+    # Expired policies
+    expired_count = expired_policies.count()
+    policy_status_distribution.append({
+        'name': 'Expired',
+        'count': expired_count,
+        'percentage': (expired_count / total_policies * 100) if total_policies > 0 else 0,
+        'owners_count': expired_policies.values('owner').distinct().count()
+    })
+    
+    # Owner analysis
+    owner_analysis = []
+    for doc in documents.values('owner__email', 'owner__first_name', 'owner__last_name').annotate(
+        total_policies=Count('id'),
+        active_policies=Count('id', filter=Q(expiration_date__isnull=True) | Q(expiration_date__gte=today)),
+        expired_policies=Count('id', filter=Q(expiration_date__lt=today))
+    ):
+        owner_name = f"{doc['owner__first_name']} {doc['owner__last_name']}" if doc['owner__first_name'] and doc['owner__last_name'] else doc['owner__email']
+        owner_analysis.append({
+            'name': owner_name,
+            'total_policies': doc['total_policies'],
+            'active_policies': doc['active_policies'],
+            'expired_policies': doc['expired_policies']
+        })
+    
+    # Calculate additional metrics
+    policy_coverage_percentage = (active_count / total_policies * 100) if total_policies > 0 else 0
+    unassigned_policies = documents.filter(owner__isnull=True, owner_email__isnull=True).count()
+    outdated_versions = documents.filter(version__lt='2.0').count()  # Assuming version 2.0+ is current
+    
     html_string = render_to_string('reports/policy_document_register.html', {
         'organization': org,
         'documents': documents,
         'filters': {'owner': owner, 'effective_date': effective_date, 'expiration_date': expiration_date, 'title': title},
+        'active_policies': active_count,
+        'expiring_policies': expiring_count,
+        'expired_policies': expired_count,
+        'policy_status_distribution': policy_status_distribution,
+        'owner_analysis': owner_analysis,
+        'policy_coverage_percentage': policy_coverage_percentage,
+        'unassigned_policies': unassigned_policies,
+        'outdated_versions': outdated_versions,
+        'today': today,
+        'thirty_days_from_now': thirty_days_from_now,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Policy Document Register Report',
+        'description': 'Comprehensive analysis of policy documents and their management status',
+        'filters_summary': f"Owner: {owner or 'All'}, Title: {title or 'All'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_policy_document_register.pdf"'
     return response
@@ -697,21 +1058,69 @@ def policy_document_register_pdf(request):
 def compliance_requirement_details_pdf(request):
     org = request.tenant
     requirement = None
-    obligations = []
-    evidences = []
+    obligations = ComplianceObligation.objects.none()  # Initialize as empty QuerySet
+    evidences = ComplianceEvidence.objects.none()  # Initialize as empty QuerySet
     title = request.GET.get('title')
     if title:
         requirement = ComplianceRequirement.objects.filter(organization=org, title__icontains=title).first()
         if requirement:
             obligations = ComplianceObligation.objects.filter(requirement=requirement)
             evidences = ComplianceEvidence.objects.filter(obligation__in=obligations)
+    
+    # Create a dictionary to map obligations to their evidences for easy template access
+    obligation_evidences_map = {}
+    if obligations.exists():
+        for obligation in obligations:
+            obligation_evidences_map[obligation.id] = evidences.filter(obligation=obligation)
+    
+    # Calculate enriched context data
+    open_obligations = obligations.filter(status='open').count()
+    completed_obligations = obligations.filter(status='completed').count()
+    overdue_obligations = obligations.filter(due_date__lt=timezone.now().date()).count()
+    high_priority_obligations = obligations.filter(priority__gte=4).count()
+    
+    # Obligation status distribution analysis
+    obligation_status_distribution = []
+    if obligations.exists():
+        for obl in obligations.values('status').annotate(
+            count=Count('id'),
+            overdue_count=Count('id', filter=Q(due_date__lt=timezone.now().date()))
+        ):
+            total = obl['count']
+            percentage = (total / obligations.count() * 100) if obligations.count() > 0 else 0
+            
+            obligation_status_distribution.append({
+                'name': obl['status'].title(),
+                'count': total,
+                'percentage': percentage,
+                'overdue_count': obl['overdue_count']
+            })
+    
+    # Calculate additional metrics
+    compliance_rate = (completed_obligations / obligations.count() * 100) if obligations.count() > 0 else 0
+    evidence_gaps = obligations.filter(evidence_required=True).exclude(complianceevidence__isnull=False).count()
+    unassigned_obligations = obligations.filter(owner__isnull=True, owner_email__isnull=True).count()
+    
     html_string = render_to_string('reports/compliance_requirement_details.html', {
         'organization': org,
         'requirement': requirement,
         'obligations': obligations,
         'evidences': evidences,
+        'obligation_evidences_map': obligation_evidences_map,
+        'open_obligations': open_obligations,
+        'completed_obligations': completed_obligations,
+        'overdue_obligations': overdue_obligations,
+        'high_priority_obligations': high_priority_obligations,
+        'obligation_status_distribution': obligation_status_distribution,
+        'compliance_rate': compliance_rate,
+        'evidence_gaps': evidence_gaps,
+        'unassigned_obligations': unassigned_obligations,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Compliance Requirement Details Report',
+        'description': 'Detailed analysis of compliance requirement implementation and associated obligations',
+        'filters_summary': f"Requirement: {title or 'Not specified'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_requirement_details.pdf"'
     return response
@@ -719,18 +1128,153 @@ def compliance_requirement_details_pdf(request):
 def compliance_obligation_details_pdf(request):
     org = request.tenant
     obligation = None
-    evidences = []
+    evidences = ComplianceEvidence.objects.none()  # Initialize as empty QuerySet
     obligation_id = request.GET.get('obligation_id')
     if obligation_id:
         obligation = ComplianceObligation.objects.filter(organization=org, obligation_id__icontains=obligation_id).first()
         if obligation:
             evidences = ComplianceEvidence.objects.filter(obligation=obligation)
+    
+    # Calculate enriched context data
+    today = timezone.now().date()
+    thirty_days_from_now = today + timedelta(days=30)
+    
+    valid_evidence = evidences.filter(validity_end__gte=today).count()
+    expiring_evidence = evidences.filter(validity_end__lte=thirty_days_from_now, validity_end__gte=today).count()
+    expired_evidence = evidences.filter(validity_end__lt=today).count()
+    
+    # Evidence status distribution analysis
+    evidence_status_distribution = []
+    if evidences.exists():
+        total_evidences = evidences.count()
+        
+        # Valid evidence
+        valid_count = valid_evidence
+        evidence_status_distribution.append({
+            'name': 'Valid',
+            'count': valid_count,
+            'percentage': (valid_count / total_evidences * 100) if total_evidences > 0 else 0,
+            'documents_count': evidences.filter(validity_end__gte=today).values('document').distinct().count()
+        })
+        
+        # Expiring evidence
+        expiring_count = expiring_evidence
+        evidence_status_distribution.append({
+            'name': 'Expiring',
+            'count': expiring_count,
+            'percentage': (expiring_count / total_evidences * 100) if total_evidences > 0 else 0,
+            'documents_count': evidences.filter(validity_end__lte=thirty_days_from_now, validity_end__gte=today).values('document').distinct().count()
+        })
+        
+        # Expired evidence
+        expired_count = expired_evidence
+        evidence_status_distribution.append({
+            'name': 'Expired',
+            'count': expired_count,
+            'percentage': (expired_count / total_evidences * 100) if total_evidences > 0 else 0,
+            'documents_count': evidences.filter(validity_end__lt=today).values('document').distinct().count()
+        })
+    
+    # Calculate risk levels and descriptions
+    if obligation:
+        # Obligation risk assessment
+        if obligation.check_overdue:
+            obligation_risk_level = "High Risk"
+            obligation_risk_description = "Obligation is overdue and requires immediate attention"
+        elif obligation.status == 'open' and obligation.due_date <= today:
+            obligation_risk_level = "Medium Risk"
+            obligation_risk_description = "Obligation is due today and should be completed"
+        else:
+            obligation_risk_level = "Low Risk"
+            obligation_risk_description = "Obligation is on track"
+        
+        # Priority description
+        if obligation.priority >= 4:
+            priority_description = "Critical priority requiring immediate attention"
+        elif obligation.priority >= 3:
+            priority_description = "High priority requiring prompt action"
+        else:
+            priority_description = "Standard priority"
+        
+        # Evidence risk assessment
+        if expired_evidence > 0:
+            evidence_risk_level = "High Risk"
+            evidence_risk_description = "Evidence has expired and needs renewal"
+        elif expiring_evidence > 0:
+            evidence_risk_level = "Medium Risk"
+            evidence_risk_description = "Evidence is expiring soon and needs attention"
+        else:
+            evidence_risk_level = "Low Risk"
+            evidence_risk_description = "Evidence is valid and current"
+        
+        # Compliance risk assessment
+        if obligation.check_overdue or expired_evidence > 0:
+            compliance_risk_level = "High Risk"
+            compliance_risk_description = "Compliance risk due to overdue obligation or expired evidence"
+        elif obligation.status == 'open' and obligation.due_date <= today or expiring_evidence > 0:
+            compliance_risk_level = "Medium Risk"
+            compliance_risk_description = "Compliance risk due to due obligation or expiring evidence"
+        else:
+            compliance_risk_level = "Low Risk"
+            compliance_risk_description = "Compliance is on track"
+        
+        # Owner accountability status
+        if obligation.owner or obligation.owner_email:
+            owner_accountability_status = "Owner assigned and accountable"
+        else:
+            owner_accountability_status = "No owner assigned - requires attention"
+        
+        # Recommendations
+        obligation_management_recommendation = "Ensure obligation is properly managed and tracked"
+        evidence_collection_recommendation = f"Collect evidence for {obligation.evidence_required and evidences.count() == 0 and 'this obligation' or 'all obligations'}"
+        status_update_recommendation = "Regularly update obligation status to maintain accurate tracking"
+        owner_engagement_recommendation = "Engage with obligation owner to ensure timely completion"
+        risk_mitigation_recommendation = "Implement risk mitigation strategies for high-priority obligations"
+        compliance_monitoring_recommendation = "Establish regular compliance monitoring and reporting"
+    else:
+        obligation_risk_level = "N/A"
+        obligation_risk_description = "No obligation found"
+        priority_description = "N/A"
+        evidence_risk_level = "N/A"
+        evidence_risk_description = "No evidence found"
+        compliance_risk_level = "N/A"
+        compliance_risk_description = "No compliance data available"
+        owner_accountability_status = "N/A"
+        obligation_management_recommendation = "N/A"
+        evidence_collection_recommendation = "N/A"
+        status_update_recommendation = "N/A"
+        owner_engagement_recommendation = "N/A"
+        risk_mitigation_recommendation = "N/A"
+        compliance_monitoring_recommendation = "N/A"
+    
     html_string = render_to_string('reports/compliance_obligation_details.html', {
         'organization': org,
         'obligation': obligation,
         'evidences': evidences,
+        'valid_evidence': valid_evidence,
+        'expiring_evidence': expiring_evidence,
+        'expired_evidence': expired_evidence,
+        'evidence_status_distribution': evidence_status_distribution,
+        'obligation_risk_level': obligation_risk_level,
+        'obligation_risk_description': obligation_risk_description,
+        'priority_description': priority_description,
+        'evidence_risk_level': evidence_risk_level,
+        'evidence_risk_description': evidence_risk_description,
+        'compliance_risk_level': compliance_risk_level,
+        'compliance_risk_description': compliance_risk_description,
+        'owner_accountability_status': owner_accountability_status,
+        'obligation_management_recommendation': obligation_management_recommendation,
+        'evidence_collection_recommendation': evidence_collection_recommendation,
+        'status_update_recommendation': status_update_recommendation,
+        'owner_engagement_recommendation': owner_engagement_recommendation,
+        'risk_mitigation_recommendation': risk_mitigation_recommendation,
+        'compliance_monitoring_recommendation': compliance_monitoring_recommendation,
+        'generation_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Compliance Obligation Details Report',
+        'description': 'Detailed analysis of compliance obligation and associated evidence',
+        'filters_summary': f"Obligation ID: {obligation_id or 'Not specified'}"
     })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_obligation_details.pdf"'
     return response
@@ -853,4 +1397,365 @@ def party_details_pdf(request):
     return render(request, 'reports/party_details.html', {
         'parties': parties,
         'organization': org
-    }) 
+    })
+
+# ─── LEGAL REPORTS ────────────────────────────────────────────────────────────
+
+def legal_case_summary_pdf(request):
+    """Generate comprehensive legal case summary report"""
+    org = request.tenant
+    cases = LegalCase.objects.filter(organization=org)
+    
+    # Apply filters
+    case_type = request.GET.get('case_type')
+    status = request.GET.get('status')
+    priority = request.GET.get('priority')
+    
+    if case_type:
+        cases = cases.filter(case_type__name__icontains=case_type)
+    if status:
+        cases = cases.filter(status=status)
+    if priority:
+        cases = cases.filter(priority=priority)
+    
+    # Calculate summary statistics
+    total_cases = cases.count()
+    open_cases = cases.filter(status__in=['intake', 'investigation', 'litigation', 'settlement_negotiation']).count()
+    closed_cases = cases.filter(status='closed').count()
+    archived_cases = cases.filter(status='archived').count()
+    overdue_cases = sum(1 for case in cases if case.is_overdue())
+    
+    # Case type distribution
+    case_type_distribution = cases.values('case_type__name').annotate(count=Count('id'))
+    
+    # Status distribution
+    status_distribution = cases.values('status').annotate(count=Count('id'))
+    
+    # Priority distribution
+    priority_distribution = cases.values('priority').annotate(count=Count('id'))
+    
+    # Recent cases
+    recent_cases = cases.order_by('-opened_date')[:10]
+    
+    filters = {'case_type': case_type, 'status': status, 'priority': priority}
+    
+    html_string = render_to_string('reports/legal_case_summary.html', {
+        'organization': org,
+        'cases': cases,
+        'total_cases': total_cases,
+        'open_cases': open_cases,
+        'closed_cases': closed_cases,
+        'archived_cases': archived_cases,
+        'overdue_cases': overdue_cases,
+        'case_type_distribution': case_type_distribution,
+        'status_distribution': status_distribution,
+        'priority_distribution': priority_distribution,
+        'recent_cases': recent_cases,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_case_summary.pdf"'
+    return response
+
+def legal_task_register_pdf(request):
+    """Generate legal task register report"""
+    org = request.tenant
+    tasks = LegalTask.objects.filter(organization=org)
+    
+    # Apply filters
+    status = request.GET.get('status')
+    assigned_to = request.GET.get('assigned_to')
+    due_date = request.GET.get('due_date')
+    
+    if status:
+        tasks = tasks.filter(status=status)
+    if assigned_to:
+        tasks = tasks.filter(assigned_to__email__icontains=assigned_to)
+    if due_date:
+        tasks = tasks.filter(due_date=due_date)
+    
+    # Calculate summary statistics
+    total_tasks = tasks.count()
+    pending_tasks = tasks.filter(status='pending').count()
+    in_progress_tasks = tasks.filter(status='in_progress').count()
+    completed_tasks = tasks.filter(status='completed').count()
+    overdue_tasks = tasks.filter(status='overdue').count()
+    
+    # Status distribution
+    status_distribution = tasks.values('status').annotate(count=Count('id'))
+    
+    # Assigned attorney distribution
+    attorney_distribution = tasks.values('assigned_to__email').annotate(count=Count('id'))
+    
+    # Due date analysis
+    overdue_tasks_list = tasks.filter(status='overdue').order_by('due_date')
+    upcoming_tasks = tasks.filter(due_date__gte=timezone.now().date()).order_by('due_date')[:10]
+    
+    filters = {'status': status, 'assigned_to': assigned_to, 'due_date': due_date}
+    
+    html_string = render_to_string('reports/legal_task_register.html', {
+        'organization': org,
+        'tasks': tasks,
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'overdue_tasks': overdue_tasks,
+        'status_distribution': status_distribution,
+        'attorney_distribution': attorney_distribution,
+        'overdue_tasks_list': overdue_tasks_list,
+        'upcoming_tasks': upcoming_tasks,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_task_register.pdf"'
+    return response
+
+def legal_document_register_pdf(request):
+    """Generate legal document register report"""
+    org = request.tenant
+    documents = LegalDocument.objects.filter(organization=org)
+    
+    # Apply filters
+    document_title = request.GET.get('document_title')
+    is_confidential = request.GET.get('is_confidential')
+    
+    if document_title:
+        documents = documents.filter(title__icontains=document_title)
+    if is_confidential:
+        documents = documents.filter(is_confidential=is_confidential.lower() == 'true')
+    
+    # Calculate summary statistics
+    total_documents = documents.count()
+    confidential_documents = documents.filter(is_confidential=True).count()
+    non_confidential_documents = documents.filter(is_confidential=False).count()
+    
+    # Document distribution by case
+    case_distribution = documents.values('case__title').annotate(count=Count('id'))
+    
+    # Version analysis
+    version_distribution = documents.values('version').annotate(count=Count('id'))
+    
+    # Recent documents
+    recent_documents = documents.order_by('-created_at')[:10]
+    
+    filters = {'document_title': document_title, 'is_confidential': is_confidential}
+    
+    html_string = render_to_string('reports/legal_document_register.html', {
+        'organization': org,
+        'documents': documents,
+        'total_documents': total_documents,
+        'confidential_documents': confidential_documents,
+        'non_confidential_documents': non_confidential_documents,
+        'case_distribution': case_distribution,
+        'version_distribution': version_distribution,
+        'recent_documents': recent_documents,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_document_register.pdf"'
+    return response
+
+def legal_party_register_pdf(request):
+    """Generate legal party register report"""
+    org = request.tenant
+    parties = LegalParty.objects.filter(organization=org)
+    
+    # Apply filters
+    party_type = request.GET.get('party_type')
+    party_name = request.GET.get('party_name')
+    
+    if party_type:
+        parties = parties.filter(party_type=party_type)
+    if party_name:
+        parties = parties.filter(name__icontains=party_name)
+    
+    # Calculate summary statistics
+    total_parties = parties.count()
+    plaintiffs = parties.filter(party_type='plaintiff').count()
+    defendants = parties.filter(party_type='defendant').count()
+    witnesses = parties.filter(party_type='witness').count()
+    third_parties = parties.filter(party_type='third_party').count()
+    
+    # Party type distribution
+    party_type_distribution = parties.values('party_type').annotate(count=Count('id'))
+    
+    # Recent parties
+    recent_parties = parties.order_by('-created_at')[:10]
+    
+    filters = {'party_type': party_type, 'party_name': party_name}
+    
+    html_string = render_to_string('reports/legal_party_register.html', {
+        'organization': org,
+        'parties': parties,
+        'total_parties': total_parties,
+        'plaintiffs': plaintiffs,
+        'defendants': defendants,
+        'witnesses': witnesses,
+        'third_parties': third_parties,
+        'party_type_distribution': party_type_distribution,
+        'recent_parties': recent_parties,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_party_register.pdf"'
+    return response
+
+def legal_archive_register_pdf(request):
+    """Generate legal archive register report"""
+    org = request.tenant
+    archives = LegalArchive.objects.filter(organization=org)
+    
+    # Apply filters
+    archive_date = request.GET.get('archive_date')
+    retention_period = request.GET.get('retention_period')
+    
+    if archive_date:
+        archives = archives.filter(archive_date=archive_date)
+    if retention_period:
+        archives = archives.filter(retention_period_years=retention_period)
+    
+    # Calculate summary statistics
+    total_archives = archives.count()
+    total_retention_years = sum(archive.retention_period_years for archive in archives)
+    avg_retention_years = total_retention_years / total_archives if total_archives > 0 else 0
+    
+    # Retention period distribution
+    retention_distribution = archives.values('retention_period_years').annotate(count=Count('id'))
+    
+    # Archive date analysis
+    recent_archives = archives.order_by('-archive_date')[:10]
+    
+    # Destruction date analysis
+    upcoming_destruction = archives.filter(destruction_date__gte=timezone.now().date()).order_by('destruction_date')[:10]
+    
+    filters = {'archive_date': archive_date, 'retention_period': retention_period}
+    
+    html_string = render_to_string('reports/legal_archive_register.html', {
+        'organization': org,
+        'archives': archives,
+        'total_archives': total_archives,
+        'total_retention_years': total_retention_years,
+        'avg_retention_years': avg_retention_years,
+        'retention_distribution': retention_distribution,
+        'recent_archives': recent_archives,
+        'upcoming_destruction': upcoming_destruction,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_archive_register.pdf"'
+    return response
+
+def legal_case_details_pdf(request):
+    """Generate detailed legal case report"""
+    org = request.tenant
+    cases = LegalCase.objects.filter(organization=org)
+    
+    # Apply filters
+    title = request.GET.get('title')
+    
+    if title:
+        cases = cases.filter(title__icontains=title)
+    
+    # Get detailed case information
+    detailed_cases = []
+    for case in cases:
+        case_data = {
+            'case': case,
+            'tasks': case.tasks.all(),
+            'documents': case.documents.all(),
+            'parties': case.parties.all(),
+            'attorneys': case.attorneys.all(),
+        }
+        detailed_cases.append(case_data)
+    
+    filters = {'title': title}
+    
+    html_string = render_to_string('reports/legal_case_details.html', {
+        'organization': org,
+        'detailed_cases': detailed_cases,
+        'total_cases': cases.count(),
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_case_details.pdf"'
+    return response
+
+def legal_task_details_pdf(request):
+    """Generate detailed legal task report"""
+    org = request.tenant
+    tasks = LegalTask.objects.filter(organization=org)
+    
+    # Apply filters
+    title = request.GET.get('title')
+    
+    if title:
+        tasks = tasks.filter(title__icontains=title)
+    
+    # Calculate task statistics
+    total_tasks = tasks.count()
+    completed_tasks = tasks.filter(status='completed').count()
+    pending_tasks = tasks.filter(status='pending').count()
+    overdue_tasks = tasks.filter(status='overdue').count()
+    
+    # Task completion analysis
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+    
+    # Average completion time
+    completed_tasks_with_dates = tasks.filter(status='completed', completion_date__isnull=False)
+    avg_completion_days = 0
+    if completed_tasks_with_dates.exists():
+        total_days = sum((task.completion_date - task.due_date).days for task in completed_tasks_with_dates if task.completion_date and task.due_date)
+        avg_completion_days = total_days / completed_tasks_with_dates.count()
+    
+    filters = {'title': title}
+    
+    html_string = render_to_string('reports/legal_task_details.html', {
+        'organization': org,
+        'tasks': tasks,
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'pending_tasks': pending_tasks,
+        'overdue_tasks': overdue_tasks,
+        'completion_rate': completion_rate,
+        'avg_completion_days': avg_completion_days,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_task_details.pdf"'
+    return response 

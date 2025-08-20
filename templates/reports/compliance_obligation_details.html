@@ -1,48 +1,418 @@
-{% extends 'reports/base_report.html' %}
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<div class="container mt-3">
-  <h2>Compliance Obligation Details</h2>
-  <p><strong>Organization:</strong> {{ organization.name }}</p>
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      <div class="row">
+        <div class="col-md-6">
+          <label for="obligation_id">Obligation ID:</label>
+          <input type="text" name="obligation_id" id="obligation_id" value="{{ request.GET.obligation_id }}" class="form-control" placeholder="Enter obligation ID">
+        </div>
+        <div class="col-md-6">
+          <label>&nbsp;</label><br>
+          <button type="submit" class="btn btn-primary">Apply Filter</button>
+          <a href="?download=pdf{% if request.GET.obligation_id %}&obligation_id={{ request.GET.obligation_id }}{% endif %}" class="btn btn-success">Download PDF</a>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Compliance Obligation Details
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Compliance Obligation Details</h2>
+
   {% if obligation %}
-    <div class="card mb-3">
-      <div class="card-body">
-        <h4>{{ obligation.obligation_id }}</h4>
-        <p><strong>Requirement:</strong> {{ obligation.requirement.title|truncatechars:40 }}</p>
-        <p><strong>Owner:</strong> {% if obligation.owner %}{{ obligation.owner.email }}{% else %}{{ obligation.owner_email }}{% endif %}</p>
-        <p><strong>Status:</strong> {{ obligation.status|title }}</p>
-        <p><strong>Due Date:</strong> {{ obligation.due_date }}</p>
-        <p><strong>Priority:</strong> {{ obligation.priority }}</p>
-        <p><strong>Completion Date:</strong> {{ obligation.completion_date|default:'-' }}</p>
-        <p><strong>Description:</strong> {{ obligation.description|striptags|truncatechars:200 }}</p>
-        <p><strong>Evidence Required:</strong> {{ obligation.evidence_required|yesno:'Yes,No' }}</p>
-        <p><strong>Active:</strong> {{ obligation.is_active|yesno:'Yes,No' }}</p>
+<!-- Obligation Overview -->
+<div class="report-card">
+  <h3>Obligation Overview</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ evidences.count }}</div>
+      <div class="stat-label">Evidence Items</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ valid_evidence }}</div>
+      <div class="stat-label">Valid Evidence</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expiring_evidence }}</div>
+      <div class="stat-label">Expiring Soon</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ expired_evidence }}</div>
+      <div class="stat-label">Expired Evidence</div>
+    </div>
+  </div>
+</div>
+
+<!-- Obligation Details -->
+<div class="report-card">
+  <h3>Obligation Information</h3>
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Obligation ID</th>
+      <td>{{ obligation.obligation_id }}</td>
+      <th style="width:20%">Status</th>
+      <td>
+        <span class="status-badge status-{{ obligation.status|lower }}">
+          {{ obligation.get_status_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Requirement</th>
+      <td colspan="3">{{ obligation.requirement.title }}</td>
+    </tr>
+    <tr>
+      <th>Owner</th>
+      <td>
+        {% if obligation.owner %}
+          {{ obligation.owner.get_full_name|default:obligation.owner.email }}
+        {% else %}
+          {{ obligation.owner_email|default:"Not assigned" }}
+        {% endif %}
+      </td>
+      <th>Priority</th>
+      <td>
+        <span class="priority-badge priority-{{ obligation.priority }}">
+          Priority {{ obligation.priority }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Due Date</th>
+      <td>{{ obligation.due_date|date:"M j, Y" }}</td>
+      <th>Due Period</th>
+      <td>{{ obligation.due_period }}</td>
+    </tr>
+    <tr>
+      <th>Completion Date</th>
+      <td>{{ obligation.completion_date|date:"M j, Y"|default:"Not completed" }}</td>
+      <th>Evidence Required</th>
+      <td>
+        <span class="status-badge {% if obligation.evidence_required %}status-active{% else %}status-inactive{% endif %}">
+          {{ obligation.evidence_required|yesno:"Required,Not Required" }}
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {% if obligation.description %}
+  <div class="field-group">
+    <div class="field-label">Description</div>
+    <div class="field-value">{{ obligation.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if obligation.risk %}
+  <div class="field-group">
+    <div class="field-label">Associated Risk</div>
+    <div class="field-value">
+      <strong>{{ obligation.risk.risk_name }}</strong> - {{ obligation.risk.description|truncatechars:100 }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if obligation.check_overdue %}
+  <div class="alert alert-danger">
+    <strong>⚠️ OVERDUE OBLIGATION:</strong> This obligation is past its due date and requires immediate attention.
+    <br><strong>Risk:</strong> Non-compliance may result in regulatory penalties or legal consequences.
+  </div>
+  {% elif obligation.status == 'open' and obligation.due_date|date:"Y-m-d" <= today|date:"Y-m-d" %}
+  <div class="alert alert-warning">
+    <strong>⚠️ DUE TODAY:</strong> This obligation is due today and should be completed or updated.
+  </div>
+  {% endif %}
+
+  {% if obligation.priority >= 4 %}
+  <div class="alert alert-danger">
+    <strong>⚠️ HIGH PRIORITY:</strong> This is a high-priority obligation that requires immediate attention.
+  </div>
+  {% endif %}
+
+  {% if obligation.evidence_required and evidences.count == 0 %}
+  <div class="alert alert-warning">
+    <strong>⚠️ EVIDENCE REQUIRED:</strong> This obligation requires evidence but none has been collected yet.
+    <br><strong>Action Required:</strong> Collect and upload appropriate evidence to demonstrate compliance.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Requirement Details -->
+<div class="report-card">
+  <h3>Associated Requirement</h3>
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Requirement ID</th>
+      <td>{{ obligation.requirement.requirement_id }}</td>
+      <th style="width:20%">Mandatory Status</th>
+      <td>
+        <span class="status-badge {% if obligation.requirement.mandatory %}status-active{% else %}status-inactive{% endif %}">
+          {{ obligation.requirement.mandatory|yesno:"Mandatory,Optional" }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Title</th>
+      <td colspan="3">{{ obligation.requirement.title }}</td>
+    </tr>
+    <tr>
+      <th>Regulatory Framework</th>
+      <td>{{ obligation.requirement.regulatory_framework.name|default:"Internal Policy" }}</td>
+      <th>Jurisdiction</th>
+      <td>{{ obligation.requirement.jurisdiction }}</td>
+    </tr>
+    <tr>
+      <th>Policy Document</th>
+      <td>{{ obligation.requirement.policy_document.title|default:"Not linked to policy" }}</td>
+      <th>Policy Section</th>
+      <td>{{ obligation.requirement.policy_section|default:"Not specified" }}</td>
+    </tr>
+  </table>
+
+  {% if obligation.requirement.description %}
+  <div class="field-group">
+    <div class="field-label">Requirement Description</div>
+    <div class="field-value">{{ obligation.requirement.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if obligation.requirement.tags %}
+  <div class="field-group">
+    <div class="field-label">Requirement Tags</div>
+    <div class="field-value">
+      {% for key, value in obligation.requirement.tags.items %}
+        <span class="status-badge status-pending">{{ key }}: {{ value }}</span>
+      {% endfor %}
       </div>
     </div>
-    <h5>Related Evidence</h5>
-    <table class="table table-striped table-sm">
-      <thead class="table-light">
-        <tr>
-          <th>Document</th>
-          <th>Validity Start</th>
-          <th>Validity End</th>
-          <th>Notes</th>
+  {% endif %}
+</div>
+
+<!-- Evidence Summary -->
+<div class="report-card">
+  <h3>Compliance Evidence</h3>
+  {% if evidences %}
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Document</th>
+        <th class="col-15 text-center">Valid From</th>
+        <th class="col-15 text-center">Valid Until</th>
+        <th class="col-15 text-center">Status</th>
+        <th class="col-30">Notes</th>
         </tr>
       </thead>
       <tbody>
-        {% for ev in evidences %}
-        <tr>
-          <td>{{ ev.document.title|truncatechars:40 }}</td>
-          <td>{{ ev.validity_start }}</td>
-          <td>{{ ev.validity_end }}</td>
-          <td>{{ ev.notes|striptags|truncatechars:40 }}</td>
+      {% for evidence in evidences %}
+      <tr>
+        <td>{{ evidence.document.title }}</td>
+        <td class="text-center">{{ evidence.validity_start|date:"M j, Y" }}</td>
+        <td class="text-center">{{ evidence.validity_end|date:"M j, Y" }}</td>
+        <td class="text-center">
+          {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+            <span class="status-badge status-inactive">Expired</span>
+          {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+            <span class="status-badge status-pending">Expiring</span>
+          {% else %}
+            <span class="status-badge status-active">Valid</span>
+          {% endif %}
+        </td>
+        <td>{{ evidence.notes|truncatechars:50|default:"-" }}</td>
         </tr>
-        {% empty %}
-        <tr><td colspan="4" class="text-center text-muted">No evidence found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <div class="alert alert-warning">No obligation found for the given ID.</div>
+  <div class="alert alert-info">
+    <strong>No Evidence:</strong> No evidence has been collected for this obligation yet.
+  </div>
   {% endif %}
 </div>
+
+<!-- Evidence Status Analysis -->
+{% if evidences %}
+<div class="report-card">
+  <h3>Evidence Status Analysis</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Status</th>
+        <th class="col-15 text-center">Count</th>
+        <th class="col-15 text-center">Percentage</th>
+        <th class="col-15 text-center">Documents</th>
+        <th class="col-30 text-center">Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for status in evidence_status_distribution %}
+      <tr>
+        <td><strong>{{ status.name }}</strong></td>
+        <td class="text-center">{{ status.count }}</td>
+        <td class="text-center">{{ status.percentage|floatformat:1 }}%</td>
+        <td class="text-center">{{ status.documents_count }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if status.name == 'Expired' %}high{% elif status.name == 'Expiring' %}medium{% else %}low{% endif %}">
+            {% if status.name == 'Expired' %}High Risk{% elif status.name == 'Expiring' %}Medium Risk{% else %}Low Risk{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Individual Evidence Details -->
+{% for evidence in evidences %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Evidence {{ forloop.counter }}: {{ evidence.document.title }}</h3>
+    <span class="priority-indicator">
+      {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+        Expired
+      {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+        Expiring Soon
+      {% else %}
+        Valid
+      {% endif %}
+    </span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Document Title</th>
+      <td colspan="3">{{ evidence.document.title }}</td>
+    </tr>
+    <tr>
+      <th>Document Owner</th>
+      <td>
+        {% if evidence.document.owner %}
+          {{ evidence.document.owner.get_full_name|default:evidence.document.owner.email }}
+        {% else %}
+          {{ evidence.document.owner_email|default:"Not specified" }}
+        {% endif %}
+      </td>
+      <th>Document Version</th>
+      <td>{{ evidence.document.version }}</td>
+    </tr>
+    <tr>
+      <th>Validity Start</th>
+      <td>{{ evidence.validity_start|date:"M j, Y" }}</td>
+      <th>Validity End</th>
+      <td>{{ evidence.validity_end|date:"M j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>File</th>
+      <td colspan="3">{{ evidence.document.file.name|default:"No file uploaded" }}</td>
+    </tr>
+  </table>
+
+  {% if evidence.notes %}
+  <div class="field-group">
+    <div class="field-label">Evidence Notes</div>
+    <div class="field-value">{{ evidence.notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if evidence.validity_end|date:"Y-m-d" < today|date:"Y-m-d" %}
+  <div class="alert alert-danger">
+    <strong>⚠️ EXPIRED EVIDENCE:</strong> This evidence has expired and is no longer valid for compliance purposes.
+    <br><strong>Action Required:</strong> Collect new evidence or renew existing evidence to maintain compliance.
+  </div>
+  {% elif evidence.validity_end|date:"Y-m-d" <= thirty_days_from_now|date:"Y-m-d" %}
+  <div class="alert alert-warning">
+    <strong>⚠️ EXPIRING EVIDENCE:</strong> This evidence will expire soon and requires attention.
+    <br><strong>Action Required:</strong> Plan for evidence renewal or replacement before expiration.
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- Obligation Analysis & Insights -->
+<div class="report-card">
+  <h3>Obligation Analysis & Insights</h3>
+  
+  <div class="field-label">Compliance Status Analysis</div>
+  <div class="field-value">
+    <p>This compliance obligation analysis provides comprehensive insights into the obligation's implementation status, 
+    covering {{ evidences.count }} evidence items and associated compliance requirements.</p>
+    
+    <p><strong>Key Compliance Metrics:</strong></p>
+    <ul>
+      <li><strong>Obligation Status:</strong> {{ obligation.get_status_display }} - {{ obligation_status_description }}</li>
+      <li><strong>Priority Level:</strong> Priority {{ obligation.priority }} - {{ priority_description }}</li>
+      <li><strong>Evidence Items:</strong> {{ evidences.count }} evidence items collected</li>
+      <li><strong>Valid Evidence:</strong> {{ valid_evidence }} evidence items currently valid</li>
+      <li><strong>Expiring Evidence:</strong> {{ expiring_evidence }} evidence items expiring within 30 days</li>
+      <li><strong>Expired Evidence:</strong> {{ expired_evidence }} evidence items that have expired</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Assessment</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Obligation Risk:</strong> {{ obligation_risk_level }} - {{ obligation_risk_description }}</li>
+      <li><strong>Evidence Risk:</strong> {{ evidence_risk_level }} - {{ evidence_risk_description }}</li>
+      <li><strong>Compliance Risk:</strong> {{ compliance_risk_level }} - {{ compliance_risk_description }}</li>
+      <li><strong>Owner Accountability:</strong> {{ owner_accountability_status }}</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  <div class="field-label">Strategic Compliance Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Obligation Management:</strong> {{ obligation_management_recommendation }}</li>
+      <li><strong>Evidence Collection:</strong> {{ evidence_collection_recommendation }}</li>
+      <li><strong>Status Updates:</strong> {{ status_update_recommendation }}</li>
+      <li><strong>Owner Engagement:</strong> {{ owner_engagement_recommendation }}</li>
+      <li><strong>Risk Mitigation:</strong> {{ risk_mitigation_recommendation }}</li>
+      <li><strong>Compliance Monitoring:</strong> {{ compliance_monitoring_recommendation }}</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Risk Mitigation Strategies</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Escalation Procedures:</strong> Establish clear escalation procedures for overdue obligations</li>
+      <li><strong>Evidence Management:</strong> Implement robust evidence collection and validation procedures</li>
+      <li><strong>Owner Training:</strong> Provide training to obligation owners on compliance requirements</li>
+      <li><strong>Automated Reminders:</strong> Implement automated reminder systems for upcoming due dates</li>
+      <li><strong>Regular Reviews:</strong> Conduct regular compliance reviews and status updates</li>
+      <li><strong>Document Control:</strong> Ensure proper document versioning and control for evidence items</li>
+    </ul>
+  </div>
+</div>
+
+{% else %}
+<div class="alert alert-info">
+  <strong>No Obligation Found:</strong> No compliance obligation matches the current filter criteria.
+  <br>Please enter a valid obligation ID to view detailed information.
+</div>
+{% endif %}
 {% endblock %} 

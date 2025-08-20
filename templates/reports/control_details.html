@@ -1,68 +1,278 @@
 {% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
 {% block content %}
-<style>
-.control-section-title {
-  background: #2563eb;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px;
-  margin-top: 1.5em;
-  margin-bottom: 1em;
-}
-.control-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 1.5em;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-  padding: 18px 24px;
-}
-.control-meta-table th {
-  width: 180px;
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #2563eb;
-  border-right: 1px solid #e0e0e0;
-}
-.control-meta-table td {
-  background: #fff;
-}
-.control-label {
-  font-weight: bold;
-  color: #2563eb;
-  margin-top: 0.5em;
-  display: block;
-}
-.truncate {
-  max-width: 600px;
-  white-space: pre-line;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-</style>
-<h2 class="control-section-title">Control Details</h2>
-{% for c in controls %}
-  <div class="control-card">
-    <table class="table table-sm control-meta-table mb-3">
-      <tr><th>Code</th><td>{{ c.code }}</td></tr>
-      <tr><th>Name</th><td>{{ c.name }}</td></tr>
-      <tr><th>Type</th><td>{{ c.get_control_type_display }}</td></tr>
-      <tr><th>Nature</th><td>{{ c.get_control_nature_display }}</td></tr>
-      <tr><th>Frequency</th><td>{{ c.get_control_frequency_display }}</td></tr>
-      <tr><th>Status</th><td>{{ c.status }}</td></tr>
-      <tr><th>Effectiveness</th><td>{{ c.effectiveness_rating }}</td></tr>
-      <tr><th>Owner</th><td>{{ c.control_owner }}</td></tr>
-    </table>
-    <span class="control-label">Description:</span>
-    <div class="truncate">{{ c.description|striptags|default:'-'|truncatechars:400 }}</div>
-    <span class="control-label">Design Assessment:</span>
-    <div class="truncate">{{ c.design_assessment|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="control-label">Operating Assessment:</span>
-    <div class="truncate">{{ c.operating_assessment|striptags|default:'-'|truncatechars:300 }}</div>
-    <span class="control-label">Notes:</span>
-    <div class="truncate">{{ c.notes|striptags|default:'-'|truncatechars:200 }}</div>
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.control_type %}&control_type={{ request.GET.control_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
   </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: Control Effectiveness Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Control Effectiveness Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Control Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ controls.count }}</div>
+      <div class="stat-label">Total Controls</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ controls|dictsort:"status"|length }}</div>
+      <div class="stat-label">Active Controls</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ controls|dictsort:"control_owner"|length }}</div>
+      <div class="stat-label">Control Owners</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ controls|dictsort:"control_type"|length }}</div>
+      <div class="stat-label">Control Types</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Control Type</th>
+      <td>{{ filters.control_type|default:"All Types" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
+    </tr>
+    <tr>
+      <th>Control Owner</th>
+      <td>{{ filters.owner|default:"All Owners" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Control Summary Table -->
+<div class="report-card">
+  <h3>Control Summary by Type and Effectiveness</h3>
+  <style>
+    /* Compact styling specifically for Control Summary table */
+    .control-summary-table {
+      font-size: 7pt !important;
+      margin: 0.3cm 0 !important;
+    }
+    .control-summary-table th,
+    .control-summary-table td {
+      padding: 4px 3px !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
+    }
+    .control-summary-table th {
+      font-size: 7pt !important;
+      font-weight: 600 !important;
+    }
+    .control-summary-table .status-badge,
+    .control-summary-table .risk-level {
+      font-size: 6pt !important;
+      padding: 2px 4px !important;
+      min-width: 50px !important;
+    }
+    .control-summary-table strong {
+      font-size: 7pt !important;
+    }
+    /* Specific column widths for better fit */
+    .control-summary-table .col-code { width: 10%; }
+    .control-summary-table .col-name { width: 20%; }
+    .control-summary-table .col-type { width: 12%; }
+    .control-summary-table .col-nature { width: 12%; }
+    .control-summary-table .col-status { width: 12%; }
+    .control-summary-table .col-effectiveness { width: 12%; }
+    .control-summary-table .col-owner { width: 12%; }
+    .control-summary-table .col-review { width: 10%; }
+  </style>
+  <table class="report-table control-summary-table">
+    <thead>
+      <tr>
+        <th class="col-code">Control Code</th>
+        <th class="col-name">Control Name</th>
+        <th class="col-type text-center">Type</th>
+        <th class="col-nature text-center">Nature</th>
+        <th class="col-status text-center">Status</th>
+        <th class="col-effectiveness text-center">Effectiveness</th>
+        <th class="col-owner">Owner</th>
+        <th class="col-review text-center">Last Review</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for control in controls %}
+      <tr>
+        <td class="text-center"><strong>{{ control.code|truncatechars:8 }}</strong></td>
+        <td>{{ control.name|truncatechars:25 }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ control.get_control_type_display|truncatechars:10 }}</span></td>
+        <td class="text-center">{{ control.get_control_nature_display|truncatechars:10 }}</td>
+        <td class="text-center"><span class="status-badge status-{{ control.status|lower }}">{{ control.get_status_display|truncatechars:8 }}</span></td>
+        <td class="text-center"><span class="risk-level risk-{% if control.effectiveness_rating == 'effective' %}low{% elif control.effectiveness_rating == 'partially-effective' %}medium{% else %}high{% endif %}">{{ control.get_effectiveness_rating_display|truncatechars:12 }}</span></td>
+        <td>{{ control.control_owner|truncatechars:15 }}</td>
+        <td class="text-center">{{ control.last_review_date|date:"M j, Y"|default:"Not reviewed"|truncatechars:10 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Control Details -->
+{% for control in controls %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Control {{ forloop.counter }}: {{ control.name }}</h3>
+    <span class="priority-indicator">Effectiveness: {{ control.get_effectiveness_rating_display }}</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Control Code</th>
+      <td>{{ control.code }}</td>
+      <th style="width:20%">Control Type</th>
+      <td>{{ control.get_control_type_display }}</td>
+    </tr>
+    <tr>
+      <th>Control Nature</th>
+      <td>{{ control.get_control_nature_display }}</td>
+      <th>Frequency</th>
+      <td>{{ control.get_control_frequency_display }}</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td><span class="status-badge status-{{ control.status|lower }}">{{ control.get_status_display }}</span></td>
+      <th>Effectiveness Rating</th>
+      <td><span class="risk-level risk-{% if control.effectiveness_rating == 'effective' %}low{% elif control.effectiveness_rating == 'partially-effective' %}medium{% else %}high{% endif %}">{{ control.get_effectiveness_rating_display }}</span></td>
+    </tr>
+    <tr>
+      <th>Control Owner</th>
+      <td>{{ control.control_owner }}</td>
+      <th>Owner Department</th>
+      <td>{{ control.owner_department|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Last Review Date</th>
+      <td>{{ control.last_review_date|date:"M j, Y"|default:"Not reviewed" }}</td>
+      <th>Next Review Date</th>
+      <td>{{ control.next_review_date|date:"M j, Y"|default:"Not scheduled" }}</td>
+    </tr>
+  </table>
+
+  {% if control.description %}
+  <div class="field-group">
+    <div class="field-label">Control Description</div>
+    <div class="field-value">{{ control.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.design_assessment %}
+  <div class="field-group">
+    <div class="field-label">Design Assessment</div>
+    <div class="field-value">{{ control.design_assessment|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.operating_assessment %}
+  <div class="field-group">
+    <div class="field-label">Operating Assessment</div>
+    <div class="field-value">{{ control.operating_assessment|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.notes %}
+  <div class="field-group">
+    <div class="field-label">Additional Notes</div>
+    <div class="field-value">{{ control.notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.effectiveness_rating == 'ineffective' %}
+  <div class="alert alert-danger">
+    <strong>⚠️ INEFFECTIVE CONTROL:</strong> This control has been rated as ineffective and requires immediate attention.
+    <br><strong>Recommendation:</strong> Review control design and implementation to improve effectiveness.
+  </div>
+  {% elif control.effectiveness_rating == 'partially-effective' %}
+  <div class="alert alert-warning">
+    <strong>⚠️ PARTIALLY EFFECTIVE:</strong> This control has been rated as partially effective and should be enhanced.
+    <br><strong>Recommendation:</strong> Identify and address gaps in control implementation.
+  </div>
+  {% endif %}
+</div>
 {% empty %}
-  <div class="alert alert-info">No controls found.</div>
+<div class="alert alert-info">
+  <strong>No Controls Found:</strong> No controls match the current filter criteria.
+</div>
 {% endfor %}
+
+<!-- Control Analysis & Insights -->
+<div class="report-card">
+  <h3>Control Analysis & Insights</h3>
+  
+  <div class="field-label">Effectiveness Analysis</div>
+  <div class="field-value">
+    <p>This control effectiveness analysis provides insights into the organization's control environment, 
+    covering {{ controls.count }} controls across multiple types and effectiveness levels.</p>
+    
+    <p><strong>Key Control Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Controls:</strong> {{ controls.count }} controls implemented across the organization</li>
+      <li><strong>Control Types:</strong> {{ controls|dictsort:"control_type"|length }} different control types represented</li>
+      <li><strong>Control Owners:</strong> {{ controls|dictsort:"control_owner"|length }} different control owners assigned</li>
+      <li><strong>Effectiveness Distribution:</strong> Distribution of controls across effectiveness ratings</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Control Management Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Effectiveness Monitoring:</strong> Monitor control effectiveness ratings to identify areas for improvement</li>
+      <li><strong>Review Cycle Management:</strong> Ensure controls are reviewed regularly based on review schedules</li>
+      <li><strong>Owner Accountability:</strong> Verify that all controls have clearly assigned owners with appropriate authority</li>
+      <li><strong>Type Distribution:</strong> Analyze control type distribution to ensure comprehensive coverage</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if controls %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Ineffective Control Remediation:</strong> Immediately address controls rated as ineffective with redesign or enhancement efforts</li>
+      <li><strong>Partially Effective Control Enhancement:</strong> Improve controls rated as partially effective to achieve full effectiveness</li>
+      <li><strong>Review Cycle Optimization:</strong> Ensure all controls have regular review cycles with appropriate frequencies</li>
+      <li><strong>Owner Accountability:</strong> Verify that all controls have clearly assigned owners with appropriate authority and resources</li>
+      <li><strong>Effectiveness Monitoring:</strong> Implement regular effectiveness assessments to maintain control quality</li>
+      <li><strong>Control Coverage Analysis:</strong> Review control type distribution to ensure comprehensive risk coverage</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
 {% endblock %} 

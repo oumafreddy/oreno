@@ -1,0 +1,245 @@
+{% extends 'reports/base_report.html' %}
+{% load static %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Professional Header -->
+    <div class="report-header">
+        <div class="header-content">
+            <h1 class="report-title">Legal Archive Register Report</h1>
+            <p class="report-subtitle">Comprehensive Overview of Legal Document Archiving</p>
+            <div class="header-meta">
+                <span><strong>Organization:</strong> {{ organization.name }}</span>
+                <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+                {% if filters.archive_type or filters.case_name %}
+                <span><strong>Filters Applied:</strong> 
+                    {% if filters.archive_type %}Archive Type: {{ filters.archive_type }}{% endif %}
+                    {% if filters.case_name %}{% if filters.archive_type %} | {% endif %}Case: {{ filters.case_name }}{% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2 class="section-header">Executive Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_archives }}</div>
+                <div class="stat-label">Total Archives</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ case_files }}</div>
+                <div class="stat-label">Case Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ evidence_files }}</div>
+                <div class="stat-label">Evidence Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ correspondence_files }}</div>
+                <div class="stat-label">Correspondence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ other_files }}</div>
+                <div class="stat-label">Other Files</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Type Distribution -->
+    <div class="section">
+        <h2 class="section-header">Archive Type Distribution</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Archive Type</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in archive_type_distribution %}
+                    <tr>
+                        <td>
+                            <span class="archive-type-badge archive-{{ item.archive_type }}">
+                                {{ item.archive_type|title }}
+                            </span>
+                        </td>
+                        <td>{{ item.count }}</td>
+                        <td>{% widthratio item.count total_archives 100 %}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="no-data">No archive type data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Archives -->
+    <div class="section">
+        <h2 class="section-header">Recent Archives</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Case</th>
+                        <th>Description</th>
+                        <th>Archived By</th>
+                        <th>Archive Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for archive in recent_archives %}
+                    <tr>
+                        <td>{{ archive.file_name }}</td>
+                        <td>
+                            <span class="archive-type-badge archive-{{ archive.archive_type }}">
+                                {{ archive.archive_type|title }}
+                            </span>
+                        </td>
+                        <td>{{ archive.case.title|default:"-" }}</td>
+                        <td>{{ archive.description|default:"-"|truncatechars:50 }}</td>
+                        <td>{{ archive.archived_by.get_full_name|default:archive.archived_by.email|default:"-" }}</td>
+                        <td>{{ archive.archived_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="no-data">No recent archives</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Archives -->
+    <div class="section">
+        <h2 class="section-header">All Archives</h2>
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Case</th>
+                        <th>Description</th>
+                        <th>File Size</th>
+                        <th>Archived By</th>
+                        <th>Archive Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for archive in archives %}
+                    <tr>
+                        <td>{{ archive.file_name }}</td>
+                        <td>
+                            <span class="archive-type-badge archive-{{ archive.archive_type }}">
+                                {{ archive.archive_type|title }}
+                            </span>
+                        </td>
+                        <td>{{ archive.case.title|default:"-" }}</td>
+                        <td>{{ archive.description|default:"-"|truncatechars:50 }}</td>
+                        <td>{{ archive.file_size|default:"-" }}</td>
+                        <td>{{ archive.archived_by.get_full_name|default:archive.archived_by.email|default:"-" }}</td>
+                        <td>{{ archive.archived_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="no-data">No archives found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Archive Analysis -->
+    <div class="section">
+        <h2 class="section-header">Archive Analysis & Insights</h2>
+        <div class="insights-container">
+            <div class="insight-item">
+                <h4>Storage Management</h4>
+                <p>
+                    <strong>Total Archives:</strong> {{ total_archives }} files archived across all cases.
+                    {% if case_files > evidence_files and case_files > correspondence_files %}
+                    <strong>Primary Content:</strong> Case files dominate the archive ({{ case_files }} files), 
+                    indicating comprehensive case documentation.
+                    {% elif evidence_files > case_files and evidence_files > correspondence_files %}
+                    <strong>Primary Content:</strong> Evidence files are the largest category ({{ evidence_files }} files), 
+                    suggesting evidence-heavy cases.
+                    {% elif correspondence_files > case_files and correspondence_files > evidence_files %}
+                    <strong>Primary Content:</strong> Correspondence files are prominent ({{ correspondence_files }} files), 
+                    indicating communication-intensive cases.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Documentation Strategy</h4>
+                <p>
+                    {% if total_archives > 0 %}
+                    <strong>Archive Coverage:</strong> 
+                    {% if case_files > 0 %}Case files ({{ case_files }}){% endif %}
+                    {% if evidence_files > 0 %}{% if case_files > 0 %}, {% endif %}Evidence ({{ evidence_files }}){% endif %}
+                    {% if correspondence_files > 0 %}{% if case_files > 0 or evidence_files > 0 %}, {% endif %}Correspondence ({{ correspondence_files }}){% endif %}
+                    {% if other_files > 0 %}{% if case_files > 0 or evidence_files > 0 or correspondence_files > 0 %}, {% endif %}Other ({{ other_files }}){% endif %}
+                    archived. Ensure proper categorization and retrieval systems.
+                    {% else %}
+                    <strong>Archive Status:</strong> No archives currently stored. Consider implementing 
+                    systematic archiving procedures for case documentation.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Retention Management</h4>
+                <p>
+                    {% if total_archives > 0 %}
+                    <strong>Archive Volume:</strong> {{ total_archives }} files require ongoing management. 
+                    Consider implementing retention policies and regular archive reviews to maintain 
+                    efficient storage and compliance.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="insight-item">
+                <h4>Access Control</h4>
+                <p>
+                    {% if total_archives > 0 %}
+                    <strong>Security:</strong> Ensure proper access controls and audit trails for archived 
+                    documents, especially for sensitive legal materials and evidence.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <p><strong>Report Generated:</strong> {{ generation_timestamp }}</p>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        <p><strong>Total Archives Analyzed:</strong> {{ total_archives }}</p>
+    </div>
+</div>
+
+<style>
+    .archive-type-badge {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 8pt;
+        font-weight: 600;
+    }
+    .archive-case_file { background: #dbeafe; color: #1e40af; }
+    .archive-evidence_file { background: #fecaca; color: #7f1d1d; }
+    .archive-correspondence_file { background: #fef3c7; color: #92400e; }
+    .archive-other { background: #d1fae5; color: #065f46; }
+</style>
+{% endblock %}

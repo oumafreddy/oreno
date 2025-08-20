@@ -31,7 +31,7 @@ from .serializers import (
 class ComplianceFrameworkViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = ComplianceFramework.objects.all()
     serializer_class = ComplianceFrameworkSerializer
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgManagerOrReadOnly]
 
 class PolicyDocumentViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = PolicyDocument.objects.all()
