@@ -1,1 +1,42 @@
+{% extends 'reports/base_report.html' %}
+{% block content %}
+<div class="report-container">
+  <div class="report-header">
+    <div class="header-content">
+      <h1 class="report-title">Milestone Register</h1>
+      <div class="header-meta">
+        <span><strong>Organization:</strong> {{ organization.name }}</span>
+        <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Milestone</th>
+          <th>Contract</th>
+          <th>Due Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in milestones %}
+        <tr>
+          <td>{{ m.milestone_id }}</td>
+          <td>{{ m.milestone_type }}</td>
+          <td>{{ m.contract.title }}</td>
+          <td>{{ m.due_date|date:"M j, Y" }}</td>
+          <td>{{ m.get_status_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="no-data">No milestones found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
  

@@ -1,21 +1,47 @@
-{% extends 'base.html' %}
+{% extends 'reports/base_report.html' %}
 {% block content %}
-<div class="container mt-3">
-  <h2>Milestone Details</h2>
-  <p><strong>Organization:</strong> {{ organization.name }}</p>
-  {% for m in milestones %}
-  <div class="card mb-3">
-    <div class="card-body">
-      <h4>{{ m.milestone_type|truncatechars:60 }}</h4>
-      <p><strong>ID:</strong> {{ m.milestone_id }}</p>
-      <p><strong>Contract:</strong> {{ m.contract.title|truncatechars:40 }}</p>
-      <p><strong>Due Date:</strong> {{ m.due_date }}</p>
-      <p><strong>Status:</strong> {{ m.get_status_display }}</p>
-      <p><strong>Description:</strong> {{ m.description|truncatechars:120 }}</p>
+<div class="report-container">
+  <div class="report-header">
+    <div class="header-content">
+      <h1 class="report-title">Milestone Details</h1>
+      <div class="header-meta">
+        <span><strong>Organization:</strong> {{ organization.name }}</span>
+        <span><strong>Generated:</strong> {{ generation_timestamp }}</span>
+      </div>
     </div>
+  </div>
+
+  {% for m in milestones %}
+  <div class="report-card">
+    <h3>{{ m.milestone_type }}</h3>
+    <table class="report-table">
+      <tr>
+        <th style="width:20%">Milestone ID</th>
+        <td>{{ m.milestone_id }}</td>
+        <th style="width:20%">Status</th>
+        <td>{{ m.get_status_display }}</td>
+      </tr>
+      <tr>
+        <th>Contract</th>
+        <td colspan="3">{{ m.contract.title }}</td>
+      </tr>
+      <tr>
+        <th>Due Date</th>
+        <td>{{ m.due_date|date:"M j, Y" }}</td>
+        <th>Completed</th>
+        <td>{{ m.is_completed|yesno:"Yes,No" }}</td>
+      </tr>
+    </table>
+
+    {% if m.description %}
+    <div class="field-group">
+      <div class="field-label">Description</div>
+      <div class="field-value">{{ m.description|striptags }}</div>
+    </div>
+    {% endif %}
   </div>
   {% empty %}
   <div class="alert alert-info">No milestones found.</div>
   {% endfor %}
 </div>
-{% endblock %} 
+{% endblock %}

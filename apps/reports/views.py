@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
 from risk.models import Risk, RiskRegister, Control, KRI, RiskAssessment
 from django.db.models import Count, Q
+from django.db import models
 import tempfile
 import matplotlib.pyplot as plt
 import io
@@ -1392,12 +1393,27 @@ def milestone_details_pdf(request):
     })
 
 def party_details_pdf(request):
+    """Generate party details report with optional filtering by party_id"""
     org = request.tenant
+    party_id = request.GET.get('party_id')
     parties = Party.objects.filter(organization=org)
-    return render(request, 'reports/party_details.html', {
+    if party_id:
+        parties = parties.filter(id=party_id)
+
+    html_string = render_to_string('reports/party_details.html', {
+        'organization': org,
         'parties': parties,
-        'organization': org
+        'filters': {'party_id': party_id},
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Party Details Report',
+        'description': 'Detailed contract parties analysis with related contracts',
     })
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_party_details.pdf"'
+    return response
 
 # ─── CONTRACT REPORTS ────────────────────────────────────────────────────────────
 

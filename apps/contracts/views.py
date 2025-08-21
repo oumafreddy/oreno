@@ -147,6 +147,8 @@ class ContractsReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Temp
         # Get parties for filters
         parties = Party.objects.filter(organization=organization).values_list('name', flat=True).distinct()
         context['parties'] = sorted(list(parties))
+        # Party objects for detailed reports (id + name)
+        context['party_objects'] = Party.objects.filter(organization=organization).order_by('name')
         
         # Get milestone types for filters
         milestone_types = ContractMilestone.objects.filter(organization=organization).values_list('milestone_type', flat=True).distinct()
@@ -161,7 +163,7 @@ class ContractsReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Temp
         context['contracts'] = contracts
         
         # Get milestones for detailed reports filter
-        milestones = ContractMilestone.objects.filter(organization=organization).order_by('title')
+        milestones = ContractMilestone.objects.filter(organization=organization).order_by('due_date')
         context['milestones'] = milestones
         
         return context

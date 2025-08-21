@@ -231,16 +231,74 @@
                 </div>
                 <div class="card-body">
                     <p class="card-text text-muted small">Access detailed reports for specific contract components and analysis.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'reports:contract_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf me-2"></i>Contract Details
-                        </a>
-                        <a href="{% url 'reports:milestone_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf me-2"></i>Milestone Details
-                        </a>
-                        <a href="{% url 'reports:party_details_pdf' %}" target="_blank" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf me-2"></i>Party Details
-                        </a>
+
+                    <!-- Contract Details Report -->
+                    <div class="mb-4">
+                        <h6 class="text-dark mb-2">Contract Details</h6>
+                        <form method="get" action="{% url 'reports:contract_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Select Contract</label>
+                                <select name="contract_id" class="form-select">
+                                    <option value="">Most recent contract</option>
+                                    {% for c in contracts %}
+                                    <option value="{{ c.id }}">{{ c.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Milestone Details Report -->
+                    <div class="mb-4">
+                        <h6 class="text-dark mb-2">Milestone Details</h6>
+                        <form method="get" action="{% url 'reports:milestone_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Select Milestone</label>
+                                <select name="milestone_id" class="form-select">
+                                    <option value="">Most recent milestone</option>
+                                    {% for m in milestones %}
+                                    <option value="{{ m.id }}">{{ m.milestone_type }} - {{ m.contract.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Party Details Report -->
+                    <div>
+                        <h6 class="text-dark mb-2">Party Details</h6>
+                        <form method="get" action="{% url 'reports:party_details_pdf' %}" target="_blank">
+                            <div class="mb-3">
+                                <label class="form-label">Select Party</label>
+                                <select name="party_id" class="form-select">
+                                    <option value="">All parties</option>
+                                    {% if party_objects %}
+                                        {% for p in party_objects %}
+                                        <option value="{{ p.id }}">{{ p.name }}</option>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% for name in parties %}
+                                        <option disabled>{{ name }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-pdf me-2"></i>Download PDF
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
