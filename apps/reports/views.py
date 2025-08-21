@@ -22,6 +22,82 @@ from datetime import timedelta
 from contracts.models import Contract, Party, ContractMilestone, ContractType
 from django.utils import timezone
 
+def _docx_start_document(org, title, generation_timestamp):
+    """Create a python-docx Document with standard header and metadata."""
+    from docx import Document
+    from docx.shared import Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+    # Organization logo (best-effort)
+    if getattr(org, 'logo', None) and getattr(org.logo, 'path', None):
+        try:
+            doc.add_picture(org.logo.path, width=Inches(1.8))
+        except Exception:
+            pass
+
+    heading = doc.add_heading(title, level=0)
+    heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Metadata table
+    meta = doc.add_table(rows=2, cols=2)
+    meta.style = 'Table Grid'
+    meta.cell(0, 0).text = 'Organization'
+    meta.cell(0, 1).text = getattr(org, 'name', 'Organization')
+    meta.cell(1, 0).text = 'Generated'
+    meta.cell(1, 1).text = generation_timestamp
+    return doc
+
+def _docx_http_response(doc, filename_prefix, org):
+    """Return the given Document as an HTTP response download."""
+    from django.http import HttpResponse
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_{filename_prefix}.docx"'
+    doc.save(response)
+    return response
+
+def _html_to_text(html_string: str) -> str:
+    """Convert rich HTML from editors into readable plain text for DOCX."""
+    if not html_string:
+        return ''
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(str(html_string), 'html.parser')
+        # Ensure line breaks for <br> and paragraphs
+        for br in soup.find_all('br'):
+            br.replace_with('\n')
+        # Separate block elements with newlines
+        for block in soup.find_all(['p', 'div', 'li']):
+            if block.string is None:
+                # Add newline after block content if not already
+                block.append('\n')
+        text = soup.get_text()
+        # Normalize excessive blank lines
+        lines = [l.rstrip() for l in text.splitlines()]
+        # Remove trailing empty lines
+        while lines and not lines[-1]:
+            lines.pop()
+        return '\n'.join(lines)
+    except Exception:
+        # Fallback: plain string coercion
+        return str(html_string)
+
+def _docx_add_heading(doc, text: str):
+    p = doc.add_paragraph()
+    run = p.add_run(text)
+    run.bold = True
+    return p
+
+def _docx_add_html_block(doc, html_string: str):
+    text = _html_to_text(html_string)
+    if not text:
+        return
+    for line in text.split('\n'):
+        if line.strip():
+            doc.add_paragraph(line)
+
 def risk_report_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
@@ -410,7 +486,7 @@ def workplan_summary_pdf(request):
     active_workplans = workplans.exclude(state='cancelled').count()
     fiscal_years = workplans.values('fiscal_year').distinct().count()
     
-    html_string = render_to_string('reports/audit_workplan_summary.html', {
+    context = {
         'organization': org,
         'summary': summary,
         'filters': {'year': year, 'status': status},
@@ -421,7 +497,26 @@ def workplan_summary_pdf(request):
         'total_workplans': total_workplans,
         'active_workplans': active_workplans,
         'fiscal_years': fiscal_years,
-    })
+    }
+
+    if request.GET.get('format') == 'docx':
+        gen_ts = context['generation_timestamp']
+        doc = _docx_start_document(org, context['title'], gen_ts)
+        _docx_add_heading(doc, 'Summary by Fiscal Year and Status')
+        tbl = doc.add_table(rows=1, cols=3)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Fiscal Year'
+        hdr[1].text = 'Status'
+        hdr[2].text = 'Count'
+        for row in context['summary']:
+            r = tbl.add_row().cells
+            r[0].text = str(row.get('fiscal_year'))
+            r[1].text = str(row.get('state'))
+            r[2].text = str(row.get('count'))
+        return _docx_http_response(doc, 'audit_workplan_summary', org)
+    else:
+        html_string = render_to_string('reports/audit_workplan_summary.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_workplan_summary.pdf"'
@@ -454,7 +549,7 @@ def engagement_summary_pdf(request):
     active_engagements = engagements.exclude(project_status__in=['completed', 'cancelled']).count()
     assigned_auditors = engagements.values('assigned_to__email').distinct().count()
     
-    html_string = render_to_string('reports/audit_engagement_summary.html', {
+    context = {
         'organization': org,
         'summary': summary,
         'filters': {'status': status, 'assigned_to': assigned_to, 'engagement_name': engagement_name},
@@ -466,7 +561,25 @@ def engagement_summary_pdf(request):
         'total_engagements': total_engagements,
         'active_engagements': active_engagements,
         'assigned_auditors': assigned_auditors,
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        gen_ts = context['generation_timestamp']
+        doc = _docx_start_document(org, context['title'], gen_ts)
+        _docx_add_heading(doc, 'Engagement Summary')
+        tbl = doc.add_table(rows=1, cols=3)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Status'
+        hdr[1].text = 'Assigned To (email)'
+        hdr[2].text = 'Count'
+        for row in context['summary']:
+            r = tbl.add_row().cells
+            r[0].text = str(row.get('project_status'))
+            r[1].text = str(row.get('assigned_to__email'))
+            r[2].text = str(row.get('count'))
+        return _docx_http_response(doc, 'audit_engagement_summary', org)
+    else:
+        html_string = render_to_string('reports/audit_engagement_summary.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_summary.pdf"'
@@ -496,7 +609,7 @@ def issue_register_pdf(request):
     high_priority_issues = issues.filter(risk_level__in=['high', 'critical']).count()
     escalated_issues = issues.filter(issue_status='escalated').count()
     
-    html_string = render_to_string('reports/audit_issue_register.html', {
+    context = {
         'organization': org,
         'issues': issues,
         'filters': {'status': status, 'severity': severity, 'engagement_name': engagement_name},
@@ -509,7 +622,31 @@ def issue_register_pdf(request):
         'open_issues': open_issues,
         'high_priority_issues': high_priority_issues,
         'escalated_issues': escalated_issues,
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        gen_ts = context['generation_timestamp']
+        doc = _docx_start_document(org, context['title'], gen_ts)
+        _docx_add_heading(doc, 'Issues')
+        tbl = doc.add_table(rows=1, cols=6)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Issue ID'
+        hdr[1].text = 'Title'
+        hdr[2].text = 'Status'
+        hdr[3].text = 'Risk Level'
+        hdr[4].text = 'Owner'
+        hdr[5].text = 'Target Date'
+        for issue in context['issues']:
+            r = tbl.add_row().cells
+            r[0].text = str(getattr(issue, 'issue_id', getattr(issue, 'id', '')))
+            r[1].text = str(getattr(issue, 'title', ''))
+            r[2].text = str(getattr(issue, 'issue_status', ''))
+            r[3].text = str(getattr(issue, 'risk_level', ''))
+            r[4].text = str(getattr(getattr(issue, 'issue_owner', None), 'get_full_name', lambda: '')() or getattr(issue, 'issue_owner_title', '') )
+            r[5].text = str(getattr(issue, 'target_date', ''))
+        return _docx_http_response(doc, 'audit_issue_register', org)
+    else:
+        html_string = render_to_string('reports/audit_issue_register.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_issue_register.pdf"'
@@ -520,18 +657,40 @@ def issue_followup_pdf(request):
     overdue = request.GET.get('overdue')
     issues = Issue.objects.filter(organization=org)
     if overdue == '1':
-        from django.utils import timezone
         today = timezone.now().date()
         issues = issues.filter(target_date__lt=today, issue_status__in=['open', 'in_progress'])
-    html_string = render_to_string('reports/audit_issue_followup.html', {
+    context = {
         'organization': org,
         'issues': issues,
         'filters': {'overdue': overdue},
-    })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_issue_followup.pdf"'
-    return response
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Issue Follow-up Report',
+    }
+    if request.GET.get('format') == 'docx':
+        doc = _docx_start_document(org, context['title'], context['generation_timestamp'])
+        _docx_add_heading(doc, 'Issues Pending Follow-up')
+        tbl = doc.add_table(rows=1, cols=5)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Issue ID'
+        hdr[1].text = 'Title'
+        hdr[2].text = 'Status'
+        hdr[3].text = 'Owner'
+        hdr[4].text = 'Target Date'
+        for issue in issues:
+            r = tbl.add_row().cells
+            r[0].text = str(getattr(issue, 'issue_id', getattr(issue, 'id', '')))
+            r[1].text = str(getattr(issue, 'title', ''))
+            r[2].text = str(getattr(issue, 'issue_status', ''))
+            r[3].text = str(getattr(getattr(issue, 'issue_owner', None), 'get_full_name', lambda: '')() or getattr(issue, 'issue_owner_title', '') )
+            r[4].text = str(getattr(issue, 'target_date', ''))
+        return _docx_http_response(doc, 'audit_issue_followup', org)
+    else:
+        html_string = render_to_string('reports/audit_issue_followup.html', context)
+        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_issue_followup.pdf"'
+        return response
 
 def approval_workflow_pdf(request):
     org = request.tenant
@@ -539,11 +698,30 @@ def approval_workflow_pdf(request):
     approvals = Approval.objects.filter(organization=org)
     if status:
         approvals = approvals.filter(status=status)
-    html_string = render_to_string('reports/audit_approval_workflow.html', {
+    context = {
         'organization': org,
         'approvals': approvals,
         'filters': {'status': status},
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        gen_ts = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        doc = _docx_start_document(org, 'Audit Approval Workflow Report', gen_ts)
+        tbl = doc.add_table(rows=1, cols=4)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Approval ID'
+        hdr[1].text = 'Status'
+        hdr[2].text = 'Created'
+        hdr[3].text = 'Updated'
+        for a in approvals:
+            r = tbl.add_row().cells
+            r[0].text = str(getattr(a, 'id', ''))
+            r[1].text = str(getattr(a, 'status', ''))
+            r[2].text = str(getattr(a, 'created_at', ''))
+            r[3].text = str(getattr(a, 'updated_at', ''))
+        return _docx_http_response(doc, 'audit_approval_workflow', org)
+    else:
+        html_string = render_to_string('reports/audit_approval_workflow.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_approval_workflow.pdf"'
@@ -560,12 +738,24 @@ def smart_engagement_progress_pdf(request):
     avg_duration = engagements.annotate(
         duration=ExpressionWrapper(F('target_end_date') - F('project_start_date'), output_field=DurationField())
     ).aggregate(avg=Avg('duration'))['avg']
-    html_string = render_to_string('reports/audit_engagement_progress.html', {
+    context = {
         'organization': org,
         'total': total,
         'closed': closed,
         'avg_duration': avg_duration,
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        gen_ts = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        doc = _docx_start_document(org, 'Audit Engagement Progress Report', gen_ts)
+        _docx_add_heading(doc, 'Progress Summary')
+        tbl = doc.add_table(rows=3, cols=2)
+        tbl.style = 'Table Grid'
+        tbl.cell(0,0).text = 'Total engagements'; tbl.cell(0,1).text = str(total)
+        tbl.cell(1,0).text = 'Closed engagements'; tbl.cell(1,1).text = str(closed)
+        tbl.cell(2,0).text = 'Average planned duration'; tbl.cell(2,1).text = str(avg_duration)
+        return _docx_http_response(doc, 'audit_engagement_progress', org)
+    else:
+        html_string = render_to_string('reports/audit_engagement_progress.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_progress.pdf"'
@@ -594,7 +784,7 @@ def engagement_details_pdf(request):
         # If no filter, show the most recent engagement
         engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
     engagement_names = get_engagement_names(org)
-    html_string = render_to_string('reports/audit_engagement_details.html', {
+    context = {
         'organization': org,
         'engagement': engagement,
         'engagement_names': engagement_names,
@@ -603,7 +793,73 @@ def engagement_details_pdf(request):
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Audit Engagement Details Report',
         'description': f'Detailed analysis of engagement: {engagement.title if engagement else "Not found"}',
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        ctx = context
+        doc = _docx_start_document(org, ctx['title'], ctx['generation_timestamp'])
+        if engagement:
+            # Basic Information table (mirrors PDF)
+            tbl = doc.add_table(rows=5, cols=2)
+            tbl.style = 'Table Grid'
+            tbl.cell(0,0).text = 'Engagement Title'; tbl.cell(0,1).text = engagement.title
+            tbl.cell(1,0).text = 'Status'; tbl.cell(1,1).text = getattr(engagement, 'get_project_status_display', lambda: getattr(engagement, 'project_status',''))()
+            tbl.cell(2,0).text = 'Workplan'; tbl.cell(2,1).text = (getattr(getattr(engagement,'annual_workplan',None),'name',None) or 'Not specified')
+            tbl.cell(3,0).text = 'Start Date'; tbl.cell(3,1).text = str(getattr(engagement, 'project_start_date', ''))
+            tbl.cell(4,0).text = 'Report Issued Date'; tbl.cell(4,1).text = str(getattr(engagement, 'report_issued_date', ''))
+
+            # Executive Summary
+            if getattr(engagement, 'executive_summary', None):
+                _docx_add_heading(doc, 'Executive Summary')
+                _docx_add_html_block(doc, getattr(engagement, 'executive_summary', ''))
+
+            # Purpose and Background
+            if getattr(engagement, 'purpose', None):
+                _docx_add_heading(doc, 'Purpose')
+                _docx_add_html_block(doc, getattr(engagement, 'purpose', ''))
+            if getattr(engagement, 'background', None):
+                _docx_add_heading(doc, 'Background')
+                _docx_add_html_block(doc, getattr(engagement, 'background', ''))
+
+            # Objectives list
+            objectives = getattr(engagement, 'objectives', None)
+            if objectives and hasattr(objectives, 'all'):
+                _docx_add_heading(doc, 'Audit Objectives')
+                for obj in objectives.all():
+                    doc.add_paragraph(f"- {getattr(obj,'title','')}")
+
+            # Conclusion
+            _docx_add_heading(doc, 'Conclusion')
+            conclusion_text = getattr(engagement, 'get_conclusion_display', lambda: getattr(engagement, 'conclusion',''))()
+            doc.add_paragraph(str(conclusion_text))
+            if getattr(engagement, 'conclusion_description', None):
+                _docx_add_html_block(doc, getattr(engagement, 'conclusion_description', ''))
+
+            # Issues and Findings
+            issues = getattr(engagement, 'all_issues', []) or []
+            if issues:
+                _docx_add_heading(doc, 'Issues and Findings')
+                for idx, issue in enumerate(issues, start=1):
+                    doc.add_paragraph(f"Issue {idx}: {getattr(issue,'issue_title','')}")
+                    if getattr(issue, 'issue_description', None):
+                        _docx_add_html_block(doc, f"Description: {getattr(issue,'issue_description','')}")
+                    if getattr(issue, 'root_cause', None):
+                        _docx_add_html_block(doc, f"Root Cause: {getattr(issue,'root_cause','')}")
+                    recs = getattr(issue, 'recommendations', None)
+                    if recs and hasattr(recs, 'all'):
+                        _docx_add_heading(doc, 'Recommendations:')
+                        for rec in recs.all():
+                            doc.add_paragraph(f"• {getattr(rec,'title','')}")
+                            if getattr(rec, 'description', None):
+                                _docx_add_html_block(doc, f"{getattr(rec,'description','')}")
+                    if getattr(issue, 'risks', None):
+                        _docx_add_html_block(doc, f"Risks: {getattr(issue,'risks','')}")
+                    if getattr(issue, 'management_action_plan', None):
+                        _docx_add_html_block(doc, f"Management Action Plan: {getattr(issue,'management_action_plan','')}")
+        else:
+            doc.add_paragraph('No engagement found for the provided filter.')
+        return _docx_http_response(doc, 'audit_engagement_details', org)
+    else:
+        html_string = render_to_string('reports/audit_engagement_details.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_details.pdf"'
@@ -621,14 +877,37 @@ def engagement_with_issues_pdf(request):
         engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
     issues = engagement.all_issues if engagement else []
     engagement_names = get_engagement_names(org)
-    html_string = render_to_string('reports/audit_engagement_with_issues.html', {
+    context = {
         'organization': org,
         'engagement': engagement,
         'issues': issues,
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
         'for_pdf': True,  # Always set for PDF context
-    })
+    }
+    if request.GET.get('format') == 'docx':
+        doc = _docx_start_document(org, 'Audit Engagement With Issues Report', timezone.now().strftime('%Y-%m-%d %H:%M:%S'))
+        if engagement:
+            _docx_add_heading(doc, f"Engagement: {engagement.title}")
+        _docx_add_heading(doc, 'Issues')
+        tbl = doc.add_table(rows=1, cols=5)
+        tbl.style = 'Table Grid'
+        hdr = tbl.rows[0].cells
+        hdr[0].text = 'Issue ID'
+        hdr[1].text = 'Title'
+        hdr[2].text = 'Status'
+        hdr[3].text = 'Risk Level'
+        hdr[4].text = 'Target Date'
+        for issue in issues:
+            r = tbl.add_row().cells
+            r[0].text = str(getattr(issue, 'issue_id', getattr(issue, 'id', '')))
+            r[1].text = str(getattr(issue, 'title', ''))
+            r[2].text = str(getattr(issue, 'issue_status', ''))
+            r[3].text = str(getattr(issue, 'risk_level', ''))
+            r[4].text = str(getattr(issue, 'target_date', ''))
+        return _docx_http_response(doc, 'audit_engagement_with_issues', org)
+    else:
+        html_string = render_to_string('reports/audit_engagement_with_issues.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
