@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
-from users.models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory
+from users.models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, PasswordPolicy, AccountLockout, SecurityAuditLog
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin, VersionAdmin):
@@ -207,6 +207,28 @@ class PasswordHistoryAdmin(VersionAdmin):
     def has_add_permission(self, request):
         """Prevent manual creation of password history entries"""
         return False
+
+
+@admin.register(PasswordPolicy)
+class PasswordPolicyAdmin(VersionAdmin):
+    list_display = ('organization', 'min_length', 'history_count', 'enable_expiration', 'expiration_days', 'enable_lockout')
+    list_filter = ('enable_expiration', 'enable_lockout', 'enable_breach_detection')
+    search_fields = ('organization__name', 'organization__code')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(AccountLockout)
+class AccountLockoutAdmin(VersionAdmin):
+    list_display = ('user', 'ip_address', 'failed_attempts', 'locked_at', 'expires_at', 'is_active', 'reason')
+    list_filter = ('is_active', 'reason', 'locked_at')
+    search_fields = ('user__email', 'ip_address', 'user_agent')
+
+
+@admin.register(SecurityAuditLog)
+class SecurityAuditLogAdmin(VersionAdmin):
+    list_display = ('user', 'event_type', 'ip_address', 'timestamp')
+    list_filter = ('event_type', 'timestamp')
+    search_fields = ('user__email', 'ip_address', 'user_agent')
     
     def has_change_permission(self, request, obj=None):
         """Prevent editing of password history entries"""

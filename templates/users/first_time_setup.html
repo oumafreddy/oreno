@@ -105,7 +105,24 @@
                                        minlength="8"
                                        required>
                                 <div class="form-text">
-                                    Password must be at least 8 characters long
+                                    Password must be strong and unique. Avoid common words and personal info.
+                                </div>
+                                <div id="password-strength-meter" class="mt-2"></div>
+                                <div class="password-policy-hints mt-2">
+                                    <small class="text-muted"><strong>Password Requirements:</strong></small>
+                                    <ul class="list-unstyled mt-1 mb-0">
+                                        {% for hint in policy_hints %}
+                                            <li class="text-muted small">{{ hint }}</li>
+                                        {% empty %}
+                                            <li class="text-muted small">At least 12 characters</li>
+                                            <li class="text-muted small">One uppercase letter (A-Z)</li>
+                                            <li class="text-muted small">One lowercase letter (a-z)</li>
+                                            <li class="text-muted small">One number (0-9)</li>
+                                            <li class="text-muted small">One special character (!@#$%^&*)</li>
+                                            <li class="text-muted small">Different from your last 8 passwords</li>
+                                            <li class="text-muted small">Not found in known data breaches</li>
+                                        {% endfor %}
+                                    </ul>
                                 </div>
                             </div>
                             

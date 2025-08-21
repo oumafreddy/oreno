@@ -55,6 +55,7 @@
 
     <!-- Feature-specific JavaScript - Load after core -->
     <script src="{% static 'js/ai_assistant.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script src="{% static 'js/password-strength-meter.js' %}" nonce="{{ request.csp_nonce }}"></script>
     
     <!-- Dashboard charts - Load after Plotly -->
     <script src="{% static 'js/dashboard_charts.js' %}" nonce="{{ request.csp_nonce }}"></script>

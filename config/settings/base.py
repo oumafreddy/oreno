@@ -329,17 +329,86 @@ DATABASE_ROUTERS = []
 # Password validation
 # ------------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-    {'NAME': 'users.validators.PasswordHistoryValidator', 'OPTIONS': {'history_count': 5}},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'max_similarity': 0.7,
+        }
+    },
+    {
+        'NAME': 'users.validators.EnhancedPasswordStrengthValidator',
+        'OPTIONS': {
+            'min_length': 12,
+            'max_length': 128,
+        }
+    },
+    {
+        'NAME': 'users.validators.PasswordComplexityValidator',
+        'OPTIONS': {
+            'require_uppercase': True,
+            'require_lowercase': True,
+            'require_digits': True,
+            'require_special': True,
+            'min_length': 12,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'users.validators.PasswordHistoryValidator',
+        'OPTIONS': {
+            'history_count': 8,
+            'min_age_days': 1,
+        }
+    },
+    {
+        'NAME': 'users.validators.PasswordBreachValidator',
+        'OPTIONS': {
+            'min_breach_count': 1,
+        }
+    },
 ]
 
+# Enhanced password hashers with Argon2 as primary
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
+
+# Password policy settings
+PASSWORD_POLICY = {
+    'DEFAULT_MIN_LENGTH': 12,
+    'DEFAULT_MAX_LENGTH': 128,
+    'DEFAULT_HISTORY_COUNT': 8,
+    'DEFAULT_EXPIRATION_DAYS': 90,
+    'DEFAULT_WARNING_DAYS': 14,
+    'DEFAULT_MAX_FAILED_ATTEMPTS': 5,
+    'DEFAULT_LOCKOUT_DURATION_MINUTES': 15,
+    'ENABLE_BREACH_DETECTION': True,
+    'ENABLE_PASSWORD_EXPIRATION': True,
+    'ENABLE_ACCOUNT_LOCKOUT': True,
+}
+
+# Security settings
+SECURITY_SETTINGS = {
+    'SESSION_COOKIE_SECURE': True,
+    'SESSION_COOKIE_HTTPONLY': True,
+    'SESSION_COOKIE_SAMESITE': 'Lax',
+    'CSRF_COOKIE_SECURE': True,
+    'CSRF_COOKIE_HTTPONLY': True,
+    'CSRF_COOKIE_SAMESITE': 'Lax',
+    'SECURE_BROWSER_XSS_FILTER': True,
+    'SECURE_CONTENT_TYPE_NOSNIFF': True,
+    'X_FRAME_OPTIONS': 'DENY',
+    'SECURE_HSTS_SECONDS': 31536000,  # 1 year
+    'SECURE_HSTS_INCLUDE_SUBDOMAINS': True,
+    'SECURE_HSTS_PRELOAD': True,
+}
 
 # ------------------------------------------------------------------------------
 # Internationalization

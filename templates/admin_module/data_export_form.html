@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Data Export - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'admin_module:dashboard' %}">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'admin_module:export-list' %}">Data Exports</a></li>
+                    <li class="breadcrumb-item active">Create Export</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-download me-2"></i>Create Data Export</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="exportForm">
+                        {% csrf_token %}
+                        
+                        <!-- Export Type Selection -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">Export Type</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check border rounded p-3 h-100">
+                                            <input class="form-check-input" type="radio" name="export_type" id="full_organization" value="full_organization" checked>
+                                            <label class="form-check-label" for="full_organization">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-database text-primary fs-4 me-3"></i>
+                                                    <div>
+                                                        <strong>Full Organization Data</strong>
+                                                        <div class="text-muted small">Export all data from all GRC modules</div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check border rounded p-3 h-100">
+                                            <input class="form-check-input" type="radio" name="export_type" id="custom" value="custom">
+                                            <label class="form-check-label" for="custom">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-gear text-warning fs-4 me-3"></i>
+                                                    <div>
+                                                        <strong>Custom Selection</strong>
+                                                        <div class="text-muted small">Choose specific modules and data types</div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Selection (initially hidden) -->
+                        <div id="customSelection" class="mb-4" style="display: none;">
+                            <h5 class="text-primary mb-3">Custom Data Selection</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_audit" value="audit">
+                                                <label class="form-check-label fw-bold" for="select_audit">
+                                                    <i class="bi bi-clipboard-check text-primary me-2"></i>Audit Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="audit_workplans" id="audit_workplans">
+                                                <label class="form-check-label" for="audit_workplans">Audit Workplans</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="audit_engagements" id="audit_engagements">
+                                                <label class="form-check-label" for="audit_engagements">Audit Engagements</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="audit_issues" id="audit_issues">
+                                                <label class="form-check-label" for="audit_issues">Audit Issues</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_risk" value="risk">
+                                                <label class="form-check-label fw-bold" for="select_risk">
+                                                    <i class="bi bi-shield text-success me-2"></i>Risk Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="risk_assessments" id="risk_assessments">
+                                                <label class="form-check-label" for="risk_assessments">Risk Assessments</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="risk_controls" id="risk_controls">
+                                                <label class="form-check-label" for="risk_controls">Risk Controls</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_compliance" value="compliance">
+                                                <label class="form-check-label fw-bold" for="select_compliance">
+                                                    <i class="bi bi-check-circle text-warning me-2"></i>Compliance Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="compliance_requirements" id="compliance_requirements">
+                                                <label class="form-check-label" for="compliance_requirements">Compliance Requirements</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="compliance_obligations" id="compliance_obligations">
+                                                <label class="form-check-label" for="compliance_obligations">Compliance Obligations</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_contracts" value="contracts">
+                                                <label class="form-check-label fw-bold" for="select_contracts">
+                                                    <i class="bi bi-file-text text-info me-2"></i>Contracts Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="contracts" id="contracts">
+                                                <label class="form-check-label" for="contracts">Contracts</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="contract_milestones" id="contract_milestones">
+                                                <label class="form-check-label" for="contract_milestones">Contract Milestones</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_legal" value="legal">
+                                                <label class="form-check-label fw-bold" for="select_legal">
+                                                    <i class="bi bi-briefcase text-danger me-2"></i>Legal Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="legal_cases" id="legal_cases">
+                                                <label class="form-check-label" for="legal_cases">Legal Cases</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="legal_tasks" id="legal_tasks">
+                                                <label class="form-check-label" for="legal_tasks">Legal Tasks</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select_documents" value="documents">
+                                                <label class="form-check-label fw-bold" for="select_documents">
+                                                    <i class="bi bi-folder text-secondary me-2"></i>Document Data
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="custom_models" value="documents" id="documents">
+                                                <label class="form-check-label" for="documents">Documents</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Configuration -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">Export Configuration</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        {{ form.export_format|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.include_attachments|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.date_from|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.date_to|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Options -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">Additional Options</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        {{ form.include_metadata|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.include_audit_trail|as_crispy_field }}
+                                    </div>
+                                    <div class="col-12">
+                                        {{ form.notes|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Notice -->
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Security Notice</h6>
+                            <p class="mb-0">
+                                <strong>Important:</strong> This export will contain sensitive organization data. 
+                                All export activities are logged and tracked for security compliance. 
+                                Please ensure you have proper authorization and handle the exported data securely.
+                            </p>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'admin_module:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Admin Dashboard
+                            </a>
+                            <a href="{% url 'admin_module:export-list' %}" class="btn btn-secondary">
+                                <i class="bi bi-list me-2"></i>Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-download me-2"></i>Create Export
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Export Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary">What's Included</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check text-success me-2"></i>All selected data tables</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Related metadata and relationships</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Export timestamp and audit information</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Data integrity checks</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-primary">Processing Time</h6>
+                        <p class="text-muted small">
+                            Export processing time depends on the amount of data selected. 
+                            You will receive an email notification when your export is ready.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-primary">File Retention</h6>
+                        <p class="text-muted small">
+                            Exported files are automatically deleted after 30 days for security purposes. 
+                            Please download and store your data securely.
+                        </p>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="bi bi-lightbulb me-2"></i>Tip</h6>
+                        <p class="mb-0 small">
+                            For large datasets, consider using date filters to reduce processing time and file size.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fullOrgRadio = document.getElementById('full_organization');
+    const customRadio = document.getElementById('custom');
+    const customSelection = document.getElementById('customSelection');
+    
+    // Toggle custom selection visibility
+    function toggleCustomSelection() {
+        if (customRadio.checked) {
+            customSelection.style.display = 'block';
+        } else {
+            customSelection.style.display = 'none';
+        }
+    }
+    
+    fullOrgRadio.addEventListener('change', toggleCustomSelection);
+    customRadio.addEventListener('change', toggleCustomSelection);
+    
+    // Handle category checkboxes
+    const categoryCheckboxes = ['select_audit', 'select_risk', 'select_compliance', 'select_contracts', 'select_legal', 'select_documents'];
+    
+    categoryCheckboxes.forEach(categoryId => {
+        const categoryCheckbox = document.getElementById(categoryId);
+        if (categoryCheckbox) {
+            categoryCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                const category = this.value;
+                
+                // Find all checkboxes in this category
+                const relatedCheckboxes = document.querySelectorAll(`input[name="custom_models"][value^="${category}_"], input[name="custom_models"][value="${category}"]`);
+                
+                relatedCheckboxes.forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                });
+            });
+        }
+    });
+    
+    // Form validation
+    document.getElementById('exportForm').addEventListener('submit', function(e) {
+        if (customRadio.checked) {
+            const selectedModels = document.querySelectorAll('input[name="custom_models"]:checked');
+            if (selectedModels.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one data type for custom export.');
+                return false;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

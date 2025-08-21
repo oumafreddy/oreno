@@ -6,14 +6,73 @@
     <div class="row mb-3 align-items-center">
         <div class="col">
             <h2 class="mb-0">Organization Admin Dashboard</h2>
+            <p class="text-muted mb-0">Manage users, security, and data exports for {{ org_name }}</p>
         </div>
     </div>
+    
+    <!-- Data Export Section - Prominently Featured -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-download me-2"></i>Data Export Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="card-title">Export Organization Data</h6>
+                            <p class="card-text text-muted">
+                                Export comprehensive data from all GRC modules including audit, risk, compliance, contracts, legal, and document management. 
+                                All exports are logged and tracked for security compliance.
+                            </p>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-primary mb-0">{{ export_stats.completed }}</h4>
+                                        <small class="text-muted">Completed Exports</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-warning mb-0">{{ export_stats.pending }}</h4>
+                                        <small class="text-muted">Pending Exports</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-danger mb-0">{{ export_stats.failed }}</h4>
+                                        <small class="text-muted">Failed Exports</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-info mb-0">{{ export_stats.total_size_mb|floatformat:1 }} MB</h4>
+                                        <small class="text-muted">Total Exported</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'admin_module:export-create' %}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-download me-2"></i>Create Export
+                            </a>
+                            <br><br>
+                            <a href="{% url 'admin_module:export-list' %}" class="btn btn-outline-primary">
+                                <i class="bi bi-list me-2"></i>View All Exports
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Organization Info -->
     <div class="row mb-4 g-3">
         <div class="col-md-3">
             <div class="card h-100 text-center">
                 {% if org_logo %}
-                <img src="{{ org_logo }}" class="card-img-top mx-auto mt-3" style="max-width:80px;max-height:80px;" alt="Logo">
+                <img src="{{ org_logo.url }}" class="card-img-top mx-auto mt-3" style="max-width:80px;max-height:80px;" alt="Logo">
                 {% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ org_name }}</h5>
@@ -71,25 +130,26 @@
                 <div class="col-md-2">
                     <div class="card text-bg-warning h-100 text-center">
                         <div class="card-body">
-                            <div class="display-6"><i class="bi bi-person-gear"></i></div>
-                            <h6 class="card-title">Managers</h6>
-                            <h3>{{ manager_count }}</h3>
+                            <div class="display-6"><i class="bi bi-shield-check"></i></div>
+                            <h6 class="card-title">Security Events</h6>
+                            <h3>{{ security_events_today }}</h3>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="card text-bg-secondary h-100 text-center">
                         <div class="card-body">
-                            <div class="display-6"><i class="bi bi-person"></i></div>
-                            <h6 class="card-title">Staff</h6>
-                            <h3>{{ staff_count }}</h3>
+                            <div class="display-6"><i class="bi bi-lock"></i></div>
+                            <h6 class="card-title">Lockouts</h6>
+                            <h3>{{ active_lockouts }}</h3>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Role Distribution Pie Chart & Recent Users -->
+
+    <!-- Role Distribution & Recent Activity -->
     <div class="row mb-4 g-3">
         <div class="col-md-6">
             <div class="card h-100">
@@ -101,28 +161,38 @@
         </div>
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header bg-light"><strong>Recent Users</strong></div>
+                <div class="card-header bg-light"><strong>Recent Data Exports</strong></div>
                 <div class="card-body p-0">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                        <thead><tr><th>Type</th><th>Status</th><th>Size</th><th>Date</th></tr></thead>
                         <tbody>
-                        {% for user in recent_users %}
+                        {% for export in recent_exports %}
                             <tr>
-                                <td>{{ user.get_full_name }}</td>
-                                <td>{{ user.email }}</td>
                                 <td>
-                                    {% if user.role == 'admin' %}
-                                        <span class="badge bg-info">{{ user.get_role_display }}</span>
-                                    {% elif user.role == 'manager' %}
-                                        <span class="badge bg-warning">{{ user.get_role_display }}</span>
+                                    <span class="badge bg-info">{{ export.get_export_type_display }}</span>
+                                </td>
+                                <td>
+                                    {% if export.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif export.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% elif export.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ user.get_role_display }}</span>
+                                        <span class="badge bg-secondary">{{ export.status }}</span>
                                     {% endif %}
                                 </td>
-                                <td>{% if user.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}</td>
+                                <td>
+                                    {% if export.file_size_mb %}
+                                        {{ export.file_size_mb|floatformat:1 }} MB
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ export.created_at|date:"M d, Y" }}</td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="4" class="text-muted">No recent users.</td></tr>
+                            <tr><td colspan="4" class="text-muted">No recent exports.</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -130,20 +200,39 @@
             </div>
         </div>
     </div>
+
     <!-- Quick Links -->
     <div class="row mb-4">
         <div class="col">
             <div class="card">
                 <div class="card-header bg-light"><strong>Quick Links</strong></div>
                 <div class="card-body">
-                    <a href="{% url 'admin_module:user-list' %}" class="btn btn-primary me-2">Manage Users</a>
-                    <a href="{% url 'admin_module:org-settings' %}" class="btn btn-outline-secondary me-2">Organization Settings</a>
-                    <a href="/risk/" class="btn btn-outline-primary me-2">Risk Dashboard</a>
-                    <a href="/audit/" class="btn btn-outline-secondary me-2">Audit Dashboard</a>
-                    <a href="/legal/" class="btn btn-outline-success me-2">Legal Dashboard</a>
-                    <a href="/compliance/" class="btn btn-outline-warning me-2">Compliance Dashboard</a>
-                    <a href="/contracts/" class="btn btn-outline-info me-2">Contracts Dashboard</a>
-                    <a href="/document_management/" class="btn btn-outline-dark me-2">Document Management</a>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Data Management</h6>
+                            <a href="{% url 'admin_module:export-create' %}" class="btn btn-primary me-2 mb-2">
+                                <i class="bi bi-download me-1"></i>Create Data Export
+                            </a>
+                            <a href="{% url 'admin_module:export-list' %}" class="btn btn-outline-primary me-2 mb-2">
+                                <i class="bi bi-list me-1"></i>View Exports
+                            </a>
+                            <a href="{% url 'admin_module:export-admin' %}" class="btn btn-outline-info me-2 mb-2">
+                                <i class="bi bi-gear me-1"></i>Export Admin
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">System Management</h6>
+                            <a href="/admin/" class="btn btn-outline-secondary me-2 mb-2">
+                                <i class="bi bi-gear me-1"></i>Django Admin
+                            </a>
+                            <a href="/risk/" class="btn btn-outline-primary me-2 mb-2">
+                                <i class="bi bi-shield me-1"></i>Risk Dashboard
+                            </a>
+                            <a href="/audit/" class="btn btn-outline-secondary me-2 mb-2">
+                                <i class="bi bi-clipboard-check me-1"></i>Audit Dashboard
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -152,4 +241,36 @@
 {{ role_distribution|json_script:"role-distribution-data" }}
 {% endblock %}
 {% block extra_scripts %}
+<script>
+// Role distribution pie chart
+document.addEventListener('DOMContentLoaded', function() {
+    const roleData = JSON.parse(document.getElementById('role-distribution-data').textContent);
+    if (Object.keys(roleData).length > 0) {
+        // Simple pie chart visualization
+        const chartContainer = document.getElementById('role-pie-chart');
+        const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d'];
+        let colorIndex = 0;
+        
+        let chartHtml = '<div class="d-flex flex-wrap justify-content-center">';
+        for (const [role, count] of Object.entries(roleData)) {
+            const percentage = ((count / {{ user_count }}) * 100).toFixed(1);
+            chartHtml += `
+                <div class="text-center mx-3 mb-3">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; background-color: ${colors[colorIndex % colors.length]}; color: white; font-weight: bold;">
+                        ${percentage}%
+                    </div>
+                    <div class="mt-2">
+                        <strong>${role}</strong><br>
+                        <small class="text-muted">${count} users</small>
+                    </div>
+                </div>
+            `;
+            colorIndex++;
+        }
+        chartHtml += '</div>';
+        chartContainer.innerHTML = chartHtml;
+    }
+});
+</script>
 {% endblock %} 

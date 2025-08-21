@@ -30,7 +30,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm, CustomSetPasswordForm
-from .models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory
+from .models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, AccountLockout, SecurityAuditLog
 from .serializers import (
     UserRegisterSerializer,
     OTPVerifySerializer,
@@ -82,6 +82,9 @@ class UserLoginAPIView(TokenObtainPairView):
     
     def post(self, request, *args, **kwargs):
         """Override to add tenant access validation after successful authentication."""
+        client_ip = request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        
         response = super().post(request, *args, **kwargs)
         
         # Only check if authentication was successful
@@ -90,6 +93,8 @@ class UserLoginAPIView(TokenObtainPairView):
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 user = serializer.user
+                # Audit logging
+                SecurityAuditLog.log_event(user, 'login_success', client_ip or '0.0.0.0', user_agent)
                 
                 # Get current tenant from request
                 current_tenant = getattr(request, 'tenant', None)
@@ -97,9 +102,18 @@ class UserLoginAPIView(TokenObtainPairView):
                 from core.utils import user_has_tenant_access
                 if current_tenant and not user_has_tenant_access(user, current_tenant):
                     # User doesn't have access to this tenant
+                    SecurityAuditLog.log_event(user, 'suspicious_activity', client_ip or '0.0.0.0', user_agent, {'reason': 'tenant_access_denied'})
                     return Response({
                         'detail': _("Access denied. You can only access your assigned organization.")
                     }, status=403)
+        else:
+            # Authentication failed
+            email = request.data.get('email')
+            user = CustomUser.objects.filter(email=email).first()
+            if user:
+                SecurityAuditLog.log_event(user, 'login_failed', client_ip or '0.0.0.0', user_agent)
+                # Record failed attempt and possibly lock out
+                AccountLockout.record_failed_attempt(user, client_ip or '0.0.0.0', user_agent)
         
         return response
 
@@ -180,9 +194,13 @@ class UserLoginView(LoginView):
     def form_valid(self, form):
         """Override to add tenant access validation and first-time setup check after successful authentication."""
         response = super().form_valid(form)
+        client_ip = self.request.META.get('REMOTE_ADDR')
+        user_agent = self.request.META.get('HTTP_USER_AGENT', '')
         
         # Get the authenticated user
         user = form.get_user()
+        # Audit
+        SecurityAuditLog.log_event(user, 'login_success', client_ip or '0.0.0.0', user_agent)
         
         # Get current tenant from request
         current_tenant = getattr(self.request, 'tenant', None)
@@ -192,6 +210,7 @@ class UserLoginView(LoginView):
             # User doesn't have access to this tenant
             from django.contrib.auth import logout
             logout(self.request)
+            SecurityAuditLog.log_event(user, 'suspicious_activity', client_ip or '0.0.0.0', user_agent, {'reason': 'tenant_access_denied'})
             
             messages.error(
                 self.request,
@@ -266,10 +285,15 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                     _("Failed to send OTP. Please contact support.")
                 )
         
+        # Get password policy hints
+        from .forms import get_password_policy_hints
+        policy_hints = get_password_policy_hints(user=user)
+        
         context.update({
             'user': user,
             'otp': otp,
             'is_admin_created': user.is_admin_created,
+            'policy_hints': policy_hints,
         })
         return context
     
@@ -305,9 +329,32 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                         messages.error(request, _("Passwords do not match."))
                         return self.get(request, *args, **kwargs)
                     
-                    # Validate password strength
+                    # Validate password strength using organization-specific validators
                     try:
-                        validate_password_strength(new_password)
+                        # Get organization-specific validators if available
+                        validators = []
+                        if user.organization:
+                            try:
+                                policy = user.organization.password_policy
+                                if policy:
+                                    validators = policy.get_validators()
+                            except Exception:
+                                pass
+                        
+                        # If no organization policy, use default validators
+                        if not validators:
+                            from .validators import EnhancedPasswordStrengthValidator, PasswordComplexityValidator, PasswordHistoryValidator, PasswordBreachValidator
+                            validators = [
+                                EnhancedPasswordStrengthValidator(),
+                                PasswordComplexityValidator(),
+                                PasswordHistoryValidator(),
+                                PasswordBreachValidator(),
+                            ]
+                        
+                        # Validate with all applicable validators
+                        for validator in validators:
+                            validator.validate(new_password, user)
+                            
                     except ValidationError as e:
                         for error in e.messages:
                             messages.error(request, error)
@@ -322,7 +369,7 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                         return self.get(request, *args, **kwargs)
                     
                     # Store current password in history before changing it
-                    PasswordHistory.store_password(user, user.password)
+                    PasswordHistory.store_password(user, user.password, reason='change', is_hashed=True)
                     
                     # Set new password and mark setup as complete
                     user.set_password(new_password)
@@ -330,7 +377,7 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                     user.save()
                     
                     # Store new password in history
-                    PasswordHistory.store_password(user, new_password)
+                    PasswordHistory.store_password(user, new_password, reason='reset')
                     
                     # Cleanup old password history
                     PasswordHistory.cleanup_old_passwords(user)
@@ -399,6 +446,14 @@ class UserLogoutView(LogoutView):
                     BlacklistedToken.objects.get_or_create(token=token)
             except Exception:
                 pass  # Don't break logout if blacklist fails
+        # Audit logout
+        try:
+            client_ip = request.META.get('REMOTE_ADDR')
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            if request.user.is_authenticated:
+                SecurityAuditLog.log_event(request.user, 'logout', client_ip or '0.0.0.0', user_agent)
+        except Exception:
+            pass
         return response
 
 def custom_logout(request):
@@ -601,12 +656,12 @@ class UserPasswordChangeView(PasswordChangeView):
         new_password = form.cleaned_data['new_password1']
         
         # Store current password in history before changing it
-        PasswordHistory.store_password(user, user.password)
+        PasswordHistory.store_password(user, user.password, reason='change', is_hashed=True)
         
         response = super().form_valid(form)
         
         # Store new password in history
-        PasswordHistory.store_password(user, new_password)
+        PasswordHistory.store_password(user, new_password, reason='change')
         
         # Cleanup old password history
         PasswordHistory.cleanup_old_passwords(user)
@@ -726,13 +781,18 @@ class UserPasswordResetConfirmView(PasswordResetConfirmView):
         except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
             return None
     
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.user
+        return kwargs
+    
     def form_valid(self, form):
         # Get the user from the form
         user = form.save()
         
         # Store the new password in history
         new_password = form.cleaned_data['new_password1']
-        PasswordHistory.store_password(user, new_password)
+        PasswordHistory.store_password(user, new_password, reason='reset')
         
         # Cleanup old password history
         PasswordHistory.cleanup_old_passwords(user)
