@@ -73,7 +73,7 @@ class PartyViewSet(viewsets.ModelViewSet):
     serializer_class = PartySerializer
     permission_classes = [IsOrgStaffOrReadOnly]
     def get_queryset(self):
-        return Party.objects.filter(organization=self.request.user.organization)
+        return Party.objects.filter(organization=self.request.organization)
 
 class ContractViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = Contract.objects.all()
@@ -85,14 +85,14 @@ class ContractPartyViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSe
     serializer_class = ContractPartySerializer
     permission_classes = [IsOrgManagerOrReadOnly]
     def get_queryset(self):
-        return ContractParty.objects.filter(organization=self.request.user.organization)
+        return ContractParty.objects.filter(contract__organization=self.request.organization)
 
 class ContractMilestoneViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):
     queryset = ContractMilestone.objects.all()
     serializer_class = ContractMilestoneSerializer
     permission_classes = [IsOrgManagerOrReadOnly]
     def get_queryset(self):
-        return ContractMilestone.objects.filter(organization=self.request.user.organization)
+        return ContractMilestone.objects.filter(organization=self.request.organization)
 
 # Register your contracts API viewsets here
 router.register(r'contracttypes', ContractTypeViewSet, basename='contracttype')

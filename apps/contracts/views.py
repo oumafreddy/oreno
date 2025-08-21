@@ -57,6 +57,13 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         context['party_count'] = party_count
         context['milestone_count'] = milestone_count
         
+        # Additional counts for dashboard cards
+        context['status_count'] = Contract.objects.filter(organization=org).values('status').distinct().count()
+        context['type_count'] = ContractType.objects.filter(organization=org).count()
+        context['milestone_type_count'] = ContractMilestone.objects.filter(organization=org).values('milestone_type').distinct().count()
+        context['milestone_status_count'] = ContractMilestone.objects.filter(organization=org).values('is_completed').distinct().count()
+        context['expiry_year_count'] = Contract.objects.filter(organization=org, end_date__isnull=False).values('end_date__year').distinct().count()
+        
         # Debugging: Print counts for verification
         print(f"ContractsDashboardView: Organization: {org.name} (ID: {org.id})")
         print(f"ContractsDashboardView: Contract count: {contract_count}")
@@ -148,6 +155,14 @@ class ContractsReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Temp
         # Get milestone statuses for filters
         milestone_statuses = ContractMilestone.objects.filter(organization=organization).values_list('is_completed', flat=True).distinct()
         context['milestone_statuses'] = sorted(list(milestone_statuses))
+        
+        # Get contracts for detailed reports filter
+        contracts = Contract.objects.filter(organization=organization).order_by('title')
+        context['contracts'] = contracts
+        
+        # Get milestones for detailed reports filter
+        milestones = ContractMilestone.objects.filter(organization=organization).order_by('title')
+        context['milestones'] = milestones
         
         return context
 
@@ -286,8 +301,37 @@ class ContractListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView
     model = Contract
     template_name = 'contracts/contract_list.html'
     context_object_name = 'contracts'
+    paginate_by = 20
+    
     def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.organization)
+        qs = super().get_queryset().filter(organization=self.request.organization)
+        
+        # Apply filters
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(
+                Q(title__icontains=q) | 
+                Q(code__icontains=q) |
+                Q(description__icontains=q)
+            )
+        
+        contract_type = self.request.GET.get('type')
+        if contract_type:
+            qs = qs.filter(contract_type__name__icontains=contract_type)
+        
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        
+        start_date = self.request.GET.get('start_date')
+        if start_date:
+            qs = qs.filter(start_date__gte=start_date)
+        
+        end_date = self.request.GET.get('end_date')
+        if end_date:
+            qs = qs.filter(end_date__lte=end_date)
+        
+        return qs
 
 class ContractDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = Contract
@@ -338,23 +382,24 @@ class ContractPartyListView(OrganizationPermissionMixin, LoginRequiredMixin, Lis
     template_name = 'contracts/contractparty_list.html'
     context_object_name = 'contractparties'
     def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.organization)
+        return super().get_queryset().filter(contract__organization=self.request.organization)
 
 class ContractPartyDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
     model = ContractParty
     template_name = 'contracts/contractparty_detail.html'
     context_object_name = 'contractparty'
     def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.organization)
+        return super().get_queryset().filter(contract__organization=self.request.organization)
 
 class ContractPartyCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
     model = ContractParty
     form_class = ContractPartyForm
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
+    
     def form_valid(self, form):
-        form.instance.organization = self.request.organization
         return super().form_valid(form)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
@@ -365,9 +410,10 @@ class ContractPartyUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, U
     form_class = ContractPartyForm
     template_name = 'contracts/contractparty_form.html'
     success_url = reverse_lazy('contracts:contractparty-list')
+    
     def form_valid(self, form):
-        form.instance.organization = self.request.organization
         return super().form_valid(form)
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
@@ -378,7 +424,7 @@ class ContractPartyDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, D
     template_name = 'contracts/contractparty_confirm_delete.html'
     success_url = reverse_lazy('contracts:contractparty-list')
     def get_queryset(self):
-        return super().get_queryset().filter(organization=self.request.organization)
+        return super().get_queryset().filter(contract__organization=self.request.organization)
 
 # --- ContractMilestone Views ---
 class ContractMilestoneListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
@@ -387,12 +433,16 @@ class ContractMilestoneListView(OrganizationPermissionMixin, LoginRequiredMixin,
     context_object_name = 'contractmilestones'
     paginate_by = 20
     def get_queryset(self):
-        qs = ContractMilestone.objects.filter(organization=self.request.user.organization)
+        qs = super().get_queryset().filter(organization=self.request.organization)
         form = ContractMilestoneFilterForm(self.request.GET)
         if form.is_valid():
             q = form.cleaned_data.get('q')
             if q:
-                qs = qs.filter(name__icontains=q)
+                qs = qs.filter(
+                    Q(title__icontains=q) | 
+                    Q(description__icontains=q) |
+                    Q(contract__title__icontains=q)
+                )
             is_completed = form.cleaned_data.get('is_completed')
             if is_completed == '1':
                 qs = qs.filter(is_completed=True)

@@ -56,7 +56,7 @@ class LegalPartyListView(OrganizationPermissionMixin, ListView):
     context_object_name = 'object_list'
     paginate_by = 20
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(name__icontains=q)
@@ -109,7 +109,7 @@ class LegalCaseListView(OrganizationPermissionMixin, ListView):
     context_object_name = 'object_list'
     paginate_by = 20
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(lead_attorney__icontains=q))
@@ -170,10 +170,16 @@ class LegalCaseDeleteView(OrganizationPermissionMixin, DeleteView):
 class CasePartyListView(OrganizationPermissionMixin, ListView):
     model = CaseParty
     template_name = 'legal/caseparty_list.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(case__organization=self.request.organization)
 
 class CasePartyDetailView(OrganizationPermissionMixin, DetailView):
     model = CaseParty
     template_name = 'legal/caseparty_detail.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(case__organization=self.request.organization)
 
 class CasePartyCreateView(OrganizationPermissionMixin, CreateView):
     model = CaseParty
@@ -199,10 +205,10 @@ class LegalTaskListView(OrganizationPermissionMixin, ListView):
     context_object_name = 'object_list'
     paginate_by = 20
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
-            qs = qs.filter(Q(title__icontains=q) | Q(legal_case__title__icontains=q))
+            qs = qs.filter(Q(title__icontains=q) | Q(case__title__icontains=q))
         assigned_to = self.request.GET.get('assigned_to')
         if assigned_to:
             qs = qs.filter(assigned_to__icontains=assigned_to)
@@ -259,17 +265,18 @@ class LegalDocumentListView(OrganizationPermissionMixin, ListView):
     template_name = 'legal/legaldocument_list.html'
     context_object_name = 'object_list'
     paginate_by = 20
+    
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(organization=self.request.organization)
         q = self.request.GET.get('q')
         if q:
-            qs = qs.filter(Q(title__icontains=q) | Q(legal_case__title__icontains=q))
-        doc_type = self.request.GET.get('type')
-        if doc_type:
-            qs = qs.filter(document_type__icontains=doc_type)
-        uploaded_by = self.request.GET.get('uploaded_by')
-        if uploaded_by:
-            qs = qs.filter(uploaded_by__icontains=uploaded_by)
+            qs = qs.filter(Q(title__icontains=q) | Q(case__title__icontains=q))
+        case_filter = self.request.GET.get('case')
+        if case_filter:
+            qs = qs.filter(case__title__icontains=case_filter)
+        is_confidential = self.request.GET.get('is_confidential')
+        if is_confidential:
+            qs = qs.filter(is_confidential=is_confidential.lower() == 'true')
         return qs
 
 class LegalDocumentDetailView(OrganizationPermissionMixin, DetailView):
@@ -308,6 +315,9 @@ class LegalDocumentDeleteView(OrganizationPermissionMixin, DeleteView):
 class LegalArchiveListView(OrganizationPermissionMixin, ListView):
     model = LegalArchive
     template_name = 'legal/legalarchive_list.html'
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
 
 class LegalArchiveDetailView(OrganizationPermissionMixin, DetailView):
     model = LegalArchive

@@ -21,7 +21,11 @@ class OrganizationPermissionMixin(LoginRequiredMixin):
         if obj is not None:
             if not hasattr(obj, 'organization'):
                 raise PermissionDenied("Object does not belong to an organization")
-            if not request.user.organization == obj.organization:
+            if not request.organization == obj.organization:
                 raise PermissionDenied("You do not have permission to access this organization")
+        else:
+            # For list views, ensure organization is set
+            if not hasattr(request, 'organization') or request.organization is None:
+                raise PermissionDenied("Organization context is missing")
 
         return super().dispatch(request, *args, **kwargs) 

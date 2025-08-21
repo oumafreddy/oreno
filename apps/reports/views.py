@@ -18,7 +18,7 @@ from django.db.models.functions import TruncYear
 from legal.models import LegalCase, LegalTask, LegalDocument, LegalParty, LegalArchive
 from compliance.models import ComplianceRequirement, ComplianceFramework, PolicyDocument, ComplianceObligation, ComplianceEvidence
 from datetime import timedelta
-from contracts.models import Contract, Party, ContractMilestone
+from contracts.models import Contract, Party, ContractMilestone, ContractType
 from django.utils import timezone
 
 def risk_report_pdf(request):
@@ -1398,6 +1398,406 @@ def party_details_pdf(request):
         'parties': parties,
         'organization': org
     })
+
+# ─── CONTRACT REPORTS ────────────────────────────────────────────────────────────
+
+def contract_register_summary_pdf(request):
+    """Generate comprehensive contract register summary report"""
+    org = request.tenant
+    contracts = Contract.objects.filter(organization=org)
+    
+    # Apply filters
+    status = request.GET.get('status')
+    contract_type = request.GET.get('contract_type')
+    party = request.GET.get('party')
+    title = request.GET.get('title')
+    
+    if status:
+        contracts = contracts.filter(status=status)
+    if contract_type:
+        contracts = contracts.filter(contract_type__name__icontains=contract_type)
+    if party:
+        contracts = contracts.filter(parties__name__icontains=party)
+    if title:
+        contracts = contracts.filter(title__icontains=title)
+    
+    # Calculate summary statistics
+    total_contracts = contracts.count()
+    active_contracts = contracts.filter(status='active').count()
+    expired_contracts = contracts.filter(status='expired').count()
+    draft_contracts = contracts.filter(status='draft').count()
+    terminated_contracts = contracts.filter(status='terminated').count()
+    
+    # Status distribution
+    status_distribution = contracts.values('status').annotate(count=Count('id'))
+    
+    # Contract type distribution
+    type_distribution = contracts.values('contract_type__name').annotate(count=Count('id'))
+    
+    # Party distribution
+    party_distribution = contracts.values('parties__name').annotate(count=Count('id')).exclude(parties__name__isnull=True)
+    
+    # Expiry analysis
+    today = timezone.now().date()
+    expiring_30_days = contracts.filter(end_date__lte=today + timedelta(days=30), end_date__gte=today).count()
+    expiring_90_days = contracts.filter(end_date__lte=today + timedelta(days=90), end_date__gte=today).count()
+    
+    # Financial analysis
+    total_value = contracts.aggregate(total=models.Sum('value'))['total'] or 0
+    
+    filters = {'status': status, 'contract_type': contract_type, 'party': party, 'title': title}
+    
+    html_string = render_to_string('reports/contract_register_summary.html', {
+        'organization': org,
+        'contracts': contracts,
+        'total_contracts': total_contracts,
+        'active_contracts': active_contracts,
+        'expired_contracts': expired_contracts,
+        'draft_contracts': draft_contracts,
+        'terminated_contracts': terminated_contracts,
+        'status_distribution': status_distribution,
+        'type_distribution': type_distribution,
+        'party_distribution': party_distribution,
+        'expiring_30_days': expiring_30_days,
+        'expiring_90_days': expiring_90_days,
+        'total_value': total_value,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_contract_register_summary.pdf"'
+    return response
+
+def contract_register_detailed_pdf(request):
+    """Generate detailed contract register report"""
+    org = request.tenant
+    contracts = Contract.objects.filter(organization=org)
+    
+    # Apply filters
+    status = request.GET.get('status')
+    contract_type = request.GET.get('contract_type')
+    party = request.GET.get('party')
+    title = request.GET.get('title')
+    
+    if status:
+        contracts = contracts.filter(status=status)
+    if contract_type:
+        contracts = contracts.filter(contract_type__name__icontains=contract_type)
+    if party:
+        contracts = contracts.filter(parties__name__icontains=party)
+    if title:
+        contracts = contracts.filter(title__icontains=title)
+    
+    # Calculate detailed statistics
+    total_contracts = contracts.count()
+    active_contracts = contracts.filter(status='active').count()
+    expired_contracts = contracts.filter(status='expired').count()
+    draft_contracts = contracts.filter(status='draft').count()
+    terminated_contracts = contracts.filter(status='terminated').count()
+    
+    # Financial analysis
+    total_value = contracts.aggregate(total=models.Sum('value'))['total'] or 0
+    avg_value = contracts.aggregate(avg=models.Avg('value'))['avg'] or 0
+    
+    # Timeline analysis
+    today = timezone.now().date()
+    expiring_30_days = contracts.filter(end_date__lte=today + timedelta(days=30), end_date__gte=today).count()
+    expiring_90_days = contracts.filter(end_date__lte=today + timedelta(days=90), end_date__gte=today).count()
+    overdue_contracts = contracts.filter(end_date__lt=today, status='active').count()
+    
+    # Compliance analysis
+    contracts_with_obligations = contracts.filter(compliance_obligations__isnull=False).distinct().count()
+    
+    filters = {'status': status, 'contract_type': contract_type, 'party': party, 'title': title}
+    
+    html_string = render_to_string('reports/contract_register_detailed.html', {
+        'organization': org,
+        'contracts': contracts,
+        'total_contracts': total_contracts,
+        'active_contracts': active_contracts,
+        'expired_contracts': expired_contracts,
+        'draft_contracts': draft_contracts,
+        'terminated_contracts': terminated_contracts,
+        'total_value': total_value,
+        'avg_value': avg_value,
+        'expiring_30_days': expiring_30_days,
+        'expiring_90_days': expiring_90_days,
+        'overdue_contracts': overdue_contracts,
+        'contracts_with_obligations': contracts_with_obligations,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_contract_register_detailed.pdf"'
+    return response
+
+def milestone_register_pdf(request):
+    """Generate milestone register report"""
+    org = request.tenant
+    milestones = ContractMilestone.objects.filter(organization=org)
+    
+    # Apply filters
+    milestone_type = request.GET.get('milestone_type')
+    is_completed = request.GET.get('is_completed')
+    contract = request.GET.get('contract')
+    
+    if milestone_type:
+        milestones = milestones.filter(milestone_type=milestone_type)
+    if is_completed:
+        milestones = milestones.filter(is_completed=is_completed.lower() == 'true')
+    if contract:
+        milestones = milestones.filter(contract__title__icontains=contract)
+    
+    # Calculate statistics
+    total_milestones = milestones.count()
+    completed_milestones = milestones.filter(is_completed=True).count()
+    pending_milestones = milestones.filter(is_completed=False).count()
+    
+    # Overdue analysis
+    today = timezone.now().date()
+    overdue_milestones = milestones.filter(due_date__lt=today, is_completed=False).count()
+    due_soon_milestones = milestones.filter(
+        due_date__gte=today, 
+        due_date__lte=today + timedelta(days=7), 
+        is_completed=False
+    ).count()
+    
+    # Type distribution
+    type_distribution = milestones.values('milestone_type').annotate(count=Count('id'))
+    
+    # Contract distribution
+    contract_distribution = milestones.values('contract__title').annotate(count=Count('id'))
+    
+    filters = {'milestone_type': milestone_type, 'is_completed': is_completed, 'contract': contract}
+    
+    html_string = render_to_string('reports/milestone_register.html', {
+        'organization': org,
+        'milestones': milestones,
+        'total_milestones': total_milestones,
+        'completed_milestones': completed_milestones,
+        'pending_milestones': pending_milestones,
+        'overdue_milestones': overdue_milestones,
+        'due_soon_milestones': due_soon_milestones,
+        'type_distribution': type_distribution,
+        'contract_distribution': contract_distribution,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_milestone_register.pdf"'
+    return response
+
+def party_register_pdf(request):
+    """Generate party register report"""
+    org = request.tenant
+    parties = Party.objects.filter(organization=org)
+    
+    # Apply filters
+    party_type = request.GET.get('party_type')
+    name = request.GET.get('name')
+    
+    if party_type:
+        parties = parties.filter(party_type=party_type)
+    if name:
+        parties = parties.filter(name__icontains=name)
+    
+    # Calculate statistics
+    total_parties = parties.count()
+    internal_parties = parties.filter(party_type='internal').count()
+    external_parties = parties.filter(party_type='external').count()
+    government_parties = parties.filter(party_type='government').count()
+    third_party_parties = parties.filter(party_type='third_party').count()
+    
+    # Type distribution
+    type_distribution = parties.values('party_type').annotate(count=Count('id'))
+    
+    # Contract participation analysis
+    parties_with_contracts = parties.annotate(
+        contract_count=Count('contracts', filter=Q(contracts__organization=org))
+    ).filter(contract_count__gt=0)
+    
+    filters = {'party_type': party_type, 'name': name}
+    
+    html_string = render_to_string('reports/party_register.html', {
+        'organization': org,
+        'parties': parties,
+        'total_parties': total_parties,
+        'internal_parties': internal_parties,
+        'external_parties': external_parties,
+        'government_parties': government_parties,
+        'third_party_parties': third_party_parties,
+        'type_distribution': type_distribution,
+        'parties_with_contracts': parties_with_contracts,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_party_register.pdf"'
+    return response
+
+def contract_expiry_pdf(request):
+    """Generate contract expiry analysis report"""
+    org = request.tenant
+    contracts = Contract.objects.filter(organization=org)
+    
+    # Apply filters
+    expiry_start = request.GET.get('expiry_start')
+    expiry_end = request.GET.get('expiry_end')
+    
+    if expiry_start:
+        contracts = contracts.filter(end_date__gte=expiry_start)
+    if expiry_end:
+        contracts = contracts.filter(end_date__lte=expiry_end)
+    
+    # Expiry analysis
+    today = timezone.now().date()
+    expired_contracts = contracts.filter(end_date__lt=today)
+    expiring_30_days = contracts.filter(end_date__lte=today + timedelta(days=30), end_date__gte=today)
+    expiring_90_days = contracts.filter(end_date__lte=today + timedelta(days=90), end_date__gte=today)
+    valid_contracts = contracts.filter(end_date__gt=today + timedelta(days=90))
+    
+    # Financial impact analysis
+    expired_value = expired_contracts.aggregate(total=models.Sum('value'))['total'] or 0
+    expiring_30_value = expiring_30_days.aggregate(total=models.Sum('value'))['total'] or 0
+    expiring_90_value = expiring_90_days.aggregate(total=models.Sum('value'))['total'] or 0
+    
+    # Auto-renewal analysis
+    auto_renew_contracts = contracts.filter(auto_renew=True)
+    auto_renew_expiring = auto_renew_contracts.filter(end_date__lte=today + timedelta(days=90))
+    
+    filters = {'expiry_start': expiry_start, 'expiry_end': expiry_end}
+    
+    html_string = render_to_string('reports/contract_expiry.html', {
+        'organization': org,
+        'expired_contracts': expired_contracts,
+        'expiring_30_days': expiring_30_days,
+        'expiring_90_days': expiring_90_days,
+        'valid_contracts': valid_contracts,
+        'expired_value': expired_value,
+        'expiring_30_value': expiring_30_value,
+        'expiring_90_value': expiring_90_value,
+        'auto_renew_contracts': auto_renew_contracts,
+        'auto_renew_expiring': auto_renew_expiring,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_contract_expiry.pdf"'
+    return response
+
+def contract_details_pdf(request):
+    """Generate detailed contract analysis report"""
+    org = request.tenant
+    contract_id = request.GET.get('contract_id')
+    contract = None
+    
+    if contract_id:
+        contract = Contract.objects.filter(organization=org, id=contract_id).first()
+    
+    if not contract:
+        # If no specific contract, show the most recent one
+        contract = Contract.objects.filter(organization=org).order_by('-created_at').first()
+    
+    if contract:
+        # Get related data
+        milestones = contract.milestones.all()
+        parties = contract.parties.all()
+        obligations = contract.compliance_obligations.all()
+        
+        # Milestone analysis
+        total_milestones = milestones.count()
+        completed_milestones = milestones.filter(is_completed=True).count()
+        overdue_milestones = milestones.filter(due_date__lt=timezone.now().date(), is_completed=False).count()
+        
+        # Financial analysis
+        days_to_expiry = contract.days_to_expiry
+        is_overdue = contract.is_overdue()
+        
+        html_string = render_to_string('reports/contract_details.html', {
+            'organization': org,
+            'contract': contract,
+            'milestones': milestones,
+            'parties': parties,
+            'obligations': obligations,
+            'total_milestones': total_milestones,
+            'completed_milestones': completed_milestones,
+            'overdue_milestones': overdue_milestones,
+            'days_to_expiry': days_to_expiry,
+            'is_overdue': is_overdue,
+            'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    else:
+        html_string = render_to_string('reports/contract_details.html', {
+            'organization': org,
+            'contract': None,
+            'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_contract_details.pdf"'
+    return response
+
+def milestone_details_pdf(request):
+    """Generate detailed milestone analysis report"""
+    org = request.tenant
+    milestone_id = request.GET.get('milestone_id')
+    milestone = None
+    
+    if milestone_id:
+        milestone = ContractMilestone.objects.filter(organization=org, id=milestone_id).first()
+    
+    if not milestone:
+        # If no specific milestone, show the most recent one
+        milestone = ContractMilestone.objects.filter(organization=org).order_by('-created_at').first()
+    
+    if milestone:
+        # Calculate metrics
+        days_until_due = (milestone.due_date - timezone.now().date()).days
+        is_overdue = milestone.check_overdue()
+        
+        html_string = render_to_string('reports/milestone_details.html', {
+            'organization': org,
+            'milestone': milestone,
+            'days_until_due': days_until_due,
+            'is_overdue': is_overdue,
+            'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    else:
+        html_string = render_to_string('reports/milestone_details.html', {
+            'organization': org,
+            'milestone': None,
+            'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_milestone_details.pdf"'
+    return response
 
 # ─── LEGAL REPORTS ────────────────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-bar-chart"></i></div>
                     <h6 class="card-title">Statuses</h6>
-                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_status_dist|length }}</a></h3>
+                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ status_count }}</a></h3>
                 </div>
             </div>
         </div>
@@ -31,7 +31,7 @@
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-pie-chart"></i></div>
                     <h6 class="card-title">Types</h6>
-                    <h3><a href="{% url 'contracts:contracttype-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_type_dist|length }}</a></h3>
+                    <h3><a href="{% url 'contracts:contracttype-list' %}" class="stretched-link text-white text-decoration-none">{{ type_count }}</a></h3>
                 </div>
             </div>
         </div>
@@ -49,7 +49,7 @@
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-calendar-event"></i></div>
                     <h6 class="card-title">Milestone Types</h6>
-                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_type_dist|length }}</a></h3>
+                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_type_count }}</a></h3>
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
                     <h6 class="card-title">Milestone Statuses</h6>
-                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_status_dist|length }}</a></h3>
+                    <h3><a href="{% url 'contracts:contractmilestone-list' %}" class="stretched-link text-white text-decoration-none">{{ milestone_status_count }}</a></h3>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
                 <div class="card-body">
                     <div class="display-6"><i class="bi bi-calendar-range"></i></div>
                     <h6 class="card-title">Expiry Years</h6>
-                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ contract_expiry_dist|length }}</a></h3>
+                    <h3><a href="{% url 'contracts:contract-list' %}" class="stretched-link text-white text-decoration-none">{{ expiry_year_count }}</a></h3>
                 </div>
             </div>
         </div>

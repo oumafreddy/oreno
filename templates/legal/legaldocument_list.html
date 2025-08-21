@@ -14,10 +14,14 @@
       <input type="text" class="form-control" name="q" placeholder="Title or Case" value="{{ request.GET.q|default:'' }}">
     </div>
     <div class="col-md-2">
-      <input type="text" class="form-control" name="type" placeholder="Type" value="{{ request.GET.type|default:'' }}">
+      <input type="text" class="form-control" name="case" placeholder="Case" value="{{ request.GET.case|default:'' }}">
     </div>
     <div class="col-md-2">
-      <input type="text" class="form-control" name="uploaded_by" placeholder="Uploaded By" value="{{ request.GET.uploaded_by|default:'' }}">
+      <select class="form-control" name="is_confidential">
+        <option value="">All Documents</option>
+        <option value="true" {% if request.GET.is_confidential == 'true' %}selected{% endif %}>Confidential</option>
+        <option value="false" {% if request.GET.is_confidential == 'false' %}selected{% endif %}>Non-Confidential</option>
+      </select>
     </div>
     <div class="col-md-2 d-flex align-items-center">
       <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
@@ -29,9 +33,9 @@
       <tr>
         <th>Title</th>
         <th>Case</th>
-        <th>Type</th>
-        <th>Uploaded By</th>
-        <th>Uploaded</th>
+        <th>Version</th>
+        <th>Confidential</th>
+        <th>Created</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -39,10 +43,16 @@
       {% for doc in object_list %}
       <tr>
         <td><a href="{% url 'legal:legaldocument_detail' doc.pk %}">{{ doc.title }}</a></td>
-        <td>{{ doc.legal_case }}</td>
-        <td>{{ doc.document_type }}</td>
-        <td>{{ doc.uploaded_by }}</td>
-        <td>{{ doc.uploaded_at }}</td>
+        <td>{{ doc.case.title|default:"-" }}</td>
+        <td>{{ doc.version }}</td>
+        <td>
+          {% if doc.is_confidential %}
+            <span class="badge bg-warning">Confidential</span>
+          {% else %}
+            <span class="badge bg-success">Public</span>
+          {% endif %}
+        </td>
+        <td>{{ doc.created_at|date:"M d, Y" }}</td>
         <td>
           <a href="{% url 'legal:legaldocument_detail' doc.pk %}" class="btn btn-sm btn-outline-info">View</a>
           <a href="{% url 'legal:legaldocument_update' doc.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
