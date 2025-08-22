@@ -5,6 +5,7 @@
 {% block title %}Data Exports - Admin{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid mt-4">
     <div class="row mb-3 align-items-center">
         <div class="col">
@@ -339,10 +340,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('confirmCancel').addEventListener('click', function() {
         if (currentExportId) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (!csrfToken) {
+                alert('CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
             fetch(`/admin-module/data-export/${currentExportId}/cancel/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': csrfToken,
                 },
             })
             .then(response => response.json())
@@ -371,10 +378,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('confirmDelete').addEventListener('click', function() {
         if (currentExportId) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (!csrfToken) {
+                alert('CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
             fetch(`/admin-module/data-export/${currentExportId}/delete/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': csrfToken,
                 },
             })
             .then(response => response.json())

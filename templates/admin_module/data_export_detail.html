@@ -49,6 +49,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -397,7 +398,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('confirmCancel').addEventListener('click', function() {
         if (currentExportId) {
-            window.location.href = `/admin-module/data-export/${currentExportId}/cancel/`;
+            // Send POST request to cancel export
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (!csrfToken) {
+                alert('CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            fetch(`/admin-module/data-export/${currentExportId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cancelModal.hide();
+                    // Show success message and redirect
+                    alert('Export cancelled successfully!');
+                    window.location.href = '{% url "admin_module:export-list" %}';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to cancel export'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error cancelling export. Please try again.');
+            });
         }
     });
 
@@ -414,7 +443,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('confirmDelete').addEventListener('click', function() {
         if (currentExportId) {
-            window.location.href = `/admin-module/data-export/${currentExportId}/delete/`;
+            // Send POST request to delete export
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (!csrfToken) {
+                alert('CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            fetch(`/admin-module/data-export/${currentExportId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    deleteModal.hide();
+                    // Show success message and redirect
+                    alert('Export deleted successfully!');
+                    window.location.href = '{% url "admin_module:export-list" %}';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete export'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting export. Please try again.');
+            });
         }
     });
 });

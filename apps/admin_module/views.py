@@ -37,7 +37,8 @@ class AdminRequiredMixin:
     
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return self.handle_no_permission()
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.get_full_path())
         
         if request.user.role != 'admin':
             raise PermissionDenied(_("Only administrators can access this feature."))
