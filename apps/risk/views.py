@@ -62,6 +62,11 @@ class RiskScopedViewSet(viewsets.ModelViewSet):
 class OrganizationPermissionMixin:
     """Mixin to ensure the user has access to the current organization."""
     def dispatch(self, request, *args, **kwargs):
+        # First check if user is authenticated - if not, LoginRequiredMixin will handle redirect
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        
+        # Only check organization context if user is authenticated
         if not hasattr(request, 'organization') or request.organization is None:
             raise PermissionDenied("No organization context found.")
         return super().dispatch(request, *args, **kwargs)
