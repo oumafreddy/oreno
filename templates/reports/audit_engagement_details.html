@@ -3,31 +3,38 @@
 
 {% block content %}
 {% if engagement %}
-  <!-- Report Header -->
-  <div class="report-header">
-    <div class="header-content">
-      <div class="header-left">&nbsp;</div>
-      <div class="header-right">
-        {% if organization.logo and organization.logo.url %}
-          <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
-        {% else %}<span>{{ organization.name }}</span>{% endif %}
-      </div>
+  <!-- Cover Page -->
+  <div class="cover-page">
+    <div class="logo-section">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <div class="default-logo-placeholder">
+          <h2>{{ organization.name }}</h2>
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="report-title-section">
+      <h1 class="report-title">{{ engagement.title }}</h1>
+      <p class="report-subtitle">Audit Engagement Report</p>
     </div>
   </div>
-  <div class="header-separator"></div>
+
+  <div class="page-break"></div>
 
   <h2 class="section-header">A. Engagement Details</h2>
   <div class="report-card">
     <h3>Basic Information</h3>
-    <table class="report-table">
+    <table class="report-table" style="font-size: 10pt;">
       <tr>
-        <th style="width:25%">Engagement Title</th>
+        <th style="width:20%">Engagement Title</th>
         <td colspan="3">{{ engagement.title }}</td>
       </tr>
       <tr>
         <th>Status</th>
         <td><span class="status-badge status-{{ engagement.project_status|lower }}">{{ engagement.get_project_status_display }}</span></td>
-        <th>Workplan</th>
+        <th style="width:15%">Workplan</th>
         <td>{% if engagement.annual_workplan %}{{ engagement.annual_workplan.name }}{% if engagement.annual_workplan.fiscal_year %} ({{ engagement.annual_workplan.fiscal_year }}){% endif %}{% else %}Not specified{% endif %}</td>
       </tr>
       <tr>
@@ -70,8 +77,8 @@
   {% if engagement.objectives.all %}
   <div class="report-card">
     <h3>Audit Objectives</h3>
-    <table class="report-table">
-      <thead><tr><th style="width:10%">#</th><th>Objective Title</th></tr></thead>
+    <table class="report-table" style="font-size: 10pt;">
+      <thead><tr><th style="width:8%">#</th><th>Objective Title</th></tr></thead>
       <tbody>
       {% for objective in engagement.objectives.all %}
         <tr><td>{{ forloop.counter }}</td><td><strong>{{ objective.title }}</strong></td></tr>
@@ -84,8 +91,8 @@
   <h2 class="section-subheader">3. Conclusion</h2>
   <div class="report-card">
     <h3>Audit Conclusion</h3>
-    <table class="report-table">
-      <tr><th>Conclusion</th><td><span class="status-badge status-{{ engagement.conclusion|lower }}">{{ engagement.get_conclusion_display }}</span></td></tr>
+    <table class="report-table" style="font-size: 10pt;">
+      <tr><th style="width:20%">Conclusion</th><td><span class="status-badge status-{{ engagement.conclusion|lower }}">{{ engagement.get_conclusion_display }}</span></td></tr>
       {% if engagement.conclusion_description %}<tr><th>Conclusion Description</th><td>{{ engagement.conclusion_description|safe }}</td></tr>{% endif %}
     </table>
   </div>
