@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment
+from .models import (
+    RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment,
+    # COBIT models
+    COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
+    # NIST models
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+)
 
 class RiskRegisterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,6 +35,63 @@ class KRISerializer(serializers.ModelSerializer):
 class RiskAssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = RiskAssessment
+        fields = '__all__'
+
+# COBIT Serializers
+class COBITDomainSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = COBITDomain
+        fields = '__all__'
+
+class COBITProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = COBITProcess
+        fields = '__all__'
+
+class COBITCapabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = COBITCapability
+        fields = '__all__'
+
+class COBITControlSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = COBITControl
+        fields = '__all__'
+
+class COBITGovernanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = COBITGovernance
+        fields = '__all__'
+
+# NIST Serializers
+class NISTFunctionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTFunction
+        fields = '__all__'
+
+class NISTCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTCategory
+        fields = '__all__'
+
+class NISTSubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTSubcategory
+        fields = '__all__'
+
+class NISTImplementationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTImplementation
+        fields = '__all__'
+
+class NISTThreatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTThreat
+        fields = '__all__'
+
+class NISTIncidentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NISTIncident
         fields = '__all__'
 
 class SummaryCardSerializer(serializers.Serializer):

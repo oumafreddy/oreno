@@ -1,6 +1,32 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Risk Dashboard{% endblock %}
+{% block extra_css %}
+<style>
+    .text-purple { color: #6f42c1 !important; }
+    .text-indigo { color: #6610f2 !important; }
+    .bg-purple { background-color: #6f42c1 !important; }
+    .bg-indigo { background-color: #6610f2 !important; }
+    .btn-outline-purple {
+        color: #6f42c1;
+        border-color: #6f42c1;
+    }
+    .btn-outline-purple:hover {
+        color: #fff;
+        background-color: #6f42c1;
+        border-color: #6f42c1;
+    }
+    .btn-outline-indigo {
+        color: #6610f2;
+        border-color: #6610f2;
+    }
+    .btn-outline-indigo:hover {
+        color: #fff;
+        background-color: #6610f2;
+        border-color: #6610f2;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
     <!-- Navigation Bar -->
@@ -21,6 +47,35 @@
             <a href="{% url 'risk:riskassessment_list' %}" class="btn btn-outline-warning me-2">Assessments</a>
             <a href="{% url 'risk:riskregister_list' %}" class="btn btn-outline-info me-2">Registers</a>
             <a href="{% url 'risk:riskmatrixconfig_list' %}" class="btn btn-outline-dark">Matrix Config</a>
+            
+            <!-- COBIT Navigation -->
+            <div class="btn-group me-2" role="group">
+                <button type="button" class="btn btn-outline-purple dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-gear-wide-connected me-1"></i>COBIT
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'risk:cobitdomain_list' %}">Domains</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:cobitprocess_list' %}">Processes</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:cobitcapability_list' %}">Capabilities</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:cobitcontrol_list' %}">Controls</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:cobitgovernance_list' %}">Governance</a></li>
+                </ul>
+            </div>
+            
+            <!-- NIST Navigation -->
+            <div class="btn-group me-2" role="group">
+                <button type="button" class="btn btn-outline-indigo dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-shield-lock me-1"></i>NIST
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'risk:nistfunction_list' %}">Functions</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:nistcategory_list' %}">Categories</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:nistsubcategory_list' %}">Subcategories</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:nistimplementation_list' %}">Implementations</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:nistthreat_list' %}">Threats</a></li>
+                    <li><a class="dropdown-item" href="{% url 'risk:nistincident_list' %}">Incidents</a></li>
+                </ul>
+            </div>
         </div>
     </div>
     <!-- Register Selector -->
@@ -217,6 +272,128 @@
             </div>
         </div>
     </div>
+    
+    <!-- COBIT Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-12">
+            <h4 class="text-purple mb-3"><i class="bi bi-gear-wide-connected me-2"></i>COBIT Framework Summary</h4>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-purple h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-diagram-3"></i></div>
+                    <h5 class="card-title">Domains</h5>
+                    <h3>{{ total_cobit_domains }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-purple h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-gear"></i></div>
+                    <h5 class="card-title">Processes</h5>
+                    <h3>{{ total_cobit_processes }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-purple h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h5 class="card-title">Capabilities</h5>
+                    <h3>{{ total_cobit_capabilities }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-purple h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-shield-check"></i></div>
+                    <h5 class="card-title">Controls</h5>
+                    <h3>{{ total_cobit_controls }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-check-circle"></i></div>
+                    <h5 class="card-title">Active Controls</h5>
+                    <h3>{{ active_cobit_controls }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-star"></i></div>
+                    <h5 class="card-title">High Maturity</h5>
+                    <h3>{{ high_maturity_capabilities }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NIST Summary Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-12">
+            <h4 class="text-indigo mb-3"><i class="bi bi-shield-lock me-2"></i>NIST Framework Summary</h4>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-indigo h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-layers"></i></div>
+                    <h5 class="card-title">Functions</h5>
+                    <h3>{{ total_nist_functions }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-indigo h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-collection"></i></div>
+                    <h5 class="card-title">Categories</h5>
+                    <h3>{{ total_nist_categories }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-indigo h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-collection-fill"></i></div>
+                    <h5 class="card-title">Subcategories</h5>
+                    <h3>{{ total_nist_subcategories }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-indigo h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-tools"></i></div>
+                    <h5 class="card-title">Implementations</h5>
+                    <h3>{{ total_nist_implementations }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-danger h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h5 class="card-title">High Severity Threats</h5>
+                    <h3>{{ high_severity_threats }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100">
+                <div class="card-body text-center">
+                    <div class="display-6"><i class="bi bi-clock"></i></div>
+                    <h5 class="card-title">Open Incidents</h5>
+                    <h3>{{ open_incidents }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Heat Map & Top Risks -->
     <div class="row mb-4 g-3">
         <div class="col-md-8">
@@ -293,6 +470,147 @@
             </div>
         </div>
     </div>
+    
+    <!-- COBIT Charts and Widgets -->
+    <div class="row mb-4 g-3">
+        <div class="col-12">
+            <h4 class="text-purple mb-3"><i class="bi bi-gear-wide-connected me-2"></i>COBIT Framework Analytics</h4>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-purple text-white"><strong>COBIT Domain Distribution</strong></div>
+                <div class="card-body">
+                    <div id="cobit-domain-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-purple text-white"><strong>COBIT Control Status</strong></div>
+                <div class="card-body">
+                    <div id="cobit-control-status-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-purple text-white"><strong>COBIT Maturity Trend</strong></div>
+                <div class="card-body">
+                    <div id="cobit-maturity-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- COBIT Top Controls and Recent Activity -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-purple text-white"><strong>Top COBIT Controls</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Control</th><th>Effectiveness</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for control in top_cobit_controls %}
+                            <tr>
+                                <td><a href="{% url 'risk:cobitcontrol_detail' control.pk %}">{{ control.control_code }}</a></td>
+                                <td>{{ control.effectiveness_rating }}</td>
+                                <td><span class="badge bg-{{ control.implementation_status }}">{{ control.implementation_status|title }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No COBIT controls found.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-purple text-white"><strong>Recent COBIT Activity</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for activity in recent_cobit_activity %}
+                            <li class="list-group-item">{{ activity }}</li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">No recent COBIT activity.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NIST Charts and Widgets -->
+    <div class="row mb-4 g-3">
+        <div class="col-12">
+            <h4 class="text-indigo mb-3"><i class="bi bi-shield-lock me-2"></i>NIST Framework Analytics</h4>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-indigo text-white"><strong>NIST Function Distribution</strong></div>
+                <div class="card-body">
+                    <div id="nist-function-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-indigo text-white"><strong>NIST Threat Severity</strong></div>
+                <div class="card-body">
+                    <div id="nist-threat-severity-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-indigo text-white"><strong>NIST Incident Timeline</strong></div>
+                <div class="card-body">
+                    <div id="nist-incident-chart" style="height:250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NIST Top Threats and Recent Activity -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-indigo text-white"><strong>Top NIST Threats</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Threat</th><th>Severity</th><th>Type</th></tr></thead>
+                        <tbody>
+                        {% for threat in top_nist_threats %}
+                            <tr>
+                                <td><a href="{% url 'risk:nistthreat_detail' threat.pk %}">{{ threat.threat_name }}</a></td>
+                                <td><span class="badge bg-{{ threat.severity }}">{{ threat.severity|title }}</span></td>
+                                <td>{{ threat.threat_type }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No NIST threats found.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-indigo text-white"><strong>Recent NIST Activity</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for activity in recent_nist_activity %}
+                            <li class="list-group-item">{{ activity }}</li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">No recent NIST activity.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Recent Activity Widget -->
     <div class="row mb-4">
         <div class="col">
@@ -375,12 +693,31 @@
 {{ control_effectiveness_dist|json_script:"control-effectiveness-data" }}
 {{ risk_trend|json_script:"risk-trend-data" }}
 
+<!-- COBIT and NIST JSON data -->
+{{ cobit_domain_dist|json_script:"cobit-domain-data" }}
+{{ cobit_capability_maturity_dist|json_script:"cobit-capability-maturity-data" }}
+{{ cobit_control_status_dist|json_script:"cobit-control-status-data" }}
+{{ cobit_trend|json_script:"cobit-trend-data" }}
+
+{{ nist_function_dist|json_script:"nist-function-data" }}
+{{ nist_category_dist|json_script:"nist-category-data" }}
+{{ nist_threat_severity_dist|json_script:"nist-threat-severity-data" }}
+{{ nist_incident_status_dist|json_script:"nist-incident-status-data" }}
+{{ nist_trend|json_script:"nist-trend-data" }}
+
 <!-- Plotly.js for charts -->
 <script src="https://cdn.plot.ly/plotly-2.27.1.min.js" nonce="{{ request.csp_nonce }}"></script>
 <script src="{% static 'js/risk_dashboard.js' %}" nonce="{{ request.csp_nonce }}"></script>
 <div id="risk-dashboard-vars"
      data-heatmap-url="{% url 'risk:api_heatmap_data' %}"
      data-assessment-timeline-url="{% url 'risk:api_assessment_timeline' %}"
+     data-cobit-domain-url="{% url 'risk:api_cobit_domain_distribution' %}"
+     data-cobit-control-status-url="{% url 'risk:api_cobit_control_status' %}"
+     data-cobit-maturity-url="{% url 'risk:api_cobit_maturity_trend' %}"
+     data-nist-function-url="{% url 'risk:api_nist_function_distribution' %}"
+     data-nist-threat-severity-url="{% url 'risk:api_nist_threat_severity' %}"
+     data-nist-incident-url="{% url 'risk:api_nist_incident_timeline' %}"
+     data-cobit-nist-summary-url="{% url 'risk:api_cobit_nist_summary' %}"
      data-selected-register="{{ selected_register|default:'' }}">
 </div>
 {% endblock %} 

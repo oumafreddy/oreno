@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}NIST Implementations{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">NIST Implementations</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'risk:nistimplementation_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add Implementation
+            </a>
+        </div>
+    </div>
+
+    <!-- Implementations Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Implementation ID</th>
+                            <th>Subcategory</th>
+                            <th>Implementation Status</th>
+                            <th>Implementation Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for implementation in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'risk:nistimplementation_detail' implementation.pk %}">
+                                    {{ implementation.implementation_id }}
+                                </a>
+                            </td>
+                            <td>{{ implementation.subcategory.subcategory_name }}</td>
+                            <td>
+                                <span class="badge bg-{% if implementation.implementation_status == 'implemented' %}success{% elif implementation.implementation_status == 'in_progress' %}warning{% else %}danger{% endif %}">
+                                    {{ implementation.get_implementation_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ implementation.implementation_date|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'risk:nistimplementation_detail' implementation.pk %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'risk:nistimplementation_update' implementation.pk %}" class="btn btn-outline-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'risk:nistimplementation_delete' implementation.pk %}" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="bi bi-check-circle display-4"></i>
+                                <p class="mt-2">No NIST implementations found.</p>
+                                <a href="{% url 'risk:nistimplementation_create' %}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Add First Implementation
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col">
+            <nav aria-label="NIST implementations pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,7 +1,13 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Row, Column
-from .models import RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment
+from .models import (
+    RiskRegister, RiskMatrixConfig, Risk, Control, KRI, RiskAssessment,
+    # COBIT models
+    COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
+    # NIST models
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+)
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
 from django_ckeditor_5.widgets import CKEditor5Widget
@@ -91,6 +97,126 @@ class RiskAssessmentForm(OrganizationScopedModelForm):
         widgets = {
             'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+# COBIT Forms
+class COBITDomainForm(OrganizationScopedModelForm):
+    class Meta:
+        model = COBITDomain
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'objectives': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class COBITProcessForm(OrganizationScopedModelForm):
+    class Meta:
+        model = COBITProcess
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'purpose': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'goals': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'practices': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'inputs': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'outputs': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class COBITCapabilityForm(OrganizationScopedModelForm):
+    class Meta:
+        model = COBITCapability
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'assessment_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'improvement_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'assessment_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class COBITControlForm(OrganizationScopedModelForm):
+    class Meta:
+        model = COBITControl
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'last_assessment_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class COBITGovernanceForm(OrganizationScopedModelForm):
+    class Meta:
+        model = COBITGovernance
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'outcome_statements': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'stakeholder_responsibilities': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+# NIST Forms
+class NISTFunctionForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTFunction
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'objectives': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class NISTCategoryForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTCategory
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'outcomes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class NISTSubcategoryForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTSubcategory
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'outcomes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'informative_references': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class NISTImplementationForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTImplementation
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'assessment_notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'implementation_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'assessment_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class NISTThreatForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTThreat
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'impact_analysis': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'affected_assets': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'mitigation_strategies': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+        }
+
+class NISTIncidentForm(OrganizationScopedModelForm):
+    class Meta:
+        model = NISTIncident
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'affected_systems': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'containment_actions': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'eradication_actions': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'recovery_actions': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'lessons_learned': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'detected_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'resolved_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
 
 # If any risk forms add direct email/phone fields in the future, use the following pattern:

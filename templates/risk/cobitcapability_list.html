@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}COBIT Capabilities{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">COBIT Capabilities</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'risk:cobitcapability_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add Capability
+            </a>
+        </div>
+    </div>
+
+    <!-- Capabilities Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Process</th>
+                            <th>Current Maturity</th>
+                            <th>Target Maturity</th>
+                            <th>Assessment Date</th>
+                            <th>Assessed By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for capability in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'risk:cobitcapability_detail' capability.pk %}">
+                                    {{ capability.process.process_name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if capability.current_maturity >= 4 %}success{% elif capability.current_maturity >= 2 %}warning{% else %}danger{% endif %}">
+                                    {{ capability.get_current_maturity_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ capability.get_target_maturity_display }}</span>
+                            </td>
+                            <td>{{ capability.assessment_date|date:"M d, Y" }}</td>
+                            <td>{{ capability.assessed_by.get_full_name|default:capability.assessed_by.username|default:"Not assigned" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'risk:cobitcapability_detail' capability.pk %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'risk:cobitcapability_update' capability.pk %}" class="btn btn-outline-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'risk:cobitcapability_delete' capability.pk %}" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4"></i>
+                                <p class="mt-2">No COBIT capabilities found.</p>
+                                <a href="{% url 'risk:cobitcapability_create' %}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Add First Capability
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col">
+            <nav aria-label="COBIT capabilities pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

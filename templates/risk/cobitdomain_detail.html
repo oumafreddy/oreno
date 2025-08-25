@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}COBIT Domain - {{ cobitdomain.domain_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">COBIT Domain: {{ cobitdomain.domain_name }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'risk:cobitdomain_update' cobitdomain.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'risk:cobitdomain_delete' cobitdomain.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                        <a href="{% url 'risk:cobitdomain_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Basic Information</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th>Domain Code:</th>
+                                    <td>{{ cobitdomain.domain_code }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Domain Name:</th>
+                                    <td>{{ cobitdomain.domain_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Created:</th>
+                                    <td>{{ cobitdomain.created_at|date:"F j, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated:</th>
+                                    <td>{{ cobitdomain.updated_at|date:"F j, Y" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Description</h5>
+                            <div class="border p-3 rounded">
+                                {{ cobitdomain.description|safe|default:"No description provided." }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if cobitdomain.objectives %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>Objectives</h5>
+                            <div class="border p-3 rounded">
+                                {{ cobitdomain.objectives|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}NIST Threats{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">NIST Threats</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'risk:nistthreat_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add Threat
+            </a>
+        </div>
+    </div>
+
+    <!-- Threats Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Threat ID</th>
+                            <th>Threat Name</th>
+                            <th>Severity</th>
+                            <th>Threat Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for threat in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'risk:nistthreat_detail' threat.pk %}">
+                                    {{ threat.threat_id }}
+                                </a>
+                            </td>
+                            <td>{{ threat.threat_name }}</td>
+                            <td>
+                                <span class="badge bg-{% if threat.severity == 'critical' %}danger{% elif threat.severity == 'high' %}warning{% elif threat.severity == 'medium' %}info{% else %}secondary{% endif %}">
+                                    {{ threat.get_severity_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ threat.get_threat_type_display }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'risk:nistthreat_detail' threat.pk %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'risk:nistthreat_update' threat.pk %}" class="btn btn-outline-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'risk:nistthreat_delete' threat.pk %}" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="bi bi-exclamation-triangle display-4"></i>
+                                <p class="mt-2">No NIST threats found.</p>
+                                <a href="{% url 'risk:nistthreat_create' %}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Add First Threat
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col">
+            <nav aria-label="NIST threats pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

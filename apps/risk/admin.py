@@ -1,6 +1,12 @@
 from django.contrib import admin
 import reversion.admin
-from .models import Risk, RiskRegister, RiskMatrixConfig, Control, RiskControl, KRI, RiskAssessment
+from .models import (
+    Risk, RiskRegister, RiskMatrixConfig, Control, RiskControl, KRI, RiskAssessment,
+    # COBIT models
+    COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
+    # NIST models
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+)
 
 @admin.register(Risk)
 class RiskAdmin(reversion.admin.VersionAdmin):
@@ -47,3 +53,82 @@ class RiskAssessmentAdmin(reversion.admin.VersionAdmin):
     list_filter = ("assessment_type",)
     search_fields = ("risk__code", "assessor")
     date_hierarchy = "assessment_date"
+
+# COBIT Admin Classes
+@admin.register(COBITDomain)
+class COBITDomainAdmin(reversion.admin.VersionAdmin):
+    list_display = ("domain_code", "domain_name", "organization")
+    list_filter = ("organization", "domain_code")
+    search_fields = ("domain_code", "domain_name")
+    ordering = ("domain_code",)
+
+@admin.register(COBITProcess)
+class COBITProcessAdmin(reversion.admin.VersionAdmin):
+    list_display = ("process_code", "process_name", "domain", "organization")
+    list_filter = ("organization", "domain")
+    search_fields = ("process_code", "process_name")
+    ordering = ("process_code",)
+
+@admin.register(COBITCapability)
+class COBITCapabilityAdmin(reversion.admin.VersionAdmin):
+    list_display = ("process", "current_maturity", "target_maturity", "assessment_date", "assessed_by", "organization")
+    list_filter = ("organization", "current_maturity", "target_maturity")
+    search_fields = ("process__process_code", "process__process_name")
+    date_hierarchy = "assessment_date"
+
+@admin.register(COBITControl)
+class COBITControlAdmin(reversion.admin.VersionAdmin):
+    list_display = ("control_code", "control_name", "process", "control_type", "implementation_status", "effectiveness_rating", "organization")
+    list_filter = ("organization", "control_type", "implementation_status", "effectiveness_rating")
+    search_fields = ("control_code", "control_name", "process__process_code")
+    ordering = ("control_code",)
+
+@admin.register(COBITGovernance)
+class COBITGovernanceAdmin(reversion.admin.VersionAdmin):
+    list_display = ("objective_code", "objective_name", "objective_type", "organization")
+    list_filter = ("organization", "objective_type")
+    search_fields = ("objective_code", "objective_name")
+    ordering = ("objective_code",)
+
+# NIST Admin Classes
+@admin.register(NISTFunction)
+class NISTFunctionAdmin(reversion.admin.VersionAdmin):
+    list_display = ("function_code", "function_name", "organization")
+    list_filter = ("organization", "function_code")
+    search_fields = ("function_code", "function_name")
+    ordering = ("function_code",)
+
+@admin.register(NISTCategory)
+class NISTCategoryAdmin(reversion.admin.VersionAdmin):
+    list_display = ("category_code", "category_name", "function", "organization")
+    list_filter = ("organization", "function")
+    search_fields = ("category_code", "category_name")
+    ordering = ("category_code",)
+
+@admin.register(NISTSubcategory)
+class NISTSubcategoryAdmin(reversion.admin.VersionAdmin):
+    list_display = ("subcategory_code", "subcategory_name", "category", "organization")
+    list_filter = ("organization", "category")
+    search_fields = ("subcategory_code", "subcategory_name")
+    ordering = ("subcategory_code",)
+
+@admin.register(NISTImplementation)
+class NISTImplementationAdmin(reversion.admin.VersionAdmin):
+    list_display = ("subcategory", "current_maturity", "target_maturity", "implementation_status", "assessment_date", "assessed_by", "organization")
+    list_filter = ("organization", "current_maturity", "target_maturity", "implementation_status")
+    search_fields = ("subcategory__subcategory_code", "subcategory__subcategory_name")
+    date_hierarchy = "assessment_date"
+
+@admin.register(NISTThreat)
+class NISTThreatAdmin(reversion.admin.VersionAdmin):
+    list_display = ("threat_name", "threat_type", "severity", "likelihood", "organization")
+    list_filter = ("organization", "threat_type", "severity", "likelihood")
+    search_fields = ("threat_name",)
+    date_hierarchy = "last_updated"
+
+@admin.register(NISTIncident)
+class NISTIncidentAdmin(reversion.admin.VersionAdmin):
+    list_display = ("incident_id", "title", "incident_type", "severity", "status", "detected_date", "reported_by", "organization")
+    list_filter = ("organization", "incident_type", "severity", "status")
+    search_fields = ("incident_id", "title", "reported_by__username")
+    date_hierarchy = "detected_date"

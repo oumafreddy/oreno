@@ -10,7 +10,7 @@ from rest_framework import viewsets
 from django_scopes import scope
 from core.mixins.permissions import OrganizationPermissionMixin
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Count, Q, Max
+from django.db.models import Count, Q, Max, Avg
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -23,13 +23,29 @@ except ImportError:
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
 from django.core.exceptions import PermissionDenied
 
-from .models import Risk, RiskRegister, RiskMatrixConfig, Control, KRI, RiskAssessment
+from .models import (
+    Risk, RiskRegister, RiskMatrixConfig, Control, KRI, RiskAssessment,
+    # COBIT models
+    COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
+    # NIST models
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+)
 from .serializers import (
     RiskSerializer, SummaryCardSerializer, TopRiskSerializer, KRIStatusSerializer,
     RecentActivitySerializer, AssessmentTimelinePointSerializer,
-    RiskCategoryDistributionSerializer, RiskStatusDistributionSerializer, ControlEffectivenessSerializer, KRIStatusCountSerializer, AssessmentTypeCountSerializer, RiskAssessmentSerializer
+    RiskCategoryDistributionSerializer, RiskStatusDistributionSerializer, ControlEffectivenessSerializer, KRIStatusCountSerializer, AssessmentTypeCountSerializer, RiskAssessmentSerializer,
+    # COBIT serializers
+    COBITDomainSerializer, COBITProcessSerializer, COBITCapabilitySerializer, COBITControlSerializer, COBITGovernanceSerializer,
+    # NIST serializers
+    NISTFunctionSerializer, NISTCategorySerializer, NISTSubcategorySerializer, NISTImplementationSerializer, NISTThreatSerializer, NISTIncidentSerializer
 )
-from .forms import RiskRegisterForm, RiskMatrixConfigForm, RiskForm, ControlForm, KRIForm, RiskAssessmentForm, RiskRegisterFilterForm, RiskMatrixConfigFilterForm
+from .forms import (
+    RiskRegisterForm, RiskMatrixConfigForm, RiskForm, ControlForm, KRIForm, RiskAssessmentForm, RiskRegisterFilterForm, RiskMatrixConfigFilterForm,
+    # COBIT forms
+    COBITDomainForm, COBITProcessForm, COBITCapabilityForm, COBITControlForm, COBITGovernanceForm,
+    # NIST forms
+    NISTFunctionForm, NISTCategoryForm, NISTSubcategoryForm, NISTImplementationForm, NISTThreatForm, NISTIncidentForm
+)
 
 
 @scope(provider=get_current_organization, name="organization")
@@ -501,6 +517,22 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         kris = KRI.objects.filter(risk__organization=org)
         assessments = RiskAssessment.objects.filter(risk__organization=org)
         matrix = get_active_matrix_config(org)
+        
+        # COBIT Data
+        cobit_domains = COBITDomain.objects.filter(organization=org)
+        cobit_processes = COBITProcess.objects.filter(organization=org)
+        cobit_capabilities = COBITCapability.objects.filter(organization=org)
+        cobit_controls = COBITControl.objects.filter(organization=org)
+        cobit_governance = COBITGovernance.objects.filter(organization=org)
+        
+        # NIST Data
+        nist_functions = NISTFunction.objects.filter(organization=org)
+        nist_categories = NISTCategory.objects.filter(organization=org)
+        nist_subcategories = NISTSubcategory.objects.filter(organization=org)
+        nist_implementations = NISTImplementation.objects.filter(organization=org)
+        nist_threats = NISTThreat.objects.filter(organization=org)
+        nist_incidents = NISTIncident.objects.filter(organization=org)
+        
         # Advanced analytics
         from collections import Counter
         # Risks by category
@@ -515,6 +547,18 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         kri_status_dist = [kri.get_status() for kri in kris]
         # Control effectiveness
         control_effectiveness_dist = controls.values_list('effectiveness_rating', flat=True)
+        
+        # COBIT Analytics
+        cobit_domain_dist = cobit_domains.values_list('domain_code', flat=True)
+        cobit_capability_maturity_dist = cobit_capabilities.values_list('current_maturity', flat=True)
+        cobit_control_status_dist = cobit_controls.values_list('implementation_status', flat=True)
+        
+        # NIST Analytics
+        nist_function_dist = nist_functions.values_list('function_code', flat=True)
+        nist_category_dist = nist_categories.values_list('category_code', flat=True)
+        nist_threat_severity_dist = nist_threats.values_list('severity', flat=True)
+        nist_incident_status_dist = nist_incidents.values_list('status', flat=True)
+        
         # Always provide valid structures for charting, even if empty
         context['risk_category_dist'] = dict(Counter(category_dist)) or {}
         context['risk_status_dist'] = dict(Counter(status_dist)) or {}
@@ -522,13 +566,35 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         context['risk_register_dist'] = dict(Counter(register_dist)) or {}
         context['kri_status_dist'] = dict(Counter(kri_status_dist)) or {}
         context['control_effectiveness_dist'] = dict(Counter(control_effectiveness_dist)) or {}
+        
+        # COBIT distributions
+        context['cobit_domain_dist'] = dict(Counter(cobit_domain_dist)) or {}
+        context['cobit_capability_maturity_dist'] = dict(Counter(cobit_capability_maturity_dist)) or {}
+        context['cobit_control_status_dist'] = dict(Counter(cobit_control_status_dist)) or {}
+        
+        # NIST distributions
+        context['nist_function_dist'] = dict(Counter(nist_function_dist)) or {}
+        context['nist_category_dist'] = dict(Counter(nist_category_dist)) or {}
+        context['nist_threat_severity_dist'] = dict(Counter(nist_threat_severity_dist)) or {}
+        context['nist_incident_status_dist'] = dict(Counter(nist_incident_status_dist)) or {}
+        
         # Risk trend: always a list
         from django.db.models.functions import TruncMonth
         risk_trend = risks.annotate(month=TruncMonth('date_identified')).values('month').annotate(count=Count('id')).order_by('month')
         context['risk_trend'] = [{'month': r['month'].strftime('%Y-%m') if r['month'] else '', 'count': r['count']} for r in risk_trend] if risk_trend else []
+        
+        # COBIT trend
+        cobit_trend = cobit_controls.annotate(month=TruncMonth('created_at')).values('month').annotate(count=Count('id')).order_by('month')
+        context['cobit_trend'] = [{'month': r['month'].strftime('%Y-%m') if r['month'] else '', 'count': r['count']} for r in cobit_trend] if cobit_trend else []
+        
+        # NIST trend
+        nist_trend = nist_incidents.annotate(month=TruncMonth('detected_date')).values('month').annotate(count=Count('id')).order_by('month')
+        context['nist_trend'] = [{'month': r['month'].strftime('%Y-%m') if r['month'] else '', 'count': r['count']} for r in nist_trend] if nist_trend else []
+        
         # Debug output for troubleshooting
         import json
         context['risk_trend_debug'] = json.dumps(context['risk_trend'], indent=2)
+        
         # Summary cards
         context['riskregisters'] = riskregisters
         context['selected_register'] = int(selected_register) if selected_register else None
@@ -538,18 +604,67 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         context['total_assessments'] = assessments.count()
         context['high_critical_risks'] = risks.filter(residual_risk_score__gte=matrix.high_threshold if matrix else 15).count() if matrix else 0
         context['recent_activity_count'] = assessments.filter(assessment_date__gte=timezone.now()-timezone.timedelta(days=7)).count()
+        
+        # COBIT Summary Cards
+        context['total_cobit_domains'] = cobit_domains.count()
+        context['total_cobit_processes'] = cobit_processes.count()
+        context['total_cobit_capabilities'] = cobit_capabilities.count()
+        context['total_cobit_controls'] = cobit_controls.count()
+        context['total_cobit_governance'] = cobit_governance.count()
+        context['active_cobit_controls'] = cobit_controls.filter(implementation_status='fully_implemented').count()
+        context['high_maturity_capabilities'] = cobit_capabilities.filter(current_maturity__in=[4, 5]).count()
+        
+        # NIST Summary Cards
+        context['total_nist_functions'] = nist_functions.count()
+        context['total_nist_categories'] = nist_categories.count()
+        context['total_nist_subcategories'] = nist_subcategories.count()
+        context['total_nist_implementations'] = nist_implementations.count()
+        context['total_nist_threats'] = nist_threats.count()
+        context['total_nist_incidents'] = nist_incidents.count()
+        context['high_severity_threats'] = nist_threats.filter(severity__in=['high', 'critical']).count()
+        context['open_incidents'] = nist_incidents.filter(status='detected').count()
+        
         # Top risks
         context['top_risks'] = risks.order_by('-residual_risk_score')[:5]
+        
+        # Top COBIT controls by effectiveness
+        context['top_cobit_controls'] = cobit_controls.order_by('-effectiveness_rating')[:5]
+        
+        # Top NIST threats by severity
+        context['top_nist_threats'] = nist_threats.order_by('-severity')[:5]
+        
         # KRI status
         context['kris_status'] = kris.order_by('-timestamp')[:10]
+        
+        # Recent COBIT activity
+        context['recent_cobit_activity'] = [
+            f"Control {c.control_code} updated on {c.updated_at.strftime('%Y-%m-%d')}" 
+            for c in cobit_controls.order_by('-updated_at')[:5]
+        ]
+        
+        # Recent NIST activity
+        context['recent_nist_activity'] = [
+            f"Incident {i.incident_id} reported on {i.detected_date.strftime('%Y-%m-%d')}" 
+            for i in nist_incidents.order_by('-detected_date')[:5]
+        ]
+        
         # Recent activity (simple example)
         context['recent_activity'] = [
             f"Assessment for {a.risk.risk_name} on {a.assessment_date}" for a in assessments.order_by('-assessment_date')[:10]
         ]
+        
         context['report_links'] = [
             {
                 'label': 'Download Risk Register PDF',
                 'url': '/reports/risk/pdf/'
+            },
+            {
+                'label': 'Download COBIT Framework Report',
+                'url': '/reports/cobit/pdf/'
+            },
+            {
+                'label': 'Download NIST Framework Report',
+                'url': '/reports/nist/pdf/'
             },
         ]
         return context
@@ -586,6 +701,38 @@ class RiskReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateV
         # Get control effectiveness ratings for filters
         control_ratings = Control.objects.filter(organization=organization).values_list('effectiveness_rating', flat=True).distinct()
         context['control_ratings'] = sorted(list(control_ratings))
+        
+        # COBIT Filters
+        cobit_domain_types = COBITDomain.objects.filter(organization=organization).values_list('domain_code', flat=True).distinct()
+        context['cobit_domain_types'] = sorted(list(cobit_domain_types))
+        
+        cobit_capability_maturity_levels = COBITCapability.objects.filter(organization=organization).values_list('current_maturity', flat=True).distinct()
+        context['cobit_capability_maturity_levels'] = sorted(list(cobit_capability_maturity_levels))
+        
+        cobit_control_statuses = COBITControl.objects.filter(organization=organization).values_list('implementation_status', flat=True).distinct()
+        context['cobit_control_statuses'] = sorted(list(cobit_control_statuses))
+        
+        cobit_governance_types = COBITGovernance.objects.filter(organization=organization).values_list('objective_type', flat=True).distinct()
+        context['cobit_governance_types'] = sorted(list(cobit_governance_types))
+        
+        # NIST Filters
+        nist_function_types = NISTFunction.objects.filter(organization=organization).values_list('function_code', flat=True).distinct()
+        context['nist_function_types'] = sorted(list(nist_function_types))
+        
+        nist_category_types = NISTCategory.objects.filter(organization=organization).values_list('category_code', flat=True).distinct()
+        context['nist_category_types'] = sorted(list(nist_category_types))
+        
+        nist_subcategory_types = NISTSubcategory.objects.filter(organization=organization).values_list('subcategory_code', flat=True).distinct()
+        context['nist_subcategory_types'] = sorted(list(nist_subcategory_types))
+        
+        nist_implementation_statuses = NISTImplementation.objects.filter(organization=organization).values_list('implementation_status', flat=True).distinct()
+        context['nist_implementation_statuses'] = sorted(list(nist_implementation_statuses))
+        
+        nist_threat_severity_levels = NISTThreat.objects.filter(organization=organization).values_list('severity', flat=True).distinct()
+        context['nist_threat_severity_levels'] = sorted(list(nist_threat_severity_levels))
+        
+        nist_incident_statuses = NISTIncident.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['nist_incident_statuses'] = sorted(list(nist_incident_statuses))
         
         return context
 
@@ -1005,3 +1152,995 @@ def export_assessments(request):
     if fmt == 'excel':
         return queryset_to_excel_response(qs, fields, 'assessments.xlsx')
     return queryset_to_csv_response(qs, fields, 'assessments.csv')
+
+
+# --- COBIT Views ---
+
+class COBITDomainListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = COBITDomain
+    template_name = 'risk/cobitdomain_list.html'
+    context_object_name = 'cobitdomains'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(domain_name__icontains=q) | Q(domain_code__icontains=q))
+        return qs
+
+
+class COBITDomainCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = COBITDomain
+    form_class = COBITDomainForm
+    template_name = 'risk/cobitdomain_form.html'
+    success_url = reverse_lazy('risk:cobitdomain_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITDomainUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = COBITDomain
+    form_class = COBITDomainForm
+    template_name = 'risk/cobitdomain_form.html'
+    success_url = reverse_lazy('risk:cobitdomain_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITDomainDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = COBITDomain
+    template_name = 'risk/cobitdomain_detail.html'
+    context_object_name = 'cobitdomain'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class COBITDomainDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = COBITDomain
+    template_name = 'risk/cobitdomain_confirm_delete.html'
+    success_url = reverse_lazy('risk:cobitdomain_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class COBITProcessListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = COBITProcess
+    template_name = 'risk/cobitprocess_list.html'
+    context_object_name = 'cobitprocesses'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(process_name__icontains=q) | Q(process_code__icontains=q))
+        domain = self.request.GET.get('domain')
+        if domain:
+            qs = qs.filter(domain_id=domain)
+        return qs
+
+
+class COBITProcessCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = COBITProcess
+    form_class = COBITProcessForm
+    template_name = 'risk/cobitprocess_form.html'
+    success_url = reverse_lazy('risk:cobitprocess_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITProcessUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = COBITProcess
+    form_class = COBITProcessForm
+    template_name = 'risk/cobitprocess_form.html'
+    success_url = reverse_lazy('risk:cobitprocess_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITProcessDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = COBITProcess
+    template_name = 'risk/cobitprocess_detail.html'
+    context_object_name = 'cobitprocess'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class COBITProcessDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = COBITProcess
+    template_name = 'risk/cobitprocess_confirm_delete.html'
+    success_url = reverse_lazy('risk:cobitprocess_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class COBITCapabilityListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = COBITCapability
+    template_name = 'risk/cobitcapability_list.html'
+    context_object_name = 'cobitcapabilities'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        process = self.request.GET.get('process')
+        if process:
+            qs = qs.filter(process_id=process)
+        return qs
+
+
+class COBITCapabilityCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = COBITCapability
+    form_class = COBITCapabilityForm
+    template_name = 'risk/cobitcapability_form.html'
+    success_url = reverse_lazy('risk:cobitcapability_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITCapabilityUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = COBITCapability
+    form_class = COBITCapabilityForm
+    template_name = 'risk/cobitcapability_form.html'
+    success_url = reverse_lazy('risk:cobitcapability_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITCapabilityDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = COBITCapability
+    template_name = 'risk/cobitcapability_detail.html'
+    context_object_name = 'cobitcapability'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class COBITCapabilityDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = COBITCapability
+    template_name = 'risk/cobitcapability_confirm_delete.html'
+    success_url = reverse_lazy('risk:cobitcapability_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class COBITControlListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = COBITControl
+    template_name = 'risk/cobitcontrol_list.html'
+    context_object_name = 'cobitcontrols'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(control_name__icontains=q) | Q(control_code__icontains=q))
+        process = self.request.GET.get('process')
+        if process:
+            qs = qs.filter(process_id=process)
+        control_type = self.request.GET.get('control_type')
+        if control_type:
+            qs = qs.filter(control_type=control_type)
+        return qs
+
+
+class COBITControlCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = COBITControl
+    form_class = COBITControlForm
+    template_name = 'risk/cobitcontrol_form.html'
+    success_url = reverse_lazy('risk:cobitcontrol_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITControlUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = COBITControl
+    form_class = COBITControlForm
+    template_name = 'risk/cobitcontrol_form.html'
+    success_url = reverse_lazy('risk:cobitcontrol_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITControlDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = COBITControl
+    template_name = 'risk/cobitcontrol_detail.html'
+    context_object_name = 'cobitcontrol'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class COBITControlDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = COBITControl
+    template_name = 'risk/cobitcontrol_confirm_delete.html'
+    success_url = reverse_lazy('risk:cobitcontrol_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class COBITGovernanceListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = COBITGovernance
+    template_name = 'risk/cobitgovernance_list.html'
+    context_object_name = 'cobitgovernances'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(objective_name__icontains=q) | Q(objective_code__icontains=q))
+        objective_type = self.request.GET.get('objective_type')
+        if objective_type:
+            qs = qs.filter(objective_type=objective_type)
+        return qs
+
+
+class COBITGovernanceCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = COBITGovernance
+    form_class = COBITGovernanceForm
+    template_name = 'risk/cobitgovernance_form.html'
+    success_url = reverse_lazy('risk:cobitgovernance_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITGovernanceUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = COBITGovernance
+    form_class = COBITGovernanceForm
+    template_name = 'risk/cobitgovernance_form.html'
+    success_url = reverse_lazy('risk:cobitgovernance_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class COBITGovernanceDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = COBITGovernance
+    template_name = 'risk/cobitgovernance_detail.html'
+    context_object_name = 'cobitgovernance'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class COBITGovernanceDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = COBITGovernance
+    template_name = 'risk/cobitgovernance_confirm_delete.html'
+    success_url = reverse_lazy('risk:cobitgovernance_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+# --- NIST Views ---
+
+class NISTFunctionListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTFunction
+    template_name = 'risk/nistfunction_list.html'
+    context_object_name = 'nistfunctions'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(function_name__icontains=q) | Q(function_code__icontains=q))
+        return qs
+
+
+class NISTFunctionCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTFunction
+    form_class = NISTFunctionForm
+    template_name = 'risk/nistfunction_form.html'
+    success_url = reverse_lazy('risk:nistfunction_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTFunctionUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTFunction
+    form_class = NISTFunctionForm
+    template_name = 'risk/nistfunction_form.html'
+    success_url = reverse_lazy('risk:nistfunction_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTFunctionDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTFunction
+    template_name = 'risk/nistfunction_detail.html'
+    context_object_name = 'nistfunction'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTFunctionDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTFunction
+    template_name = 'risk/nistfunction_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistfunction_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class NISTCategoryListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTCategory
+    template_name = 'risk/nistcategory_list.html'
+    context_object_name = 'nistcategories'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(category_name__icontains=q) | Q(category_code__icontains=q))
+        function = self.request.GET.get('function')
+        if function:
+            qs = qs.filter(function_id=function)
+        return qs
+
+
+class NISTCategoryCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTCategory
+    form_class = NISTCategoryForm
+    template_name = 'risk/nistcategory_form.html'
+    success_url = reverse_lazy('risk:nistcategory_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTCategoryUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTCategory
+    form_class = NISTCategoryForm
+    template_name = 'risk/nistcategory_form.html'
+    success_url = reverse_lazy('risk:nistcategory_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTCategoryDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTCategory
+    template_name = 'risk/nistcategory_detail.html'
+    context_object_name = 'nistcategory'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTCategoryDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTCategory
+    template_name = 'risk/nistcategory_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistcategory_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class NISTSubcategoryListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTSubcategory
+    template_name = 'risk/nistsubcategory_list.html'
+    context_object_name = 'nistsubcategories'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(subcategory_name__icontains=q) | Q(subcategory_code__icontains=q))
+        category = self.request.GET.get('category')
+        if category:
+            qs = qs.filter(category_id=category)
+        return qs
+
+
+class NISTSubcategoryCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTSubcategory
+    form_class = NISTSubcategoryForm
+    template_name = 'risk/nistsubcategory_form.html'
+    success_url = reverse_lazy('risk:nistsubcategory_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTSubcategoryUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTSubcategory
+    form_class = NISTSubcategoryForm
+    template_name = 'risk/nistsubcategory_form.html'
+    success_url = reverse_lazy('risk:nistsubcategory_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTSubcategoryDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTSubcategory
+    template_name = 'risk/nistsubcategory_detail.html'
+    context_object_name = 'nistsubcategory'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTSubcategoryDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTSubcategory
+    template_name = 'risk/nistsubcategory_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistsubcategory_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class NISTImplementationListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTImplementation
+    template_name = 'risk/nistimplementation_list.html'
+    context_object_name = 'nistimplementations'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        subcategory = self.request.GET.get('subcategory')
+        if subcategory:
+            qs = qs.filter(subcategory_id=subcategory)
+        implementation_status = self.request.GET.get('implementation_status')
+        if implementation_status:
+            qs = qs.filter(implementation_status=implementation_status)
+        return qs
+
+
+class NISTImplementationCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTImplementation
+    form_class = NISTImplementationForm
+    template_name = 'risk/nistimplementation_form.html'
+    success_url = reverse_lazy('risk:nistimplementation_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTImplementationUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTImplementation
+    form_class = NISTImplementationForm
+    template_name = 'risk/nistimplementation_form.html'
+    success_url = reverse_lazy('risk:nistimplementation_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTImplementationDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTImplementation
+    template_name = 'risk/nistimplementation_detail.html'
+    context_object_name = 'nistimplementation'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTImplementationDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTImplementation
+    template_name = 'risk/nistimplementation_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistimplementation_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class NISTThreatListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTThreat
+    template_name = 'risk/nistthreat_list.html'
+    context_object_name = 'nistthreats'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(threat_name__icontains=q)
+        threat_type = self.request.GET.get('threat_type')
+        if threat_type:
+            qs = qs.filter(threat_type=threat_type)
+        severity = self.request.GET.get('severity')
+        if severity:
+            qs = qs.filter(severity=severity)
+        return qs
+
+
+class NISTThreatCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTThreat
+    form_class = NISTThreatForm
+    template_name = 'risk/nistthreat_form.html'
+    success_url = reverse_lazy('risk:nistthreat_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTThreatUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTThreat
+    form_class = NISTThreatForm
+    template_name = 'risk/nistthreat_form.html'
+    success_url = reverse_lazy('risk:nistthreat_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTThreatDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTThreat
+    template_name = 'risk/nistthreat_detail.html'
+    context_object_name = 'nistthreat'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTThreatDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTThreat
+    template_name = 'risk/nistthreat_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistthreat_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+class NISTIncidentListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = NISTIncident
+    template_name = 'risk/nistincident_list.html'
+    context_object_name = 'nistincidents'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(incident_id__icontains=q))
+        incident_type = self.request.GET.get('incident_type')
+        if incident_type:
+            qs = qs.filter(incident_type=incident_type)
+        severity = self.request.GET.get('severity')
+        if severity:
+            qs = qs.filter(severity=severity)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+
+class NISTIncidentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = NISTIncident
+    form_class = NISTIncidentForm
+    template_name = 'risk/nistincident_form.html'
+    success_url = reverse_lazy('risk:nistincident_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTIncidentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = NISTIncident
+    form_class = NISTIncidentForm
+    template_name = 'risk/nistincident_form.html'
+    success_url = reverse_lazy('risk:nistincident_list')
+    
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+
+class NISTIncidentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = NISTIncident
+    template_name = 'risk/nistincident_detail.html'
+    context_object_name = 'nistincident'
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+
+class NISTIncidentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = NISTIncident
+    template_name = 'risk/nistincident_confirm_delete.html'
+    success_url = reverse_lazy('risk:nistincident_list')
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+
+# --- COBIT API Endpoints for Dashboard Widgets ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_cobit_domain_distribution(request):
+    org = request.organization
+    domains = COBITDomain.objects.filter(organization=org)
+    domain_dist = domains.values('domain_code').annotate(count=Count('id')).order_by('domain_code')
+    
+    data = [{
+        'x': [d['domain_code'] for d in domain_dist],
+        'y': [d['count'] for d in domain_dist],
+        'type': 'bar',
+        'name': 'COBIT Domains',
+        'marker': {'color': 'rgb(55, 83, 109)'}
+    }] if domain_dist else []
+    
+    layout = {
+        'title': 'COBIT Domain Distribution',
+        'xaxis': {'title': 'Domain Code'},
+        'yaxis': {'title': 'Count'},
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_cobit_control_status(request):
+    org = request.organization
+    controls = COBITControl.objects.filter(organization=org)
+    status_dist = controls.values('implementation_status').annotate(count=Count('id')).order_by('implementation_status')
+    
+    data = [{
+        'labels': [s['implementation_status'] for s in status_dist],
+        'values': [s['count'] for s in status_dist],
+        'type': 'pie',
+        'name': 'Control Status',
+        'marker': {'colors': ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']}
+    }] if status_dist else []
+    
+    layout = {
+        'title': 'COBIT Control Status Distribution',
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_cobit_maturity_trend(request):
+    org = request.organization
+    from django.db.models.functions import TruncMonth
+    
+    capabilities = COBITCapability.objects.filter(organization=org)
+    maturity_trend = capabilities.annotate(
+        month=TruncMonth('created_at')
+    ).values('month').annotate(
+        avg_maturity=Avg('current_maturity')
+    ).order_by('month')
+    
+    data = [{
+        'x': [m['month'].strftime('%Y-%m') for m in maturity_trend],
+        'y': [float(m['avg_maturity']) for m in maturity_trend],
+        'type': 'scatter',
+        'mode': 'lines+markers',
+        'name': 'Avg Maturity Level',
+        'line': {'color': 'rgb(75, 192, 192)'}
+    }] if maturity_trend else []
+    
+    layout = {
+        'title': 'COBIT Capability Maturity Trend',
+        'xaxis': {'title': 'Month'},
+        'yaxis': {'title': 'Average Maturity Level', 'range': [0, 5]},
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+# --- NIST API Endpoints for Dashboard Widgets ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_nist_function_distribution(request):
+    org = request.organization
+    functions = NISTFunction.objects.filter(organization=org)
+    function_dist = functions.values('function_code').annotate(count=Count('id')).order_by('function_code')
+    
+    data = [{
+        'x': [f['function_code'] for f in function_dist],
+        'y': [f['count'] for f in function_dist],
+        'type': 'bar',
+        'name': 'NIST Functions',
+        'marker': {'color': 'rgb(158, 202, 225)'}
+    }] if function_dist else []
+    
+    layout = {
+        'title': 'NIST Function Distribution',
+        'xaxis': {'title': 'Function Code'},
+        'yaxis': {'title': 'Count'},
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_nist_threat_severity(request):
+    org = request.organization
+    threats = NISTThreat.objects.filter(organization=org)
+    severity_dist = threats.values('severity').annotate(count=Count('id')).order_by('severity')
+    
+    data = [{
+        'labels': [s['severity'] for s in severity_dist],
+        'values': [s['count'] for s in severity_dist],
+        'type': 'pie',
+        'name': 'Threat Severity',
+        'marker': {'colors': ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#ff99cc']}
+    }] if severity_dist else []
+    
+    layout = {
+        'title': 'NIST Threat Severity Distribution',
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_nist_incident_timeline(request):
+    org = request.organization
+    from django.db.models.functions import TruncMonth
+    
+    incidents = NISTIncident.objects.filter(organization=org)
+    incident_trend = incidents.annotate(
+        month=TruncMonth('incident_date')
+    ).values('month').annotate(
+        count=Count('id')
+    ).order_by('month')
+    
+    data = [{
+        'x': [i['month'].strftime('%Y-%m') for i in incident_trend],
+        'y': [i['count'] for i in incident_trend],
+        'type': 'scatter',
+        'mode': 'lines+markers',
+        'name': 'Incident Count',
+        'line': {'color': 'rgb(255, 99, 132)'}
+    }] if incident_trend else []
+    
+    layout = {
+        'title': 'NIST Incident Timeline',
+        'xaxis': {'title': 'Month'},
+        'yaxis': {'title': 'Incident Count'},
+        'height': 300
+    }
+    return JsonResponse({'data': data, 'layout': layout})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_cobit_nist_summary(request):
+    org = request.organization
+    
+    # COBIT Summary
+    cobit_domains = COBITDomain.objects.filter(organization=org).count()
+    cobit_processes = COBITProcess.objects.filter(organization=org).count()
+    cobit_controls = COBITControl.objects.filter(organization=org).count()
+    active_cobit_controls = COBITControl.objects.filter(organization=org, implementation_status='fully_implemented').count()
+    
+    # NIST Summary
+    nist_functions = NISTFunction.objects.filter(organization=org).count()
+    nist_categories = NISTCategory.objects.filter(organization=org).count()
+    nist_threats = NISTThreat.objects.filter(organization=org).count()
+    nist_incidents = NISTIncident.objects.filter(organization=org).count()
+    
+    data = {
+        'cobit': {
+            'domains': cobit_domains,
+            'processes': cobit_processes,
+            'controls': cobit_controls,
+            'active_controls': active_cobit_controls,
+            'control_effectiveness': round((active_cobit_controls / cobit_controls * 100) if cobit_controls > 0 else 0, 1)
+        },
+        'nist': {
+            'functions': nist_functions,
+            'categories': nist_categories,
+            'threats': nist_threats,
+            'incidents': nist_incidents,
+            'threat_coverage': round((nist_categories / nist_functions * 100) if nist_functions > 0 else 0, 1)
+        }
+    }
+    
+    return JsonResponse(data)
