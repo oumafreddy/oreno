@@ -1,0 +1,266 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.process %}&process={{ request.GET.process }}{% endif %}{% if request.GET.control_type %}&control_type={{ request.GET.control_type }}{% endif %}{% if request.GET.implementation_status %}&implementation_status={{ request.GET.implementation_status }}{% endif %}{% if request.GET.effectiveness_rating %}&effectiveness_rating={{ request.GET.effectiveness_rating }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: COBIT Control Effectiveness
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. COBIT Control Effectiveness Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Control Effectiveness Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_controls }}</div>
+      <div class="stat-label">Total Controls</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ implemented_controls }}</div>
+      <div class="stat-label">Implemented</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ effective_controls }}</div>
+      <div class="stat-label">Effective</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ highly_effective_controls }}</div>
+      <div class="stat-label">Highly Effective</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Process</th>
+      <td>{{ filters.process|default:"All Processes" }}</td>
+      <th style="width:25%">Control Type</th>
+      <td>{{ filters.control_type|default:"All Types" }}</td>
+    </tr>
+    <tr>
+      <th>Implementation Status</th>
+      <td>{{ filters.implementation_status|default:"All Statuses" }}</td>
+      <th>Effectiveness Rating</th>
+      <td>{{ filters.effectiveness_rating|default:"All Ratings" }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Control Summary Table -->
+<div class="report-card">
+  <h3>Control Effectiveness Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Process</th>
+        <th class="col-20">Control Name</th>
+        <th class="col-15 text-center">Control Type</th>
+        <th class="col-15 text-center">Implementation</th>
+        <th class="col-15 text-center">Effectiveness</th>
+        <th class="col-10 text-center">Last Review</th>
+        <th class="col-10">Reviewed By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for control in controls %}
+      <tr>
+        <td><strong>{{ control.process.process_code }}</strong></td>
+        <td>{{ control.control_name }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ control.get_control_type_display }}</span></td>
+        <td class="text-center">
+          <span class="status-badge status-{% if control.implementation_status == 'fully_implemented' %}active{% elif control.implementation_status == 'partially_implemented' %}pending{% else %}draft{% endif %}">
+            {{ control.get_implementation_status_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if control.effectiveness_rating == 'highly_effective' %}low{% elif control.effectiveness_rating == 'effective' %}medium{% else %}high{% endif %}">
+            {{ control.get_effectiveness_rating_display }}
+          </span>
+        </td>
+        <td class="text-center">{{ control.last_review_date|date:"M j, Y"|default:"Not reviewed" }}</td>
+        <td>{% if control.reviewed_by %}{{ control.reviewed_by.get_full_name|default:control.reviewed_by.username }}{% else %}Not specified{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Control Details -->
+{% for control in controls %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Control {{ forloop.counter }}: {{ control.control_name }}</h3>
+    <span class="priority-indicator">Effectiveness: {{ control.get_effectiveness_rating_display }}</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Control Code</th>
+      <td>{{ control.control_code }}</td>
+      <th style="width:20%">Control Name</th>
+      <td>{{ control.control_name }}</td>
+    </tr>
+    <tr>
+      <th>Process</th>
+      <td>{{ control.process.process_code }} - {{ control.process.process_name }}</td>
+      <th>Domain</th>
+      <td>{{ control.process.domain.domain_code }} - {{ control.process.domain.domain_name }}</td>
+    </tr>
+    <tr>
+      <th>Control Type</th>
+      <td>{{ control.get_control_type_display }}</td>
+      <th>Implementation Status</th>
+      <td>
+        <span class="status-badge status-{% if control.implementation_status == 'fully_implemented' %}active{% elif control.implementation_status == 'partially_implemented' %}pending{% else %}draft{% endif %}">
+          {{ control.get_implementation_status_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Effectiveness Rating</th>
+      <td>
+        <span class="risk-level risk-{% if control.effectiveness_rating == 'highly_effective' %}low{% elif control.effectiveness_rating == 'effective' %}medium{% else %}high{% endif %}">
+          {{ control.get_effectiveness_rating_display }}
+        </span>
+      </td>
+      <th>Last Review</th>
+      <td>{{ control.last_review_date|date:"M j, Y"|default:"Not reviewed" }}</td>
+    </tr>
+    <tr>
+      <th>Reviewed By</th>
+      <td>{% if control.reviewed_by %}{{ control.reviewed_by.get_full_name|default:control.reviewed_by.username }}{% else %}Not specified{% endif %}</td>
+      <th>Next Review</th>
+      <td>{{ control.next_review_date|date:"M j, Y"|default:"Not scheduled" }}</td>
+    </tr>
+  </table>
+
+  {% if control.control_description %}
+  <div class="field-group">
+    <div class="field-label">Control Description</div>
+    <div class="field-value">{{ control.control_description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.control_objectives %}
+  <div class="field-group">
+    <div class="field-label">Control Objectives</div>
+    <div class="field-value">{{ control.control_objectives|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.implementation_notes %}
+  <div class="field-group">
+    <div class="field-label">Implementation Notes</div>
+    <div class="field-value">{{ control.implementation_notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if control.effectiveness_notes %}
+  <div class="field-group">
+    <div class="field-label">Effectiveness Notes</div>
+    <div class="field-value">{{ control.effectiveness_notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Process Information -->
+  <div class="field-group">
+    <div class="field-label">Process Information</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <tr>
+          <th style="width:20%">Process Description</th>
+          <td>{% if control.process.description %}{{ control.process.description|striptags|truncatewords:30 }}{% else %}No description available{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Process Purpose</th>
+          <td>{% if control.process.purpose %}{{ control.process.purpose|striptags|truncatewords:30 }}{% else %}No purpose defined{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Capabilities in Process</th>
+          <td>{{ control.process.cobitcapability_set.count }} capabilities</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Controls Found:</strong> No controls match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Control Analysis & Insights -->
+<div class="report-card">
+  <h3>Control Effectiveness Analysis & Insights</h3>
+  
+  <div class="field-label">Control Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive COBIT control effectiveness analysis provides insights into the organization's control framework implementation, 
+    covering {{ total_controls }} controls with {{ implemented_controls }} fully implemented and {{ effective_controls }} rated as effective.</p>
+    
+    <p><strong>Key Control Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Controls:</strong> {{ total_controls }} COBIT controls</li>
+      <li><strong>Fully Implemented:</strong> {{ implemented_controls }} controls ({% if total_controls %}{% widthratio implemented_controls total_controls 100 %}{% else %}0{% endif %}%)</li>
+      <li><strong>Effective Controls:</strong> {{ effective_controls }} controls ({% if total_controls %}{% widthratio effective_controls total_controls 100 %}{% else %}0{% endif %}%)</li>
+      <li><strong>Highly Effective:</strong> {{ highly_effective_controls }} controls ({% if total_controls %}{% widthratio highly_effective_controls total_controls 100 %}{% else %}0{% endif %}%)</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Control Effectiveness Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Implementation Status:</strong> Monitor the distribution of control implementation across processes</li>
+      <li><strong>Effectiveness Ratings:</strong> Track control effectiveness and identify areas for improvement</li>
+      <li><strong>Review Frequency:</strong> Ensure regular review cycles for all controls</li>
+      <li><strong>Process Alignment:</strong> Evaluate control alignment with process objectives</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if controls %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Implementation Gap Closure:</strong> Focus on controls that are not fully implemented</li>
+      <li><strong>Effectiveness Improvement:</strong> Enhance controls rated as ineffective or partially effective</li>
+      <li><strong>Review Frequency:</strong> Establish regular review cycles for all controls</li>
+      <li><strong>Process Integration:</strong> Ensure controls are properly integrated with process workflows</li>
+      <li><strong>Resource Allocation:</strong> Allocate resources based on control effectiveness and business criticality</li>
+      <li><strong>Continuous Monitoring:</strong> Implement ongoing monitoring of control effectiveness</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

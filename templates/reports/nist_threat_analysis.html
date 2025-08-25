@@ -1,0 +1,311 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.threat_type %}&threat_type={{ request.GET.threat_type }}{% endif %}{% if request.GET.severity %}&severity={{ request.GET.severity }}{% endif %}{% if request.GET.likelihood %}&likelihood={{ request.GET.likelihood }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: NIST Threat Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. NIST Threat Intelligence Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Threat Analysis Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_threats }}</div>
+      <div class="stat-label">Total Threats</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_critical_threats }}</div>
+      <div class="stat-label">High/Critical</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ likely_certain_threats }}</div>
+      <div class="stat-label">Likely/Certain</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ adversarial_threats }}</div>
+      <div class="stat-label">Adversarial</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Threat Type</th>
+      <td>{{ filters.threat_type|default:"All Types" }}</td>
+      <th style="width:25%">Severity</th>
+      <td>{{ filters.severity|default:"All Severities" }}</td>
+    </tr>
+    <tr>
+      <th>Likelihood</th>
+      <td>{{ filters.likelihood|default:"All Likelihoods" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Threat Summary Table -->
+<div class="report-card">
+  <h3>Threat Analysis Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Threat Name</th>
+        <th class="col-15 text-center">Threat Type</th>
+        <th class="col-12 text-center">Severity</th>
+        <th class="col-12 text-center">Likelihood</th>
+        <th class="col-15 text-center">Risk Level</th>
+        <th class="col-15 text-center">Last Updated</th>
+        <th class="col-16">Threat Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for threat in threats %}
+      <tr>
+        <td><strong>{{ threat.threat_name }}</strong></td>
+        <td class="text-center"><span class="status-badge status-active">{{ threat.get_threat_type_display }}</span></td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if threat.severity == 'critical' %}high{% elif threat.severity == 'high' %}high{% elif threat.severity == 'medium' %}medium{% else %}low{% endif %}">
+            {{ threat.get_severity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if threat.likelihood == 'certain' %}high{% elif threat.likelihood == 'likely' %}high{% elif threat.likelihood == 'possible' %}medium{% else %}low{% endif %}">
+            {{ threat.get_likelihood_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="status-badge status-{% if threat.severity == 'critical' and threat.likelihood == 'certain' %}pending{% elif threat.severity == 'high' or threat.likelihood == 'likely' %}active{% else %}draft{% endif %}">
+            {% if threat.severity == 'critical' and threat.likelihood == 'certain' %}Critical
+            {% elif threat.severity == 'high' or threat.likelihood == 'likely' %}High
+            {% elif threat.severity == 'medium' or threat.likelihood == 'possible' %}Medium
+            {% else %}Low{% endif %}
+          </span>
+        </td>
+        <td class="text-center">{{ threat.updated_at|date:"M j, Y" }}</td>
+        <td>{{ threat.threat_source|default:"Not specified" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Threat Details -->
+{% for threat in threats %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Threat {{ forloop.counter }}: {{ threat.threat_name }}</h3>
+    <span class="priority-indicator">
+      Risk Level: {% if threat.severity == 'critical' and threat.likelihood == 'certain' %}Critical
+      {% elif threat.severity == 'high' or threat.likelihood == 'likely' %}High
+      {% elif threat.severity == 'medium' or threat.likelihood == 'possible' %}Medium
+      {% else %}Low{% endif %}
+    </span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Threat Name</th>
+      <td>{{ threat.threat_name }}</td>
+      <th style="width:20%">Threat Type</th>
+      <td>{{ threat.get_threat_type_display }}</td>
+    </tr>
+    <tr>
+      <th>Severity</th>
+      <td>
+        <span class="risk-level risk-{% if threat.severity == 'critical' %}high{% elif threat.severity == 'high' %}high{% elif threat.severity == 'medium' %}medium{% else %}low{% endif %}">
+          {{ threat.get_severity_display }}
+        </span>
+      </td>
+      <th>Likelihood</th>
+      <td>
+        <span class="risk-level risk-{% if threat.likelihood == 'certain' %}high{% elif threat.likelihood == 'likely' %}high{% elif threat.likelihood == 'possible' %}medium{% else %}low{% endif %}">
+          {{ threat.get_likelihood_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Threat Source</th>
+      <td>{{ threat.threat_source|default:"Not specified" }}</td>
+      <th>Threat Vector</th>
+      <td>{{ threat.threat_vector|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Created</th>
+      <td>{{ threat.created_at|date:"M j, Y H:i" }}</td>
+      <th>Last Updated</th>
+      <td>{{ threat.updated_at|date:"M j, Y H:i" }}</td>
+    </tr>
+    <tr>
+      <th>Created By</th>
+      <td>{% if threat.created_by %}{{ threat.created_by.get_full_name|default:threat.created_by.username }}{% else %}System{% endif %}</td>
+      <th>Threat Status</th>
+      <td>
+        <span class="status-badge status-{% if threat.is_active %}active{% else %}draft{% endif %}">
+          {% if threat.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {% if threat.threat_description %}
+  <div class="field-group">
+    <div class="field-label">Threat Description</div>
+    <div class="field-value">{{ threat.threat_description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if threat.attack_vectors %}
+  <div class="field-group">
+    <div class="field-label">Attack Vectors</div>
+    <div class="field-value">{{ threat.attack_vectors|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if threat.impact_analysis %}
+  <div class="field-group">
+    <div class="field-label">Impact Analysis</div>
+    <div class="field-value">{{ threat.impact_analysis|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if threat.mitigation_strategies %}
+  <div class="field-group">
+    <div class="field-label">Mitigation Strategies</div>
+    <div class="field-value">{{ threat.mitigation_strategies|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if threat.threat_indicators %}
+  <div class="field-group">
+    <div class="field-label">Threat Indicators</div>
+    <div class="field-value">{{ threat.threat_indicators|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Risk Assessment -->
+  <div class="field-group">
+    <div class="field-label">Risk Assessment</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <tr>
+          <th style="width:20%">Risk Level</th>
+          <td>
+            {% if threat.severity == 'critical' and threat.likelihood == 'certain' %}Critical
+            {% elif threat.severity == 'high' or threat.likelihood == 'likely' %}High
+            {% elif threat.severity == 'medium' or threat.likelihood == 'possible' %}Medium
+            {% else %}Low{% endif %}
+          </td>
+          <th style="width:20%">Risk Score</th>
+          <td>
+            {% if threat.severity == 'critical' and threat.likelihood == 'certain' %}16
+            {% elif threat.severity == 'critical' and threat.likelihood == 'likely' %}12
+            {% elif threat.severity == 'high' and threat.likelihood == 'certain' %}12
+            {% elif threat.severity == 'high' and threat.likelihood == 'likely' %}9
+            {% elif threat.severity == 'medium' and threat.likelihood == 'possible' %}6
+            {% else %}3{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>Priority</th>
+          <td>
+            {% if threat.severity == 'critical' or threat.likelihood == 'certain' %}Immediate
+            {% elif threat.severity == 'high' or threat.likelihood == 'likely' %}High
+            {% elif threat.severity == 'medium' or threat.likelihood == 'possible' %}Medium
+            {% else %}Low{% endif %}
+          </td>
+          <th>Response Required</th>
+          <td>
+            {% if threat.severity == 'critical' or threat.likelihood == 'certain' %}Immediate Response
+            {% elif threat.severity == 'high' or threat.likelihood == 'likely' %}Enhanced Monitoring
+            {% elif threat.severity == 'medium' or threat.likelihood == 'possible' %}Standard Monitoring
+            {% else %}Periodic Review{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Threats Found:</strong> No threats match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Threat Analysis & Insights -->
+<div class="report-card">
+  <h3>Threat Intelligence Analysis & Insights</h3>
+  
+  <div class="field-label">Threat Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive NIST threat intelligence analysis provides insights into the organization's cybersecurity threat landscape, 
+    covering {{ total_threats }} threats with {{ high_critical_threats }} high/critical severity threats and {{ likely_certain_threats }} likely/certain likelihood threats.</p>
+    
+    <p><strong>Key Threat Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Threats:</strong> {{ total_threats }} identified cybersecurity threats</li>
+      <li><strong>High/Critical Severity:</strong> {{ high_critical_threats }} high-priority threats</li>
+      <li><strong>Likely/Certain Likelihood:</strong> {{ likely_certain_threats }} probable threats</li>
+      <li><strong>Adversarial Threats:</strong> {{ adversarial_threats }} human-based threats</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Threat Intelligence Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Threat Types:</strong> Analyze the distribution of threat types (adversarial, environmental, structural)</li>
+      <li><strong>Severity Distribution:</strong> Monitor the distribution of threat severities</li>
+      <li><strong>Likelihood Assessment:</strong> Track threat likelihood assessments and trends</li>
+      <li><strong>Risk Prioritization:</strong> Prioritize threats based on severity and likelihood</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if threats %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Critical Threat Response:</strong> Implement immediate response measures for critical threats</li>
+      <li><strong>Enhanced Monitoring:</strong> Establish enhanced monitoring for high-likelihood threats</li>
+      <li><strong>Mitigation Strategy Development:</strong> Develop comprehensive mitigation strategies for all identified threats</li>
+      <li><strong>Threat Intelligence Integration:</strong> Integrate threat intelligence into security operations</li>
+      <li><strong>Regular Threat Assessment:</strong> Conduct regular threat assessments and updates</li>
+      <li><strong>Incident Response Preparation:</strong> Prepare incident response procedures for high-priority threats</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -379,6 +379,277 @@
                 </div>
             </div>
         </div>
+
+        <!-- COBIT Domain Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-building me-2"></i>COBIT Domain Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Comprehensive COBIT domain analysis with process coverage and framework insights.</p>
+                    <form method="get" action="{% url 'reports:cobit_domain_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Domain Code</label>
+                            <select name="domain_code" class="form-select">
+                                <option value="">All Domains</option>
+                                {% for domain in cobit_domains %}
+                                    <option value="{{ domain.domain_code }}">{{ domain.domain_code }} - {{ domain.domain_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- COBIT Capability Assessment Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>COBIT Capability Assessment</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Detailed capability maturity assessments with gap analysis and improvement plans.</p>
+                    <form method="get" action="{% url 'reports:cobit_capability_assessment_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Process</label>
+                            <select name="process" class="form-select">
+                                <option value="">All Processes</option>
+                                {% for process in cobit_processes %}
+                                    <option value="{{ process.process_code }}">{{ process.process_code }} - {{ process.process_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Maturity</label>
+                            <select name="current_maturity" class="form-select">
+                                <option value="">All Levels</option>
+                                <option value="0">Level 0 - Incomplete</option>
+                                <option value="1">Level 1 - Performed</option>
+                                <option value="2">Level 2 - Managed</option>
+                                <option value="3">Level 3 - Established</option>
+                                <option value="4">Level 4 - Predictable</option>
+                                <option value="5">Level 5 - Optimizing</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- COBIT Control Effectiveness Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>COBIT Control Effectiveness</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Control effectiveness analysis with implementation status and ratings.</p>
+                    <form method="get" action="{% url 'reports:cobit_control_effectiveness_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Process</label>
+                            <select name="process" class="form-select">
+                                <option value="">All Processes</option>
+                                {% for process in cobit_processes %}
+                                    <option value="{{ process.process_code }}">{{ process.process_code }} - {{ process.process_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Control Type</label>
+                            <select name="control_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="preventive">Preventive</option>
+                                <option value="detective">Detective</option>
+                                <option value="corrective">Corrective</option>
+                                <option value="directive">Directive</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- NIST Function Summary Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>NIST Function Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">NIST CSF function analysis with category coverage and framework insights.</p>
+                    <form method="get" action="{% url 'reports:nist_function_summary_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Function Code</label>
+                            <select name="function_code" class="form-select">
+                                <option value="">All Functions</option>
+                                {% for function in nist_functions %}
+                                    <option value="{{ function.function_code }}">{{ function.function_code }} - {{ function.function_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-dark">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- NIST Implementation Status Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>NIST Implementation Status</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Implementation maturity tracking with target vs current levels and gap analysis.</p>
+                    <form method="get" action="{% url 'reports:nist_implementation_status_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Subcategory</label>
+                            <select name="subcategory" class="form-select">
+                                <option value="">All Subcategories</option>
+                                {% for subcategory in nist_subcategories %}
+                                    <option value="{{ subcategory.subcategory_code }}">{{ subcategory.subcategory_code }} - {{ subcategory.subcategory_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Maturity</label>
+                            <select name="current_maturity" class="form-select">
+                                <option value="">All Levels</option>
+                                <option value="1">Level 1 - Partial</option>
+                                <option value="2">Level 2 - Risk Informed</option>
+                                <option value="3">Level 3 - Repeatable</option>
+                                <option value="4">Level 4 - Adaptive</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- NIST Incident Register Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>NIST Incident Register</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Incident response analysis with resolution times and lessons learned.</p>
+                    <form method="get" action="{% url 'reports:nist_incident_register_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Incident Type</label>
+                            <select name="incident_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="data_breach">Data Breach</option>
+                                <option value="malware">Malware</option>
+                                <option value="phishing">Phishing</option>
+                                <option value="system_failure">System Failure</option>
+                                <option value="unauthorized_access">Unauthorized Access</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Severity</label>
+                            <select name="severity" class="form-select">
+                                <option value="">All Severities</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- NIST Threat Analysis Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-shield-exclamation me-2"></i>NIST Threat Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Threat intelligence analysis with risk assessment and prioritization.</p>
+                    <form method="get" action="{% url 'reports:nist_threat_analysis_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Threat Type</label>
+                            <select name="threat_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="adversarial">Adversarial</option>
+                                <option value="environmental">Environmental</option>
+                                <option value="structural">Structural</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Severity</label>
+                            <select name="severity" class="form-select">
+                                <option value="">All Severities</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-warning">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

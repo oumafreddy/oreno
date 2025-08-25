@@ -1,0 +1,224 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.function_code %}&function_code={{ request.GET.function_code }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: NIST CSF Function Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. NIST Cybersecurity Framework Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>NIST CSF Function Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ functions.count }}</div>
+      <div class="stat-label">Total Functions</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_categories }}</div>
+      <div class="stat-label">Total Categories</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_subcategories }}</div>
+      <div class="stat-label">Total Subcategories</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_implementations }}</div>
+      <div class="stat-label">Total Implementations</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Function Code</th>
+      <td>{{ filters.function_code|default:"All Functions" }}</td>
+      <th style="width:25%">Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Function Summary Table -->
+<div class="report-card">
+  <h3>NIST CSF Function Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Function Code</th>
+        <th class="col-25">Function Name</th>
+        <th class="col-15 text-center">Categories</th>
+        <th class="col-15 text-center">Subcategories</th>
+        <th class="col-15 text-center">Implementations</th>
+        <th class="col-15">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for function in functions %}
+      <tr>
+        <td class="text-center"><strong>{{ function.function_code }}</strong></td>
+        <td>{{ function.function_name }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ function.nistcategory_set.count }}</span></td>
+        <td class="text-center"><span class="status-badge status-active">{{ function.nistcategory_set.all|length }}</span></td>
+        <td class="text-center"><span class="status-badge status-active">{{ function.nistcategory_set.all|length }}</span></td>
+        <td>{{ function.created_at|date:"M j, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Function Details -->
+{% for function in functions %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Function {{ forloop.counter }}: {{ function.function_name }} ({{ function.function_code }})</h3>
+    <span class="priority-indicator">NIST CSF Framework</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Function Code</th>
+      <td>{{ function.function_code }}</td>
+      <th style="width:20%">Function Name</th>
+      <td>{{ function.function_name }}</td>
+    </tr>
+    <tr>
+      <th>Created</th>
+      <td>{{ function.created_at|date:"M j, Y H:i" }}</td>
+      <th>Updated</th>
+      <td>{{ function.updated_at|date:"M j, Y H:i" }}</td>
+    </tr>
+    <tr>
+      <th>Created By</th>
+      <td>{% if function.created_by %}{{ function.created_by.get_full_name|default:function.created_by.username }}{% else %}System{% endif %}</td>
+      <th>Categories</th>
+      <td>{{ function.nistcategory_set.count }} categories</td>
+    </tr>
+  </table>
+
+  {% if function.description %}
+  <div class="field-group">
+    <div class="field-label">Function Description</div>
+    <div class="field-value">{{ function.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if function.objectives %}
+  <div class="field-group">
+    <div class="field-label">Function Objectives</div>
+    <div class="field-value">{{ function.objectives|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Categories in this Function -->
+  {% if function.nistcategory_set.all %}
+  <div class="field-group">
+    <div class="field-label">Categories in {{ function.function_code }}</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <thead>
+          <tr>
+            <th>Category Code</th>
+            <th>Category Name</th>
+            <th>Subcategories</th>
+            <th>Implementations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category in function.nistcategory_set.all %}
+          <tr>
+            <td><strong>{{ category.category_code }}</strong></td>
+            <td>{{ category.category_name }}</td>
+            <td>{{ category.nistsubcategory_set.count }}</td>
+            <td>{{ category.nistsubcategory_set.all|length }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No NIST Functions Found:</strong> No NIST functions match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- NIST Analysis & Insights -->
+<div class="report-card">
+  <h3>NIST CSF Framework Analysis & Insights</h3>
+  
+  <div class="field-label">Function Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive NIST CSF function analysis provides insights into the organization's cybersecurity framework implementation, 
+    covering {{ functions.count }} NIST functions with {{ total_categories }} categories, {{ total_subcategories }} subcategories, and {{ total_implementations }} implementations.</p>
+    
+    <p><strong>Key NIST CSF Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Functions Analyzed:</strong> {{ functions.count }} NIST CSF core functions</li>
+      <li><strong>Category Coverage:</strong> {{ total_categories }} categories across all functions</li>
+      <li><strong>Subcategory Coverage:</strong> {{ total_subcategories }} subcategories defined</li>
+      <li><strong>Implementation Status:</strong> {{ total_implementations }} implementation assessments</li>
+    </ul>
+  </div>
+
+  <div class="field-label">NIST CSF Framework Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Function Coverage:</strong> Analyze the distribution of categories across ID, PR, DE, RS, and RC functions</li>
+      <li><strong>Implementation Maturity:</strong> Assess implementation maturity levels across all subcategories</li>
+      <li><strong>Threat Analysis:</strong> Evaluate threat intelligence and modeling across functions</li>
+      <li><strong>Incident Response:</strong> Review incident response framework implementation</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if functions %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Function Balance:</strong> Ensure balanced coverage across all five NIST functions (ID, PR, DE, RS, RC)</li>
+      <li><strong>Implementation Maturity:</strong> Focus on subcategories with low implementation maturity levels</li>
+      <li><strong>Threat Intelligence:</strong> Enhance threat intelligence and modeling capabilities</li>
+      <li><strong>Incident Response:</strong> Strengthen incident response and recovery capabilities</li>
+      <li><strong>Continuous Assessment:</strong> Conduct regular assessments of implementation status</li>
+      <li><strong>Framework Alignment:</strong> Align cybersecurity practices with NIST CSF framework objectives</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

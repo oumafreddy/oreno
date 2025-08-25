@@ -2453,4 +2453,335 @@ def legal_task_details_pdf(request):
     )
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_task_details.pdf"'
-    return response 
+    return response
+
+# COBIT Reports
+def cobit_domain_summary_pdf(request):
+    """Generate COBIT domain summary report"""
+    from risk.models import COBITDomain, COBITProcess, COBITCapability, COBITControl
+    
+    org = request.tenant
+    domains = COBITDomain.objects.filter(organization=org)
+    
+    # Apply filters
+    domain_code = request.GET.get('domain_code')
+    if domain_code:
+        domains = domains.filter(domain_code=domain_code)
+    
+    # Calculate statistics
+    total_processes = COBITProcess.objects.filter(domain__organization=org).count()
+    total_capabilities = COBITCapability.objects.filter(process__domain__organization=org).count()
+    total_controls = COBITControl.objects.filter(process__domain__organization=org).count()
+    
+    filters = {'domain_code': domain_code}
+    
+    html_string = render_to_string('reports/cobit_domain_summary.html', {
+        'organization': org,
+        'domains': domains,
+        'total_processes': total_processes,
+        'total_capabilities': total_capabilities,
+        'total_controls': total_controls,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_cobit_domain_summary.pdf"'
+    return response
+
+def cobit_capability_assessment_pdf(request):
+    """Generate COBIT capability assessment report"""
+    from risk.models import COBITCapability
+    
+    org = request.tenant
+    capabilities = COBITCapability.objects.filter(process__domain__organization=org)
+    
+    # Apply filters
+    process = request.GET.get('process')
+    current_maturity = request.GET.get('current_maturity')
+    target_maturity = request.GET.get('target_maturity')
+    
+    if process:
+        capabilities = capabilities.filter(process__process_code__icontains=process)
+    if current_maturity:
+        capabilities = capabilities.filter(current_maturity=current_maturity)
+    if target_maturity:
+        capabilities = capabilities.filter(target_maturity=target_maturity)
+    
+    # Calculate statistics
+    avg_current_maturity = capabilities.aggregate(avg=models.Avg('current_maturity'))['avg'] or 0
+    avg_target_maturity = capabilities.aggregate(avg=models.Avg('target_maturity'))['avg'] or 0
+    maturity_gap = avg_target_maturity - avg_current_maturity
+    
+    filters = {
+        'process': process,
+        'current_maturity': current_maturity,
+        'target_maturity': target_maturity
+    }
+    
+    html_string = render_to_string('reports/cobit_capability_assessment.html', {
+        'organization': org,
+        'capabilities': capabilities,
+        'avg_current_maturity': avg_current_maturity,
+        'avg_target_maturity': avg_target_maturity,
+        'maturity_gap': maturity_gap,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_cobit_capability_assessment.pdf"'
+    return response
+
+def cobit_control_effectiveness_pdf(request):
+    """Generate COBIT control effectiveness report"""
+    from risk.models import COBITControl
+    
+    org = request.tenant
+    controls = COBITControl.objects.filter(process__domain__organization=org)
+    
+    # Apply filters
+    process = request.GET.get('process')
+    control_type = request.GET.get('control_type')
+    implementation_status = request.GET.get('implementation_status')
+    effectiveness_rating = request.GET.get('effectiveness_rating')
+    
+    if process:
+        controls = controls.filter(process__process_code__icontains=process)
+    if control_type:
+        controls = controls.filter(control_type=control_type)
+    if implementation_status:
+        controls = controls.filter(implementation_status=implementation_status)
+    if effectiveness_rating:
+        controls = controls.filter(effectiveness_rating=effectiveness_rating)
+    
+    # Calculate statistics
+    total_controls = controls.count()
+    implemented_controls = controls.filter(implementation_status='fully_implemented').count()
+    effective_controls = controls.filter(effectiveness_rating='effective').count()
+    highly_effective_controls = controls.filter(effectiveness_rating='highly_effective').count()
+    
+    filters = {
+        'process': process,
+        'control_type': control_type,
+        'implementation_status': implementation_status,
+        'effectiveness_rating': effectiveness_rating
+    }
+    
+    html_string = render_to_string('reports/cobit_control_effectiveness.html', {
+        'organization': org,
+        'controls': controls,
+        'total_controls': total_controls,
+        'implemented_controls': implemented_controls,
+        'effective_controls': effective_controls,
+        'highly_effective_controls': highly_effective_controls,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_cobit_control_effectiveness.pdf"'
+    return response
+
+# NIST Reports
+def nist_function_summary_pdf(request):
+    """Generate NIST function summary report"""
+    from risk.models import NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation
+    
+    org = request.tenant
+    functions = NISTFunction.objects.filter(organization=org)
+    
+    # Apply filters
+    function_code = request.GET.get('function_code')
+    if function_code:
+        functions = functions.filter(function_code=function_code)
+    
+    # Calculate statistics
+    total_categories = NISTCategory.objects.filter(function__organization=org).count()
+    total_subcategories = NISTSubcategory.objects.filter(category__function__organization=org).count()
+    total_implementations = NISTImplementation.objects.filter(subcategory__category__function__organization=org).count()
+    
+    filters = {'function_code': function_code}
+    
+    html_string = render_to_string('reports/nist_function_summary.html', {
+        'organization': org,
+        'functions': functions,
+        'total_categories': total_categories,
+        'total_subcategories': total_subcategories,
+        'total_implementations': total_implementations,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_nist_function_summary.pdf"'
+    return response
+
+def nist_implementation_status_pdf(request):
+    """Generate NIST implementation status report"""
+    from risk.models import NISTImplementation
+    
+    org = request.tenant
+    implementations = NISTImplementation.objects.filter(subcategory__category__function__organization=org)
+    
+    # Apply filters
+    subcategory = request.GET.get('subcategory')
+    current_maturity = request.GET.get('current_maturity')
+    target_maturity = request.GET.get('target_maturity')
+    implementation_status = request.GET.get('implementation_status')
+    
+    if subcategory:
+        implementations = implementations.filter(subcategory__subcategory_code__icontains=subcategory)
+    if current_maturity:
+        implementations = implementations.filter(current_maturity=current_maturity)
+    if target_maturity:
+        implementations = implementations.filter(target_maturity=target_maturity)
+    if implementation_status:
+        implementations = implementations.filter(implementation_status=implementation_status)
+    
+    # Calculate statistics
+    avg_current_maturity = implementations.aggregate(avg=models.Avg('current_maturity'))['avg'] or 0
+    avg_target_maturity = implementations.aggregate(avg=models.Avg('target_maturity'))['avg'] or 0
+    maturity_gap = avg_target_maturity - avg_current_maturity
+    fully_implemented = implementations.filter(implementation_status='fully_implemented').count()
+    
+    filters = {
+        'subcategory': subcategory,
+        'current_maturity': current_maturity,
+        'target_maturity': target_maturity,
+        'implementation_status': implementation_status
+    }
+    
+    html_string = render_to_string('reports/nist_implementation_status.html', {
+        'organization': org,
+        'implementations': implementations,
+        'avg_current_maturity': avg_current_maturity,
+        'avg_target_maturity': avg_target_maturity,
+        'maturity_gap': maturity_gap,
+        'fully_implemented': fully_implemented,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_nist_implementation_status.pdf"'
+    return response
+
+def nist_incident_register_pdf(request):
+    """Generate NIST incident register report"""
+    from risk.models import NISTIncident
+    
+    org = request.tenant
+    incidents = NISTIncident.objects.filter(organization=org)
+    
+    # Apply filters
+    incident_type = request.GET.get('incident_type')
+    severity = request.GET.get('severity')
+    status = request.GET.get('status')
+    
+    if incident_type:
+        incidents = incidents.filter(incident_type=incident_type)
+    if severity:
+        incidents = incidents.filter(severity=severity)
+    if status:
+        incidents = incidents.filter(status=status)
+    
+    # Calculate statistics
+    total_incidents = incidents.count()
+    open_incidents = incidents.exclude(status__in=['closed', 'recovered']).count()
+    high_critical_incidents = incidents.filter(severity__in=['high', 'critical']).count()
+    
+    # Calculate average resolution time
+    resolved_incidents = incidents.filter(resolved_date__isnull=False)
+    avg_resolution_time = 0
+    if resolved_incidents.exists():
+        total_days = sum((incident.resolved_date - incident.detected_date).days for incident in resolved_incidents)
+        avg_resolution_time = total_days / resolved_incidents.count()
+    
+    filters = {
+        'incident_type': incident_type,
+        'severity': severity,
+        'status': status
+    }
+    
+    html_string = render_to_string('reports/nist_incident_register.html', {
+        'organization': org,
+        'incidents': incidents,
+        'total_incidents': total_incidents,
+        'open_incidents': open_incidents,
+        'high_critical_incidents': high_critical_incidents,
+        'avg_resolution_time': avg_resolution_time,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_nist_incident_register.pdf"'
+    return response
+
+def nist_threat_analysis_pdf(request):
+    """Generate NIST threat analysis report"""
+    from risk.models import NISTThreat
+    
+    org = request.tenant
+    threats = NISTThreat.objects.filter(organization=org)
+    
+    # Apply filters
+    threat_type = request.GET.get('threat_type')
+    severity = request.GET.get('severity')
+    likelihood = request.GET.get('likelihood')
+    
+    if threat_type:
+        threats = threats.filter(threat_type=threat_type)
+    if severity:
+        threats = threats.filter(severity=severity)
+    if likelihood:
+        threats = threats.filter(likelihood=likelihood)
+    
+    # Calculate statistics
+    total_threats = threats.count()
+    high_critical_threats = threats.filter(severity__in=['high', 'critical']).count()
+    likely_certain_threats = threats.filter(likelihood__in=['likely', 'certain']).count()
+    adversarial_threats = threats.filter(threat_type='adversarial').count()
+    
+    filters = {
+        'threat_type': threat_type,
+        'severity': severity,
+        'likelihood': likelihood
+    }
+    
+    html_string = render_to_string('reports/nist_threat_analysis.html', {
+        'organization': org,
+        'threats': threats,
+        'total_threats': total_threats,
+        'high_critical_threats': high_critical_threats,
+        'likely_certain_threats': likely_certain_threats,
+        'adversarial_threats': adversarial_threats,
+        'filters': filters,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_nist_threat_analysis.pdf"'
+    return response

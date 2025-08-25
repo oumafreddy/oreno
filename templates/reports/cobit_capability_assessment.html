@@ -1,0 +1,252 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.process %}&process={{ request.GET.process }}{% endif %}{% if request.GET.current_maturity %}&current_maturity={{ request.GET.current_maturity }}{% endif %}{% if request.GET.target_maturity %}&target_maturity={{ request.GET.target_maturity }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: COBIT Capability Assessment
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. COBIT Capability Assessment Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Capability Assessment Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ capabilities.count }}</div>
+      <div class="stat-label">Total Capabilities</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_current_maturity|floatformat:1 }}</div>
+      <div class="stat-label">Avg Current Maturity</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_target_maturity|floatformat:1 }}</div>
+      <div class="stat-label">Avg Target Maturity</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ maturity_gap|floatformat:1 }}</div>
+      <div class="stat-label">Maturity Gap</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Process</th>
+      <td>{{ filters.process|default:"All Processes" }}</td>
+      <th style="width:25%">Current Maturity</th>
+      <td>{{ filters.current_maturity|default:"All Levels" }}</td>
+    </tr>
+    <tr>
+      <th>Target Maturity</th>
+      <td>{{ filters.target_maturity|default:"All Levels" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Capability Summary Table -->
+<div class="report-card">
+  <h3>Capability Assessment Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Process</th>
+        <th class="col-20">Process Name</th>
+        <th class="col-15 text-center">Current Maturity</th>
+        <th class="col-15 text-center">Target Maturity</th>
+        <th class="col-15 text-center">Gap</th>
+        <th class="col-10 text-center">Assessment Date</th>
+        <th class="col-10">Assessed By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for capability in capabilities %}
+      <tr>
+        <td><strong>{{ capability.process.process_code }}</strong></td>
+        <td>{{ capability.process.process_name }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if capability.current_maturity >= 4 %}low{% elif capability.current_maturity >= 2 %}medium{% else %}high{% endif %}">
+            Level {{ capability.current_maturity }}: {{ capability.get_current_maturity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if capability.target_maturity >= 4 %}low{% elif capability.target_maturity >= 2 %}medium{% else %}high{% endif %}">
+            Level {{ capability.target_maturity }}: {{ capability.get_target_maturity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="status-badge status-{% if capability.target_maturity|add:'-'|add:capability.current_maturity > 2 %}pending{% elif capability.target_maturity|add:'-'|add:capability.current_maturity > 0 %}active{% else %}draft{% endif %}">
+            {{ capability.target_maturity|add:'-'|add:capability.current_maturity }} levels
+          </span>
+        </td>
+        <td class="text-center">{{ capability.assessment_date|date:"M j, Y" }}</td>
+        <td>{% if capability.assessed_by %}{{ capability.assessed_by.get_full_name|default:capability.assessed_by.username }}{% else %}Not specified{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Capability Details -->
+{% for capability in capabilities %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Capability {{ forloop.counter }}: {{ capability.process.process_name }} ({{ capability.process.process_code }})</h3>
+    <span class="priority-indicator">Maturity Gap: {{ capability.target_maturity|add:'-'|add:capability.current_maturity }} levels</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Process Code</th>
+      <td>{{ capability.process.process_code }}</td>
+      <th style="width:20%">Process Name</th>
+      <td>{{ capability.process.process_name }}</td>
+    </tr>
+    <tr>
+      <th>Domain</th>
+      <td>{{ capability.process.domain.domain_code }} - {{ capability.process.domain.domain_name }}</td>
+      <th>Assessment Date</th>
+      <td>{{ capability.assessment_date|date:"M j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>Current Maturity</th>
+      <td>
+        <span class="risk-level risk-{% if capability.current_maturity >= 4 %}low{% elif capability.current_maturity >= 2 %}medium{% else %}high{% endif %}">
+          Level {{ capability.current_maturity }}: {{ capability.get_current_maturity_display }}
+        </span>
+      </td>
+      <th>Target Maturity</th>
+      <td>
+        <span class="risk-level risk-{% if capability.target_maturity >= 4 %}low{% elif capability.target_maturity >= 2 %}medium{% else %}high{% endif %}">
+          Level {{ capability.target_maturity }}: {{ capability.get_target_maturity_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Assessed By</th>
+      <td>{% if capability.assessed_by %}{{ capability.assessed_by.get_full_name|default:capability.assessed_by.username }}{% else %}Not specified{% endif %}</td>
+      <th>Next Assessment</th>
+      <td>{{ capability.next_assessment_date|date:"M j, Y"|default:"Not scheduled" }}</td>
+    </tr>
+  </table>
+
+  {% if capability.assessment_notes %}
+  <div class="field-group">
+    <div class="field-label">Assessment Notes</div>
+    <div class="field-value">{{ capability.assessment_notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if capability.improvement_plan %}
+  <div class="field-group">
+    <div class="field-label">Improvement Plan</div>
+    <div class="field-value">{{ capability.improvement_plan|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Process Information -->
+  <div class="field-group">
+    <div class="field-label">Process Information</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <tr>
+          <th style="width:20%">Process Description</th>
+          <td>{% if capability.process.description %}{{ capability.process.description|striptags|truncatewords:30 }}{% else %}No description available{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Process Purpose</th>
+          <td>{% if capability.process.purpose %}{{ capability.process.purpose|striptags|truncatewords:30 }}{% else %}No purpose defined{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Controls in Process</th>
+          <td>{{ capability.process.cobitcontrol_set.count }} controls</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Capability Assessments Found:</strong> No capability assessments match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Maturity Analysis & Insights -->
+<div class="report-card">
+  <h3>Capability Maturity Analysis & Insights</h3>
+  
+  <div class="field-label">Maturity Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive COBIT capability assessment provides insights into the organization's process maturity levels, 
+    covering {{ capabilities.count }} capability assessments with an average current maturity of {{ avg_current_maturity|floatformat:1 }} and target maturity of {{ avg_target_maturity|floatformat:1 }}.</p>
+    
+    <p><strong>Key Maturity Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Assessments:</strong> {{ capabilities.count }} capability maturity assessments</li>
+      <li><strong>Average Current Maturity:</strong> {{ avg_current_maturity|floatformat:1 }} out of 5 levels</li>
+      <li><strong>Average Target Maturity:</strong> {{ avg_target_maturity|floatformat:1 }} out of 5 levels</li>
+      <li><strong>Overall Maturity Gap:</strong> {{ maturity_gap|floatformat:1 }} levels to target</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Maturity Level Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Level 0 (Incomplete):</strong> Processes not implemented or fail to achieve their objectives</li>
+      <li><strong>Level 1 (Performed):</strong> Processes achieve their objectives but are not managed</li>
+      <li><strong>Level 2 (Managed):</strong> Processes are managed and monitored for compliance</li>
+      <li><strong>Level 3 (Established):</strong> Processes are established and consistently applied</li>
+      <li><strong>Level 4 (Predictable):</strong> Processes are quantitatively managed and controlled</li>
+      <li><strong>Level 5 (Optimizing):</strong> Processes are continuously improved and optimized</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if capabilities %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Maturity Gap Closure:</strong> Focus on processes with the largest maturity gaps to achieve target levels</li>
+      <li><strong>Low Maturity Processes:</strong> Prioritize processes at Level 0-1 for immediate improvement initiatives</li>
+      <li><strong>Assessment Frequency:</strong> Establish regular assessment cycles for all processes</li>
+      <li><strong>Improvement Planning:</strong> Develop detailed improvement plans for processes below target maturity</li>
+      <li><strong>Resource Allocation:</strong> Allocate resources based on maturity gaps and business criticality</li>
+      <li><strong>Continuous Monitoring:</strong> Implement ongoing monitoring of maturity improvements</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

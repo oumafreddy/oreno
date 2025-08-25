@@ -1,0 +1,268 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.subcategory %}&subcategory={{ request.GET.subcategory }}{% endif %}{% if request.GET.current_maturity %}&current_maturity={{ request.GET.current_maturity }}{% endif %}{% if request.GET.target_maturity %}&target_maturity={{ request.GET.target_maturity }}{% endif %}{% if request.GET.implementation_status %}&implementation_status={{ request.GET.implementation_status }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: NIST Implementation Status
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. NIST Implementation Status Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Implementation Status Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ implementations.count }}</div>
+      <div class="stat-label">Total Implementations</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_current_maturity|floatformat:1 }}</div>
+      <div class="stat-label">Avg Current Maturity</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_target_maturity|floatformat:1 }}</div>
+      <div class="stat-label">Avg Target Maturity</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ fully_implemented }}</div>
+      <div class="stat-label">Fully Implemented</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Subcategory</th>
+      <td>{{ filters.subcategory|default:"All Subcategories" }}</td>
+      <th style="width:25%">Current Maturity</th>
+      <td>{{ filters.current_maturity|default:"All Levels" }}</td>
+    </tr>
+    <tr>
+      <th>Target Maturity</th>
+      <td>{{ filters.target_maturity|default:"All Levels" }}</td>
+      <th>Implementation Status</th>
+      <td>{{ filters.implementation_status|default:"All Statuses" }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Implementation Summary Table -->
+<div class="report-card">
+  <h3>Implementation Status Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Function</th>
+        <th class="col-20">Subcategory</th>
+        <th class="col-15 text-center">Current Maturity</th>
+        <th class="col-15 text-center">Target Maturity</th>
+        <th class="col-15 text-center">Gap</th>
+        <th class="col-10 text-center">Assessment Date</th>
+        <th class="col-10">Assessed By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for implementation in implementations %}
+      <tr>
+        <td><strong>{{ implementation.subcategory.category.function.function_code }}</strong></td>
+        <td>{{ implementation.subcategory.subcategory_name }}</td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if implementation.current_maturity >= 3 %}low{% elif implementation.current_maturity >= 2 %}medium{% else %}high{% endif %}">
+            Level {{ implementation.current_maturity }}: {{ implementation.get_current_maturity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if implementation.target_maturity >= 3 %}low{% elif implementation.target_maturity >= 2 %}medium{% else %}high{% endif %}">
+            Level {{ implementation.target_maturity }}: {{ implementation.get_target_maturity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="status-badge status-{% if implementation.target_maturity|add:'-'|add:implementation.current_maturity > 2 %}pending{% elif implementation.target_maturity|add:'-'|add:implementation.current_maturity > 0 %}active{% else %}draft{% endif %}">
+            {{ implementation.target_maturity|add:'-'|add:implementation.current_maturity }} levels
+          </span>
+        </td>
+        <td class="text-center">{{ implementation.assessment_date|date:"M j, Y" }}</td>
+        <td>{% if implementation.assessed_by %}{{ implementation.assessed_by.get_full_name|default:implementation.assessed_by.username }}{% else %}Not specified{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Implementation Details -->
+{% for implementation in implementations %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Implementation {{ forloop.counter }}: {{ implementation.subcategory.subcategory_name }}</h3>
+    <span class="priority-indicator">Maturity Gap: {{ implementation.target_maturity|add:'-'|add:implementation.current_maturity }} levels</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Function</th>
+      <td>{{ implementation.subcategory.category.function.function_code }} - {{ implementation.subcategory.category.function.function_name }}</td>
+      <th style="width:20%">Category</th>
+      <td>{{ implementation.subcategory.category.category_code }} - {{ implementation.subcategory.category.category_name }}</td>
+    </tr>
+    <tr>
+      <th>Subcategory</th>
+      <td>{{ implementation.subcategory.subcategory_code }} - {{ implementation.subcategory.subcategory_name }}</td>
+      <th>Assessment Date</th>
+      <td>{{ implementation.assessment_date|date:"M j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>Current Maturity</th>
+      <td>
+        <span class="risk-level risk-{% if implementation.current_maturity >= 3 %}low{% elif implementation.current_maturity >= 2 %}medium{% else %}high{% endif %}">
+          Level {{ implementation.current_maturity }}: {{ implementation.get_current_maturity_display }}
+        </span>
+      </td>
+      <th>Target Maturity</th>
+      <td>
+        <span class="risk-level risk-{% if implementation.target_maturity >= 3 %}low{% elif implementation.target_maturity >= 2 %}medium{% else %}high{% endif %}">
+          Level {{ implementation.target_maturity }}: {{ implementation.get_target_maturity_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Implementation Status</th>
+      <td>
+        <span class="status-badge status-{% if implementation.implementation_status == 'fully_implemented' %}active{% elif implementation.implementation_status == 'partially_implemented' %}pending{% else %}draft{% endif %}">
+          {{ implementation.get_implementation_status_display }}
+        </span>
+      </td>
+      <th>Next Assessment</th>
+      <td>{{ implementation.next_assessment_date|date:"M j, Y"|default:"Not scheduled" }}</td>
+    </tr>
+    <tr>
+      <th>Assessed By</th>
+      <td>{% if implementation.assessed_by %}{{ implementation.assessed_by.get_full_name|default:implementation.assessed_by.username }}{% else %}Not specified{% endif %}</td>
+      <th>Implementation Date</th>
+      <td>{{ implementation.implementation_date|date:"M j, Y"|default:"Not implemented" }}</td>
+    </tr>
+  </table>
+
+  {% if implementation.assessment_notes %}
+  <div class="field-group">
+    <div class="field-label">Assessment Notes</div>
+    <div class="field-value">{{ implementation.assessment_notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if implementation.implementation_plan %}
+  <div class="field-group">
+    <div class="field-label">Implementation Plan</div>
+    <div class="field-value">{{ implementation.implementation_plan|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if implementation.implementation_notes %}
+  <div class="field-group">
+    <div class="field-label">Implementation Notes</div>
+    <div class="field-value">{{ implementation.implementation_notes|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Subcategory Information -->
+  <div class="field-group">
+    <div class="field-label">Subcategory Information</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <tr>
+          <th style="width:20%">Subcategory Description</th>
+          <td>{% if implementation.subcategory.description %}{{ implementation.subcategory.description|striptags|truncatewords:30 }}{% else %}No description available{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Category Description</th>
+          <td>{% if implementation.subcategory.category.description %}{{ implementation.subcategory.category.description|striptags|truncatewords:30 }}{% else %}No description available{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Function Description</th>
+          <td>{% if implementation.subcategory.category.function.description %}{{ implementation.subcategory.category.function.description|striptags|truncatewords:30 }}{% else %}No description available{% endif %}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Implementations Found:</strong> No implementations match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Implementation Analysis & Insights -->
+<div class="report-card">
+  <h3>Implementation Status Analysis & Insights</h3>
+  
+  <div class="field-label">Implementation Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive NIST implementation status analysis provides insights into the organization's cybersecurity framework implementation, 
+    covering {{ implementations.count }} implementations with an average current maturity of {{ avg_current_maturity|floatformat:1 }} and target maturity of {{ avg_target_maturity|floatformat:1 }}.</p>
+    
+    <p><strong>Key Implementation Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Implementations:</strong> {{ implementations.count }} NIST subcategory implementations</li>
+      <li><strong>Average Current Maturity:</strong> {{ avg_current_maturity|floatformat:1 }} out of 4 levels</li>
+      <li><strong>Average Target Maturity:</strong> {{ avg_target_maturity|floatformat:1 }} out of 4 levels</li>
+      <li><strong>Overall Maturity Gap:</strong> {{ maturity_gap|floatformat:1 }} levels to target</li>
+      <li><strong>Fully Implemented:</strong> {{ fully_implemented }} implementations</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Implementation Maturity Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Level 1 (Partial):</strong> Implementation is partially in place with basic controls</li>
+      <li><strong>Level 2 (Risk Informed):</strong> Implementation is risk-informed with policies and procedures</li>
+      <li><strong>Level 3 (Repeatable):</strong> Implementation is consistently applied across the organization</li>
+      <li><strong>Level 4 (Adaptive):</strong> Implementation is adaptive and continuously improved</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if implementations %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Maturity Gap Closure:</strong> Focus on implementations with the largest maturity gaps to achieve target levels</li>
+      <li><strong>Low Maturity Implementations:</strong> Prioritize implementations at Level 1 for immediate improvement initiatives</li>
+      <li><strong>Assessment Frequency:</strong> Establish regular assessment cycles for all implementations</li>
+      <li><strong>Implementation Planning:</strong> Develop detailed implementation plans for subcategories below target maturity</li>
+      <li><strong>Resource Allocation:</strong> Allocate resources based on maturity gaps and business criticality</li>
+      <li><strong>Continuous Monitoring:</strong> Implement ongoing monitoring of implementation improvements</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

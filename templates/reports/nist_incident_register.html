@@ -1,0 +1,280 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.incident_type %}&incident_type={{ request.GET.incident_type }}{% endif %}{% if request.GET.severity %}&severity={{ request.GET.severity }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: NIST Incident Register
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. NIST Incident Response Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>Incident Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ incidents.count }}</div>
+      <div class="stat-label">Total Incidents</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ open_incidents }}</div>
+      <div class="stat-label">Open Incidents</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_critical_incidents }}</div>
+      <div class="stat-label">High/Critical</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_resolution_time|floatformat:1 }}</div>
+      <div class="stat-label">Avg Resolution (Days)</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Incident Type</th>
+      <td>{{ filters.incident_type|default:"All Types" }}</td>
+      <th style="width:25%">Severity</th>
+      <td>{{ filters.severity|default:"All Severities" }}</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td>{{ filters.status|default:"All Statuses" }}</td>
+      <th>Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Incident Summary Table -->
+<div class="report-card">
+  <h3>Incident Summary by Type and Status</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-12">Incident ID</th>
+        <th class="col-20">Title</th>
+        <th class="col-15 text-center">Type</th>
+        <th class="col-12 text-center">Severity</th>
+        <th class="col-12 text-center">Status</th>
+        <th class="col-15 text-center">Detected Date</th>
+        <th class="col-14">Reported By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for incident in incidents %}
+      <tr>
+        <td class="text-center"><strong>{{ incident.incident_id }}</strong></td>
+        <td>{{ incident.title }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ incident.get_incident_type_display }}</span></td>
+        <td class="text-center">
+          <span class="risk-level risk-{% if incident.severity == 'critical' %}high{% elif incident.severity == 'high' %}high{% elif incident.severity == 'medium' %}medium{% else %}low{% endif %}">
+            {{ incident.get_severity_display }}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="status-badge status-{% if incident.status == 'closed' %}draft{% elif incident.status == 'recovered' %}active{% elif incident.status == 'contained' %}active{% else %}pending{% endif %}">
+            {{ incident.get_status_display }}
+          </span>
+        </td>
+        <td class="text-center">{{ incident.detected_date|date:"M j, Y" }}</td>
+        <td>{% if incident.reported_by %}{{ incident.reported_by.get_full_name|default:incident.reported_by.username }}{% else %}Not specified{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Incident Details -->
+{% for incident in incidents %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Incident {{ forloop.counter }}: {{ incident.title }}</h3>
+    <span class="priority-indicator">Severity: {{ incident.get_severity_display }}</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Incident ID</th>
+      <td>{{ incident.incident_id }}</td>
+      <th style="width:20%">Incident Type</th>
+      <td>{{ incident.get_incident_type_display }}</td>
+    </tr>
+    <tr>
+      <th>Severity</th>
+      <td>
+        <span class="risk-level risk-{% if incident.severity == 'critical' %}high{% elif incident.severity == 'high' %}high{% elif incident.severity == 'medium' %}medium{% else %}low{% endif %}">
+          {{ incident.get_severity_display }}
+        </span>
+      </td>
+      <th>Status</th>
+      <td>
+        <span class="status-badge status-{% if incident.status == 'closed' %}draft{% elif incident.status == 'recovered' %}active{% elif incident.status == 'contained' %}active{% else %}pending{% endif %}">
+          {{ incident.get_status_display }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Detected Date</th>
+      <td>{{ incident.detected_date|date:"M j, Y H:i" }}</td>
+      <th>Resolved Date</th>
+      <td>{{ incident.resolved_date|date:"M j, Y H:i"|default:"Not resolved" }}</td>
+    </tr>
+    <tr>
+      <th>Reported By</th>
+      <td>{% if incident.reported_by %}{{ incident.reported_by.get_full_name|default:incident.reported_by.username }}{% else %}Not specified{% endif %}</td>
+      <th>Incident Team</th>
+      <td>{{ incident.incident_team.count }} members</td>
+    </tr>
+  </table>
+
+  {% if incident.description %}
+  <div class="field-group">
+    <div class="field-label">Incident Description</div>
+    <div class="field-value">{{ incident.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if incident.affected_systems %}
+  <div class="field-group">
+    <div class="field-label">Affected Systems</div>
+    <div class="field-value">{{ incident.affected_systems|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if incident.containment_actions %}
+  <div class="field-group">
+    <div class="field-label">Containment Actions</div>
+    <div class="field-value">{{ incident.containment_actions|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if incident.eradication_actions %}
+  <div class="field-group">
+    <div class="field-label">Eradication Actions</div>
+    <div class="field-value">{{ incident.eradication_actions|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if incident.recovery_actions %}
+  <div class="field-group">
+    <div class="field-label">Recovery Actions</div>
+    <div class="field-value">{{ incident.recovery_actions|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if incident.lessons_learned %}
+  <div class="field-group">
+    <div class="field-label">Lessons Learned</div>
+    <div class="field-value">{{ incident.lessons_learned|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Incident Timeline -->
+  <div class="field-group">
+    <div class="field-label">Incident Timeline</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <tr>
+          <th style="width:20%">Detection</th>
+          <td>{{ incident.detected_date|date:"M j, Y H:i" }}</td>
+          <th style="width:20%">Resolution</th>
+          <td>{{ incident.resolved_date|date:"M j, Y H:i"|default:"Ongoing" }}</td>
+        </tr>
+        <tr>
+          <th>Duration</th>
+          <td>
+            {% if incident.resolved_date %}
+              {{ incident.resolved_date|timeuntil:incident.detected_date }}
+            {% else %}
+              Ongoing ({{ incident.detected_date|timesince }})
+            {% endif %}
+          </td>
+          <th>Status</th>
+          <td>{{ incident.get_status_display }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No Incidents Found:</strong> No incidents match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- Incident Analysis & Insights -->
+<div class="report-card">
+  <h3>Incident Response Analysis & Insights</h3>
+  
+  <div class="field-label">Incident Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive NIST incident response analysis provides insights into the organization's cybersecurity incident management, 
+    covering {{ incidents.count }} incidents with {{ open_incidents }} currently open and {{ high_critical_incidents }} high/critical severity incidents.</p>
+    
+    <p><strong>Key Incident Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Incidents:</strong> {{ incidents.count }} cybersecurity incidents</li>
+      <li><strong>Open Incidents:</strong> {{ open_incidents }} incidents requiring attention</li>
+      <li><strong>High/Critical Severity:</strong> {{ high_critical_incidents }} high-priority incidents</li>
+      <li><strong>Average Resolution Time:</strong> {{ avg_resolution_time|floatformat:1 }} days</li>
+    </ul>
+  </div>
+
+  <div class="field-label">Incident Response Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Incident Types:</strong> Analyze the distribution of incident types (data breach, malware, phishing, etc.)</li>
+      <li><strong>Severity Distribution:</strong> Monitor the distribution of incident severities</li>
+      <li><strong>Response Times:</strong> Track detection to resolution times</li>
+      <li><strong>Resolution Effectiveness:</strong> Evaluate the effectiveness of containment and eradication actions</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if incidents %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Incident Response Optimization:</strong> Focus on reducing detection to containment times for high-severity incidents</li>
+      <li><strong>Response Team Effectiveness:</strong> Ensure incident response teams are properly staffed and trained</li>
+      <li><strong>Lessons Learned Integration:</strong> Incorporate lessons learned into security controls and procedures</li>
+      <li><strong>Prevention Measures:</strong> Implement preventive measures based on incident patterns</li>
+      <li><strong>Communication Protocols:</strong> Establish clear communication protocols for incident reporting and escalation</li>
+      <li><strong>Continuous Improvement:</strong> Regularly review and update incident response procedures</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "reports/base_report.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!-- Filter Form (shown only in HTML, not in PDF) -->
+{% if not for_pdf %}
+  <div class="report-card no-print">
+    <h3>Report Filters</h3>
+    <form method="get" class="mb-0">
+      {% if filter_form %}
+        {% crispy filter_form %}
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Apply Filter</button>
+      <a href="?download=pdf{% if request.GET.domain_code %}&domain_code={{ request.GET.domain_code }}{% endif %}" class="btn btn-success">Download PDF</a>
+    </form>
+  </div>
+{% endif %}
+
+<!-- Report Header -->
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      Report ID: COBIT Domain Analysis
+    </div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}
+        <span>{{ organization.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. COBIT Domain Analysis</h2>
+
+<!-- Summary Statistics & Filters -->
+<div class="report-card">
+  <h3>COBIT Domain Overview & Filters</h3>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ domains.count }}</div>
+      <div class="stat-label">Total Domains</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_processes }}</div>
+      <div class="stat-label">Total Processes</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_capabilities }}</div>
+      <div class="stat-label">Total Capabilities</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ total_controls }}</div>
+      <div class="stat-label">Total Controls</div>
+    </div>
+  </div>
+  
+  <table class="report-table" style="margin-top: 0.5cm;">
+    <tr>
+      <th style="width:25%">Domain Code</th>
+      <td>{{ filters.domain_code|default:"All Domains" }}</td>
+      <th style="width:25%">Organization</th>
+      <td>{{ organization.name }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Domain Summary Table -->
+<div class="report-card">
+  <h3>COBIT Domain Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Domain Code</th>
+        <th class="col-25">Domain Name</th>
+        <th class="col-15 text-center">Processes</th>
+        <th class="col-15 text-center">Capabilities</th>
+        <th class="col-15 text-center">Controls</th>
+        <th class="col-15">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for domain in domains %}
+      <tr>
+        <td class="text-center"><strong>{{ domain.domain_code }}</strong></td>
+        <td>{{ domain.domain_name }}</td>
+        <td class="text-center"><span class="status-badge status-active">{{ domain.cobitprocess_set.count }}</span></td>
+        <td class="text-center"><span class="status-badge status-active">{{ domain.cobitprocess_set.all|length }}</span></td>
+        <td class="text-center"><span class="status-badge status-active">{{ domain.cobitprocess_set.all|length }}</span></td>
+        <td>{{ domain.created_at|date:"M j, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Individual Domain Details -->
+{% for domain in domains %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">Domain {{ forloop.counter }}: {{ domain.domain_name }} ({{ domain.domain_code }})</h3>
+    <span class="priority-indicator">COBIT 2019 Framework</span>
+  </div>
+  
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Domain Code</th>
+      <td>{{ domain.domain_code }}</td>
+      <th style="width:20%">Domain Name</th>
+      <td>{{ domain.domain_name }}</td>
+    </tr>
+    <tr>
+      <th>Created</th>
+      <td>{{ domain.created_at|date:"M j, Y H:i" }}</td>
+      <th>Updated</th>
+      <td>{{ domain.updated_at|date:"M j, Y H:i" }}</td>
+    </tr>
+    <tr>
+      <th>Created By</th>
+      <td>{% if domain.created_by %}{{ domain.created_by.get_full_name|default:domain.created_by.username }}{% else %}System{% endif %}</td>
+      <th>Processes</th>
+      <td>{{ domain.cobitprocess_set.count }} processes</td>
+    </tr>
+  </table>
+
+  {% if domain.description %}
+  <div class="field-group">
+    <div class="field-label">Domain Description</div>
+    <div class="field-value">{{ domain.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  {% if domain.objectives %}
+  <div class="field-group">
+    <div class="field-label">Domain Objectives</div>
+    <div class="field-value">{{ domain.objectives|safe }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Processes in this Domain -->
+  {% if domain.cobitprocess_set.all %}
+  <div class="field-group">
+    <div class="field-label">Processes in {{ domain.domain_code }}</div>
+    <div class="field-value">
+      <table class="report-table" style="margin-top: 0.5cm;">
+        <thead>
+          <tr>
+            <th>Process Code</th>
+            <th>Process Name</th>
+            <th>Capabilities</th>
+            <th>Controls</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for process in domain.cobitprocess_set.all %}
+          <tr>
+            <td><strong>{{ process.process_code }}</strong></td>
+            <td>{{ process.process_name }}</td>
+            <td>{{ process.cobitcapability_set.count }}</td>
+            <td>{{ process.cobitcontrol_set.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="alert alert-info">
+  <strong>No COBIT Domains Found:</strong> No COBIT domains match the current filter criteria.
+</div>
+{% endfor %}
+
+<!-- COBIT Analysis & Insights -->
+<div class="report-card">
+  <h3>COBIT Framework Analysis & Insights</h3>
+  
+  <div class="field-label">Domain Distribution Analysis</div>
+  <div class="field-value">
+    <p>This comprehensive COBIT domain analysis provides insights into the organization's IT governance framework implementation, 
+    covering {{ domains.count }} COBIT domains with {{ total_processes }} processes, {{ total_capabilities }} capabilities, and {{ total_controls }} controls.</p>
+    
+    <p><strong>Key COBIT Metrics:</strong></p>
+    <ul>
+      <li><strong>Total Domains Analyzed:</strong> {{ domains.count }} COBIT 2019 domains</li>
+      <li><strong>Process Coverage:</strong> {{ total_processes }} processes across all domains</li>
+      <li><strong>Capability Assessments:</strong> {{ total_capabilities }} capability maturity assessments</li>
+      <li><strong>Control Implementation:</strong> {{ total_controls }} control objectives defined</li>
+    </ul>
+  </div>
+
+  <div class="field-label">COBIT Framework Insights</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Domain Coverage:</strong> Analyze the distribution of processes across EDM, APO, BAI, DSS, and MEA domains</li>
+      <li><strong>Process Maturity:</strong> Assess capability maturity levels across all processes</li>
+      <li><strong>Control Effectiveness:</strong> Evaluate the implementation status and effectiveness of controls</li>
+      <li><strong>Governance Alignment:</strong> Review alignment with COBIT governance objectives</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Recommendations -->
+<div class="report-card">
+  <h3>Key Insights & Recommendations</h3>
+  
+  {% if domains %}
+  <div class="field-label">Strategic Recommendations</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Domain Balance:</strong> Ensure balanced coverage across all five COBIT domains (EDM, APO, BAI, DSS, MEA)</li>
+      <li><strong>Process Maturity:</strong> Focus on processes with low capability maturity levels to improve overall governance</li>
+      <li><strong>Control Implementation:</strong> Prioritize implementation of controls in critical processes</li>
+      <li><strong>Capability Assessment:</strong> Conduct regular capability assessments to track maturity improvements</li>
+      <li><strong>Governance Objectives:</strong> Align process objectives with overall governance and management objectives</li>
+      <li><strong>Continuous Improvement:</strong> Establish regular review cycles for all COBIT processes and controls</li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

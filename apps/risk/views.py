@@ -739,6 +739,12 @@ class RiskReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateV
         nist_incident_statuses = NISTIncident.objects.filter(organization=organization).values_list('status', flat=True).distinct()
         context['nist_incident_statuses'] = sorted(list(nist_incident_statuses))
         
+        # Add the specific data needed for the template dropdowns
+        context['cobit_domains'] = COBITDomain.objects.filter(organization=organization)
+        context['cobit_processes'] = COBITProcess.objects.filter(organization=organization)
+        context['nist_functions'] = NISTFunction.objects.filter(organization=organization)
+        context['nist_subcategories'] = NISTSubcategory.objects.filter(organization=organization)
+        
         return context
 
 # --- API Endpoints for Dashboard Widgets ---

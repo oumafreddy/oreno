@@ -15,6 +15,18 @@ urlpatterns = [
     path('assessment/details/', views.risk_assessment_details_pdf, name='risk_assessment_details_pdf'),
     path('control/details/', views.control_details_pdf, name='control_details_pdf'),
     path('kri/details/', views.kri_details_pdf, name='kri_details_pdf'),
+    
+    # COBIT Reports
+    path('cobit/domain/summary/', views.cobit_domain_summary_pdf, name='cobit_domain_summary_pdf'),
+    path('cobit/capability/assessment/', views.cobit_capability_assessment_pdf, name='cobit_capability_assessment_pdf'),
+    path('cobit/control/effectiveness/', views.cobit_control_effectiveness_pdf, name='cobit_control_effectiveness_pdf'),
+    
+    # NIST Reports
+    path('nist/function/summary/', views.nist_function_summary_pdf, name='nist_function_summary_pdf'),
+    path('nist/implementation/status/', views.nist_implementation_status_pdf, name='nist_implementation_status_pdf'),
+    path('nist/incident/register/', views.nist_incident_register_pdf, name='nist_incident_register_pdf'),
+    path('nist/threat/analysis/', views.nist_threat_analysis_pdf, name='nist_threat_analysis_pdf'),
+    
     # Audit reports
     path('audit/workplan/summary/', views.workplan_summary_pdf, name='audit_workplan_summary_pdf'),
     path('audit/engagement/summary/', views.engagement_summary_pdf, name='audit_engagement_summary_pdf'),
