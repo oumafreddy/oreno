@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
 from risk.models import Risk, RiskRegister, Control, KRI, RiskAssessment
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, Sum
 from django.db import models
 import tempfile
 import matplotlib.pyplot as plt
@@ -156,33 +156,172 @@ def risk_register_summary_pdf(request):
 def risk_heatmap_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
-    # Prepare heatmap data (impact vs likelihood)
+    
+    # Apply register filter if provided
+    register_filter = request.GET.get('register')
+    if register_filter:
+        risks = risks.filter(risk_register__register_name__icontains=register_filter)
+    
+    # Enhanced data preparation for bubble chart
     impact_range = range(1, 6)
     likelihood_range = range(1, 6)
-    heatmap = [[risks.filter(residual_impact_score=i, residual_likelihood_score=j).count() for i in impact_range] for j in likelihood_range]
-    # Generate heatmap image
-    fig, ax = plt.subplots(figsize=(8, 6))
-    cax = ax.imshow(heatmap, cmap='YlOrRd', origin='lower')
-    ax.set_xticks(range(len(impact_range)))
-    ax.set_yticks(range(len(likelihood_range)))
-    ax.set_xticklabels(impact_range)
-    ax.set_yticklabels(likelihood_range)
-    ax.set_xlabel('Impact')
-    ax.set_ylabel('Likelihood')
-    ax.set_title('Risk Heatmap')
-    fig.colorbar(cax)
+    
+    # Create bubble chart data with risk counts and details
+    bubble_data = []
+    risk_details = {}
+    
+    for impact in impact_range:
+        for likelihood in likelihood_range:
+            risk_count = risks.filter(
+                residual_impact_score=impact, 
+                residual_likelihood_score=likelihood
+            ).count()
+            
+            if risk_count > 0:
+                # Get actual risks for this cell
+                cell_risks = risks.filter(
+                    residual_impact_score=impact, 
+                    residual_likelihood_score=likelihood
+                )
+                
+                # Calculate risk score (impact * likelihood)
+                risk_score = impact * likelihood
+                
+                bubble_data.append({
+                    'impact': impact,
+                    'likelihood': likelihood,
+                    'count': risk_count,
+                    'risk_score': risk_score,
+                    'risks': list(cell_risks.values('risk_name', 'category', 'status', 'risk_owner')[:5])  # Top 5 risks
+                })
+                
+                risk_details[f"{impact}-{likelihood}"] = {
+                    'count': risk_count,
+                    'risks': list(cell_risks.values('risk_name', 'category', 'status', 'risk_owner')),
+                    'risk_score': risk_score
+                }
+    
+    # Calculate comprehensive statistics
+    total_risks = risks.count()
+    high_risk_count = risks.filter(
+        models.Q(residual_impact_score__gte=4) | 
+        models.Q(residual_likelihood_score__gte=4)
+    ).count()
+    
+    medium_risk_count = risks.filter(
+        models.Q(residual_impact_score=3) & 
+        models.Q(residual_likelihood_score=3)
+    ).count()
+    
+    low_risk_count = risks.filter(
+        models.Q(residual_impact_score__lte=2) & 
+        models.Q(residual_likelihood_score__lte=2)
+    ).count()
+    
+    # Risk distribution by category
+    category_distribution = risks.values('category').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Top risk areas (highest risk scores)
+    top_risk_areas = []
+    for data in bubble_data:
+        if data['risk_score'] >= 12:  # High risk threshold
+            top_risk_areas.append({
+                'impact': data['impact'],
+                'likelihood': data['likelihood'],
+                'count': data['count'],
+                'risk_score': data['risk_score'],
+                'risks': data['risks']
+            })
+    
+    # Generate enhanced bubble chart
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+    
+    # Main bubble chart
+    if bubble_data:
+        x = [d['impact'] for d in bubble_data]
+        y = [d['likelihood'] for d in bubble_data]
+        sizes = [d['count'] * 100 for d in bubble_data]  # Scale bubble sizes
+        colors = [d['risk_score'] for d in bubble_data]
+        
+        scatter = ax1.scatter(x, y, s=sizes, c=colors, cmap='RdYlGn_r', alpha=0.7, edgecolors='black', linewidth=1)
+        
+        # Add risk count labels on bubbles
+        for i, data in enumerate(bubble_data):
+            if data['count'] > 0:
+                ax1.annotate(str(data['count']), 
+                           (data['impact'], data['likelihood']), 
+                           ha='center', va='center', fontweight='bold', fontsize=10)
+    
+    ax1.set_xlabel('Impact Score', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Likelihood Score', fontsize=12, fontweight='bold')
+    ax1.set_title('Risk Distribution Bubble Chart', fontsize=14, fontweight='bold')
+    ax1.set_xlim(0.5, 5.5)
+    ax1.set_ylim(0.5, 5.5)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(range(1, 6))
+    ax1.set_yticks(range(1, 6))
+    
+    # Add colorbar
+    cbar = plt.colorbar(scatter, ax=ax1)
+    cbar.set_label('Risk Score (Impact × Likelihood)', fontsize=10)
+    
+    # Risk level zones
+    ax1.axhline(y=3.5, color='red', linestyle='--', alpha=0.5, label='High Risk Zone')
+    ax1.axvline(x=3.5, color='red', linestyle='--', alpha=0.5)
+    ax1.axhline(y=2.5, color='orange', linestyle='--', alpha=0.5, label='Medium Risk Zone')
+    ax1.axvline(x=2.5, color='orange', linestyle='--', alpha=0.5)
+    ax1.legend()
+    
+    # Risk distribution pie chart
+    if total_risks > 0:
+        labels = ['High Risk', 'Medium Risk', 'Low Risk']
+        sizes = [high_risk_count, medium_risk_count, low_risk_count]
+        colors = ['#ff4444', '#ffaa00', '#44aa44']
+        
+        wedges, texts, autotexts = ax2.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', 
+                                          startangle=90, explode=(0.1, 0.05, 0.05))
+        ax2.set_title('Risk Level Distribution', fontsize=14, fontweight='bold')
+        
+        # Enhance text appearance
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+    
+    plt.tight_layout()
+    
+    # Save chart
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
     plt.close(fig)
     buf.seek(0)
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    html_string = render_to_string('reports/risk_heatmap.html', {
+    
+    # Generate comprehensive context
+    context = {
         'organization': org,
         'image_base64': image_base64,
-    })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Enterprise Risk Heatmap Analysis',
+        'description': 'Comprehensive risk distribution analysis with bubble chart visualization',
+        'total_risks': total_risks,
+        'high_risk_count': high_risk_count,
+        'medium_risk_count': medium_risk_count,
+        'low_risk_count': low_risk_count,
+        'category_distribution': category_distribution,
+        'top_risk_areas': top_risk_areas,
+        'risk_details': risk_details,
+        'bubble_data': bubble_data,
+        'filters_summary': f"Register: {register_filter}" if register_filter else 'All risks analyzed'
+    }
+    
+    html_string = render_to_string('reports/risk_heatmap.html', context)
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
     response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_risk_heatmap.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_enterprise_risk_heatmap.pdf"'
     return response
 
 def risk_trends_pdf(request):
@@ -656,16 +795,78 @@ def issue_followup_pdf(request):
     org = request.tenant
     overdue = request.GET.get('overdue')
     issues = Issue.objects.filter(organization=org)
+    
+    # Apply overdue filter if specified
     if overdue == '1':
         today = timezone.now().date()
         issues = issues.filter(target_date__lt=today, issue_status__in=['open', 'in_progress'])
+    
+    # Calculate comprehensive statistics
+    total_issues = issues.count()
+    open_issues = issues.filter(issue_status='open').count()
+    in_progress_issues = issues.filter(issue_status='in_progress').count()
+    closed_issues = issues.filter(issue_status='closed').count()
+    
+    # Risk level distribution
+    high_risk_issues = issues.filter(risk_level='high').count()
+    medium_risk_issues = issues.filter(risk_level='medium').count()
+    low_risk_issues = issues.filter(risk_level='low').count()
+    critical_risk_issues = issues.filter(risk_level='critical').count()
+    
+    # Overdue analysis
+    overdue_issues = issues.filter(
+        target_date__lt=timezone.now().date(),
+        issue_status__in=['open', 'in_progress']
+    ).count()
+    
+    # Issue type distribution
+    issue_type_distribution = issues.values('issue_type').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Top issue owners
+    top_owners = issues.values('issue_owner__first_name', 'issue_owner__last_name', 'issue_owner_email').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Average days overdue
+    overdue_issues_data = issues.filter(
+        target_date__lt=timezone.now().date(),
+        issue_status__in=['open', 'in_progress']
+    )
+    avg_days_overdue = overdue_issues_data.aggregate(
+        avg_days=Avg('days_overdue')
+    )['avg_days'] or 0
+    
+    # Financial impact analysis
+    total_financial_impact = issues.aggregate(
+        total_impact=Sum('financial_impact')
+    )['total_impact'] or 0
+    
+    # Generate comprehensive context
     context = {
         'organization': org,
         'issues': issues,
         'filters': {'overdue': overdue},
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Audit Issue Follow-up Report',
+        'description': 'Comprehensive audit issue tracking and follow-up analysis',
+        'total_issues': total_issues,
+        'open_issues': open_issues,
+        'in_progress_issues': in_progress_issues,
+        'closed_issues': closed_issues,
+        'high_risk_issues': high_risk_issues,
+        'medium_risk_issues': medium_risk_issues,
+        'low_risk_issues': low_risk_issues,
+        'critical_risk_issues': critical_risk_issues,
+        'overdue_issues': overdue_issues,
+        'issue_type_distribution': issue_type_distribution,
+        'top_owners': top_owners,
+        'avg_days_overdue': round(avg_days_overdue, 1),
+        'total_financial_impact': total_financial_impact,
+        'filters_summary': f"Overdue Only: {'Yes' if overdue == '1' else 'No'}"
     }
+    
     if request.GET.get('format') == 'docx':
         doc = _docx_start_document(org, context['title'], context['generation_timestamp'])
         _docx_add_heading(doc, 'Issues Pending Follow-up')
@@ -679,15 +880,17 @@ def issue_followup_pdf(request):
         hdr[4].text = 'Target Date'
         for issue in issues:
             r = tbl.add_row().cells
-            r[0].text = str(getattr(issue, 'issue_id', getattr(issue, 'id', '')))
-            r[1].text = str(getattr(issue, 'title', ''))
+            r[0].text = str(getattr(issue, 'code', getattr(issue, 'id', '')))
+            r[1].text = str(getattr(issue, 'issue_title', ''))
             r[2].text = str(getattr(issue, 'issue_status', ''))
             r[3].text = str(getattr(getattr(issue, 'issue_owner', None), 'get_full_name', lambda: '')() or getattr(issue, 'issue_owner_title', '') )
             r[4].text = str(getattr(issue, 'target_date', ''))
         return _docx_http_response(doc, 'audit_issue_followup', org)
     else:
         html_string = render_to_string('reports/audit_issue_followup.html', context)
-        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+        )
         response = HttpResponse(pdf_file, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_issue_followup.pdf"'
         return response
@@ -729,37 +932,101 @@ def approval_workflow_pdf(request):
 
 def smart_engagement_progress_pdf(request):
     org = request.tenant
-    # Example: % closed engagements, avg duration, etc.
+    # Enhanced engagement analysis with comprehensive statistics
     from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField
     from django.db.models.functions import Now
+    
     engagements = Engagement.objects.filter(organization=org)
-    total = engagements.count()
-    closed = engagements.filter(project_status='closed').count()
-    avg_duration = engagements.annotate(
+    
+    # Basic statistics
+    total_engagements = engagements.count()
+    closed_engagements = engagements.filter(project_status='closed').count()
+    in_progress_engagements = engagements.filter(project_status='in_progress').count()
+    planned_engagements = engagements.filter(project_status='planned').count()
+    
+    # Calculate percentages
+    percent_closed = (closed_engagements / total_engagements * 100) if total_engagements > 0 else 0
+    
+    # Duration analysis
+    completed_engagements = engagements.filter(
+        project_status='closed',
+        target_end_date__isnull=False,
+        project_start_date__isnull=False
+    )
+    
+    avg_duration = completed_engagements.annotate(
         duration=ExpressionWrapper(F('target_end_date') - F('project_start_date'), output_field=DurationField())
     ).aggregate(avg=Avg('duration'))['avg']
+    
+    # Convert timedelta to days for display
+    avg_duration_days = avg_duration.days if avg_duration else 0
+    
+    # Engagement type distribution
+    engagement_type_distribution = engagements.values('engagement_type').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Top assigned auditors
+    top_auditors = engagements.values('assigned_to__first_name', 'assigned_to__last_name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Workplan distribution
+    workplan_distribution = engagements.values('annual_workplan__name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Timeline analysis
+    overdue_engagements = engagements.filter(
+        target_end_date__lt=timezone.now().date(),
+        project_status__in=['in_progress', 'planned']
+    ).count()
+    
+    # Risk assessment analysis based on conclusion
+    high_risk_engagements = engagements.filter(conclusion__in=['unsatisfactory', 'significant_improvement_needed']).count()
+    medium_risk_engagements = engagements.filter(conclusion='needs_improvement').count()
+    low_risk_engagements = engagements.filter(conclusion='satisfactory').count()
+    
+    # Generate comprehensive context
     context = {
         'organization': org,
-        'total': total,
-        'closed': closed,
-        'avg_duration': avg_duration,
+        'total_engagements': total_engagements,
+        'closed_engagements': closed_engagements,
+        'in_progress_engagements': in_progress_engagements,
+        'planned_engagements': planned_engagements,
+        'percent_closed': round(percent_closed, 2),
+        'avg_duration_days': avg_duration_days,
+        'engagement_type_distribution': engagement_type_distribution,
+        'top_auditors': top_auditors,
+        'workplan_distribution': workplan_distribution,
+        'overdue_engagements': overdue_engagements,
+        'high_risk_engagements': high_risk_engagements,
+        'medium_risk_engagements': medium_risk_engagements,
+        'low_risk_engagements': low_risk_engagements,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Smart Engagement Progress Report',
+        'description': 'Comprehensive audit engagement progress analysis and performance metrics',
+        'filters_summary': 'All engagements analyzed'
     }
+    
     if request.GET.get('format') == 'docx':
         gen_ts = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         doc = _docx_start_document(org, 'Audit Engagement Progress Report', gen_ts)
         _docx_add_heading(doc, 'Progress Summary')
         tbl = doc.add_table(rows=3, cols=2)
         tbl.style = 'Table Grid'
-        tbl.cell(0,0).text = 'Total engagements'; tbl.cell(0,1).text = str(total)
-        tbl.cell(1,0).text = 'Closed engagements'; tbl.cell(1,1).text = str(closed)
-        tbl.cell(2,0).text = 'Average planned duration'; tbl.cell(2,1).text = str(avg_duration)
+        tbl.cell(0,0).text = 'Total engagements'; tbl.cell(0,1).text = str(total_engagements)
+        tbl.cell(1,0).text = 'Closed engagements'; tbl.cell(1,1).text = str(closed_engagements)
+        tbl.cell(2,0).text = 'Percent closed'; tbl.cell(2,1).text = f"{percent_closed:.2f}%"
         return _docx_http_response(doc, 'audit_engagement_progress', org)
     else:
-        html_string = render_to_string('reports/audit_engagement_progress.html', context)
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_progress.pdf"'
-    return response
+        html_string = render_to_string('reports/smart_engagement_progress.html', context)
+        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+        )
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{org.code}_smart_engagement_progress.pdf"'
+        return response
 
 def get_engagement_by_name(org, engagement_name):
     if engagement_name:
@@ -869,14 +1136,43 @@ def engagement_with_issues_pdf(request):
     org = request.tenant
     engagement_name = request.GET.get('engagement_name') or request.GET.get('q')
     engagement = None
+    
     if engagement_name:
         engagement = Engagement.objects.filter(organization=org, title=engagement_name).first()
         if not engagement:
             engagement = Engagement.objects.filter(organization=org, title__icontains=engagement_name).first()
     else:
         engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
+    
     issues = engagement.all_issues if engagement else []
     engagement_names = get_engagement_names(org)
+    
+    # Calculate comprehensive statistics
+    total_issues = len(issues) if issues else 0
+    open_issues = len([i for i in issues if i.issue_status == 'open']) if issues else 0
+    closed_issues = len([i for i in issues if i.issue_status == 'closed']) if issues else 0
+    in_progress_issues = len([i for i in issues if i.issue_status == 'in_progress']) if issues else 0
+    
+    # Risk level distribution
+    high_risk_issues = len([i for i in issues if i.risk_level == 'high']) if issues else 0
+    medium_risk_issues = len([i for i in issues if i.risk_level == 'medium']) if issues else 0
+    low_risk_issues = len([i for i in issues if i.risk_level == 'low']) if issues else 0
+    critical_risk_issues = len([i for i in issues if i.risk_level == 'critical']) if issues else 0
+    
+    # Issue type distribution
+    issue_type_distribution = {}
+    if issues:
+        for issue in issues:
+            issue_type = issue.issue_type or 'other'
+            issue_type_distribution[issue_type] = issue_type_distribution.get(issue_type, 0) + 1
+    
+    # Overdue analysis
+    overdue_issues = len([i for i in issues if i.target_date and i.target_date < timezone.now().date() and i.issue_status in ['open', 'in_progress']]) if issues else 0
+    
+    # Financial impact analysis
+    total_financial_impact = sum([i.financial_impact or 0 for i in issues]) if issues else 0
+    
+    # Generate comprehensive context
     context = {
         'organization': org,
         'engagement': engagement,
@@ -884,7 +1180,23 @@ def engagement_with_issues_pdf(request):
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
         'for_pdf': True,  # Always set for PDF context
+        'total_issues': total_issues,
+        'open_issues': open_issues,
+        'closed_issues': closed_issues,
+        'in_progress_issues': in_progress_issues,
+        'high_risk_issues': high_risk_issues,
+        'medium_risk_issues': medium_risk_issues,
+        'low_risk_issues': low_risk_issues,
+        'critical_risk_issues': critical_risk_issues,
+        'issue_type_distribution': issue_type_distribution,
+        'overdue_issues': overdue_issues,
+        'total_financial_impact': total_financial_impact,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Audit Engagement With Issues Report',
+        'description': 'Comprehensive audit engagement analysis with detailed issue breakdown',
+        'filters_summary': f"Engagement: {engagement.title if engagement else 'Not specified'}"
     }
+    
     if request.GET.get('format') == 'docx':
         doc = _docx_start_document(org, 'Audit Engagement With Issues Report', timezone.now().strftime('%Y-%m-%d %H:%M:%S'))
         if engagement:
@@ -900,18 +1212,20 @@ def engagement_with_issues_pdf(request):
         hdr[4].text = 'Target Date'
         for issue in issues:
             r = tbl.add_row().cells
-            r[0].text = str(getattr(issue, 'issue_id', getattr(issue, 'id', '')))
-            r[1].text = str(getattr(issue, 'title', ''))
+            r[0].text = str(getattr(issue, 'code', getattr(issue, 'id', '')))
+            r[1].text = str(getattr(issue, 'issue_title', ''))
             r[2].text = str(getattr(issue, 'issue_status', ''))
             r[3].text = str(getattr(issue, 'risk_level', ''))
             r[4].text = str(getattr(issue, 'target_date', ''))
         return _docx_http_response(doc, 'audit_engagement_with_issues', org)
     else:
         html_string = render_to_string('reports/audit_engagement_with_issues.html', context)
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
-    return response
+        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+            stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+        )
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
+        return response
 
 def legal_case_summary_pdf(request):
     org = request.tenant

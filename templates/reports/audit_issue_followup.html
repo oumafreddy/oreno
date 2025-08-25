@@ -1,28 +1,390 @@
 {% extends "reports/base_report.html" %}
+
 {% block content %}
-<style>
-table.table-sm th, table.table-sm td {
-  padding: 4px 6px;
-  font-size: 12px;
-  word-break: break-word;
-}
-</style>
-<h2>Audit Issue Follow-up</h2>
-<p>Filters: Overdue Only: {{ filters.overdue|yesno:"Yes,No" }}</p>
-<table class="table table-sm">
-  <tr>
-    <th>Code</th><th>Title</th><th>Status</th><th>Risk Level</th><th>Owner</th><th>Remediation Deadline</th><th>Actual Remediation</th>
-  </tr>
-  {% for issue in issues %}
-    <tr>
-      <td>{{ issue.code }}</td>
-      <td>{{ issue.issue_title }}</td>
-      <td>{{ issue.get_issue_status_display }}</td>
-      <td>{{ issue.get_risk_level_display }}</td>
-      <td>{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td>
-      <td>{{ issue.target_date|default:'-' }}</td>
-      <td>{{ issue.actual_remediation_date|default:'-' }}</td>
-    </tr>
-  {% endfor %}
-</table>
+<div class="cover-page">
+  <div class="logo-section">
+    {% if organization.logo and organization.logo.url %}
+      <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+    {% else %}
+      <div class="default-logo-placeholder">
+        <h2>{{ organization.name }}</h2>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="report-title-section">
+    <h1 class="report-title">{{ title }}</h1>
+    <p class="report-subtitle">{{ description }}</p>
+  </div>
+  
+  <div class="report-meta">
+    <p><strong>Generated:</strong> {{ generation_timestamp }}</p>
+    <p><strong>Organization:</strong> {{ organization.name }}</p>
+    <p><strong>Analysis Period:</strong> All Time</p>
+    <p><strong>Total Issues Analyzed:</strong> {{ total_issues }}</p>
+    {% if filters_summary %}
+      <p><strong>Filters Applied:</strong> {{ filters_summary }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Executive Summary -->
+<div class="section-header">Executive Summary</div>
+<div class="content-wrapper">
+  <p>This comprehensive audit issue follow-up report provides a strategic overview of {{ organization.name }}'s audit issue landscape, 
+  identifying critical issues requiring immediate attention and tracking remediation progress across all audit engagements. 
+  The analysis covers {{ total_issues }} identified issues with detailed insights into status distribution, 
+  risk levels, and remediation timelines.</p>
+  
+  <div class="alert alert-info">
+    <strong>Key Findings:</strong>
+    <ul>
+      <li><strong>{{ open_issues }}</strong> open issues requiring immediate attention</li>
+      <li><strong>{{ in_progress_issues }}</strong> issues currently under remediation</li>
+      <li><strong>{{ overdue_issues }}</strong> overdue issues past their target dates</li>
+      <li><strong>{{ critical_risk_issues }}</strong> critical risk issues requiring urgent action</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Issue Statistics Dashboard -->
+<div class="section-header">Issue Statistics Dashboard</div>
+<div class="content-wrapper">
+  {% if total_issues > 0 %}
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_issues }}</div>
+      <div class="stat-label">TOTAL ISSUES</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ open_issues }}</div>
+      <div class="stat-label">OPEN ISSUES</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ in_progress_issues }}</div>
+      <div class="stat-label">IN PROGRESS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ closed_issues }}</div>
+      <div class="stat-label">CLOSED ISSUES</div>
+    </div>
+  </div>
+  
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ critical_risk_issues }}</div>
+      <div class="stat-label">CRITICAL RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_risk_issues }}</div>
+      <div class="stat-label">HIGH RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ medium_risk_issues }}</div>
+      <div class="stat-label">MEDIUM RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ low_risk_issues }}</div>
+      <div class="stat-label">LOW RISK</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    <strong>No Data Available:</strong> No audit issues found matching the current filter criteria.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Overdue Analysis -->
+{% if overdue_issues > 0 %}
+<div class="section-header">Overdue Issues Analysis</div>
+<div class="content-wrapper">
+  <div class="alert alert-danger">
+    <strong>Critical Alert:</strong> {{ overdue_issues }} issues are currently overdue with an average of {{ avg_days_overdue }} days past their target dates.
+  </div>
+  
+  <div class="field-label">Overdue Issues Summary</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Total Overdue Issues:</strong> {{ overdue_issues }}</li>
+      <li><strong>Average Days Overdue:</strong> {{ avg_days_overdue }} days</li>
+      <li><strong>Financial Impact:</strong> ${{ total_financial_impact|floatformat:2|default:"0.00" }}</li>
+      <li><strong>Immediate Action Required:</strong> Review and escalate overdue issues</li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Issue Type Distribution -->
+{% if issue_type_distribution %}
+<div class="section-header">Issue Type Distribution</div>
+<div class="content-wrapper">
+  <p>Analysis of issue distribution across different categories provides insights into organizational risk exposure patterns.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Issue Type</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Priority Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for type in issue_type_distribution %}
+      <tr>
+        <td>{{ type.issue_type|title|default:"Uncategorized" }}</td>
+        <td>{{ type.count }}</td>
+        <td>{% widthratio type.count total_issues 100 %}%</td>
+        <td>
+          {% if type.count > 5 %}
+            <span class="status-badge status-active">High</span>
+          {% elif type.count > 2 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Top Issue Owners -->
+{% if top_owners %}
+<div class="section-header">Issue Ownership Analysis</div>
+<div class="content-wrapper">
+  <p>Analysis of issue ownership distribution to identify workload patterns and resource allocation needs.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Issue Owner</th>
+        <th>Issue Count</th>
+        <th>Percentage</th>
+        <th>Workload Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for owner in top_owners %}
+      <tr>
+        <td>{% if owner.issue_owner__first_name or owner.issue_owner__last_name %}{{ owner.issue_owner__first_name|default:"" }} {{ owner.issue_owner__last_name|default:"" }}{% else %}{{ owner.issue_owner_email|default:"Unassigned" }}{% endif %}</td>
+        <td>{{ owner.count }}</td>
+        <td>{% widthratio owner.count total_issues 100 %}%</td>
+        <td>
+          {% if owner.count > 3 %}
+            <span class="status-badge status-active">High</span>
+          {% elif owner.count > 1 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Detailed Issues Table -->
+<div class="section-header">Detailed Issues Listing</div>
+<div class="content-wrapper">
+  {% if issues %}
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Risk Level</th>
+        <th>Owner</th>
+        <th>Remediation Deadline</th>
+        <th>Days Overdue</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for issue in issues %}
+      <tr>
+        <td>{{ issue.code }}</td>
+        <td>{{ issue.issue_title|truncatechars:50 }}</td>
+        <td>
+          {% if issue.issue_status == 'open' %}
+            <span class="status-badge status-active">Open</span>
+          {% elif issue.issue_status == 'in_progress' %}
+            <span class="status-badge status-pending">In Progress</span>
+          {% elif issue.issue_status == 'closed' %}
+            <span class="status-badge status-inactive">Closed</span>
+          {% else %}
+            <span class="status-badge status-draft">{{ issue.get_issue_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if issue.risk_level == 'critical' %}
+            <span class="status-badge status-critical">Critical</span>
+          {% elif issue.risk_level == 'high' %}
+            <span class="status-badge status-active">High</span>
+          {% elif issue.risk_level == 'medium' %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+        <td>{% if issue.issue_owner.first_name or issue.issue_owner.last_name %}{{ issue.issue_owner.first_name|default:"" }} {{ issue.issue_owner.last_name|default:"" }}{% else %}{{ issue.issue_owner_email|default:"Unassigned" }}{% endif %}</td>
+        <td>{{ issue.target_date|default:"Not Set" }}</td>
+        <td>
+          {% if issue.days_overdue > 0 %}
+            <span class="status-badge status-active">{{ issue.days_overdue }} days</span>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="alert alert-info">
+    <strong>No Issues Found:</strong> No audit issues match the current filter criteria.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Strategic Recommendations -->
+<div class="section-header">Strategic Recommendations</div>
+<div class="content-wrapper">
+  <div class="recommendations-grid">
+    <div class="recommendation-card">
+      <h4>Immediate Actions (Overdue Issues)</h4>
+      <ul>
+        <li>Escalate all overdue issues to senior management</li>
+        <li>Implement daily follow-up procedures for critical issues</li>
+        <li>Reallocate resources to address high-priority items</li>
+        <li>Establish weekly status review meetings</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Process Improvements</h4>
+      <ul>
+        <li>Implement automated reminder systems</li>
+        <li>Establish clear escalation procedures</li>
+        <li>Develop issue tracking dashboards</li>
+        <li>Enhance communication protocols</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Long-term Optimization</h4>
+      <ul>
+        <li>Implement predictive analytics for issue management</li>
+        <li>Develop issue prevention strategies</li>
+        <li>Establish continuous monitoring systems</li>
+        <li>Optimize resource allocation based on workload analysis</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Management Framework -->
+<div class="section-header">Risk Management Framework Integration</div>
+<div class="content-wrapper">
+  <p>This issue follow-up analysis integrates with {{ organization.name }}'s comprehensive audit and risk management framework, 
+  supporting strategic decision-making and operational excellence objectives.</p>
+  
+  <div class="framework-grid">
+    <div class="framework-item">
+      <strong>Governance:</strong> Board-level oversight of critical audit issues
+    </div>
+    <div class="framework-item">
+      <strong>Strategy:</strong> Issue-based strategic planning and resource allocation
+    </div>
+    <div class="framework-item">
+      <strong>Operations:</strong> Integrated issue management in daily operations
+    </div>
+    <div class="framework-item">
+      <strong>Reporting:</strong> Regular issue reporting and stakeholder communication
+    </div>
+  </div>
+</div>
+
+<!-- Methodology and Assumptions -->
+<div class="section-header">Methodology and Assumptions</div>
+<div class="content-wrapper">
+  <div class="methodology-section">
+    <h4>Issue Classification Methodology</h4>
+    <ul>
+      <li><strong>Risk Levels:</strong> Critical, High, Medium, Low based on impact and likelihood</li>
+      <li><strong>Status Tracking:</strong> Open, In Progress, Closed, and other workflow states</li>
+      <li><strong>Overdue Calculation:</strong> Based on target dates vs. current date</li>
+      <li><strong>Financial Impact:</strong> Estimated monetary impact of unresolved issues</li>
+    </ul>
+    
+    <h4>Data Quality and Limitations</h4>
+    <ul>
+      <li>Analysis based on current issue register data as of report generation</li>
+      <li>Issue status reflects current workflow state</li>
+      <li>Dynamic nature of issues requires regular updates and monitoring</li>
+      <li>External factors may impact issue resolution timelines</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Next Steps and Follow-up -->
+<div class="section-header">Next Steps and Follow-up Actions</div>
+<div class="content-wrapper">
+  <div class="next-steps-grid">
+    <div class="step-item">
+      <strong>Immediate (Next 7 Days):</strong>
+      <ul>
+        <li>Review and validate all overdue issues</li>
+        <li>Develop action plans for critical issues</li>
+        <li>Establish daily follow-up procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Short-term (Next 30 Days):</strong>
+      <ul>
+        <li>Implement enhanced tracking systems</li>
+        <li>Conduct issue owner training</li>
+        <li>Update issue management procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Medium-term (Next 90 Days):</strong>
+      <ul>
+        <li>Evaluate issue resolution effectiveness</li>
+        <li>Update issue assessment criteria</li>
+        <li>Enhance reporting capabilities</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Conclusion -->
+<div class="section-header">Conclusion</div>
+<div class="content-wrapper">
+  <p>This comprehensive audit issue follow-up analysis provides {{ organization.name }} with a detailed view of its audit issue landscape, 
+  enabling informed decision-making and strategic issue management. The analysis highlights critical overdue issues 
+  and provides a foundation for targeted remediation efforts.</p>
+  
+  <p><strong>Key Success Factors:</strong></p>
+  <ul>
+    <li>Regular monitoring and updating of issue status</li>
+    <li>Integration of issue insights into strategic planning</li>
+    <li>Continuous improvement of issue management processes</li>
+    <li>Stakeholder engagement and communication</li>
+  </ul>
+  
+  <div class="alert alert-success">
+    <strong>Recommendation:</strong> This analysis should be reviewed weekly and updated monthly to ensure 
+    continued relevance and effectiveness in supporting {{ organization.name }}'s audit issue management objectives.
+  </div>
+</div>
 {% endblock %} 

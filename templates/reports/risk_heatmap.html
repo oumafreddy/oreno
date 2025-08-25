@@ -1,8 +1,318 @@
 {% extends "reports/base_report.html" %}
+
 {% block content %}
-<h2>Risk Heatmap</h2>
-<p>This heatmap visualizes the distribution of risks by impact and likelihood.</p>
-<div class="text-center">
-  <img src="data:image/png;base64,{{ image_base64 }}" alt="Risk Heatmap" style="max-width:100%; height:auto;">
+<div class="cover-page">
+  <div class="logo-section">
+    {% if organization.logo and organization.logo.url %}
+      <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+    {% else %}
+      <div class="default-logo-placeholder">
+        <h2>{{ organization.name }}</h2>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="report-title-section">
+    <h1 class="report-title">{{ title }}</h1>
+    <p class="report-subtitle">{{ description }}</p>
+  </div>
+  
+  <div class="report-meta">
+    <p><strong>Generated:</strong> {{ generation_timestamp }}</p>
+    <p><strong>Organization:</strong> {{ organization.name }}</p>
+    <p><strong>Analysis Period:</strong> All Time</p>
+    <p><strong>Total Risks Analyzed:</strong> {{ total_risks }}</p>
+    {% if filters_summary %}
+      <p><strong>Filters Applied:</strong> {{ filters_summary }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Executive Summary -->
+<div class="section-header">Executive Summary</div>
+<div class="content-wrapper">
+  <p>This comprehensive risk heatmap analysis provides a strategic overview of {{ organization.name }}'s risk landscape, 
+  identifying critical risk concentrations and distribution patterns across impact and likelihood dimensions. 
+  The analysis covers {{ total_risks }} identified risks with detailed insights into risk distribution, 
+  concentration areas, and strategic implications for risk management.</p>
+  
+  <div class="alert alert-info">
+    <strong>Key Findings:</strong>
+    <ul>
+      <li><strong>{{ high_risk_count }}</strong> high-risk items requiring immediate attention</li>
+      <li><strong>{{ medium_risk_count }}</strong> medium-risk items under active monitoring</li>
+      <li><strong>{{ low_risk_count }}</strong> low-risk items with acceptable risk levels</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Risk Distribution Visualization -->
+<div class="section-header">Risk Distribution Analysis</div>
+<div class="content-wrapper">
+  {% if total_risks > 0 %}
+  <p>The bubble chart visualization below represents risk distribution across impact and likelihood dimensions. 
+  Bubble size indicates the number of risks in each category, while color intensity represents the overall risk score 
+  (Impact × Likelihood). Risk zones are clearly demarcated to facilitate strategic decision-making.</p>
+  
+  <div class="text-center">
+    <img src="data:image/png;base64,{{ image_base64 }}" alt="Enterprise Risk Heatmap" style="max-width:100%; height:auto; border: 1px solid #ddd; border-radius: 8px;">
+  </div>
+  
+  <div class="field-label">Chart Interpretation Guide</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Bubble Size:</strong> Number of risks in each impact-likelihood combination</li>
+      <li><strong>Color Intensity:</strong> Risk score (darker = higher risk)</li>
+      <li><strong>Red Zone:</strong> High-risk area requiring immediate attention</li>
+      <li><strong>Orange Zone:</strong> Medium-risk area requiring monitoring</li>
+      <li><strong>Green Zone:</strong> Low-risk area with acceptable levels</li>
+    </ul>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <strong>No Risks Found:</strong> No risks were found matching the current filter criteria. 
+    Please adjust your filters or add risks to the system to generate a heatmap analysis.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Risk Statistics Dashboard -->
+<div class="section-header">Risk Statistics Dashboard</div>
+<div class="content-wrapper">
+  {% if total_risks > 0 %}
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_risks }}</div>
+      <div class="stat-label">TOTAL RISKS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_risk_count }}</div>
+      <div class="stat-label">HIGH RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ medium_risk_count }}</div>
+      <div class="stat-label">MEDIUM RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ low_risk_count }}</div>
+      <div class="stat-label">LOW RISK</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    <strong>No Data Available:</strong> No risk statistics can be calculated without risk data.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Risk Category Analysis -->
+{% if category_distribution %}
+<div class="section-header">Risk Distribution by Category</div>
+<div class="content-wrapper">
+  <p>Analysis of risk distribution across different business categories provides insights into organizational risk exposure patterns.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Risk Category</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for category in category_distribution %}
+      <tr>
+        <td>{{ category.category|default:"Uncategorized" }}</td>
+        <td>{{ category.count }}</td>
+        <td>{% widthratio category.count total_risks 100 %}%</td>
+        <td>
+          {% if category.count > 5 %}
+            <span class="status-badge status-active">High</span>
+          {% elif category.count > 2 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- High-Risk Areas Analysis -->
+{% if top_risk_areas %}
+<div class="section-header">Critical Risk Areas Analysis</div>
+<div class="content-wrapper">
+  <p>The following areas represent the highest concentration of risks requiring immediate management attention and strategic intervention.</p>
+  
+  {% for area in top_risk_areas %}
+  <div class="risk-area-card">
+    <div class="field-label">Risk Area: Impact {{ area.impact }} × Likelihood {{ area.likelihood }} (Score: {{ area.risk_score }})</div>
+    <div class="field-value">
+      <p><strong>Risk Count:</strong> {{ area.count }} risks</p>
+      <p><strong>Risk Level:</strong> 
+        {% if area.risk_score >= 15 %}
+          <span class="status-badge status-active">Critical</span>
+        {% elif area.risk_score >= 12 %}
+          <span class="status-badge status-pending">High</span>
+        {% else %}
+          <span class="status-badge status-inactive">Medium</span>
+        {% endif %}
+      </p>
+      
+      {% if area.risks %}
+      <p><strong>Key Risks in This Area:</strong></p>
+      <ul>
+        {% for risk in area.risks|slice:":3" %}
+        <li>{{ risk.risk_name|default:"Unnamed Risk" }} ({{ risk.category|default:"Uncategorized" }})</li>
+        {% endfor %}
+        {% if area.risks|length > 3 %}
+        <li><em>... and {{ area.risks|length|add:"-3" }} more risks</em></li>
+        {% endif %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Strategic Recommendations -->
+<div class="section-header">Strategic Risk Management Recommendations</div>
+<div class="content-wrapper">
+  <div class="recommendations-grid">
+    <div class="recommendation-card">
+      <h4>Immediate Actions (High-Risk Areas)</h4>
+      <ul>
+        <li>Implement enhanced monitoring for risks in Impact 4-5 and Likelihood 4-5 zones</li>
+        <li>Develop specific mitigation strategies for each high-risk category</li>
+        <li>Establish regular review cycles for critical risk areas</li>
+        <li>Allocate additional resources to high-risk mitigation efforts</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Medium-Term Strategies</h4>
+      <ul>
+        <li>Strengthen control frameworks in medium-risk areas</li>
+        <li>Implement risk-based audit programs</li>
+        <li>Develop contingency plans for medium-risk scenarios</li>
+        <li>Enhance risk awareness and training programs</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Long-Term Risk Optimization</h4>
+      <ul>
+        <li>Establish continuous risk monitoring systems</li>
+        <li>Develop predictive risk analytics capabilities</li>
+        <li>Implement enterprise-wide risk culture initiatives</li>
+        <li>Optimize risk-return balance across all business areas</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Management Framework -->
+<div class="section-header">Risk Management Framework Integration</div>
+<div class="content-wrapper">
+  <p>This heatmap analysis integrates with {{ organization.name }}'s comprehensive risk management framework, 
+  supporting strategic decision-making and operational excellence objectives.</p>
+  
+  <div class="framework-grid">
+    <div class="framework-item">
+      <strong>Governance:</strong> Board-level risk oversight and strategic direction
+    </div>
+    <div class="framework-item">
+      <strong>Strategy:</strong> Risk-informed strategic planning and resource allocation
+    </div>
+    <div class="framework-item">
+      <strong>Operations:</strong> Integrated risk management in daily operations
+    </div>
+    <div class="framework-item">
+      <strong>Reporting:</strong> Regular risk reporting and stakeholder communication
+    </div>
+  </div>
+</div>
+
+<!-- Methodology and Assumptions -->
+<div class="section-header">Methodology and Assumptions</div>
+<div class="content-wrapper">
+  <div class="methodology-section">
+    <h4>Risk Scoring Methodology</h4>
+    <ul>
+      <li><strong>Impact Score (1-5):</strong> Based on potential financial, operational, and reputational impact</li>
+      <li><strong>Likelihood Score (1-5):</strong> Based on probability of occurrence within the next 12 months</li>
+      <li><strong>Risk Score:</strong> Calculated as Impact × Likelihood (range: 1-25)</li>
+      <li><strong>Risk Zones:</strong> High (≥12), Medium (6-11), Low (≤5)</li>
+    </ul>
+    
+    <h4>Data Quality and Limitations</h4>
+    <ul>
+      <li>Analysis based on current risk register data as of report generation</li>
+      <li>Risk scores reflect residual risk levels after existing controls</li>
+      <li>Dynamic nature of risks requires regular updates and monitoring</li>
+      <li>External factors and emerging risks may impact risk profiles</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Next Steps and Follow-up -->
+<div class="section-header">Next Steps and Follow-up Actions</div>
+<div class="content-wrapper">
+  <div class="next-steps-grid">
+    <div class="step-item">
+      <strong>Immediate (Next 30 Days):</strong>
+      <ul>
+        <li>Review and validate high-risk area findings</li>
+        <li>Develop action plans for critical risk mitigation</li>
+        <li>Establish risk monitoring dashboards</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Short-term (Next 90 Days):</strong>
+      <ul>
+        <li>Implement enhanced risk controls</li>
+        <li>Conduct risk awareness training</li>
+        <li>Update risk management procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Medium-term (Next 6 Months):</strong>
+      <ul>
+        <li>Evaluate control effectiveness</li>
+        <li>Update risk assessments</li>
+        <li>Enhance risk reporting capabilities</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Conclusion -->
+<div class="section-header">Conclusion</div>
+<div class="content-wrapper">
+  <p>This enterprise risk heatmap analysis provides {{ organization.name }} with a comprehensive view of its risk landscape, 
+  enabling informed decision-making and strategic risk management. The visualization highlights critical risk concentrations 
+  and provides a foundation for targeted risk mitigation efforts.</p>
+  
+  <p><strong>Key Success Factors:</strong></p>
+  <ul>
+    <li>Regular monitoring and updating of risk assessments</li>
+    <li>Integration of risk insights into strategic planning</li>
+    <li>Continuous improvement of risk management processes</li>
+    <li>Stakeholder engagement and communication</li>
+  </ul>
+  
+  <div class="alert alert-success">
+    <strong>Recommendation:</strong> This analysis should be reviewed quarterly and updated annually to ensure 
+    continued relevance and effectiveness in supporting {{ organization.name }}'s risk management objectives.
+  </div>
 </div>
 {% endblock %} 

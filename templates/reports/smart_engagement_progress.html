@@ -1,0 +1,434 @@
+{% extends "reports/base_report.html" %}
+
+{% block content %}
+<div class="cover-page">
+  <div class="logo-section">
+    {% if organization.logo and organization.logo.url %}
+      <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+    {% else %}
+      <div class="default-logo-placeholder">
+        <h2>{{ organization.name }}</h2>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="report-title-section">
+    <h1 class="report-title">{{ title }}</h1>
+    <p class="report-subtitle">{{ description }}</p>
+  </div>
+  
+  <div class="report-meta">
+    <p><strong>Generated:</strong> {{ generation_timestamp }}</p>
+    <p><strong>Organization:</strong> {{ organization.name }}</p>
+    <p><strong>Analysis Period:</strong> All Time</p>
+    <p><strong>Total Engagements Analyzed:</strong> {{ total_engagements }}</p>
+    {% if filters_summary %}
+      <p><strong>Filters Applied:</strong> {{ filters_summary }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Executive Summary -->
+<div class="section-header">Executive Summary</div>
+<div class="content-wrapper">
+  <p>This comprehensive engagement progress analysis provides a strategic overview of {{ organization.name }}'s audit engagement performance, 
+  tracking completion rates, timeline adherence, and resource utilization across all audit activities. 
+  The analysis covers {{ total_engagements }} engagements with detailed insights into progress metrics, 
+  performance trends, and operational efficiency indicators.</p>
+  
+  <div class="alert alert-info">
+    <strong>Key Performance Indicators:</strong>
+    <ul>
+      <li><strong>{{ percent_closed }}%</strong> completion rate across all engagements</li>
+      <li><strong>{{ avg_duration_days }}</strong> average days to complete engagements</li>
+      <li><strong>{{ in_progress_engagements }}</strong> engagements currently in progress</li>
+      <li><strong>{{ overdue_engagements }}</strong> engagements past their target dates</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Engagement Statistics Dashboard -->
+<div class="section-header">Engagement Statistics Dashboard</div>
+<div class="content-wrapper">
+  {% if total_engagements > 0 %}
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_engagements }}</div>
+      <div class="stat-label">TOTAL ENGAGEMENTS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ closed_engagements }}</div>
+      <div class="stat-label">CLOSED</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ in_progress_engagements }}</div>
+      <div class="stat-label">IN PROGRESS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ planned_engagements }}</div>
+      <div class="stat-label">PLANNED</div>
+    </div>
+  </div>
+  
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ percent_closed }}%</div>
+      <div class="stat-label">COMPLETION RATE</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ avg_duration_days }}</div>
+      <div class="stat-label">AVG DAYS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ overdue_engagements }}</div>
+      <div class="stat-label">OVERDUE</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_risk_engagements }}</div>
+      <div class="stat-label">HIGH RISK</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    <strong>No Data Available:</strong> No audit engagements found in the system.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Performance Analysis -->
+{% if total_engagements > 0 %}
+<div class="section-header">Performance Analysis</div>
+<div class="content-wrapper">
+  <div class="field-label">Completion Rate Analysis</div>
+  <div class="field-value">
+    <p>The current completion rate of <strong>{{ percent_closed }}%</strong> indicates 
+    {% if percent_closed >= 80 %}
+      <span class="status-badge status-active">excellent performance</span> in engagement delivery.
+    {% elif percent_closed >= 60 %}
+      <span class="status-badge status-pending">good performance</span> with room for improvement.
+    {% else %}
+      <span class="status-badge status-inactive">needs improvement</span> in engagement completion.
+    {% endif %}
+    </p>
+    
+    <ul>
+      <li><strong>Completed Engagements:</strong> {{ closed_engagements }} out of {{ total_engagements }}</li>
+      <li><strong>In Progress:</strong> {{ in_progress_engagements }} engagements</li>
+      <li><strong>Planned:</strong> {{ planned_engagements }} engagements</li>
+      <li><strong>Overdue:</strong> {{ overdue_engagements }} engagements requiring attention</li>
+    </ul>
+  </div>
+  
+  <div class="field-label">Timeline Performance</div>
+  <div class="field-value">
+    <p>The average engagement duration of <strong>{{ avg_duration_days }} days</strong> provides insights into operational efficiency.</p>
+    
+    {% if overdue_engagements > 0 %}
+    <div class="alert alert-danger">
+      <strong>Timeline Alert:</strong> {{ overdue_engagements }} engagements are currently overdue and require immediate attention.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Risk Level Distribution -->
+{% if total_engagements > 0 %}
+<div class="section-header">Risk Level Distribution</div>
+<div class="content-wrapper">
+  <p>Analysis of engagement distribution across risk levels provides insights into audit focus and resource allocation.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Risk Level</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Priority Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>High Risk</td>
+        <td>{{ high_risk_engagements }}</td>
+        <td>{% widthratio high_risk_engagements total_engagements 100 %}%</td>
+        <td>
+          {% if high_risk_engagements > 0 %}
+            <span class="status-badge status-active">Critical</span>
+          {% else %}
+            <span class="status-badge status-inactive">None</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Medium Risk</td>
+        <td>{{ medium_risk_engagements }}</td>
+        <td>{% widthratio medium_risk_engagements total_engagements 100 %}%</td>
+        <td>
+          {% if medium_risk_engagements > 2 %}
+            <span class="status-badge status-pending">High</span>
+          {% else %}
+            <span class="status-badge status-inactive">Normal</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Low Risk</td>
+        <td>{{ low_risk_engagements }}</td>
+        <td>{% widthratio low_risk_engagements total_engagements 100 %}%</td>
+        <td>
+          <span class="status-badge status-inactive">Standard</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Engagement Type Distribution -->
+{% if engagement_type_distribution %}
+<div class="section-header">Engagement Type Distribution</div>
+<div class="content-wrapper">
+  <p>Analysis of engagement distribution across different audit types provides insights into organizational audit focus areas.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Engagement Type</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Focus Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for type in engagement_type_distribution %}
+      <tr>
+        <td>{{ type.engagement_type|default:"Unspecified" }}</td>
+        <td>{{ type.count }}</td>
+        <td>{% widthratio type.count total_engagements 100 %}%</td>
+        <td>
+          {% if type.count > 2 %}
+            <span class="status-badge status-active">High</span>
+          {% elif type.count > 1 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Auditor Workload Analysis -->
+{% if top_auditors %}
+<div class="section-header">Auditor Workload Analysis</div>
+<div class="content-wrapper">
+  <p>Analysis of engagement distribution across auditors to identify workload patterns and resource allocation needs.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Auditor</th>
+        <th>Engagement Count</th>
+        <th>Percentage</th>
+        <th>Workload Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for auditor in top_auditors %}
+      <tr>
+        <td>{% if auditor.assigned_to__first_name or auditor.assigned_to__last_name %}{{ auditor.assigned_to__first_name|default:"" }} {{ auditor.assigned_to__last_name|default:"" }}{% else %}Unassigned{% endif %}</td>
+        <td>{{ auditor.count }}</td>
+        <td>{% widthratio auditor.count total_engagements 100 %}%</td>
+        <td>
+          {% if auditor.count > 2 %}
+            <span class="status-badge status-active">High</span>
+          {% elif auditor.count > 1 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Workplan Distribution -->
+{% if workplan_distribution %}
+<div class="section-header">Workplan Distribution</div>
+<div class="content-wrapper">
+  <p>Analysis of engagement distribution across annual workplans to assess strategic planning effectiveness.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Workplan</th>
+        <th>Engagement Count</th>
+        <th>Percentage</th>
+        <th>Strategic Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for workplan in workplan_distribution %}
+      <tr>
+        <td>{{ workplan.annual_workplan__name|default:"Unspecified" }}</td>
+        <td>{{ workplan.count }}</td>
+        <td>{% widthratio workplan.count total_engagements 100 %}%</td>
+        <td>
+          {% if workplan.count > 2 %}
+            <span class="status-badge status-active">High</span>
+          {% elif workplan.count > 1 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Strategic Recommendations -->
+<div class="section-header">Strategic Recommendations</div>
+<div class="content-wrapper">
+  <div class="recommendations-grid">
+    <div class="recommendation-card">
+      <h4>Performance Optimization</h4>
+      <ul>
+        <li>Focus on completing overdue engagements</li>
+        <li>Implement timeline tracking systems</li>
+        <li>Optimize resource allocation based on workload</li>
+        <li>Establish performance benchmarks</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Process Improvements</h4>
+      <ul>
+        <li>Streamline engagement planning processes</li>
+        <li>Implement automated progress tracking</li>
+        <li>Develop engagement templates for efficiency</li>
+        <li>Enhance communication protocols</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Resource Management</h4>
+      <ul>
+        <li>Balance auditor workload distribution</li>
+        <li>Develop auditor training programs</li>
+        <li>Implement capacity planning tools</li>
+        <li>Establish backup resource pools</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Management Framework -->
+<div class="section-header">Audit Management Framework Integration</div>
+<div class="content-wrapper">
+  <p>This engagement progress analysis integrates with {{ organization.name }}'s comprehensive audit management framework, 
+  supporting strategic decision-making and operational excellence objectives.</p>
+  
+  <div class="framework-grid">
+    <div class="framework-item">
+      <strong>Governance:</strong> Board-level oversight of audit engagement performance
+    </div>
+    <div class="framework-item">
+      <strong>Strategy:</strong> Engagement-based strategic planning and resource allocation
+    </div>
+    <div class="framework-item">
+      <strong>Operations:</strong> Integrated engagement management in daily operations
+    </div>
+    <div class="framework-item">
+      <strong>Reporting:</strong> Regular engagement reporting and stakeholder communication
+    </div>
+  </div>
+</div>
+
+<!-- Methodology and Assumptions -->
+<div class="section-header">Methodology and Assumptions</div>
+<div class="content-wrapper">
+  <div class="methodology-section">
+    <h4>Performance Metrics Methodology</h4>
+    <ul>
+      <li><strong>Completion Rate:</strong> Percentage of closed engagements vs. total engagements</li>
+      <li><strong>Average Duration:</strong> Mean days from start to completion for closed engagements</li>
+      <li><strong>Overdue Calculation:</strong> Engagements past target end date and still in progress</li>
+      <li><strong>Risk Distribution:</strong> Engagement count by assigned risk level</li>
+    </ul>
+    
+    <h4>Data Quality and Limitations</h4>
+    <ul>
+      <li>Analysis based on current engagement data as of report generation</li>
+      <li>Duration calculations exclude engagements without start/end dates</li>
+      <li>Performance metrics reflect historical completion patterns</li>
+      <li>External factors may impact engagement timelines</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Next Steps and Follow-up -->
+<div class="section-header">Next Steps and Follow-up Actions</div>
+<div class="content-wrapper">
+  <div class="next-steps-grid">
+    <div class="step-item">
+      <strong>Immediate (Next 30 Days):</strong>
+      <ul>
+        <li>Review and prioritize overdue engagements</li>
+        <li>Develop action plans for high-risk engagements</li>
+        <li>Establish weekly progress review meetings</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Short-term (Next 90 Days):</strong>
+      <ul>
+        <li>Implement enhanced tracking systems</li>
+        <li>Conduct auditor workload analysis</li>
+        <li>Update engagement management procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Medium-term (Next 6 Months):</strong>
+      <ul>
+        <li>Evaluate engagement completion effectiveness</li>
+        <li>Update performance benchmarks</li>
+        <li>Enhance reporting capabilities</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Conclusion -->
+<div class="section-header">Conclusion</div>
+<div class="content-wrapper">
+  <p>This comprehensive engagement progress analysis provides {{ organization.name }} with a detailed view of its audit engagement performance, 
+  enabling informed decision-making and strategic audit management. The analysis highlights performance trends 
+  and provides a foundation for continuous improvement efforts.</p>
+  
+  <p><strong>Key Success Factors:</strong></p>
+  <ul>
+    <li>Regular monitoring and updating of engagement status</li>
+    <li>Integration of performance insights into strategic planning</li>
+    <li>Continuous improvement of engagement management processes</li>
+    <li>Stakeholder engagement and communication</li>
+  </ul>
+  
+  <div class="alert alert-success">
+    <strong>Recommendation:</strong> This analysis should be reviewed monthly and updated quarterly to ensure 
+    continued relevance and effectiveness in supporting {{ organization.name }}'s audit engagement objectives.
+  </div>
+</div>
+{% endblock %}

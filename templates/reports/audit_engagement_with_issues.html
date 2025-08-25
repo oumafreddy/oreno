@@ -1,71 +1,493 @@
 {% extends "reports/base_report.html" %}
-{% load crispy_forms_tags %}
+
 {% block content %}
-<!-- PAGE 1: Logo and Title -->
-<div style="text-align:center; margin-top: 80px;">
-  {% if organization.logo and organization.logo.url %}
-    <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" style="max-height:120px; max-width:300px; margin-bottom: 30px;" />
-  {% endif %}
-  <h1 style="margin-top: 30px; color: #2563eb;">Audit Engagement With Issues Report</h1>
+<div class="cover-page">
+  <div class="logo-section">
+    {% if organization.logo and organization.logo.url %}
+      <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+    {% else %}
+      <div class="default-logo-placeholder">
+        <h2>{{ organization.name }}</h2>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="report-title-section">
+    <h1 class="report-title">{{ title }}</h1>
+    <p class="report-subtitle">{{ description }}</p>
+  </div>
+  
+  <div class="report-meta">
+    <p><strong>Generated:</strong> {{ generation_timestamp }}</p>
+    <p><strong>Organization:</strong> {{ organization.name }}</p>
+    <p><strong>Analysis Period:</strong> All Time</p>
+    <p><strong>Total Issues Analyzed:</strong> {{ total_issues }}</p>
+    {% if filters_summary %}
+      <p><strong>Filters Applied:</strong> {{ filters_summary }}</p>
+    {% endif %}
+  </div>
 </div>
-<div style="page-break-after: always;"></div>
-<!-- PAGE 2+: Engagement and Issues Details -->
+
+<div class="page-break"></div>
+
+<!-- Executive Summary -->
+<div class="section-header">Executive Summary</div>
+<div class="content-wrapper">
+  <p>This comprehensive audit engagement analysis provides a detailed overview of {{ organization.name }}'s audit engagement performance, 
+  including issue identification, risk assessment, and remediation tracking. The analysis covers {{ total_issues }} identified issues 
+  with detailed insights into engagement scope, findings, and strategic implications for audit management.</p>
+  
+  <div class="alert alert-info">
+    <strong>Key Findings:</strong>
+    <ul>
+      <li><strong>{{ open_issues }}</strong> open issues requiring immediate attention</li>
+      <li><strong>{{ in_progress_issues }}</strong> issues currently under remediation</li>
+      <li><strong>{{ critical_risk_issues }}</strong> critical risk issues requiring urgent action</li>
+      <li><strong>{{ overdue_issues }}</strong> overdue issues past their target dates</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Engagement Details -->
 {% if engagement %}
-  <h2 class="section-title">Engagement Details</h2>
-  <table class="table table-sm">
-    <tr><th>Status</th><td>{{ engagement.get_project_status_display }}</td></tr>
-    <tr><th>Type</th><td>{{ engagement.engagement_type }}</td></tr>
-    <tr><th>Start Date</th><td>{{ engagement.project_start_date }}</td></tr>
-    <tr><th>End Date</th><td>{{ engagement.target_end_date }}</td></tr>
-    <tr><th>Engagement</th><td class="truncate">{{ engagement.title }}</td></tr>
-    <tr><th>Code</th><td>{{ engagement.code }}</td></tr>
-    <tr><th>Workplan</th><td class="truncate">{{ engagement.audit_workplan.name }} ({{ engagement.audit_workplan.fiscal_year }})</td></tr>
-    <tr><th>Assigned To</th><td>{{ engagement.assigned_to.email }}</td></tr>
+<div class="section-header">Engagement Details</div>
+<div class="content-wrapper">
+  <div class="field-label">Basic Information</div>
+  <table class="report-table">
+    <tr>
+      <th>Status</th>
+      <td>
+        {% if engagement.project_status == 'completed' %}
+          <span class="status-badge status-active">Completed</span>
+        {% elif engagement.project_status == 'in_progress' %}
+          <span class="status-badge status-pending">In Progress</span>
+        {% elif engagement.project_status == 'planned' %}
+          <span class="status-badge status-draft">Planned</span>
+        {% else %}
+          <span class="status-badge status-inactive">{{ engagement.get_project_status_display }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Type</th>
+      <td>{{ engagement.engagement_type|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Start Date</th>
+      <td>{{ engagement.project_start_date|date:"F j, Y" }}</td>
+    </tr>
+    <tr>
+      <th>End Date</th>
+      <td>{{ engagement.target_end_date|date:"F j, Y"|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Engagement</th>
+      <td>{{ engagement.title }}</td>
+    </tr>
+    <tr>
+      <th>Code</th>
+      <td>{{ engagement.code }}</td>
+    </tr>
+    <tr>
+      <th>Workplan</th>
+      <td>{{ engagement.annual_workplan.name|default:"Not specified" }}</td>
+    </tr>
+    <tr>
+      <th>Assigned To</th>
+      <td>{% if engagement.assigned_to.first_name or engagement.assigned_to.last_name %}{{ engagement.assigned_to.first_name|default:"" }} {{ engagement.assigned_to.last_name|default:"" }}{% else %}Not assigned{% endif %}</td>
+    </tr>
   </table>
-  <span class="label">Executive Summary:</span>
-  <div class="truncate">{{ engagement.executive_summary|striptags|truncatechars:300 }}</div>
-  <span class="label">Purpose:</span>
-  <div class="truncate">{{ engagement.purpose|striptags|truncatechars:300 }}</div>
-  <span class="label">Background:</span>
-  <div class="truncate">{{ engagement.background|striptags|truncatechars:300 }}</div>
-  <span class="label">Scope:</span>
-  <div class="truncate">{{ engagement.scope|striptags|truncatechars:300 }}</div>
-  <span class="label">Objectives:</span>
-  <div class="truncate">{{ engagement.project_objectives|striptags|truncatechars:300 }}</div>
-  <span class="label">Conclusion:</span>
-  <div>{{ engagement.get_conclusion_display }}</div>
-  <span class="label">Conclusion Description:</span>
-  <div class="truncate">{{ engagement.conclusion_description|striptags|truncatechars:300 }}</div>
-  <h4 class="section-title">Issues</h4>
+  
+  {% if engagement.executive_summary %}
+  <div class="field-label">Executive Summary</div>
+  <div class="field-value">
+    {{ engagement.executive_summary|striptags|truncatewords:100 }}
+  </div>
+  {% endif %}
+  
+  {% if engagement.purpose %}
+  <div class="field-label">Purpose</div>
+  <div class="field-value">
+    {{ engagement.purpose|striptags|truncatewords:100 }}
+  </div>
+  {% endif %}
+  
+  {% if engagement.background %}
+  <div class="field-label">Background</div>
+  <div class="field-value">
+    {{ engagement.background|striptags|truncatewords:100 }}
+  </div>
+  {% endif %}
+  
+  {% if engagement.scope %}
+  <div class="field-label">Scope</div>
+  <div class="field-value">
+    {{ engagement.scope|striptags|truncatewords:100 }}
+  </div>
+  {% endif %}
+  
+  {% if engagement.project_objectives %}
+  <div class="field-label">Objectives</div>
+  <div class="field-value">
+    {{ engagement.project_objectives|striptags|truncatewords:100 }}
+  </div>
+  {% endif %}
+  
+  {% if engagement.conclusion %}
+  <div class="field-label">Conclusion</div>
+  <div class="field-value">
+    <span class="status-badge status-{{ engagement.conclusion }}">{{ engagement.get_conclusion_display }}</span>
+    {% if engagement.conclusion_description %}
+      <br>{{ engagement.conclusion_description|striptags|truncatewords:50 }}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Issue Statistics Dashboard -->
+<div class="section-header">Issue Statistics Dashboard</div>
+<div class="content-wrapper">
+  {% if total_issues > 0 %}
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ total_issues }}</div>
+      <div class="stat-label">TOTAL ISSUES</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ open_issues }}</div>
+      <div class="stat-label">OPEN ISSUES</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ in_progress_issues }}</div>
+      <div class="stat-label">IN PROGRESS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ closed_issues }}</div>
+      <div class="stat-label">CLOSED ISSUES</div>
+    </div>
+  </div>
+  
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">{{ critical_risk_issues }}</div>
+      <div class="stat-label">CRITICAL RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ high_risk_issues }}</div>
+      <div class="stat-label">HIGH RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ medium_risk_issues }}</div>
+      <div class="stat-label">MEDIUM RISK</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">{{ low_risk_issues }}</div>
+      <div class="stat-label">LOW RISK</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    <strong>No Issues Found:</strong> No audit issues were identified in this engagement.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Overdue Analysis -->
+{% if overdue_issues > 0 %}
+<div class="section-header">Overdue Issues Analysis</div>
+<div class="content-wrapper">
+  <div class="alert alert-danger">
+    <strong>Critical Alert:</strong> {{ overdue_issues }} issues are currently overdue and require immediate attention.
+  </div>
+  
+  <div class="field-label">Overdue Issues Summary</div>
+  <div class="field-value">
+    <ul>
+      <li><strong>Total Overdue Issues:</strong> {{ overdue_issues }}</li>
+      <li><strong>Financial Impact:</strong> ${{ total_financial_impact|floatformat:2|default:"0.00" }}</li>
+      <li><strong>Immediate Action Required:</strong> Review and escalate overdue issues</li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Issue Type Distribution -->
+{% if issue_type_distribution %}
+<div class="section-header">Issue Type Distribution</div>
+<div class="content-wrapper">
+  <p>Analysis of issue distribution across different categories provides insights into engagement focus areas and risk exposure patterns.</p>
+  
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Issue Type</th>
+        <th>Count</th>
+        <th>Percentage</th>
+        <th>Priority Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for issue_type, count in issue_type_distribution.items %}
+      <tr>
+        <td>{{ issue_type|title|default:"Uncategorized" }}</td>
+        <td>{{ count }}</td>
+        <td>{% widthratio count total_issues 100 %}%</td>
+        <td>
+          {% if count > 2 %}
+            <span class="status-badge status-active">High</span>
+          {% elif count > 1 %}
+            <span class="status-badge status-pending">Medium</span>
+          {% else %}
+            <span class="status-badge status-inactive">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Detailed Issues Listing -->
+<div class="section-header">Detailed Issues Listing</div>
+<div class="content-wrapper">
   {% if issues and issues|length > 0 %}
     {% for issue in issues %}
-      <div class="issue-section mb-4">
-        <table class="table table-sm">
-          <tr><th>Status</th><td>{{ issue.get_issue_status_display }}</td></tr>
-          <tr><th>Risk Level</th><td>{{ issue.get_risk_level_display }}</td></tr>
-          <tr><th>Remediation Status</th><td>{{ issue.get_remediation_status_display }}</td></tr>
-          <tr><th>Remediation Deadline</th><td>{{ issue.target_date|default:'-' }}</td></tr>
-          <tr><th>Actual Remediation Date</th><td>{{ issue.actual_remediation_date|default:'-' }}</td></tr>
-          <tr><th>Code</th><td>{{ issue.code }}</td></tr>
-          <tr><th>Title</th><td class="truncate">{{ issue.issue_title }}</td></tr>
-          <tr><th>Owner</th><td class="truncate">{{ issue.issue_owner.email|default:issue.issue_owner_email|default:'Unassigned' }}</td></tr>
-        </table>
-        <span class="issue-label">Description:</span>
-        <div class="truncate">{{ issue.issue_description|striptags|truncatechars:300 }}</div>
-        <span class="issue-label">Root Cause:</span>
-        <div class="truncate">{{ issue.root_cause|striptags|truncatechars:200 }}</div>
-        <span class="issue-label">Risks:</span>
-        <div class="truncate">{{ issue.risks|striptags|truncatechars:200 }}</div>
-        <span class="issue-label">Recommendation:</span>
-        <div class="truncate">{{ issue.recommendation|striptags|truncatechars:200 }}</div>
-        <span class="issue-label">Management Action Plan:</span>
-        <div class="truncate">{{ issue.management_action_plan|striptags|truncatechars:200 }}</div>
+    <div class="issue-section mb-4">
+      <div class="field-label">Issue: {{ issue.code }} - {{ issue.issue_title }}</div>
+      
+      <table class="report-table">
+        <tr>
+          <th>Status</th>
+          <td>
+            {% if issue.issue_status == 'open' %}
+              <span class="status-badge status-active">Open</span>
+            {% elif issue.issue_status == 'in_progress' %}
+              <span class="status-badge status-pending">In Progress</span>
+            {% elif issue.issue_status == 'closed' %}
+              <span class="status-badge status-inactive">Closed</span>
+            {% else %}
+              <span class="status-badge status-draft">{{ issue.get_issue_status_display }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>Risk Level</th>
+          <td>
+            {% if issue.risk_level == 'critical' %}
+              <span class="status-badge status-critical">Critical</span>
+            {% elif issue.risk_level == 'high' %}
+              <span class="status-badge status-active">High</span>
+            {% elif issue.risk_level == 'medium' %}
+              <span class="status-badge status-pending">Medium</span>
+            {% else %}
+              <span class="status-badge status-inactive">Low</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>Remediation Status</th>
+          <td>{{ issue.get_remediation_status_display }}</td>
+        </tr>
+        <tr>
+          <th>Remediation Deadline</th>
+          <td>{{ issue.target_date|date:"F j, Y"|default:"Not Set" }}</td>
+        </tr>
+        <tr>
+          <th>Actual Remediation Date</th>
+          <td>{{ issue.actual_remediation_date|date:"F j, Y"|default:"Not Completed" }}</td>
+        </tr>
+        <tr>
+          <th>Owner</th>
+          <td>{% if issue.issue_owner.first_name or issue.issue_owner.last_name %}{{ issue.issue_owner.first_name|default:"" }} {{ issue.issue_owner.last_name|default:"" }}{% else %}{{ issue.issue_owner_email|default:"Unassigned" }}{% endif %}</td>
+        </tr>
+        <tr>
+          <th>Issue Type</th>
+          <td>{{ issue.get_issue_type_display }}</td>
+        </tr>
+        {% if issue.financial_impact %}
+        <tr>
+          <th>Financial Impact</th>
+          <td>${{ issue.financial_impact|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+      </table>
+      
+      {% if issue.issue_description %}
+      <div class="field-label">Description</div>
+      <div class="field-value">
+        {{ issue.issue_description|striptags|truncatewords:100 }}
       </div>
+      {% endif %}
+      
+      {% if issue.root_cause %}
+      <div class="field-label">Root Cause</div>
+      <div class="field-value">
+        {{ issue.root_cause|striptags|truncatewords:100 }}
+      </div>
+      {% endif %}
+      
+      {% if issue.risks %}
+      <div class="field-label">Risks</div>
+      <div class="field-value">
+        {{ issue.risks|striptags|truncatewords:100 }}
+      </div>
+      {% endif %}
+      
+      {% if issue.recommendation %}
+      <div class="field-label">Recommendation</div>
+      <div class="field-value">
+        {{ issue.recommendation|striptags|truncatewords:100 }}
+      </div>
+      {% endif %}
+      
+      {% if issue.management_action_plan %}
+      <div class="field-label">Management Action Plan</div>
+      <div class="field-value">
+        {{ issue.management_action_plan|striptags|truncatewords:100 }}
+      </div>
+      {% endif %}
+    </div>
     {% endfor %}
   {% else %}
-    <p>No issues linked to this engagement.</p>
+  <div class="alert alert-info">
+    <strong>No Issues Found:</strong> No audit issues were identified in this engagement.
+  </div>
   {% endif %}
-{% else %}
-  <div class="alert alert-warning">No engagement found for the selected name.</div>
-{% endif %}
+</div>
+
+<!-- Strategic Recommendations -->
+<div class="section-header">Strategic Recommendations</div>
+<div class="content-wrapper">
+  <div class="recommendations-grid">
+    <div class="recommendation-card">
+      <h4>Immediate Actions (Critical Issues)</h4>
+      <ul>
+        <li>Prioritize remediation of critical and high-risk issues</li>
+        <li>Implement enhanced monitoring for overdue issues</li>
+        <li>Establish clear escalation procedures</li>
+        <li>Allocate additional resources to high-priority items</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Process Improvements</h4>
+      <ul>
+        <li>Strengthen issue tracking and follow-up procedures</li>
+        <li>Implement automated reminder systems</li>
+        <li>Develop issue prevention strategies</li>
+        <li>Enhance communication protocols</li>
+      </ul>
+    </div>
+    
+    <div class="recommendation-card">
+      <h4>Long-term Optimization</h4>
+      <ul>
+        <li>Establish continuous monitoring systems</li>
+        <li>Develop predictive analytics for issue management</li>
+        <li>Implement enterprise-wide issue culture initiatives</li>
+        <li>Optimize resource allocation based on issue patterns</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Management Framework -->
+<div class="section-header">Audit Management Framework Integration</div>
+<div class="content-wrapper">
+  <p>This engagement analysis integrates with {{ organization.name }}'s comprehensive audit management framework, 
+  supporting strategic decision-making and operational excellence objectives.</p>
+  
+  <div class="framework-grid">
+    <div class="framework-item">
+      <strong>Governance:</strong> Board-level oversight of critical audit findings
+    </div>
+    <div class="framework-item">
+      <strong>Strategy:</strong> Issue-based strategic planning and resource allocation
+    </div>
+    <div class="framework-item">
+      <strong>Operations:</strong> Integrated issue management in daily operations
+    </div>
+    <div class="framework-item">
+      <strong>Reporting:</strong> Regular issue reporting and stakeholder communication
+    </div>
+  </div>
+</div>
+
+<!-- Methodology and Assumptions -->
+<div class="section-header">Methodology and Assumptions</div>
+<div class="content-wrapper">
+  <div class="methodology-section">
+    <h4>Issue Assessment Methodology</h4>
+    <ul>
+      <li><strong>Risk Levels:</strong> Critical, High, Medium, Low based on impact and likelihood</li>
+      <li><strong>Status Tracking:</strong> Open, In Progress, Closed, and other workflow states</li>
+      <li><strong>Issue Classification:</strong> Based on GIAS 2024 standards and organizational criteria</li>
+      <li><strong>Financial Impact:</strong> Estimated monetary impact of unresolved issues</li>
+    </ul>
+    
+    <h4>Data Quality and Limitations</h4>
+    <ul>
+      <li>Analysis based on current engagement data as of report generation</li>
+      <li>Issue status reflects current workflow state</li>
+      <li>Dynamic nature of issues requires regular updates and monitoring</li>
+      <li>External factors may impact issue resolution timelines</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Next Steps and Follow-up -->
+<div class="section-header">Next Steps and Follow-up Actions</div>
+<div class="content-wrapper">
+  <div class="next-steps-grid">
+    <div class="step-item">
+      <strong>Immediate (Next 7 Days):</strong>
+      <ul>
+        <li>Review and validate all critical and high-risk issues</li>
+        <li>Develop action plans for overdue issues</li>
+        <li>Establish daily follow-up procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Short-term (Next 30 Days):</strong>
+      <ul>
+        <li>Implement enhanced tracking systems</li>
+        <li>Conduct issue owner training</li>
+        <li>Update issue management procedures</li>
+      </ul>
+    </div>
+    
+    <div class="step-item">
+      <strong>Medium-term (Next 90 Days):</strong>
+      <ul>
+        <li>Evaluate issue resolution effectiveness</li>
+        <li>Update issue assessment criteria</li>
+        <li>Enhance reporting capabilities</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Conclusion -->
+<div class="section-header">Conclusion</div>
+<div class="content-wrapper">
+  <p>This comprehensive engagement analysis provides {{ organization.name }} with a detailed view of its audit engagement performance, 
+  enabling informed decision-making and strategic issue management. The analysis highlights critical findings 
+  and provides a foundation for targeted remediation efforts.</p>
+  
+  <p><strong>Key Success Factors:</strong></p>
+  <ul>
+    <li>Regular monitoring and updating of issue status</li>
+    <li>Integration of issue insights into strategic planning</li>
+    <li>Continuous improvement of issue management processes</li>
+    <li>Stakeholder engagement and communication</li>
+  </ul>
+  
+  <div class="alert alert-success">
+    <strong>Recommendation:</strong> This analysis should be reviewed weekly and updated monthly to ensure 
+    continued relevance and effectiveness in supporting {{ organization.name }}'s audit engagement objectives.
+  </div>
+</div>
 {% endblock %} 
