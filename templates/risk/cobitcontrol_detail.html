@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ object.control_name }} - COBIT Control{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:cobitcontrol_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to COBIT Controls
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-0">{{ object.control_name }}</h2>
+            <p class="text-muted mb-0">Control Code: {{ object.control_code }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'risk:cobitcontrol_update' object.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'risk:cobitcontrol_delete' object.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Control Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Control Code:</dt>
+                                <dd class="col-sm-8">{{ object.control_code }}</dd>
+                                
+                                <dt class="col-sm-4">Control Name:</dt>
+                                <dd class="col-sm-8">{{ object.control_name }}</dd>
+                                
+                                <dt class="col-sm-4">Process:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'risk:cobitprocess_detail' object.process.pk %}">
+                                        {{ object.process.process_name }}
+                                    </a>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Control Type:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ object.get_control_type_display }}</span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Implementation Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.implementation_status == 'fully_implemented' %}success{% elif object.implementation_status == 'partially_implemented' %}warning{% else %}danger{% endif %}">
+                                        {{ object.get_implementation_status_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Effectiveness Rating:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.effectiveness_rating == 'effective' %}success{% elif object.effectiveness_rating == 'partially_effective' %}warning{% elif object.effectiveness_rating == 'ineffective' %}danger{% else %}secondary{% endif %}">
+                                        {{ object.get_effectiveness_rating_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Control Owner:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.control_owner %}
+                                        {{ object.control_owner.get_full_name|default:object.control_owner.username }}
+                                    {% else %}
+                                        <span class="text-muted">Not assigned</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if object.description %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assessment Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Assessment Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Last Assessment:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.last_assessment_date %}
+                                        {{ object.last_assessment_date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Not assessed</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Next Assessment:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.next_assessment_date %}
+                                        {{ object.next_assessment_date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Not scheduled</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Status Overview -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Status Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Implementation Status</label>
+                        <div class="progress mb-2">
+                            {% if object.implementation_status == 'fully_implemented' %}
+                                <div class="progress-bar bg-success" style="width: 100%">100%</div>
+                            {% elif object.implementation_status == 'partially_implemented' %}
+                                <div class="progress-bar bg-warning" style="width: 50%">50%</div>
+                            {% else %}
+                                <div class="progress-bar bg-danger" style="width: 0%">0%</div>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ object.get_implementation_status_display }}</small>
+                    </div>
+                    
+                    <div class="alert alert-{% if object.effectiveness_rating == 'effective' %}success{% elif object.effectiveness_rating == 'partially_effective' %}warning{% elif object.effectiveness_rating == 'ineffective' %}danger{% else %}info{% endif %}">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Effectiveness:</strong> {{ object.get_effectiveness_rating_display }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'risk:cobitcontrol_update' object.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Control
+                        </a>
+                        <a href="{% url 'risk:cobitprocess_detail' object.process.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left me-2"></i>View Process
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Process Information</h5>
+                </div>
+                                 <div class="card-body">
+                     <h6>{{ object.process.process_code }} - {{ object.process.process_name }}</h6>
+                     {% if object.process.description %}
+                     <div class="text-muted small">
+                         {{ object.process.description|striptags|truncatewords:15 }}
+                     </div>
+                     {% endif %}
+                     <a href="{% url 'risk:cobitprocess_detail' object.process.pk %}" class="btn btn-sm btn-outline-primary">
+                         View Process Details
+                     </a>
+                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

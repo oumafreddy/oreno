@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ object.subcategory.subcategory_name }} - Implementation{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:nistimplementation_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to NIST Implementations
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-0">Implementation Assessment</h2>
+            <p class="text-muted mb-0">{{ object.subcategory.subcategory_name }} ({{ object.subcategory.subcategory_code }})</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'risk:nistimplementation_update' object.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'risk:nistimplementation_delete' object.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Implementation Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Implementation Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Subcategory:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'risk:nistsubcategory_detail' object.subcategory.pk %}">
+                                        {{ object.subcategory.subcategory_name }}
+                                    </a>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Current Maturity:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.current_maturity >= 3 %}success{% elif object.current_maturity >= 2 %}warning{% else %}danger{% endif %}">
+                                        Level {{ object.current_maturity }}: {{ object.get_current_maturity_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Target Maturity:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-primary">
+                                        Level {{ object.target_maturity }}: {{ object.get_target_maturity_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Implementation Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.implementation_status == 'fully_implemented' %}success{% elif object.implementation_status == 'partially_implemented' %}warning{% else %}danger{% endif %}">
+                                        {{ object.get_implementation_status_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Assessment Date:</dt>
+                                <dd class="col-sm-8">{{ object.assessment_date|date:"M d, Y" }}</dd>
+                                
+                                <dt class="col-sm-4">Next Assessment:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.next_assessment_date %}
+                                        {{ object.next_assessment_date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Not scheduled</span>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Assessed By:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.assessed_by %}
+                                        {{ object.assessed_by.get_full_name|default:object.assessed_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Notes -->
+            {% if object.assessment_notes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Assessment Notes</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.assessment_notes|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Implementation Plan -->
+            {% if object.implementation_plan %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Implementation Plan</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.implementation_plan|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Maturity Progress -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Maturity Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Maturity</label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-{% if object.current_maturity >= 3 %}success{% elif object.current_maturity >= 2 %}warning{% else %}danger{% endif %}" 
+                                                              style="width: {% widthratio object.current_maturity 4 100 %}%">
+                             {% widthratio object.current_maturity 4 100 %}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Level {{ object.current_maturity }}: {{ object.get_current_maturity_display }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Target Maturity</label>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-primary" 
+                                                              style="width: {% widthratio object.target_maturity 4 100 %}%">
+                             {% widthratio object.target_maturity 4 100 %}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Level {{ object.target_maturity }}: {{ object.get_target_maturity_display }}</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Gap:</strong> {{ object.target_maturity }} - {{ object.current_maturity }} levels to target
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'risk:nistimplementation_update' object.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Assessment
+                        </a>
+                        <a href="{% url 'risk:nistsubcategory_detail' object.subcategory.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left me-2"></i>View Subcategory
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subcategory Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Subcategory Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ object.subcategory.subcategory_code }} - {{ object.subcategory.subcategory_name }}</h6>
+                    {% if object.subcategory.description %}
+                    <div class="text-muted small">
+                        {{ object.subcategory.description|striptags|truncatewords:15 }}
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'risk:nistsubcategory_detail' object.subcategory.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Subcategory Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

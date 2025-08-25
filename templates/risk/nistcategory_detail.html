@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ object.category_name }} - NIST Category{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:nistcategory_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to NIST Categories
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-0">{{ object.category_name }}</h2>
+            <p class="text-muted mb-0">Category Code: {{ object.category_code }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'risk:nistcategory_update' object.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'risk:nistcategory_delete' object.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Category Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Category Code:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-primary">{{ object.category_code }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Category Name:</dt>
+                                <dd class="col-sm-8">{{ object.category_name }}</dd>
+                                
+                                <dt class="col-sm-4">Function:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'risk:nistfunction_detail' object.function.pk %}">
+                                        {{ object.function.function_code }} - {{ object.function.function_name }}
+                                    </a>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Created:</dt>
+                                <dd class="col-sm-8">{{ object.created_at|date:"M d, Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Updated:</dt>
+                                <dd class="col-sm-8">{{ object.updated_at|date:"M d, Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Created By:</dt>
+                                <dd class="col-sm-8">{{ object.created_by.get_full_name|default:object.created_by.username }}</dd>
+                                
+                                <dt class="col-sm-4">Subcategories:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-success">{{ object.nistsubcategory_set.count }}</span>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if object.description %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Outcomes -->
+            {% if object.outcomes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-target me-2"></i>Outcomes</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.outcomes|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'risk:nistsubcategory_create' %}?category={{ object.pk }}" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add Subcategory
+                        </a>
+                        <a href="{% url 'risk:nistcategory_update' object.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil me-2"></i>Edit Category
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Related Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'risk:nistsubcategory_list' %}?category={{ object.pk }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Subcategories
+                            <span class="badge bg-primary rounded-pill">{{ object.nistsubcategory_set.count }}</span>
+                        </a>
+                        <a href="{% url 'risk:nistimplementation_list' %}?category={{ object.pk }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Implementations
+                            <span class="badge bg-success rounded-pill">{{ object.nistimplementation_set.count }}</span>
+                        </a>
+                        <a href="{% url 'risk:nistthreat_list' %}?category={{ object.pk }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Threats
+                            <span class="badge bg-warning rounded-pill">{{ object.nistthreat_set.count }}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Function Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Function Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ object.function.function_code }} - {{ object.function.function_name }}</h6>
+                    {% if object.function.description %}
+                    <div class="text-muted small">
+                        {{ object.function.description|striptags|truncatewords:15 }}
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'risk:nistfunction_detail' object.function.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Function Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

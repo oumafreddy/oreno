@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ object.title }} - NIST Incident{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:nistincident_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to NIST Incidents
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-0">{{ object.title }}</h2>
+            <p class="text-muted mb-0">Incident ID: {{ object.incident_id }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'risk:nistincident_update' object.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'risk:nistincident_delete' object.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incident Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Incident Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Incident ID:</dt>
+                                <dd class="col-sm-8">{{ object.incident_id }}</dd>
+                                
+                                <dt class="col-sm-4">Title:</dt>
+                                <dd class="col-sm-8">{{ object.title }}</dd>
+                                
+                                <dt class="col-sm-4">Incident Type:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ object.get_incident_type_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Severity:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.severity == 'critical' %}danger{% elif object.severity == 'high' %}warning{% elif object.severity == 'medium' %}info{% else %}success{% endif %}">
+                                        {{ object.get_severity_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.status == 'closed' %}success{% elif object.status == 'recovered' %}info{% elif object.status == 'contained' %}warning{% else %}danger{% endif %}">
+                                        {{ object.get_status_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Detected Date:</dt>
+                                <dd class="col-sm-8">{{ object.detected_date|date:"M d, Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Resolved Date:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.resolved_date %}
+                                        {{ object.resolved_date|date:"M d, Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Not resolved</span>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Reported By:</dt>
+                                <dd class="col-sm-8">
+                                    {% if object.reported_by %}
+                                        {{ object.reported_by.get_full_name|default:object.reported_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if object.description %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Affected Systems -->
+            {% if object.affected_systems %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-cpu me-2"></i>Affected Systems</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.affected_systems|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Containment Actions -->
+            {% if object.containment_actions %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Containment Actions</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.containment_actions|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Eradication Actions -->
+            {% if object.eradication_actions %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-trash me-2"></i>Eradication Actions</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.eradication_actions|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recovery Actions -->
+            {% if object.recovery_actions %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-arrow-clockwise me-2"></i>Recovery Actions</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.recovery_actions|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lessons Learned -->
+            {% if object.lessons_learned %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Lessons Learned</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.lessons_learned|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Status Overview -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Status Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Incident Status</label>
+                        <div class="progress mb-2">
+                            {% if object.status == 'closed' %}
+                                <div class="progress-bar bg-success" style="width: 100%">100%</div>
+                            {% elif object.status == 'recovered' %}
+                                <div class="progress-bar bg-info" style="width: 80%">80%</div>
+                            {% elif object.status == 'contained' %}
+                                <div class="progress-bar bg-warning" style="width: 60%">60%</div>
+                            {% else %}
+                                <div class="progress-bar bg-danger" style="width: 20%">20%</div>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ object.get_status_display }}</small>
+                    </div>
+                    
+                    <div class="alert alert-{% if object.severity == 'critical' %}danger{% elif object.severity == 'high' %}warning{% elif object.severity == 'medium' %}info{% else %}success{% endif %}">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Severity:</strong> {{ object.get_severity_display }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'risk:nistincident_update' object.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Incident
+                        </a>
+                        <a href="{% url 'risk:nistthreat_create' %}?incident={{ object.pk }}" class="btn btn-outline-danger">
+                            <i class="bi bi-plus-circle me-2"></i>Create Related Threat
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Incident Team -->
+            {% if object.incident_team.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Incident Team</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for member in object.incident_team.all %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ member.get_full_name|default:member.username }}
+                            <span class="badge bg-primary rounded-pill">Team Member</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Detected</h6>
+                                <small class="text-muted">{{ object.detected_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% if object.resolved_date %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Resolved</h6>
+                                <small class="text-muted">{{ object.resolved_date|date:"M d, Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 10px;
+}
+</style>
+{% endblock %}

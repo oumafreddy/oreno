@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ object.threat_name }} - NIST Threat{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{% url 'risk:nistthreat_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to NIST Threats
+            </a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-0">{{ object.threat_name }}</h2>
+            <p class="text-muted mb-0">Threat Type: {{ object.get_threat_type_display }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="{% url 'risk:nistthreat_update' object.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'risk:nistthreat_delete' object.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Threat Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Threat Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Threat Name:</dt>
+                                <dd class="col-sm-8">{{ object.threat_name }}</dd>
+                                
+                                <dt class="col-sm-4">Threat Type:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ object.get_threat_type_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Severity:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.severity == 'critical' %}danger{% elif object.severity == 'high' %}warning{% elif object.severity == 'medium' %}info{% else %}success{% endif %}">
+                                        {{ object.get_severity_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Likelihood:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if object.likelihood == 'certain' %}danger{% elif object.likelihood == 'likely' %}warning{% elif object.likelihood == 'possible' %}info{% else %}success{% endif %}">
+                                        {{ object.get_likelihood_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Last Updated:</dt>
+                                <dd class="col-sm-8">{{ object.last_updated|date:"M d, Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Created:</dt>
+                                <dd class="col-sm-8">{{ object.created_at|date:"M d, Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Created By:</dt>
+                                <dd class="col-sm-8">{{ object.created_by.get_full_name|default:object.created_by.username }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if object.description %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.description|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Impact Analysis -->
+            {% if object.impact_analysis %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Impact Analysis</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.impact_analysis|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Affected Assets -->
+            {% if object.affected_assets %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-cpu me-2"></i>Affected Assets</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.affected_assets|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Mitigation Strategies -->
+            {% if object.mitigation_strategies %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Mitigation Strategies</h5>
+                </div>
+                <div class="card-body">
+                    {{ object.mitigation_strategies|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Risk Assessment -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Risk Assessment</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Severity Level</label>
+                        <div class="progress mb-2">
+                            {% if object.severity == 'critical' %}
+                                <div class="progress-bar bg-danger" style="width: 100%">100%</div>
+                            {% elif object.severity == 'high' %}
+                                <div class="progress-bar bg-warning" style="width: 75%">75%</div>
+                            {% elif object.severity == 'medium' %}
+                                <div class="progress-bar bg-info" style="width: 50%">50%</div>
+                            {% else %}
+                                <div class="progress-bar bg-success" style="width: 25%">25%</div>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ object.get_severity_display }}</small>
+                    </div>
+                    
+                    <div class="alert alert-{% if object.likelihood == 'certain' %}danger{% elif object.likelihood == 'likely' %}warning{% elif object.likelihood == 'possible' %}info{% else %}success{% endif %}">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Likelihood:</strong> {{ object.get_likelihood_display }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'risk:nistthreat_update' object.pk %}" class="btn btn-outline-warning">
+                            <i class="bi bi-pencil me-2"></i>Update Threat
+                        </a>
+                        <a href="{% url 'risk:nistincident_create' %}?threat={{ object.pk }}" class="btn btn-outline-danger">
+                            <i class="bi bi-plus-circle me-2"></i>Create Related Incident
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Subcategories -->
+            {% if object.related_subcategories.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Related Subcategories</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for subcategory in object.related_subcategories.all %}
+                        <a href="{% url 'risk:nistsubcategory_detail' subcategory.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ subcategory.subcategory_code }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ subcategory.subcategory_name }}</small>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ subcategory.category.function.function_code }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- NIST CSF Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>NIST CSF Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>NIST Cybersecurity Framework</h6>
+                    <p class="text-muted small">The NIST Cybersecurity Framework provides guidance for identifying, protecting, detecting, responding to, and recovering from cybersecurity threats.</p>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Threat Type:</strong> {{ object.get_threat_type_display }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
