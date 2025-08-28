@@ -46,6 +46,7 @@
             <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-success me-2">KRIs</a>
             <a href="{% url 'risk:riskassessment_list' %}" class="btn btn-outline-warning me-2">Assessments</a>
             <a href="{% url 'risk:riskregister_list' %}" class="btn btn-outline-info me-2">Registers</a>
+            <a href="{% url 'risk:objective_list' %}" class="btn btn-outline-secondary me-2">Objectives</a>
             <a href="{% url 'risk:riskmatrixconfig_list' %}" class="btn btn-outline-dark">Matrix Config</a>
             
             <!-- COBIT Navigation -->
@@ -424,6 +425,18 @@
                         {% endfor %}
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Objective Reports Links -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Objective Reports</strong></div>
+                <div class="card-body">
+                    <a href="{% url 'reports:objective_list_pdf' %}" class="btn btn-outline-primary btn-sm me-2">Download Objective List</a>
+                    <a href="{% url 'reports:objective_detailed_pdf' %}" class="btn btn-outline-secondary btn-sm">Download Objective Detailed</a>
                 </div>
             </div>
         </div>

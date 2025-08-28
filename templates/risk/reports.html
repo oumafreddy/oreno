@@ -380,6 +380,76 @@
             </div>
         </div>
 
+        <!-- Objective List Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bullseye me-2"></i>Objective List</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Summary of objectives with risk counts and statuses.</p>
+                    <form method="get" action="{% url 'reports:objective_list_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for s in objective_statuses %}
+                                    <option value="{{ s }}">{{ s|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="q" class="form-control" placeholder="Name/Code/Origin">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Objective Detailed Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-bullseye me-2"></i>Objective Detailed</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">Objective details with linked risks and action plans.</p>
+                    <form method="get" action="{% url 'reports:objective_detailed_pdf' %}" target="_blank">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                {% for s in objective_statuses %}
+                                    <option value="{{ s }}">{{ s|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="q" class="form-control" placeholder="Name/Code/Origin">
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-outline-info">
+                                <i class="bi bi-file-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="submit" name="format" value="docx" class="btn btn-outline-success">
+                                <i class="bi bi-file-word me-1"></i>Download Word
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- COBIT Domain Summary Report -->
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">

@@ -51,6 +51,13 @@ urlpatterns = [
     path('assessments/<int:pk>/update/', views.RiskAssessmentUpdateView.as_view(), name='riskassessment_update'),
     path('assessments/<int:pk>/delete/', views.RiskAssessmentDeleteView.as_view(), name='riskassessment_delete'),
 
+    # Objectives
+    path('objectives/', views.ObjectiveListView.as_view(), name='objective_list'),
+    path('objectives/create/', views.ObjectiveCreateView.as_view(), name='objective_create'),
+    path('objectives/<int:pk>/', views.ObjectiveDetailView.as_view(), name='objective_detail'),
+    path('objectives/<int:pk>/update/', views.ObjectiveUpdateView.as_view(), name='objective_update'),
+    path('objectives/<int:pk>/delete/', views.ObjectiveDeleteView.as_view(), name='objective_delete'),
+
     # COBIT URLs
     path('cobit/domains/', views.COBITDomainListView.as_view(), name='cobitdomain_list'),
     path('cobit/domains/create/', views.COBITDomainCreateView.as_view(), name='cobitdomain_create'),

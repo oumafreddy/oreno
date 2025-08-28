@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-3">
+  <h2>Delete Objective</h2>
+  <p>Are you sure you want to delete <strong>{{ object }}</strong>?</p>
+  <form method="post">
+    {% csrf_token %}
+    <a class="btn btn-secondary" href="{% url 'risk:objective_list' %}">Cancel</a>
+    <button class="btn btn-danger" type="submit">Delete</button>
+  </form>
+</div>
+{% endblock %}
+

@@ -11,6 +11,7 @@ from django_scopes import scope
 from core.mixins.permissions import OrganizationPermissionMixin
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Count, Q, Max, Avg
+from django.db import models
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -28,12 +29,14 @@ from .models import (
     # COBIT models
     COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
     # NIST models
-    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident,
+    Objective
 )
 from .serializers import (
     RiskSerializer, SummaryCardSerializer, TopRiskSerializer, KRIStatusSerializer,
     RecentActivitySerializer, AssessmentTimelinePointSerializer,
     RiskCategoryDistributionSerializer, RiskStatusDistributionSerializer, ControlEffectivenessSerializer, KRIStatusCountSerializer, AssessmentTypeCountSerializer, RiskAssessmentSerializer,
+    ObjectiveSerializer,
     # COBIT serializers
     COBITDomainSerializer, COBITProcessSerializer, COBITCapabilitySerializer, COBITControlSerializer, COBITGovernanceSerializer,
     # NIST serializers
@@ -41,6 +44,7 @@ from .serializers import (
 )
 from .forms import (
     RiskRegisterForm, RiskMatrixConfigForm, RiskForm, ControlForm, KRIForm, RiskAssessmentForm, RiskRegisterFilterForm, RiskMatrixConfigFilterForm,
+    ObjectiveForm,
     # COBIT forms
     COBITDomainForm, COBITProcessForm, COBITCapabilityForm, COBITControlForm, COBITGovernanceForm,
     # NIST forms
@@ -674,6 +678,67 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         ]
         return context
 
+# --- Objective Views ---
+class ObjectiveListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = Objective
+    template_name = 'risk/objective_list.html'
+    context_object_name = 'objectives'
+    paginate_by = 20
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(organization=self.request.organization)
+        q = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+        if q:
+            qs = qs.filter(models.Q(name__icontains=q) | models.Q(code__icontains=q) | models.Q(origin_source__icontains=q))
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+class ObjectiveCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = Objective
+    form_class = ObjectiveForm
+    template_name = 'risk/objective_form.html'
+    success_url = reverse_lazy('risk:objective_list')
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+class ObjectiveUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = Objective
+    form_class = ObjectiveForm
+    template_name = 'risk/objective_form.html'
+    success_url = reverse_lazy('risk:objective_list')
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization'] = self.request.organization
+        return kwargs
+
+class ObjectiveDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = Objective
+    template_name = 'risk/objective_detail.html'
+    context_object_name = 'objective'
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(organization=self.request.organization)
+
+class ObjectiveDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Objective
+    template_name = 'risk/objective_confirm_delete.html'
+    success_url = reverse_lazy('risk:objective_list')
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
 # ─── REPORTS VIEW ────────────────────────────────────────────────────────────
 class RiskReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView):
     template_name = 'risk/reports.html'
@@ -738,12 +803,17 @@ class RiskReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateV
         
         nist_incident_statuses = NISTIncident.objects.filter(organization=organization).values_list('status', flat=True).distinct()
         context['nist_incident_statuses'] = sorted(list(nist_incident_statuses))
+
+        # Objective filters
+        objective_statuses = Objective.objects.filter(organization=organization).values_list('status', flat=True).distinct()
+        context['objective_statuses'] = sorted(list(objective_statuses))
         
         # Add the specific data needed for the template dropdowns
         context['cobit_domains'] = COBITDomain.objects.filter(organization=organization)
         context['cobit_processes'] = COBITProcess.objects.filter(organization=organization)
         context['nist_functions'] = NISTFunction.objects.filter(organization=organization)
         context['nist_subcategories'] = NISTSubcategory.objects.filter(organization=organization)
+        context['objectives'] = Objective.objects.filter(organization=organization)
         
         return context
 

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-3">
+  <h2>Objectives</h2>
+  <div class="mb-2">
+    <a class="btn btn-outline-secondary btn-sm me-2" href="{% url 'risk:dashboard' %}">← Back to Dashboard</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'risk:objective_create' %}">New Objective</a>
+  </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto"><input type="text" name="q" class="form-control form-control-sm" placeholder="Search name/code/origin" value="{{ request.GET.q }}"></div>
+    <div class="col-auto">
+      <select name="status" class="form-select form-select-sm">
+        <option value="">All Statuses</option>
+        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+        <option value="achieved" {% if request.GET.status == 'achieved' %}selected{% endif %}>Achieved</option>
+        <option value="retired" {% if request.GET.status == 'retired' %}selected{% endif %}>Retired</option>
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" type="submit">Filter</button></div>
+  </form>
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th>Status</th><th>Perpetual</th><th>Start</th><th>End</th><th></th></tr></thead>
+    <tbody>
+      {% for o in objectives %}
+      <tr>
+        <td>{{ o.code }}</td>
+        <td><a href="{% url 'risk:objective_detail' o.pk %}">{{ o.name }}</a></td>
+        <td>{{ o.get_status_display }}</td>
+        <td>{{ o.is_perpetual|yesno:"Yes,No" }}</td>
+        <td>{{ o.start_date|default:"-" }}</td>
+        <td>{{ o.end_date|default:"-" }}</td>
+        <td>
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'risk:objective_update' o.pk %}">Edit</a>
+          <a class="btn btn-sm btn-outline-danger" href="{% url 'risk:objective_delete' o.pk %}">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-muted">No objectives found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}
+

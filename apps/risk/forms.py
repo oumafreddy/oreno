@@ -6,7 +6,8 @@ from .models import (
     # COBIT models
     COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
     # NIST models
-    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident,
+    Objective
 )
 from django.forms import EmailInput, TextInput
 from django.core.validators import RegexValidator
@@ -26,6 +27,10 @@ class OrganizationScopedModelForm(forms.ModelForm):
             if hasattr(model_field, 'related_model') and hasattr(model_field.related_model, 'organization'):
                 if self.organization:
                     self.fields[field_name].queryset = model_field.related_model.objects.filter(organization=self.organization)
+            # ManyToMany fields
+            if hasattr(model_field, 'many_to_many') and getattr(model_field, 'many_to_many'):
+                if self.organization and hasattr(field, 'queryset') and field.queryset is not None and hasattr(field.queryset.model, 'organization'):
+                    field.queryset = field.queryset.filter(organization=self.organization)
         
         # Filter user fields by organization
         if self.organization:
@@ -72,6 +77,15 @@ class RiskForm(OrganizationScopedModelForm):
             'closure_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def __init__(self, *args, organization=None, request=None, **kwargs):
+        super().__init__(*args, organization=organization, request=request, **kwargs)
+        # Limit objectives to active ones in current organization
+        if 'objectives' in self.fields:
+            qs = Objective.objects.all()
+            if organization is not None:
+                qs = qs.filter(organization=organization)
+            self.fields['objectives'].queryset = qs.filter(status='active')
+
 class ControlForm(OrganizationScopedModelForm):
     class Meta:
         model = Control
@@ -97,6 +111,16 @@ class RiskAssessmentForm(OrganizationScopedModelForm):
         widgets = {
             'notes': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'assessment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class ObjectiveForm(OrganizationScopedModelForm):
+    class Meta:
+        model = Objective
+        exclude = ('organization', 'created_by', 'updated_by')
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
 # COBIT Forms

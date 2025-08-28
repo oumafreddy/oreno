@@ -1,0 +1,61 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">Objective List</div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}<span>{{ organization.name }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<div class="report-card">
+  <h3>Overview & Filters</h3>
+  <table class="report-table">
+    <tr>
+      <th style="width:25%">Search</th>
+      <td>{{ filters.q|default:"All" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All" }}</td>
+    </tr>
+  </table>
+</div>
+
+<div class="report-card">
+  <h3>Objective Summary</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-15">Code</th>
+        <th class="col-25">Name</th>
+        <th class="col-15 text-center">Status</th>
+        <th class="col-10 text-center">Perpetual</th>
+        <th class="col-10 text-center">Risks</th>
+        <th class="col-10 text-center">Open</th>
+        <th class="col-10 text-center">In Progress</th>
+        <th class="col-10 text-center">Closed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.objective.code }}</td>
+        <td>{{ row.objective.name }}</td>
+        <td class="text-center"><span class="status-badge status-{{ row.objective.status }}">{{ row.objective.get_status_display }}</span></td>
+        <td class="text-center">{{ row.objective.is_perpetual|yesno:"Yes,No" }}</td>
+        <td class="text-center"><strong>{{ row.risk_count }}</strong></td>
+        <td class="text-center">{{ row.open_risks }}</td>
+        <td class="text-center">{{ row.in_progress_risks }}</td>
+        <td class="text-center">{{ row.closed_risks }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">No objectives found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

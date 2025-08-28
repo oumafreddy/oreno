@@ -4,7 +4,8 @@ from .models import (
     # COBIT models
     COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
     # NIST models
-    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident,
+    Objective
 )
 
 class RiskRegisterSerializer(serializers.ModelSerializer):
@@ -18,8 +19,14 @@ class RiskMatrixConfigSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RiskSerializer(serializers.ModelSerializer):
+    objectives = serializers.PrimaryKeyRelatedField(queryset=Objective.objects.all(), many=True, required=False)
     class Meta:
         model = Risk
+        fields = '__all__'
+
+class ObjectiveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Objective
         fields = '__all__'
 
 class ControlSerializer(serializers.ModelSerializer):

@@ -9,6 +9,9 @@ urlpatterns = [
     path('risk/register/detailed/', views.risk_register_detailed_pdf, name='risk_register_detailed_pdf'),
     path('risk/heatmap/', views.risk_heatmap_pdf, name='risk_heatmap_pdf'),
     path('risk/trends/', views.risk_trends_pdf, name='risk_trends_pdf'),
+    # Objective reports
+    path('risk/objective/list/', views.objective_list_pdf, name='objective_list_pdf'),
+    path('risk/objective/detailed/', views.objective_detailed_pdf, name='objective_detailed_pdf'),
     path('control/effectiveness/', views.control_effectiveness_pdf, name='control_effectiveness_pdf'),
     path('kri/status/', views.kri_status_pdf, name='kri_status_pdf'),
     path('assessment/timeline/', views.assessment_timeline_pdf, name='assessment_timeline_pdf'),

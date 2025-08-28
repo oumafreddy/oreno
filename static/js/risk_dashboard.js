@@ -32,6 +32,7 @@ function plotOrShowEmpty(containerId, data, layout) {
     if (!data || (Array.isArray(data) ? data.length === 0 : Object.keys(data).length === 0)) {
         container.innerHTML = '<div class="text-muted text-center py-5">No data available</div>';
     } else {
+        // Use layout object that contains Plotly data & options (prior behavior)
         Plotly.newPlot(containerId, layout.data, layout.options);
     }
 }
@@ -51,7 +52,8 @@ if (window.RISK_API_HEATMAP_URL && window.RISK_SELECTED_REGISTER) {
     fetch(window.RISK_API_HEATMAP_URL + '?register=' + window.RISK_SELECTED_REGISTER)
         .then(response => response.json())
         .then(data => {
-            plotOrShowEmpty('risk-heatmap', data, data.layout);
+            // Pass the full payload as layout (expects {data: [...], options: {...}})
+            plotOrShowEmpty('risk-heatmap', { ok: true }, data);
         });
 }
 // Assessment Timeline AJAX placeholder
@@ -59,7 +61,7 @@ if (window.RISK_API_ASSESSMENT_TIMELINE_URL && window.RISK_SELECTED_REGISTER) {
     fetch(window.RISK_API_ASSESSMENT_TIMELINE_URL + '?register=' + window.RISK_SELECTED_REGISTER)
         .then(response => response.json())
         .then(data => {
-            plotOrShowEmpty('assessment-timeline', data, data.layout);
+            plotOrShowEmpty('assessment-timeline', { ok: true }, data);
         });
 }
 // Register selector auto-submit

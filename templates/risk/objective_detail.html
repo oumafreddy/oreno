@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-3">
+  <h2>{{ objective.code }} – {{ objective.name }}</h2>
+  <div class="mb-2">
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'risk:objective_update' objective.pk %}">Edit</a>
+    <a class="btn btn-outline-danger btn-sm" href="{% url 'risk:objective_delete' objective.pk %}">Delete</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'risk:objective_list' %}">Back</a>
+  </div>
+  <table class="table table-sm">
+    <tr><th>Status</th><td>{{ objective.get_status_display }}</td></tr>
+    <tr><th>Perpetual</th><td>{{ objective.is_perpetual|yesno:"Yes,No" }}</td></tr>
+    <tr><th>Start</th><td>{{ objective.start_date|default:"-" }}</td></tr>
+    <tr><th>End</th><td>{{ objective.end_date|default:"-" }}</td></tr>
+    <tr><th>Origin/Source</th><td>{{ objective.origin_source|default:"-" }}</td></tr>
+  </table>
+  {% if objective.description %}
+  <div class="mb-3">
+    <h5>Description</h5>
+    <div>{{ objective.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  <h5>Linked Risks</h5>
+  <ul>
+    {% for r in objective.risks.all %}
+      <li>{{ r.code }} – {{ r.risk_name }} ({{ r.get_status_display }})</li>
+    {% empty %}
+      <li class="text-muted">No risks linked yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
+

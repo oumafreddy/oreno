@@ -5,7 +5,9 @@ from .models import (
     # COBIT models
     COBITDomain, COBITProcess, COBITCapability, COBITControl, COBITGovernance,
     # NIST models
-    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident
+    NISTFunction, NISTCategory, NISTSubcategory, NISTImplementation, NISTThreat, NISTIncident,
+    # Objectives
+    Objective
 )
 
 @admin.register(Risk)
@@ -53,6 +55,12 @@ class RiskAssessmentAdmin(reversion.admin.VersionAdmin):
     list_filter = ("assessment_type",)
     search_fields = ("risk__code", "assessor")
     date_hierarchy = "assessment_date"
+
+@admin.register(Objective)
+class ObjectiveAdmin(reversion.admin.VersionAdmin):
+    list_display = ("code", "name", "organization", "status", "is_perpetual", "start_date", "end_date")
+    list_filter = ("organization", "status", "is_perpetual")
+    search_fields = ("code", "name", "origin_source")
 
 # COBIT Admin Classes
 @admin.register(COBITDomain)

@@ -1,0 +1,95 @@
+{% extends "reports/base_report.html" %}
+{% block content %}
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">Objective Detailed Report</div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}<span>{{ organization.name }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="header-separator"></div>
+
+<div class="report-card">
+  <h3>Overview & Filters</h3>
+  <table class="report-table">
+    <tr>
+      <th style="width:25%">Search</th>
+      <td>{{ filters.q|default:"All" }}</td>
+      <th style="width:25%">Status</th>
+      <td>{{ filters.status|default:"All" }}</td>
+    </tr>
+  </table>
+</div>
+
+{% for block in data %}
+<div class="report-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <h3 style="margin:0;">{{ block.objective.code }} – {{ block.objective.name }}</h3>
+    <span class="status-badge status-{{ block.objective.status }}">{{ block.objective.get_status_display }}</span>
+  </div>
+  <table class="report-table">
+    <tr>
+      <th style="width:20%">Perpetual</th>
+      <td>{{ block.objective.is_perpetual|yesno:"Yes,No" }}</td>
+      <th style="width:20%">Origin/Source</th>
+      <td>{{ block.objective.origin_source|default:"-" }}</td>
+    </tr>
+    <tr>
+      <th>Start</th>
+      <td>{{ block.objective.start_date|default:"-" }}</td>
+      <th>End</th>
+      <td>{{ block.objective.end_date|default:"-" }}</td>
+    </tr>
+  </table>
+  {% if block.objective.description %}
+  <div class="field-group">
+    <div class="field-label">Objective Description</div>
+    <div class="field-value">{{ block.objective.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  <h4 class="section-subsubheader">Linked Risks and Actions</h4>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-20">Risk</th>
+        <th class="col-10 text-center">Status</th>
+        <th class="col-10 text-center">Residual Score</th>
+        <th class="col-15">Control Status</th>
+        <th class="col-15">Control Rating</th>
+        <th class="col-30">Action Plan (Owner / Due / Status)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rr in block.risk_rows %}
+      <tr>
+        <td>{{ rr.risk.code }} – {{ rr.risk.risk_name }}</td>
+        <td class="text-center">{{ rr.risk.get_status_display }}</td>
+        <td class="text-center">{{ rr.risk.residual_risk_score }}</td>
+        <td>{{ rr.control_status|default:"-" }}</td>
+        <td>{{ rr.control_rating|default:"-" }}</td>
+        <td>
+          {% if rr.action_plan %}
+            {{ rr.action_plan|striptags|truncatechars:120 }}
+          {% else %}-{% endif %}
+          <div>
+            <small><strong>Owner:</strong> {{ rr.action_owner|default:"-" }} | <strong>Due:</strong> {{ rr.action_due_date|default:"-" }} | <strong>Status:</strong> {{ rr.action_plan_status|default:"-" }}</small>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-muted">No risks linked to this objective.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="report-card">
+  <div class="alert alert-info">No objectives match the filters.</div>
+  </div>
+{% endfor %}
+{% endblock %}
+

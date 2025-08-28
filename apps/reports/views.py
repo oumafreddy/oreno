@@ -21,6 +21,7 @@ from compliance.models import ComplianceRequirement, ComplianceFramework, Policy
 from datetime import timedelta
 from contracts.models import Contract, Party, ContractMilestone, ContractType
 from django.utils import timezone
+from risk.models import Objective
 
 def _docx_start_document(org, title, generation_timestamp):
     """Create a python-docx Document with standard header and metadata."""
@@ -3098,4 +3099,85 @@ def nist_threat_analysis_pdf(request):
     )
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_nist_threat_analysis.pdf"'
+    return response
+
+# ─── OBJECTIVE REPORTS (RISK APP) ─────────────────────────────────────────────
+def objective_list_pdf(request):
+    org = request.organization
+    q = request.GET.get('q')
+    status = request.GET.get('status')
+    objectives = Objective.objects.filter(organization=org)
+    if q:
+        objectives = objectives.filter(
+            Q(name__icontains=q) | Q(code__icontains=q) | Q(origin_source__icontains=q)
+        )
+    if status:
+        objectives = objectives.filter(status=status)
+
+    # Aggregate simple insights per objective
+    rows = []
+    for obj in objectives:
+        risks_qs = obj.risks.all()
+        rows.append({
+            'objective': obj,
+            'risk_count': risks_qs.count(),
+            'open_risks': risks_qs.filter(status='open').count(),
+            'in_progress_risks': risks_qs.filter(status='in-progress').count(),
+            'closed_risks': risks_qs.filter(status='closed').count(),
+        })
+
+    html_string = render_to_string('reports/objective_list.html', {
+        'organization': org,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'rows': rows,
+        'filters': {'q': q, 'status': status},
+    })
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_objective_list.pdf"'
+    return response
+
+def objective_detailed_pdf(request):
+    org = request.organization
+    # Filters: objective status and search
+    q = request.GET.get('q')
+    status = request.GET.get('status')
+    objectives = Objective.objects.filter(organization=org)
+    if q:
+        objectives = objectives.filter(
+            Q(name__icontains=q) | Q(code__icontains=q) | Q(origin_source__icontains=q)
+        )
+    if status:
+        objectives = objectives.filter(status=status)
+
+    # Build context with risks per objective and what is being done (action plan fields)
+    data = []
+    for obj in objectives:
+        risks = obj.risks.all().order_by('-updated_at')
+        risk_rows = []
+        for r in risks:
+            risk_rows.append({
+                'risk': r,
+                'action_plan': r.action_plan,
+                'action_plan_status': r.action_plan_status,
+                'action_owner': r.action_owner,
+                'action_due_date': r.action_due_date,
+                'control_status': r.control_status,
+                'control_rating': r.control_rating,
+            })
+        data.append({'objective': obj, 'risk_rows': risk_rows})
+
+    html_string = render_to_string('reports/objective_detailed.html', {
+        'organization': org,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'data': data,
+        'filters': {'q': q, 'status': status},
+    })
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_objective_detailed.pdf"'
     return response

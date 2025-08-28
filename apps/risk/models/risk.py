@@ -13,6 +13,7 @@ from common.constants import RISK_CATEGORY_CHOICES
 from .choices import (
     RISK_RESPONSE_CHOICES, CONTROL_STATUS_CHOICES, CONTROL_RATING_CHOICES, ACTION_PLAN_STATUS_CHOICES, STATUS_CHOICES
 )
+from .objective import Objective
 
 class Risk(OrganizationOwnedModel, AuditableModel):
     """Model for managing risks according to ISO 31000 and COSO ERM frameworks."""
@@ -60,6 +61,7 @@ class Risk(OrganizationOwnedModel, AuditableModel):
     closure_date = models.DateField(null=True, blank=True, verbose_name="Closure Date")
     closure_justification = CKEditor5Field('Closure Justification', config_name='extends', blank=True, null=True)
     additional_notes = CKEditor5Field('Additional Notes', config_name='extends', blank=True, null=True)
+    objectives = models.ManyToManyField(Objective, related_name='risks', blank=True)
 
     class Meta:
         verbose_name = "Risk"
