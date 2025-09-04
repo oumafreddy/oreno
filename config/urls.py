@@ -55,8 +55,7 @@ urlpatterns = [
     path('api/contracts/', include(('contracts.urls', 'contracts'), namespace='contracts-api')),
     path('api/risk/', include(('risk.urls', 'risk'), namespace='risk-api')),
     path('api/legal/', include(('legal.urls', 'legal'), namespace='legal-api')),
-    # Remove duplicate AI endpoint - keep only the services.ai one
-    # path('api/ai/ask/', AIAssistantAPIView.as_view(), name='ai-assistant-ask'),
+    path('api/ai-governance/', include(('ai_governance.urls', 'ai_governance'), namespace='ai-governance-api')),
     path('api/engagements/', audit_views.api_engagements, name='api-engagements'),
     path('api/objectives/', audit_views.api_objectives, name='api-objectives'),
     path('api/issues/', audit_views.api_issues, name='api-issues'),
@@ -72,6 +71,7 @@ urlpatterns = [
     path('risk/', include(('risk.urls', 'risk'), namespace='risk')),
     path('document_management/', include(('document_management.urls', 'document_management'), namespace='document_management')),
     path('legal/', include(('legal.urls', 'legal'), namespace='legal')),
+    path('ai-governance/', include(('ai_governance.urls', 'ai_governance'), namespace='ai_governance')),
     
     # CKEditor 5
     path('upload/', include('django_ckeditor_5.urls')),

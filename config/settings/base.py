@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
     'reports.apps.ReportsConfig',
+    'ai_governance.apps.AIGovernanceConfig',
     
     # Services
     'services.ai.apps.AIServiceConfig',
