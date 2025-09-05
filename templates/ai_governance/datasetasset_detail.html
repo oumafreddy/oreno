@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Dataset Asset Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Dataset Asset Details</h1>
+                    <p class="text-muted">View detailed information about the dataset asset</p>
+                </div>
+                <div>
+                    <a href="{% url 'ai_governance:dataset_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                    <a href="{% url 'ai_governance:dataset_update' dataset_asset.pk %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Edit Dataset
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dataset Information Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-database"></i> {{ dataset_asset.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Basic Information</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td>{{ dataset_asset.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Role:</strong></td>
+                                    <td>
+                                        <span class="badge bg-info">{{ dataset_asset.role|title }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Format:</strong></td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ dataset_asset.format|upper }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Path:</strong></td>
+                                    <td>
+                                        <code>{{ dataset_asset.path }}</code>
+                                    </td>
+                                </tr>
+                                {% if dataset_asset.label %}
+                                <tr>
+                                    <td><strong>Label:</strong></td>
+                                    <td>{{ dataset_asset.label }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Security & Classification</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Data Classification:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if dataset_asset.data_classification == 'public' %}bg-success
+                                            {% elif dataset_asset.data_classification == 'internal' %}bg-info
+                                            {% elif dataset_asset.data_classification == 'confidential' %}bg-warning
+                                            {% elif dataset_asset.data_classification == 'restricted' %}bg-danger
+                                            {% endif %}">
+                                            {{ dataset_asset.data_classification|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Contains PII:</strong></td>
+                                    <td>
+                                        {% if dataset_asset.contains_pii %}
+                                            <span class="badge bg-danger">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-success">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if dataset_asset.encryption_key_id %}
+                                <tr>
+                                    <td><strong>Encryption Key:</strong></td>
+                                    <td>
+                                        <code>{{ dataset_asset.encryption_key_id }}</code>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if dataset_asset.retention_date %}
+                                <tr>
+                                    <td><strong>Retention Date:</strong></td>
+                                    <td>{{ dataset_asset.retention_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schema Information -->
+            {% if dataset_asset.schema %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-diagram-3"></i> Schema Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>{{ dataset_asset.schema|pprint }}</code></pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Sensitive Attributes -->
+            {% if dataset_asset.sensitive_attributes %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-shield-exclamation"></i> Sensitive Attributes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for attr in dataset_asset.sensitive_attributes %}
+                        <div class="col-md-3 mb-2">
+                            <span class="badge bg-warning">{{ attr }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Additional Information -->
+            {% if dataset_asset.extra %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Additional Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>{{ dataset_asset.extra|pprint }}</code></pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Audit Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Audit Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>{{ dataset_asset.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Created By:</strong></td>
+                                    <td>{{ dataset_asset.created_by|default:"System" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Last Updated:</strong></td>
+                                    <td>{{ dataset_asset.updated_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Updated By:</strong></td>
+                                    <td>{{ dataset_asset.updated_by|default:"System" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

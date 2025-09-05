@@ -1,0 +1,313 @@
+{% extends 'reports/base_report.html' %}
+
+{% block content %}
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      <strong>{{ organization.name }}</strong><br>
+      AI Governance Dashboard Report
+    </div>
+    <div class="header-right">
+      Generated: {{ generation_timestamp }}<br>
+      Report Period: Last 30 Days
+    </div>
+  </div>
+</div>
+
+<div class="section-header">Executive Summary</div>
+<div class="summary-box">
+  <p><strong>Organization:</strong> {{ organization.name }}</p>
+  <p><strong>Report Period:</strong> {{ generation_timestamp }}</p>
+  <p><strong>Total Models:</strong> {{ total_models }}</p>
+  <p><strong>Total Test Runs:</strong> {{ total_test_runs }}</p>
+  <p><strong>Overall Compliance Score:</strong> {{ compliance_score }}%</p>
+  <p><strong>Recent Tests Passed:</strong> {{ passed_tests }}/{{ total_recent_tests }}</p>
+</div>
+
+<div class="section-header">Key Metrics</div>
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-value">{{ total_models }}</div>
+    <div class="metric-label">Registered Models</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ total_test_runs }}</div>
+    <div class="metric-label">Test Runs</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ compliance_score }}%</div>
+    <div class="metric-label">Compliance Score</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ passed_tests }}/{{ total_recent_tests }}</div>
+    <div class="metric-label">Recent Tests Passed</div>
+  </div>
+</div>
+
+<div class="section-header">Framework Compliance Scores</div>
+<div class="framework-scores">
+  <div class="framework-score">
+    <h4>EU AI Act</h4>
+    <div class="score-value">{{ eu_ai_act_score }}%</div>
+  </div>
+  <div class="framework-score">
+    <h4>OECD Principles</h4>
+    <div class="score-value">{{ oecd_score }}%</div>
+  </div>
+  <div class="framework-score">
+    <h4>NIST AI RMF</h4>
+    <div class="score-value">{{ nist_score }}%</div>
+  </div>
+</div>
+
+<div class="section-header">Test Categories Performance</div>
+<div class="test-categories">
+  <div class="category-item">
+    <strong>Fairness Tests:</strong> {{ fairness_passed }} passed
+  </div>
+  <div class="category-item">
+    <strong>Explainability Tests:</strong> {{ explainability_passed }} passed
+  </div>
+  <div class="category-item">
+    <strong>Robustness Tests:</strong> {{ robustness_passed }} passed
+  </div>
+  <div class="category-item">
+    <strong>Privacy Tests:</strong> {{ privacy_passed }} passed
+  </div>
+</div>
+
+<div class="section-header">Model Inventory</div>
+{% if available_models %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Model Name</th>
+      <th>Type</th>
+      <th>Version</th>
+      <th>Data Classification</th>
+      <th>Contains PII</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for model in available_models %}
+    <tr>
+      <td>{{ model.name }}</td>
+      <td>{{ model.model_type|title }}</td>
+      <td>{{ model.version|default:"latest" }}</td>
+      <td><span class="classification-badge classification-{{ model.data_classification }}">{{ model.data_classification|title }}</span></td>
+      <td>{% if model.contains_pii %}<span class="pii-badge">Yes</span>{% else %}<span class="no-pii-badge">No</span>{% endif %}</td>
+      <td>{{ model.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No models registered yet.</p>
+{% endif %}
+
+<div class="section-header">Recent Test Runs</div>
+{% if recent_test_runs %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>Test Plan</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Duration</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for test_run in recent_test_runs %}
+    <tr>
+      <td>{{ test_run.model_asset.name }}</td>
+      <td>{{ test_run.test_plan.name|default:"N/A" }}</td>
+      <td class="status-{{ test_run.status }}">{{ test_run.status|title }}</td>
+      <td>{{ test_run.created_at|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if test_run.completed_at and test_run.started_at %}
+          {{ test_run.completed_at|timeuntil:test_run.started_at }}
+        {% else %}
+          N/A
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No recent test runs.</p>
+{% endif %}
+
+<div class="section-header">Available Datasets</div>
+{% if available_datasets %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Dataset Name</th>
+      <th>Role</th>
+      <th>Format</th>
+      <th>Data Classification</th>
+      <th>Contains PII</th>
+      <th>Retention Date</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dataset in available_datasets %}
+    <tr>
+      <td>{{ dataset.name }}</td>
+      <td>{{ dataset.role|title }}</td>
+      <td>{{ dataset.format|upper }}</td>
+      <td><span class="classification-badge classification-{{ dataset.data_classification }}">{{ dataset.data_classification|title }}</span></td>
+      <td>{% if dataset.contains_pii %}<span class="pii-badge">Yes</span>{% else %}<span class="no-pii-badge">No</span>{% endif %}</td>
+      <td>{{ dataset.retention_date|date:"Y-m-d"|default:"N/A" }}</td>
+      <td>{{ dataset.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No datasets available.</p>
+{% endif %}
+
+<div class="section-header">Available Test Plans</div>
+{% if available_test_plans %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Test Plan Name</th>
+      <th>Model Type</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for plan in available_test_plans %}
+    <tr>
+      <td>{{ plan.name }}</td>
+      <td>{{ plan.model_type|title }}</td>
+      <td>{{ plan.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No test plans available.</p>
+{% endif %}
+
+<style>
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.metric-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.framework-scores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.framework-score {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.framework-score h4 {
+  margin: 0 0 0.5rem 0;
+  color: #495057;
+}
+
+.score-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.test-categories {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.category-item {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.status-completed { color: #28a745; font-weight: bold; }
+.status-failed { color: #dc3545; font-weight: bold; }
+.status-running { color: #ffc107; font-weight: bold; }
+.status-pending { color: #6c757d; font-weight: bold; }
+
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* Security Badges */
+.classification-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.classification-public { background: #d4edda; color: #155724; }
+.classification-internal { background: #d1ecf1; color: #0c5460; }
+.classification-confidential { background: #fff3cd; color: #856404; }
+.classification-restricted { background: #f8d7da; color: #721c24; }
+
+.pii-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.no-pii-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+</style>
+{% endblock %}

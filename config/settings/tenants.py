@@ -90,6 +90,7 @@ TENANT_APPS = [
     'document_management.apps.DocumentManagementConfig',
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
+    'ai_governance.apps.AIGovernanceConfig',
 
     # Third-party integrations
     'rest_framework',

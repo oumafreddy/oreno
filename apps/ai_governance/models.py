@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from core.models.abstract_models import (
     OrganizationOwnedModel,
@@ -25,6 +26,21 @@ class ModelAsset(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     version = models.CharField(max_length=128, blank=True, null=True)
     signature = models.JSONField(default=dict, blank=True)
     extra = models.JSONField(default=dict, blank=True)
+    
+    # Security fields
+    contains_pii = models.BooleanField(default=False, help_text='Whether this model processes PII')
+    data_classification = models.CharField(
+        max_length=20,
+        choices=[
+            ('public', 'Public'),
+            ('internal', 'Internal'),
+            ('confidential', 'Confidential'),
+            ('restricted', 'Restricted'),
+        ],
+        default='internal',
+        help_text='Data classification level'
+    )
+    encryption_key_id = models.CharField(max_length=255, blank=True, null=True, help_text='Encryption key identifier')
 
     class Meta:
         app_label = 'ai_governance'
@@ -38,6 +54,31 @@ class ModelAsset(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
 
     def __str__(self):
         return f"{self.name} ({self.version or 'latest'})"
+    
+    def clean(self):
+        """Validate model asset data."""
+        super().clean()
+        
+        # Check for PII in model metadata
+        from .security import pii_masking_service
+        
+        # Check signature and extra fields for PII
+        text_to_check = []
+        if self.signature:
+            text_to_check.append(str(self.signature))
+        if self.extra:
+            text_to_check.append(str(self.extra))
+        
+        for text in text_to_check:
+            detected_pii = pii_masking_service.detect_pii(text)
+            if detected_pii:
+                self.contains_pii = True
+                break
+    
+    def save(self, *args, **kwargs):
+        """Save model asset with security validation."""
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class DatasetAsset(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -59,6 +100,22 @@ class DatasetAsset(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     sensitive_attributes = models.JSONField(default=list, blank=True)
     label = models.CharField(max_length=128, blank=True, null=True)
     extra = models.JSONField(default=dict, blank=True)
+    
+    # Security fields
+    contains_pii = models.BooleanField(default=False, help_text='Whether this dataset contains PII')
+    data_classification = models.CharField(
+        max_length=20,
+        choices=[
+            ('public', 'Public'),
+            ('internal', 'Internal'),
+            ('confidential', 'Confidential'),
+            ('restricted', 'Restricted'),
+        ],
+        default='internal',
+        help_text='Data classification level'
+    )
+    encryption_key_id = models.CharField(max_length=255, blank=True, null=True, help_text='Encryption key identifier')
+    retention_date = models.DateTimeField(blank=True, null=True, help_text='Data retention expiration date')
 
     class Meta:
         app_label = 'ai_governance'
@@ -72,6 +129,33 @@ class DatasetAsset(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
 
     def __str__(self):
         return self.name
+    
+    def clean(self):
+        """Validate dataset asset data."""
+        super().clean()
+        
+        # Check for PII in dataset metadata
+        from .security import pii_masking_service
+        
+        # Check schema, sensitive_attributes, and extra fields for PII
+        text_to_check = []
+        if self.schema:
+            text_to_check.append(str(self.schema))
+        if self.sensitive_attributes:
+            text_to_check.append(str(self.sensitive_attributes))
+        if self.extra:
+            text_to_check.append(str(self.extra))
+        
+        for text in text_to_check:
+            detected_pii = pii_masking_service.detect_pii(text)
+            if detected_pii:
+                self.contains_pii = True
+                break
+    
+    def save(self, *args, **kwargs):
+        """Save dataset asset with security validation."""
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class TestPlan(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -119,6 +203,22 @@ class TestRun(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     completed_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(blank=True)
     worker_info = models.JSONField(default=dict, blank=True)
+    
+    # Security fields
+    contains_pii = models.BooleanField(default=False, help_text='Whether this test run processes PII')
+    data_classification = models.CharField(
+        max_length=20,
+        choices=[
+            ('public', 'Public'),
+            ('internal', 'Internal'),
+            ('confidential', 'Confidential'),
+            ('restricted', 'Restricted'),
+        ],
+        default='internal',
+        help_text='Data classification level'
+    )
+    encryption_key_id = models.CharField(max_length=255, blank=True, null=True, help_text='Encryption key identifier')
+    retention_date = models.DateTimeField(blank=True, null=True, help_text='Data retention expiration date')
 
     class Meta:
         app_label = 'ai_governance'
@@ -132,6 +232,39 @@ class TestRun(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
 
     def __str__(self):
         return f"Run #{self.id} - {self.status}"
+    
+    def clean(self):
+        """Validate test run data."""
+        super().clean()
+        
+        # Check for PII in test run data
+        from .security import pii_masking_service
+        
+        # Check parameters and worker_info for PII
+        text_to_check = []
+        if self.parameters:
+            text_to_check.append(str(self.parameters))
+        if self.worker_info:
+            text_to_check.append(str(self.worker_info))
+        if self.error_message:
+            text_to_check.append(self.error_message)
+        
+        for text in text_to_check:
+            detected_pii = pii_masking_service.detect_pii(text)
+            if detected_pii:
+                self.contains_pii = True
+                break
+        
+        # Inherit data classification from model and dataset
+        if self.model_asset:
+            self.data_classification = self.model_asset.data_classification
+        if self.dataset_asset and self.dataset_asset.data_classification in ['confidential', 'restricted']:
+            self.data_classification = self.dataset_asset.data_classification
+    
+    def save(self, *args, **kwargs):
+        """Save test run with security validation."""
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class TestResult(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -142,6 +275,21 @@ class TestResult(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     test_name = models.CharField(max_length=255, db_index=True)
     summary = models.JSONField(default=dict, blank=True)
     passed = models.BooleanField(default=False)
+    
+    # Security fields
+    contains_pii = models.BooleanField(default=False, help_text='Whether this test result contains PII')
+    data_classification = models.CharField(
+        max_length=20,
+        choices=[
+            ('public', 'Public'),
+            ('internal', 'Internal'),
+            ('confidential', 'Confidential'),
+            ('restricted', 'Restricted'),
+        ],
+        default='internal',
+        help_text='Data classification level'
+    )
+    encryption_key_id = models.CharField(max_length=255, blank=True, null=True, help_text='Encryption key identifier')
 
     class Meta:
         app_label = 'ai_governance'
@@ -154,6 +302,28 @@ class TestResult(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
 
     def __str__(self):
         return f"{self.test_name} ({'pass' if self.passed else 'fail'})"
+    
+    def clean(self):
+        """Validate test result data."""
+        super().clean()
+        
+        # Check for PII in test result data
+        from .security import pii_masking_service
+        
+        # Check summary for PII
+        if self.summary:
+            detected_pii = pii_masking_service.detect_pii(str(self.summary))
+            if detected_pii:
+                self.contains_pii = True
+        
+        # Inherit data classification from test run
+        if self.test_run:
+            self.data_classification = self.test_run.data_classification
+    
+    def save(self, *args, **kwargs):
+        """Save test result with security validation."""
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class Metric(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
@@ -199,6 +369,22 @@ class EvidenceArtifact(OrganizationOwnedModel, AuditableModel, SoftDeletionModel
     artifact_type = models.CharField(max_length=20, choices=ARTIFACT_TYPE_CHOICES, default='other')
     file_path = models.CharField(max_length=1024)
     file_info = models.JSONField(default=dict, blank=True)
+    
+    # Security fields
+    contains_pii = models.BooleanField(default=False, help_text='Whether this artifact contains PII')
+    data_classification = models.CharField(
+        max_length=20,
+        choices=[
+            ('public', 'Public'),
+            ('internal', 'Internal'),
+            ('confidential', 'Confidential'),
+            ('restricted', 'Restricted'),
+        ],
+        default='internal',
+        help_text='Data classification level'
+    )
+    encryption_key_id = models.CharField(max_length=255, blank=True, null=True, help_text='Encryption key identifier')
+    retention_date = models.DateTimeField(blank=True, null=True, help_text='Data retention expiration date')
 
     class Meta:
         app_label = 'ai_governance'
@@ -211,6 +397,28 @@ class EvidenceArtifact(OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 
     def __str__(self):
         return self.file_path
+    
+    def clean(self):
+        """Validate evidence artifact data."""
+        super().clean()
+        
+        # Check for PII in artifact metadata
+        from .security import pii_masking_service
+        
+        # Check file_info for PII
+        if self.file_info:
+            detected_pii = pii_masking_service.detect_pii(str(self.file_info))
+            if detected_pii:
+                self.contains_pii = True
+        
+        # Inherit data classification from test run
+        if self.test_run:
+            self.data_classification = self.test_run.data_classification
+    
+    def save(self, *args, **kwargs):
+        """Save evidence artifact with security validation."""
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class Framework(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):

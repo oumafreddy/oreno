@@ -4,6 +4,7 @@ Management command to seed AI governance compliance frameworks.
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django_tenants.utils import tenant_context
 from organizations.models import Organization
 
 from ai_governance.models import Framework, Clause, ComplianceMapping
@@ -52,15 +53,16 @@ class Command(BaseCommand):
         for org in organizations:
             self.stdout.write(f'Seeding frameworks for organization: {org.name}')
             
-            with transaction.atomic():
-                if framework_choice in ['eu_ai_act', 'all']:
-                    self._seed_eu_ai_act(org)
-                
-                if framework_choice in ['oecd', 'all']:
-                    self._seed_oecd_principles(org)
-                
-                if framework_choice in ['nist', 'all']:
-                    self._seed_nist_ai_rmf(org)
+            with tenant_context(org):
+                with transaction.atomic():
+                    if framework_choice in ['eu_ai_act', 'all']:
+                        self._seed_eu_ai_act(org)
+                    
+                    if framework_choice in ['oecd', 'all']:
+                        self._seed_oecd_principles(org)
+                    
+                    if framework_choice in ['nist', 'all']:
+                        self._seed_nist_ai_rmf(org)
 
         self.stdout.write(
             self.style.SUCCESS('Successfully seeded compliance frameworks')
@@ -374,7 +376,8 @@ class Command(BaseCommand):
                 clause_code=clause_data['clause_code'],
                 defaults={
                     'text': clause_data['text'],
-                    'metadata': clause_data['metadata']
+                    'metadata': clause_data['metadata'],
+                    'organization': framework.organization
                 }
             )
             

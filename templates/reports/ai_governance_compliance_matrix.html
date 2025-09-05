@@ -1,0 +1,317 @@
+{% extends 'reports/base_report.html' %}
+{% load ai_governance_extras %}
+
+{% block content %}
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">
+      <strong>{{ organization.name }}</strong><br>
+      AI Governance Compliance Matrix
+    </div>
+    <div class="header-right">
+      Generated: {{ generation_timestamp }}<br>
+      Report Period: Last 30 Days
+    </div>
+  </div>
+</div>
+
+<div class="section-header">Framework Compliance Scores</div>
+<div class="framework-scores">
+  {% for framework in frameworks %}
+  <div class="framework-score">
+    <h4>{{ framework.title }}</h4>
+    <div class="score-value">{{ framework_scores|dict_get:framework.code }}%</div>
+    <div class="score-details">
+      <small>Version: {{ framework.version|default:"N/A" }}</small><br>
+      <small>Clauses: {{ framework.clauses.count }}</small>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-header">Compliance Matrix Overview</div>
+<div class="compliance-overview">
+  <div class="overview-stats">
+    <div class="stat-card">
+      <div class="stat-value">{{ frameworks.count }}</div>
+      <div class="stat-label">Frameworks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ mappings.count }}</div>
+      <div class="stat-label">Total Mappings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ average_score }}%</div>
+      <div class="stat-label">Average Score</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-header">Detailed Compliance Matrix</div>
+{% if mappings %}
+<table class="data-table compliance-matrix">
+  <thead>
+    <tr>
+      <th>Framework</th>
+      <th>Clause Code</th>
+      <th>Clause Description</th>
+      <th>Test Name</th>
+      <th>Rationale</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for mapping in mappings %}
+    <tr>
+      <td>
+        <strong>{{ mapping.clause.framework.title }}</strong><br>
+        <small>{{ mapping.clause.framework.code }}</small>
+      </td>
+      <td>
+        <strong>{{ mapping.clause.clause_code }}</strong>
+      </td>
+      <td>
+        {{ mapping.clause.text|truncatewords:20 }}
+      </td>
+      <td>
+        <code>{{ mapping.test_name }}</code>
+      </td>
+      <td>
+        {{ mapping.rationale|truncatewords:15 }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="no-data">No compliance mappings found.</p>
+{% endif %}
+
+<div class="section-header">Framework Details</div>
+{% for framework in frameworks %}
+<div class="framework-detail">
+  <h3>{{ framework.title }} ({{ framework.code }})</h3>
+  <div class="framework-meta">
+    <p><strong>Version:</strong> {{ framework.version|default:"N/A" }}</p>
+    <p><strong>Compliance Score:</strong> {{ framework_scores|dict_get:framework.code }}%</p>
+    <p><strong>Total Clauses:</strong> {{ framework.clauses.count }}</p>
+    <p><strong>Mapped Tests:</strong> {{ framework.clauses.all|length }}</p>
+  </div>
+  
+  {% if framework.metadata %}
+  <div class="framework-description">
+    <h4>Description</h4>
+    <p>{{ framework.metadata.description|default:"No description available." }}</p>
+  </div>
+  {% endif %}
+  
+  <div class="clauses-list">
+    <h4>Clauses</h4>
+    {% for clause in framework.clauses.all %}
+    <div class="clause-item">
+      <div class="clause-header">
+        <strong>{{ clause.clause_code }}</strong>
+        <span class="mapping-count">
+          {{ clause.mappings.count }} mapping{{ clause.mappings.count|pluralize }}
+        </span>
+      </div>
+      <div class="clause-text">
+        {{ clause.text }}
+      </div>
+      {% if clause.mappings.exists %}
+      <div class="clause-mappings">
+        <strong>Mapped Tests:</strong>
+        {% for mapping in clause.mappings.all %}
+          <span class="mapping-tag">{{ mapping.test_name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<style>
+.framework-scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.framework-score {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.framework-score h4 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #28a745;
+  margin-bottom: 0.5rem;
+}
+
+.score-details {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.compliance-overview {
+  margin: 1rem 0;
+}
+
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.compliance-matrix {
+  font-size: 0.9rem;
+}
+
+.compliance-matrix th {
+  background-color: #e9ecef;
+  font-weight: 600;
+}
+
+.compliance-matrix td {
+  vertical-align: top;
+  padding: 0.75rem;
+}
+
+.framework-detail {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.framework-detail h3 {
+  color: #1e3a8a;
+  margin: 0 0 1rem 0;
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 0.5rem;
+}
+
+.framework-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.framework-meta p {
+  margin: 0.5rem 0;
+  background: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.framework-description {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.framework-description h4 {
+  color: #495057;
+  margin: 0 0 0.5rem 0;
+}
+
+.clauses-list {
+  margin-top: 1rem;
+}
+
+.clauses-list h4 {
+  color: #495057;
+  margin: 0 0 1rem 0;
+}
+
+.clause-item {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.clause-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.mapping-count {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.clause-text {
+  color: #495057;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.clause-mappings {
+  margin-top: 0.5rem;
+}
+
+.mapping-tag {
+  display: inline-block;
+  background: #e9ecef;
+  color: #495057;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin: 0.25rem 0.25rem 0.25rem 0;
+  font-family: monospace;
+}
+
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+</style>
+{% endblock %}

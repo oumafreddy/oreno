@@ -1,0 +1,50 @@
+AI GOVERNANCE ALERT: {{ alert_data.alert_type|title }}
+
+Organization: {{ organization.name }}
+Time: {{ alert_data.timestamp|date:"F d, Y H:i:s" }}
+
+ALERT DETAILS
+=============
+
+{% if alert_data.alert_type == 'test_failure' %}
+Model: {{ alert_data.model_name }}
+Test Run ID: {{ alert_data.test_run_id }}
+
+Failed Tests:
+{% for test in alert_data.failed_tests %}
+- {{ test.test_name }}: {{ test.error_message }}
+{% endfor %}
+
+{% elif alert_data.alert_type == 'threshold_breach' %}
+Model: {{ alert_data.model_name }}
+Test Run ID: {{ alert_data.test_run_id }}
+
+Metric: {{ alert_data.metric_name }}
+Current Value: {{ alert_data.metric_value }}
+Threshold: {{ alert_data.threshold }}
+Severity: {{ alert_data.breach_severity|title }}
+
+{% elif alert_data.alert_type == 'compliance_violation' %}
+Model: {{ alert_data.model_name }}
+Test Run ID: {{ alert_data.test_run_id }}
+
+Violation Details:
+{% for key, value in alert_data.violation_details.items %}
+{{ key|title }}: {{ value }}
+{% endfor %}
+
+{% elif alert_data.alert_type == 'performance_degradation' %}
+Model: {{ alert_data.model_name }}
+Test Run ID: {{ alert_data.test_run_id }}
+
+Performance Metrics:
+{% for key, value in alert_data.performance_metrics.items %}
+{{ key|title }}: {{ value }}
+{% endfor %}
+{% endif %}
+
+View Test Run Details: {{ site_url }}/ai-governance/test-runs/{{ alert_data.test_run_id }}/
+
+---
+This is an automated alert from the Oreno AI Governance system.
+Please do not reply to this email. For support, contact your system administrator.

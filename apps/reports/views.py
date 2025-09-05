@@ -3181,3 +3181,22 @@ def objective_detailed_pdf(request):
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_objective_detailed.pdf"'
     return response
+
+
+# AI Governance Reports
+def ai_governance_dashboard_pdf(request):
+    """Generate AI Governance Dashboard PDF report."""
+    from ai_governance.reports import ai_governance_dashboard_pdf as ai_dashboard_pdf
+    return ai_dashboard_pdf(request)
+
+
+def ai_governance_test_run_details_pdf(request):
+    """Generate detailed test run report."""
+    from ai_governance.reports import test_run_details_pdf as ai_test_run_pdf
+    return ai_test_run_pdf(request)
+
+
+def ai_governance_compliance_matrix_pdf(request):
+    """Generate compliance matrix report showing test mappings to frameworks."""
+    from ai_governance.reports import compliance_matrix_pdf as ai_compliance_pdf
+    return ai_compliance_pdf(request)

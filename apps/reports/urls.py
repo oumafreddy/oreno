@@ -70,4 +70,9 @@ urlpatterns = [
     path('contracts/details/', views.contract_details_pdf, name='contract_details_pdf'),
     path('contracts/milestone/details/', views.milestone_details_pdf, name='milestone_details_pdf'),
     path('contracts/party/details/', views.party_details_pdf, name='party_details_pdf'),
+    
+    # AI Governance Reports
+    path('ai-governance/dashboard/', views.ai_governance_dashboard_pdf, name='ai_governance_dashboard_pdf'),
+    path('ai-governance/test-run/', views.ai_governance_test_run_details_pdf, name='ai_governance_test_run_details_pdf'),
+    path('ai-governance/compliance-matrix/', views.ai_governance_compliance_matrix_pdf, name='ai_governance_compliance_matrix_pdf'),
 ] 

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI Governance Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .alert-type {
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .metric {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+        }
+        .footer {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="alert-type">🚨 AI Governance Alert: {{ alert_data.alert_type|title }}</div>
+        <p><strong>Organization:</strong> {{ organization.name }}</p>
+        <p><strong>Time:</strong> {{ alert_data.timestamp|date:"F d, Y H:i:s" }}</p>
+    </div>
+
+    <div class="content">
+        <h3>Alert Details</h3>
+        
+        {% if alert_data.alert_type == 'test_failure' %}
+            <p><strong>Model:</strong> {{ alert_data.model_name }}</p>
+            <p><strong>Test Run ID:</strong> {{ alert_data.test_run_id }}</p>
+            
+            <h4>Failed Tests:</h4>
+            <ul>
+                {% for test in alert_data.failed_tests %}
+                    <li>
+                        <strong>{{ test.test_name }}</strong><br>
+                        <em>{{ test.error_message }}</em>
+                    </li>
+                {% endfor %}
+            </ul>
+            
+        {% elif alert_data.alert_type == 'threshold_breach' %}
+            <p><strong>Model:</strong> {{ alert_data.model_name }}</p>
+            <p><strong>Test Run ID:</strong> {{ alert_data.test_run_id }}</p>
+            
+            <div class="metric">
+                <strong>Metric:</strong> {{ alert_data.metric_name }}<br>
+                <strong>Current Value:</strong> {{ alert_data.metric_value }}<br>
+                <strong>Threshold:</strong> {{ alert_data.threshold }}<br>
+                <strong>Severity:</strong> {{ alert_data.breach_severity|title }}
+            </div>
+            
+        {% elif alert_data.alert_type == 'compliance_violation' %}
+            <p><strong>Model:</strong> {{ alert_data.model_name }}</p>
+            <p><strong>Test Run ID:</strong> {{ alert_data.test_run_id }}</p>
+            
+            <h4>Violation Details:</h4>
+            <div class="metric">
+                {% for key, value in alert_data.violation_details.items %}
+                    <strong>{{ key|title }}:</strong> {{ value }}<br>
+                {% endfor %}
+            </div>
+            
+        {% elif alert_data.alert_type == 'performance_degradation' %}
+            <p><strong>Model:</strong> {{ alert_data.model_name }}</p>
+            <p><strong>Test Run ID:</strong> {{ alert_data.test_run_id }}</p>
+            
+            <h4>Performance Metrics:</h4>
+            <div class="metric">
+                {% for key, value in alert_data.performance_metrics.items %}
+                    <strong>{{ key|title }}:</strong> {{ value }}<br>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <p>
+            <a href="{{ site_url }}/ai-governance/test-runs/{{ alert_data.test_run_id }}/" class="button">
+                View Test Run Details
+            </a>
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated alert from the Oreno AI Governance system.</p>
+        <p>Please do not reply to this email. For support, contact your system administrator.</p>
+    </div>
+</body>
+</html>

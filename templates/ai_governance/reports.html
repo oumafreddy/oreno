@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Governance Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        border-left: 4px solid #6f42c1;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .report-icon {
+        font-size: 2rem;
+        color: #6f42c1;
+        margin-bottom: 1rem;
+    }
+    
+    .report-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .report-description {
+        color: #666;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-purple {
+        background-color: #6f42c1;
+        border-color: #6f42c1;
+        color: white;
+    }
+    
+    .btn-purple:hover {
+        background-color: #5a32a3;
+        border-color: #5a32a3;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 2rem;">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-file-earmark-text me-2" style="color: #6f42c1;"></i>
+                        AI Governance Reports
+                    </h1>
+                    <p class="text-muted mb-0">Generate comprehensive reports for AI model compliance and testing</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Report Generation:</strong> All reports are scoped to your organization and support both PDF and Word export formats. 
+        Use the filters below to customize your reports before downloading.
+    </div>
+
+    <!-- Reports Grid -->
+    <div class="row">
+        <!-- Dashboard Report -->
+        <div class="col-lg-4 col-md-6">
+            <div class="report-card">
+                <div class="report-icon">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <h5 class="report-title">AI Governance Dashboard</h5>
+                <p class="report-description">
+                    Comprehensive overview of AI model compliance, test results, and framework scores.
+                </p>
+                <form method="get" action="{% url 'reports:ai_governance_dashboard_pdf' %}" target="_blank">
+                    <div class="mb-3">
+                        <label class="form-label">Model Type</label>
+                        <select name="model_type" class="form-select">
+                            <option value="">All Model Types</option>
+                            {% for model_type in model_types %}
+                                <option value="{{ model_type }}">{{ model_type|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <select name="date_range" class="form-select">
+                            {% for value, label in date_ranges %}
+                                <option value="{{ value }}" {% if value == 'last_30_days' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Framework</label>
+                        <select name="framework" class="form-select">
+                            <option value="">All Frameworks</option>
+                            {% for framework in frameworks %}
+                                <option value="{{ framework.code }}">{{ framework.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-purple">
+                            <i class="bi bi-file-pdf me-1"></i>
+                            Download PDF
+                        </button>
+                        <button type="submit" name="format" value="docx" class="btn btn-outline-purple">
+                            <i class="bi bi-file-word me-1"></i>
+                            Download Word
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Test Run Details Report -->
+        <div class="col-lg-4 col-md-6">
+            <div class="report-card">
+                <div class="report-icon">
+                    <i class="bi bi-clipboard-data"></i>
+                </div>
+                <h5 class="report-title">Test Run Details</h5>
+                <p class="report-description">
+                    Detailed analysis of specific test runs with results, metrics, and artifacts.
+                </p>
+                <form method="get" action="{% url 'reports:ai_governance_test_run_details_pdf' %}" target="_blank">
+                    <div class="mb-3">
+                        <label class="form-label">Test Run</label>
+                        <select name="test_run_id" class="form-select" required>
+                            <option value="">Select Test Run</option>
+                            {% for test_run in test_runs %}
+                                <option value="{{ test_run.id }}">
+                                    {{ test_run.model_asset.name }} - {{ test_run.status|title }} ({{ test_run.created_at|date:"M d, Y" }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Model Type</label>
+                        <select name="model_type" class="form-select">
+                            <option value="">All Model Types</option>
+                            {% for model_type in model_types %}
+                                <option value="{{ model_type }}">{{ model_type|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            {% for status in test_run_statuses %}
+                                <option value="{{ status }}">{{ status|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-purple">
+                            <i class="bi bi-file-pdf me-1"></i>
+                            Download PDF
+                        </button>
+                        <button type="submit" name="format" value="docx" class="btn btn-outline-purple">
+                            <i class="bi bi-file-word me-1"></i>
+                            Download Word
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Compliance Matrix Report -->
+        <div class="col-lg-4 col-md-6">
+            <div class="report-card">
+                <div class="report-icon">
+                    <i class="bi bi-diagram-3"></i>
+                </div>
+                <h5 class="report-title">Compliance Matrix</h5>
+                <p class="report-description">
+                    Framework compliance mapping showing test-to-clause relationships and scores.
+                </p>
+                <form method="get" action="{% url 'reports:ai_governance_compliance_matrix_pdf' %}" target="_blank">
+                    <div class="mb-3">
+                        <label class="form-label">Framework</label>
+                        <select name="framework" class="form-select">
+                            <option value="">All Frameworks</option>
+                            {% for framework in frameworks %}
+                                <option value="{{ framework.code }}">{{ framework.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Test Name</label>
+                        <select name="test_name" class="form-select">
+                            <option value="">All Tests</option>
+                            {% for test_name in test_names %}
+                                <option value="{{ test_name }}">{{ test_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <select name="date_range" class="form-select">
+                            {% for value, label in date_ranges %}
+                                <option value="{{ value }}" {% if value == 'last_30_days' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-purple">
+                            <i class="bi bi-file-pdf me-1"></i>
+                            Download PDF
+                        </button>
+                        <button type="submit" name="format" value="docx" class="btn btn-outline-purple">
+                            <i class="bi bi-file-word me-1"></i>
+                            Download Word
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-lightning me-2"></i>
+                        Quick Actions
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'ai_governance:model_list' %}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-cpu me-1"></i>
+                                View Models
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'ai_governance:dataset_list' %}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="bi bi-database me-1"></i>
+                                View Datasets
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'ai_governance:testrun_list' %}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="bi bi-play-circle me-1"></i>
+                                View Test Runs
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'ai_governance:dashboard' %}" class="btn btn-outline-secondary w-100 mb-2">
+                                <i class="bi bi-house me-1"></i>
+                                Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

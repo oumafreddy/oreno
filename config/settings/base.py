@@ -127,6 +127,7 @@ AUDIT_ENABLED_APPS = [
     'contracts',
     'document_management',
     'risk',
+    'ai_governance',
 ]
 
 # Custom user model
