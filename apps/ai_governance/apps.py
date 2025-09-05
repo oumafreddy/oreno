@@ -6,8 +6,5 @@ class AIGovernanceConfig(AppConfig):
     verbose_name = 'AI Governance'
 
     def ready(self):
-        # Import signals if/when added
-        try:
-            from . import signals  # noqa: F401
-        except Exception:
-            pass
+        import ai_governance.signals
+

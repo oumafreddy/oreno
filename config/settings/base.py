@@ -110,8 +110,9 @@ INSTALLED_APPS = [
     'document_management.apps.DocumentManagementConfig',
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
-    'reports.apps.ReportsConfig',
     'ai_governance.apps.AIGovernanceConfig',
+    'reports.apps.ReportsConfig',
+    
     
     # Services
     'services.ai.apps.AIServiceConfig',

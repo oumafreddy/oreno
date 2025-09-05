@@ -6,6 +6,86 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def load_model_for_testing(model_asset):
+    """
+    Load a model from a ModelAsset for testing.
+    
+    Args:
+        model_asset: ModelAsset instance
+        
+    Returns:
+        Loaded model object
+    """
+    try:
+        # This is a placeholder implementation
+        # In practice, you would load the model from the URI
+        # using appropriate libraries (joblib, pickle, MLflow, etc.)
+        
+        if model_asset.model_type == 'tabular':
+            # For tabular models, you might load from MLflow or local file
+            # Example: return mlflow.pyfunc.load_model(model_asset.uri)
+            logger.info(f"Loading tabular model from {model_asset.uri}")
+            # Return a mock model for now
+            from sklearn.ensemble import RandomForestClassifier
+            return RandomForestClassifier()
+            
+        elif model_asset.model_type == 'image':
+            # For image models, you might load from TensorFlow/PyTorch
+            logger.info(f"Loading image model from {model_asset.uri}")
+            # Return a mock model for now
+            return None
+            
+        elif model_asset.model_type == 'generative':
+            # For generative models
+            logger.info(f"Loading generative model from {model_asset.uri}")
+            # Return a mock model for now
+            return None
+            
+        else:
+            raise ValueError(f"Unsupported model type: {model_asset.model_type}")
+            
+    except Exception as exc:
+        logger.error(f"Failed to load model {model_asset.id}: {exc}")
+        raise
+
+
+def load_dataset_for_testing(dataset_asset):
+    """
+    Load a dataset from a DatasetAsset for testing.
+    
+    Args:
+        dataset_asset: DatasetAsset instance
+        
+    Returns:
+        Loaded dataset (X, y) or DataFrame
+    """
+    try:
+        # This is a placeholder implementation
+        # In practice, you would load the dataset from the path
+        # using pandas, pyarrow, or other appropriate libraries
+        
+        logger.info(f"Loading dataset from {dataset_asset.path}")
+        
+        if dataset_asset.format == 'csv':
+            # Load CSV dataset
+            import pandas as pd
+            df = pd.read_csv(dataset_asset.path)
+            return df
+            
+        elif dataset_asset.format == 'parquet':
+            # Load Parquet dataset
+            import pandas as pd
+            df = pd.read_parquet(dataset_asset.path)
+            return df
+            
+        else:
+            raise ValueError(f"Unsupported dataset format: {dataset_asset.format}")
+            
+    except Exception as exc:
+        logger.error(f"Failed to load dataset {dataset_asset.id}: {exc}")
+        raise
+
+
 @shared_task(bind=True, queue='ai_governance_high')
 def execute_test_run(self, test_run_id):
     """
@@ -13,6 +93,7 @@ def execute_test_run(self, test_run_id):
     High priority queue for immediate test execution.
     """
     from .models import TestRun, TestResult, Metric, EvidenceArtifact
+    from services.ai.governance_engine.test_executor import TestExecutor, TestExecutionPlan, TestConfig
     
     try:
         test_run = TestRun.objects.get(id=test_run_id)
@@ -24,32 +105,72 @@ def execute_test_run(self, test_run_id):
         }
         test_run.save()
         
-        # Execute tests based on test plan configuration
-        config = test_run.test_plan.config if test_run.test_plan else {}
+        # Load model and dataset
+        model = load_model_for_testing(test_run.model_asset)
+        dataset = load_dataset_for_testing(test_run.dataset_asset) if test_run.dataset_asset else None
         
-        # Placeholder for actual test execution
-        # This will be implemented with the test adapters
-        results = []
+        # Create test execution plan
+        test_configs = []
+        if test_run.test_plan:
+            config = test_run.test_plan.config
+            for test_name, test_params in config.get('tests', {}).items():
+                test_config = TestConfig(
+                    test_name=test_name,
+                    parameters=test_params.get('parameters', {}),
+                    thresholds=test_params.get('thresholds', {}),
+                    enabled=test_params.get('enabled', True),
+                    timeout=test_params.get('timeout'),
+                    metadata=test_params.get('metadata', {})
+                )
+                test_configs.append(test_config)
         
-        for test_name, test_config in config.get('tests', {}).items():
-            # Create test result
+        # Execute tests using the test executor
+        executor = TestExecutor()
+        execution_plan = TestExecutionPlan(
+            model_asset_id=str(test_run.model_asset.id),
+            dataset_asset_id=str(test_run.dataset_asset.id) if test_run.dataset_asset else None,
+            test_configs=test_configs,
+            execution_parameters=test_run.parameters
+        )
+        
+        # Execute the test plan
+        test_results = executor.execute_test_plan(
+            execution_plan,
+            model=model,
+            dataset=dataset
+        )
+        
+        # Save results to database
+        for result in test_results:
+            # Create TestResult record
             test_result = TestResult.objects.create(
                 test_run=test_run,
-                test_name=test_name,
-                summary=test_config,
-                passed=True  # Placeholder
+                test_name=result.test_name,
+                summary={
+                    'status': result.status.value,
+                    'score': result.score,
+                    'execution_time': result.execution_time,
+                    'metadata': result.metadata
+                },
+                passed=result.passed
             )
             
-            # Create metrics
-            for metric_name, metric_value in test_config.get('metrics', {}).items():
+            # Create Metric records
+            for metric_name, metric_value in result.metrics.items():
                 Metric.objects.create(
                     test_result=test_result,
                     name=metric_name,
                     value=metric_value,
-                    passed=True  # Placeholder
+                    passed=result.passed
                 )
             
-            results.append(test_result)
+            # Create EvidenceArtifact records
+            for artifact_path in result.artifacts:
+                EvidenceArtifact.objects.create(
+                    test_run=test_run,
+                    artifact_type='other',  # Could be determined from file extension
+                    file_path=artifact_path
+                )
         
         # Mark as completed
         test_run.status = 'completed'
@@ -59,7 +180,7 @@ def execute_test_run(self, test_run_id):
         # Trigger webhooks
         trigger_webhooks.delay(test_run_id, 'test_run.completed')
         
-        return f"Test run {test_run_id} completed successfully"
+        return f"Test run {test_run_id} completed successfully with {len(test_results)} results"
         
     except Exception as exc:
         logger.error(f"Test run {test_run_id} failed: {exc}")

@@ -36,4 +36,5 @@ router.register(r'webhooks', WebhookSubscriptionViewSet, basename='webhook')
 urlpatterns = [
     path('dashboard/', GovernanceDashboardView.as_view(), name='dashboard'),
     path('api/', include(router.urls)),
+    path('api/test-runs/create/', TestRunViewSet.as_view({'post': 'create_test_run'}), name='api-test-runs'),
 ]
