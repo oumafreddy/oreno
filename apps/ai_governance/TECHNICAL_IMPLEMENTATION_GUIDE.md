@@ -1,4 +1,4 @@
- to# AI Governance Technical Implementation Guide
+# AI Governance Technical Implementation Guide
 ## Oreno GRC Platform - AI Governance Module
 
 **Version:** 2.0  
