@@ -37,12 +37,25 @@ def create_user_related_profiles(sender, instance, created, **kwargs):
     """
     if created:
         # Use a transaction block for DB-related operations (profile and OTP creation)
+        created_otp = None
         with transaction.atomic():
             # Create the one-to-one Profile
             Profile.objects.create(user=instance)
 
-            # Generate an OTP for email verification (but not inside transaction block)
-            OTP.objects.create(user=instance)
+            # Generate an OTP for email verification
+            created_otp = OTP.objects.create(user=instance)
+
+            # Ensure we send the OTP email only after commit succeeds
+            if created_otp:
+                def _send_otp_email(otp_id, user_email):
+                    try:
+                        otp_obj = OTP.objects.filter(pk=otp_id).first()
+                        if otp_obj:
+                            otp_obj.send_via_email()
+                    except Exception:
+                        # Avoid raising in signal; logging handled by mail backend/logger
+                        pass
+                transaction.on_commit(lambda: _send_otp_email(created_otp.id, instance.email))
 
         # After DB changes are committed, handle async tasks independently
         # Send welcome email asynchronously outside the transaction block

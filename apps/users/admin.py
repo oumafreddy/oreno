@@ -7,6 +7,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
+from django.contrib import messages
+from django.urls import reverse
+from django.shortcuts import redirect
+from django.db import IntegrityError
 
 from users.models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, PasswordPolicy, AccountLockout, SecurityAuditLog
 
@@ -116,6 +120,28 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
             obj.is_admin_created = True
             obj.is_first_time_setup_complete = False
         super().save_model(request, obj, form, change)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        """
+        Override delete view to gracefully handle FK protection/constraints
+        and provide a clear admin message instead of a 500 error.
+        """
+        try:
+            return super().delete_view(request, object_id, extra_context)
+        except IntegrityError:
+            messages.error(
+                request,
+                _(
+                    "This user cannot be deleted because it is referenced by other records (e.g., audit logs, risk controls). "
+                    "Please reassign or clean up related references, or use the supported data cleanup command/view."
+                ),
+            )
+            # Redirect back to the change page for the user
+            try:
+                url = reverse('admin:users_customuser_change', args=[object_id])
+            except Exception:
+                url = reverse('admin:users_customuser_changelist')
+            return redirect(url)
 
 @admin.register(Profile)
 class ProfileAdmin(VersionAdmin):

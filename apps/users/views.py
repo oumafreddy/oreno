@@ -19,6 +19,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q, Prefetch
 from django.utils.translation import gettext_lazy as _
+from django.db import IntegrityError
 
 from core.decorators import skip_org_check
 from core.mixins.organization import OrganizationScopedQuerysetMixin
@@ -571,6 +572,10 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
     success_url = reverse_lazy('users:user-list')
     success_message = _("User deleted successfully")
 
+    def get_organization(self):
+        # Provide organization context for OrganizationPermissionMixin
+        return self.get_object().organization
+
     def delete(self, request, *args, **kwargs):
         if self.get_object() == request.user:
             raise PermissionDenied(_("You cannot delete your own account"))
@@ -581,19 +586,29 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
             
         user = self.get_object()
         
-        with transaction.atomic():
-            # First, delete any tenant-specific data in the user's organization schema
-            if user.organization:
-                from django_tenants.utils import tenant_context
-                with tenant_context(user.organization):
-                    # Delete audit-related records first
-                    from audit.models import Approval
-                    Approval.objects.filter(
-                        Q(requester=user) | Q(approver=user)
-                    ).delete()
-            
-            # Now delete the user from the public schema
-            return super().delete(request, *args, **kwargs)
+        try:
+            with transaction.atomic():
+                # First, delete any tenant-specific data in the user's organization schema
+                if user.organization:
+                    from django_tenants.utils import tenant_context
+                    with tenant_context(user.organization):
+                        # Delete audit-related records first
+                        from audit.models import Approval
+                        Approval.objects.filter(
+                            Q(requester=user) | Q(approver=user)
+                        ).delete()
+                
+                # Now delete the user from the public schema
+                return super().delete(request, *args, **kwargs)
+        except IntegrityError:
+            messages.error(
+                request,
+                _(
+                    "This user cannot be deleted because it is referenced by other records (e.g., audit logs, risk controls). "
+                    "Please reassign or clean up related references, or use the supported data cleanup command/view."
+                ),
+            )
+            return redirect('users:user-detail', pk=user.pk)
 
 class AdminUserCreateView(UserPermissionMixin, SuccessMessageMixin, CreateView):
     """
