@@ -1058,35 +1058,68 @@ def engagement_details_pdf(request):
     else:
         # If no filter, show the most recent engagement
         engagement = Engagement.objects.filter(organization=org).order_by('-project_start_date').first()
+
     engagement_names = get_engagement_names(org)
+
+    # Annex 1: Priorities
+    annex_recommendation_priorities = list(getattr(Recommendation, 'PRIORITY_CHOICES', []))
+    annex_priority_definitions = {
+        'low': 'Action is desirable; failure to act is unlikely to cause material negative consequences.',
+        'medium': 'Action is required to ensure the entity is not exposed to risks; failure to act could result in negative consequences.',
+        'high': 'Prompt action is required to ensure the entity is not exposed to high risks; failure to act could result in major negative consequences.',
+        'critical': 'Immediate action is imperative; risk exposure is critical and may lead to severe consequences if not addressed.',
+    }
+    priority_definitions = [
+        {
+            "priority": val,
+            "label": label,
+            "definition": annex_priority_definitions.get(val, "Priority definition"),
+        }
+        for val, label in annex_recommendation_priorities
+    ]
+
+    # Annex 2: Conclusion ratings
+    annex_conclusion_choices = list(getattr(Engagement, 'CONCLUSION_CHOICES', []))
+    annex_conclusion_definitions = {
+        'satisfactory': 'Governance, risk management and control processes are adequately designed and operating effectively.',
+        'needs_improvement': 'Arrangements are generally established, but improvements are needed to address noted gaps that do not significantly impair objectives.',
+        'significant_improvement_needed': 'Key weaknesses exist; major improvement is needed and results may materially affect achievement of objectives.',
+        'unsatisfactory': 'Governance arrangements and controls are not adequately established or not functioning, posing significant risk to objectives.',
+        'not_rated': 'An overall rating was not assigned for this engagement.',
+    }
+    conclusion_definitions = [
+        {
+            "conclusion": val,
+            "label": label,
+            "definition": annex_conclusion_definitions.get(val, "Rating definition"),
+        }
+        for val, label in annex_conclusion_choices
+    ]
+
+    # Annex 3: Risk levels (same approach if needed later)
+
     context = {
         'organization': org,
         'engagement': engagement,
         'engagement_names': engagement_names,
         'filters': {'engagement_name': engagement_name},
-        'for_pdf': True,  # Always set for PDF context
+        'for_pdf': True,
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Audit Engagement Details Report',
         'description': f'Detailed analysis of engagement: {engagement.title if engagement else "Not found"}',
-        # Annex data: pull choices from models to avoid hardcoding
-        'annex_recommendation_priorities': list(getattr(Recommendation, 'PRIORITY_CHOICES', [])),
-        'annex_conclusion_choices': list(getattr(Engagement, 'CONCLUSION_CHOICES', [])),
+
+        # Clean lists for template
+        'priority_definitions': priority_definitions,
+        'conclusion_definitions': conclusion_definitions,
+
+        # Still keep originals in case other parts use them
+        'annex_recommendation_priorities': annex_recommendation_priorities,
+        'annex_priority_definitions': annex_priority_definitions,
+        'annex_conclusion_choices': annex_conclusion_choices,
+        'annex_conclusion_definitions': annex_conclusion_definitions,
         'annex_issue_risk_levels': list(getattr(Issue, 'RISK_LEVEL_CHOICES', [])),
-        # Human-friendly definitions (non-destructive; can be adjusted later)
-        'annex_conclusion_definitions': {
-            'satisfactory': 'Governance, risk management and control processes are adequately designed and operating effectively.',
-            'needs_improvement': 'Arrangements are generally established, but improvements are needed to address noted gaps that do not significantly impair objectives.',
-            'significant_improvement_needed': 'Key weaknesses exist; major improvement is needed and results may materially affect achievement of objectives.',
-            'unsatisfactory': 'Governance arrangements and controls are not adequately established or not functioning, posing significant risk to objectives.',
-            'not_rated': 'An overall rating was not assigned for this engagement.',
-        },
-        'annex_priority_definitions': {
-            'low': 'Action is desirable; failure to act is unlikely to cause material negative consequences.',
-            'medium': 'Action is required to ensure the entity is not exposed to risks; failure to act could result in negative consequences.',
-            'high': 'Prompt action is required to ensure the entity is not exposed to high risks; failure to act could result in major negative consequences.',
-            'critical': 'Immediate action is imperative; risk exposure is critical and may lead to severe consequences if not addressed.',
-        },
     }
+
     if request.GET.get('format') == 'docx':
         ctx = context
         doc = _docx_start_document(org, ctx['title'], ctx['generation_timestamp'])

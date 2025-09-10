@@ -162,12 +162,13 @@
         <tr><th style="width:25%">Priority</th><th>Description</th></tr>
       </thead>
       <tbody>
-        {% for val,label in annex_recommendation_priorities %}
+        {% for item in priority_definitions %}
         <tr>
-          <td><span class="status-badge status-{{ val|lower }}">{{ label }}</span></td>
-          <td>{{ annex_priority_definitions[val]|default:"Priority definition" }}</td>
+          <td><span class="status-badge status-{{ item.priority|lower }}">{{ item.label }}</span></td>
+          <td>{{ item.definition }}</td>
         </tr>
         {% endfor %}
+        
       </tbody>
     </table>
   </div>
@@ -180,12 +181,13 @@
         <tr><th style="width:30%">Overall Rating</th><th>Meaning</th></tr>
       </thead>
       <tbody>
-        {% for val,label in annex_conclusion_choices %}
+        {% for item in conclusion_definitions %}
         <tr>
-          <td><span class="status-badge status-{{ val|lower }}">{{ label }}</span></td>
-          <td>{{ annex_conclusion_definitions[val]|default:"Rating definition" }}</td>
+          <td><span class="status-badge status-{{ item.conclusion|lower }}">{{ item.label }}</span></td>
+          <td>{{ item.definition }}</td>
         </tr>
         {% endfor %}
+        
       </tbody>
     </table>
   </div>
