@@ -15,6 +15,7 @@ import base64
 from datetime import datetime
 from django.db.models.functions import TruncMonth
 from audit.models import AuditWorkplan, Engagement, Issue, Approval
+from audit.models.recommendation import Recommendation
 from django.db.models.functions import TruncYear
 from legal.models import LegalCase, LegalTask, LegalDocument, LegalParty, LegalArchive
 from compliance.models import ComplianceRequirement, ComplianceFramework, PolicyDocument, ComplianceObligation, ComplianceEvidence
@@ -202,22 +203,28 @@ def risk_heatmap_pdf(request):
                     'risk_score': risk_score
                 }
     
-    # Calculate comprehensive statistics
+    # Calculate comprehensive statistics using model risk levels to avoid gaps
     total_risks = risks.count()
-    high_risk_count = risks.filter(
-        models.Q(residual_impact_score__gte=4) | 
-        models.Q(residual_likelihood_score__gte=4)
-    ).count()
-    
-    medium_risk_count = risks.filter(
-        models.Q(residual_impact_score=3) & 
-        models.Q(residual_likelihood_score=3)
-    ).count()
-    
-    low_risk_count = risks.filter(
-        models.Q(residual_impact_score__lte=2) & 
-        models.Q(residual_likelihood_score__lte=2)
-    ).count()
+    low_risk_count = 0
+    medium_risk_count = 0
+    high_risk_count = 0
+    for r in risks:
+        level = r.get_risk_level()
+        if level == 'low':
+            low_risk_count += 1
+        elif level == 'medium':
+            medium_risk_count += 1
+        elif level in ('high', 'very_high', 'critical'):
+            high_risk_count += 1
+        else:
+            # Fallback if level is None: infer with conservative thresholds
+            score = r.residual_risk_score
+            if score <= 5:
+                low_risk_count += 1
+            elif score <= 10:
+                medium_risk_count += 1
+            else:
+                high_risk_count += 1
     
     # Risk distribution by category
     category_distribution = risks.values('category').annotate(
@@ -1061,6 +1068,24 @@ def engagement_details_pdf(request):
         'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
         'title': 'Audit Engagement Details Report',
         'description': f'Detailed analysis of engagement: {engagement.title if engagement else "Not found"}',
+        # Annex data: pull choices from models to avoid hardcoding
+        'annex_recommendation_priorities': list(getattr(Recommendation, 'PRIORITY_CHOICES', [])),
+        'annex_conclusion_choices': list(getattr(Engagement, 'CONCLUSION_CHOICES', [])),
+        'annex_issue_risk_levels': list(getattr(Issue, 'RISK_LEVEL_CHOICES', [])),
+        # Human-friendly definitions (non-destructive; can be adjusted later)
+        'annex_conclusion_definitions': {
+            'satisfactory': 'Governance, risk management and control processes are adequately designed and operating effectively.',
+            'needs_improvement': 'Arrangements are generally established, but improvements are needed to address noted gaps that do not significantly impair objectives.',
+            'significant_improvement_needed': 'Key weaknesses exist; major improvement is needed and results may materially affect achievement of objectives.',
+            'unsatisfactory': 'Governance arrangements and controls are not adequately established or not functioning, posing significant risk to objectives.',
+            'not_rated': 'An overall rating was not assigned for this engagement.',
+        },
+        'annex_priority_definitions': {
+            'low': 'Action is desirable; failure to act is unlikely to cause material negative consequences.',
+            'medium': 'Action is required to ensure the entity is not exposed to risks; failure to act could result in negative consequences.',
+            'high': 'Prompt action is required to ensure the entity is not exposed to high risks; failure to act could result in major negative consequences.',
+            'critical': 'Immediate action is imperative; risk exposure is critical and may lead to severe consequences if not addressed.',
+        },
     }
     if request.GET.get('format') == 'docx':
         ctx = context

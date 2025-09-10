@@ -509,6 +509,38 @@ class RiskAssessmentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, 
 def get_active_matrix_config(org):
     return RiskMatrixConfig.objects.filter(organization=org, is_active=True).first()
 
+# Helper: collapse detailed risk levels into Low/Medium/High buckets
+def _bucket_risk_levels(risks, matrix):
+    """Return tuple (low_count, medium_count, high_count).
+
+    High bucket includes 'high', 'very_high', and 'critical' levels so that
+    totals always add up to the overall number of risks when only three bands
+    are displayed in reports.
+    """
+    if risks is None:
+        return (0, 0, 0)
+    low = medium = high = 0
+    # Safeguard when matrix is missing
+    active_matrix = matrix
+    for r in risks:
+        level = r.get_risk_level() if active_matrix else None
+        if level == 'low':
+            low += 1
+        elif level == 'medium':
+            medium += 1
+        elif level in ('high', 'very_high', 'critical'):
+            high += 1
+        else:
+            # If level could not be determined, infer using default thresholds (5/10/15/20)
+            score = r.residual_risk_score
+            if score <= 5:
+                low += 1
+            elif score <= 10:
+                medium += 1
+            else:
+                high += 1
+    return (low, medium, high)
+
 class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     template_name = 'risk/list.html'
     context_object_name = 'dashboard'
@@ -611,7 +643,12 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         context['total_controls'] = controls.count()
         context['total_kris'] = kris.count()
         context['total_assessments'] = assessments.count()
-        context['high_critical_risks'] = risks.filter(residual_risk_score__gte=matrix.high_threshold if matrix else 15).count() if matrix else 0
+        # Three-band breakdown (High bucket aggregates very_high/critical)
+        low_c, med_c, high_c = _bucket_risk_levels(list(risks), matrix)
+        context['low_risks'] = low_c
+        context['medium_risks'] = med_c
+        context['high_risks'] = high_c
+        context['high_critical_risks'] = high_c  # maintain existing key semantics
         context['recent_activity_count'] = assessments.filter(assessment_date__gte=timezone.now()-timezone.timedelta(days=7)).count()
         
         # COBIT Summary Cards
@@ -891,12 +928,16 @@ def api_summary_cards(request):
     kris = KRI.objects.filter(risk__organization=org)
     assessments = RiskAssessment.objects.filter(risk__organization=org)
     matrix = get_active_matrix_config(org)
+    low_c, med_c, high_c = _bucket_risk_levels(list(risks), matrix)
     data = {
         'total_risks': risks.count(),
         'total_controls': controls.count(),
         'total_kris': kris.count(),
         'total_assessments': assessments.count(),
-        'high_critical_risks': risks.filter(residual_risk_score__gte=matrix.high_threshold if matrix else 15).count() if matrix else 0,
+        'high_critical_risks': high_c,
+        'low_risks': low_c,
+        'medium_risks': med_c,
+        'high_risks': high_c,
         'recent_activity_count': assessments.filter(assessment_date__gte=timezone.now()-timezone.timedelta(days=7)).count(),
     }
     return JsonResponse(SummaryCardSerializer(data).data)

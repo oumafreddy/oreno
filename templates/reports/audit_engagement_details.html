@@ -149,4 +149,69 @@
 {% else %}
   <div class="alert alert-warning"><strong>No Engagement Found:</strong> {% if filters.engagement_name %}No engagement found matching "{{ filters.engagement_name }}"{% else %}Please select an engagement to view details{% endif %}</div>
 {% endif %}
+  
+  {% if engagement %}
+  <div class="page-break"></div>
+  <h2 class="section-header">Annexes</h2>
+  
+  <!-- Annex 1: Priorities of Audit Recommendations -->
+  <div class="report-card">
+    <h3>Annex 1. Priorities of Audit Recommendations</h3>
+    <table class="report-table" style="font-size:10pt;">
+      <thead>
+        <tr><th style="width:25%">Priority</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        {% for val,label in annex_recommendation_priorities %}
+        <tr>
+          <td><span class="status-badge status-{{ val|lower }}">{{ label }}</span></td>
+          <td>{{ annex_priority_definitions[val]|default:"Priority definition" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Annex 2: Definition of Audit Results (Overall Rating) -->
+  <div class="report-card">
+    <h3>Annex 2. Definition of Audit Results (Overall Rating)</h3>
+    <table class="report-table" style="font-size:10pt;">
+      <thead>
+        <tr><th style="width:30%">Overall Rating</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        {% for val,label in annex_conclusion_choices %}
+        <tr>
+          <td><span class="status-badge status-{{ val|lower }}">{{ label }}</span></td>
+          <td>{{ annex_conclusion_definitions[val]|default:"Rating definition" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Annex 3: Issue Risk Levels -->
+  <div class="report-card">
+    <h3>Annex 3. Issue Risk Levels</h3>
+    <table class="report-table" style="font-size:10pt;">
+      <thead>
+        <tr><th style="width:25%">Risk Level</th><th>General Meaning</th></tr>
+      </thead>
+      <tbody>
+        {% for val,label in annex_issue_risk_levels %}
+        <tr>
+          <td><span class="status-badge status-{{ val|lower }}">{{ label }}</span></td>
+          <td>
+            {% if val == 'low' %}Minimal impact and likelihood; routine monitoring is sufficient.
+            {% elif val == 'medium' %}Moderate impact or likelihood; management attention required.
+            {% elif val == 'high' %}Significant impact or likelihood; prompt action required.
+            {% elif val == 'critical' %}Severe impact and/or likelihood; immediate action imperative.
+            {% else %}As defined by the engagement context.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 {% endblock %} 
