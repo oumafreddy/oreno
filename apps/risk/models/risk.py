@@ -93,6 +93,43 @@ class Risk(OrganizationOwnedModel, AuditableModel):
     def clean(self):
         if self.date_identified and self.date_identified > timezone.now().date():
             raise ValidationError('Date identified cannot be in the future.')
+        # Dynamic validation based on active matrix configuration
+        matrix_config = self.get_matrix_config
+        errors = {}
+        if matrix_config:
+            # Respect model-level 1..5 caps, but further restrict to matrix levels when lower
+            max_impact = min(matrix_config.impact_levels, 5)
+            max_likelihood = min(matrix_config.likelihood_levels, 5)
+
+            # Validate inherent scores
+            if not (1 <= self.inherent_impact_score <= max_impact):
+                errors['inherent_impact_score'] = (
+                    f"Impact score must be between 1 and {max_impact} for the current matrix"
+                )
+            if not (1 <= self.inherent_likelihood_score <= max_likelihood):
+                errors['inherent_likelihood_score'] = (
+                    f"Likelihood score must be between 1 and {max_likelihood} for the current matrix"
+                )
+
+            # Validate residual scores
+            if not (1 <= self.residual_impact_score <= max_impact):
+                errors['residual_impact_score'] = (
+                    f"Impact score must be between 1 and {max_impact} for the current matrix"
+                )
+            if not (1 <= self.residual_likelihood_score <= max_likelihood):
+                errors['residual_likelihood_score'] = (
+                    f"Likelihood score must be between 1 and {max_likelihood} for the current matrix"
+                )
+
+            # Validate risk appetite within matrix threshold ceiling if provided
+            if self.risk_appetite is not None:
+                if self.risk_appetite < 1 or self.risk_appetite > matrix_config.very_high_threshold:
+                    errors['risk_appetite'] = (
+                        f"Risk appetite must be between 1 and {matrix_config.very_high_threshold}"
+                    )
+
+        if errors:
+            raise ValidationError(errors)
 
     def check_action_due(self):
         if (self.action_due_date and self.action_due_date < timezone.now().date() and self.action_plan_status != 'completed'):

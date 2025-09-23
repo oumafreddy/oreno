@@ -3,6 +3,7 @@ from core.models.abstract_models import TimeStampedModel
 from django_ckeditor_5.fields import CKEditor5Field
 from django.utils import timezone
 from .risk import Risk
+from .risk_matrix import RiskMatrixConfig
 
 class KRI(TimeStampedModel):
     """Key Risk Indicator model for monitoring risks."""
@@ -51,3 +52,34 @@ class KRI(TimeStampedModel):
             elif self.value <= self.threshold_warning:
                 return 'warning'
             return 'normal'
+
+    # Matrix-aware mapping helpers (non-destructive, optional use)
+    def get_matrix_status(self):
+        """Map KRI value to matrix bands using the linked risk's matrix thresholds.
+        This does not change KRI thresholds; it provides a consistent banding for UI.
+        """
+        try:
+            matrix = RiskMatrixConfig.objects.filter(
+                organization=self.risk.organization, is_active=True
+            ).first()
+            if not matrix:
+                return None
+            # Use risk's appetite as a contextual ceiling if available, else just value as score
+            # Here we interpret value directly as a score; projects can override to normalize.
+            score = float(self.value)
+            return matrix.get_risk_level(score)
+        except Exception:
+            return None
+
+    def get_matrix_color(self):
+        """Return matrix color for this KRI based on get_matrix_status()."""
+        try:
+            matrix = RiskMatrixConfig.objects.filter(
+                organization=self.risk.organization, is_active=True
+            ).first()
+            if not matrix:
+                return None
+            score = float(self.value)
+            return matrix.get_risk_level_color(score)
+        except Exception:
+            return None

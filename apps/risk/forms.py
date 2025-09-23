@@ -79,6 +79,42 @@ class RiskForm(OrganizationScopedModelForm):
 
     def __init__(self, *args, organization=None, request=None, **kwargs):
         super().__init__(*args, organization=organization, request=request, **kwargs)
+        # Dynamically limit score choices based on active matrix
+        try:
+            from .models import RiskMatrixConfig
+            matrix = None
+            org = organization or (getattr(request, 'organization', None) if request else None)
+            if org:
+                matrix = RiskMatrixConfig.objects.filter(organization=org, is_active=True).first()
+            if matrix:
+                impact_range = [(i, str(i)) for i in range(1, min(matrix.impact_levels, 5) + 1)]
+                likelihood_range = [(i, str(i)) for i in range(1, min(matrix.likelihood_levels, 5) + 1)]
+                # Inherent
+                if 'inherent_impact_score' in self.fields:
+                    self.fields['inherent_impact_score'].widget = forms.Select(choices=impact_range)
+                if 'inherent_likelihood_score' in self.fields:
+                    self.fields['inherent_likelihood_score'].widget = forms.Select(choices=likelihood_range)
+                # Residual
+                if 'residual_impact_score' in self.fields:
+                    self.fields['residual_impact_score'].widget = forms.Select(choices=impact_range)
+                if 'residual_likelihood_score' in self.fields:
+                    self.fields['residual_likelihood_score'].widget = forms.Select(choices=likelihood_range)
+                # Optional: guide risk appetite entry by setting HTML attrs (non-enforcing)
+                if 'risk_appetite' in self.fields:
+                    self.fields['risk_appetite'].widget.attrs.update({
+                        'min': 1,
+                        'max': str(matrix.very_high_threshold),
+                    })
+        except Exception:
+            # Fail open: keep default widgets if anything goes wrong
+            from django.contrib import messages
+            req = request or getattr(self, 'request', None)
+            if req and hasattr(req, 'META'):
+                try:
+                    messages.warning(req, 'Active risk matrix not found; using default score ranges (1-5).')
+                except Exception:
+                    # messages framework may not be available in this context
+                    pass
         # Limit objectives to active ones in current organization
         if 'objectives' in self.fields:
             qs = Objective.objects.all()
@@ -277,3 +313,15 @@ class RiskMatrixConfigFilterForm(forms.Form):
                 Column(Submit('filter', 'Filter', css_class='btn-primary mt-0'), css_class='col-md-2 align-self-end'),
             )
         ) 
+
+# Friendly message when active matrix is missing (form-only utility)
+def get_active_matrix_or_message(request, organization):
+    try:
+        from .models import RiskMatrixConfig
+        matrix = RiskMatrixConfig.objects.filter(organization=organization, is_active=True).first()
+        if not matrix and request is not None:
+            from django.contrib import messages
+            messages.warning(request, 'No active risk matrix found. Please configure one to enable matrix-driven scoring.')
+        return matrix
+    except Exception:
+        return None

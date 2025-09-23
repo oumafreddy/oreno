@@ -26,13 +26,27 @@
                 <dt class="col-sm-4">Data Source</dt><dd class="col-sm-8">{{ kri.data_source }}</dd>
                 <dt class="col-sm-4">Collection Frequency</dt><dd class="col-sm-8">{{ kri.collection_frequency }}</dd>
                 <dt class="col-sm-4">Status</dt><dd class="col-sm-8">
-                    {% if kri.get_status == 'critical' %}
-                        <span class="badge bg-danger">Critical</span>
-                    {% elif kri.get_status == 'warning' %}
-                        <span class="badge bg-warning text-dark">Warning</span>
-                    {% else %}
-                        <span class="badge bg-success">Normal</span>
-                    {% endif %}
+                    {% with mband=kri.get_matrix_status %}
+                        {% if mband %}
+                            {% if mband == 'low' %}
+                                <span class="badge bg-success">{{ kri.get_status|title }}</span>
+                            {% elif mband == 'medium' %}
+                                <span class="badge bg-warning text-dark">{{ kri.get_status|title }}</span>
+                            {% elif mband == 'high' or mband == 'very_high' or mband == 'critical' %}
+                                <span class="badge bg-danger">{{ kri.get_status|title }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ kri.get_status|title }}</span>
+                            {% endif %}
+                        {% else %}
+                            {% if kri.get_status == 'critical' %}
+                                <span class="badge bg-danger">Critical</span>
+                            {% elif kri.get_status == 'warning' %}
+                                <span class="badge bg-warning text-dark">Warning</span>
+                            {% else %}
+                                <span class="badge bg-success">Normal</span>
+                            {% endif %}
+                        {% endif %}
+                    {% endwith %}
                 </dd>
             </dl>
         </div>

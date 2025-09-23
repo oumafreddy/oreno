@@ -69,13 +69,27 @@
                                 <td>{{ kri.value }}</td>
                                 <td>{{ kri.unit }}</td>
                                 <td>
-                                    {% if kri.get_status == 'critical' %}
-                                        <span class="badge bg-danger">Critical</span>
-                                    {% elif kri.get_status == 'warning' %}
-                                        <span class="badge bg-warning text-dark">Warning</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Normal</span>
-                                    {% endif %}
+                                    {% with mband=kri.get_matrix_status %}
+                                        {% if mband %}
+                                            {% if mband == 'low' %}
+                                                <span class="badge bg-success">{{ kri.get_status|title }}</span>
+                                            {% elif mband == 'medium' %}
+                                                <span class="badge bg-warning text-dark">{{ kri.get_status|title }}</span>
+                                            {% elif mband == 'high' or mband == 'very_high' or mband == 'critical' %}
+                                                <span class="badge bg-danger">{{ kri.get_status|title }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ kri.get_status|title }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if kri.get_status == 'critical' %}
+                                                <span class="badge bg-danger">Critical</span>
+                                            {% elif kri.get_status == 'warning' %}
+                                                <span class="badge bg-warning text-dark">Warning</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Normal</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endwith %}
                                 </td>
                                 <td>{{ kri.timestamp }}</td>
                                 <td>
