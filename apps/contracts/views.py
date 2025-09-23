@@ -70,11 +70,32 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         print(f"ContractsDashboardView: Party count: {party_count}")
         print(f"ContractsDashboardView: Milestone count: {milestone_count}")
         
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
+
+        contract_qs = Contract.objects.filter(organization=org)
+        if not filter_all:
+            cq = Q(start_date__year__in=year_ints) | Q(end_date__year__in=year_ints)
+            if month_ints:
+                cq &= (Q(start_date__month__in=month_ints) | Q(end_date__month__in=month_ints))
+            contract_qs = contract_qs.filter(cq)
+
         # Recent contracts
-        context['recent_contracts'] = Contract.objects.filter(organization=org).order_by('-start_date')[:8]
+        context['recent_contracts'] = contract_qs.order_by('-start_date')[:8]
         
         # Contract status distribution
-        status_dist = Contract.objects.filter(organization=org).values_list('status', flat=True)
+        status_dist = contract_qs.values_list('status', flat=True)
         status_counter = Counter(status_dist)
         # Map status values to display names
         status_mapping = {
@@ -91,17 +112,23 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         context['contract_status_dist'] = contract_status_chart or {'Draft': 0, 'Active': 0, 'Expired': 0}
         
         # Contract type distribution
-        type_dist = Contract.objects.filter(organization=org).values_list('contract_type__name', flat=True)
+        type_dist = contract_qs.values_list('contract_type__name', flat=True)
         type_counter = Counter(type_dist)
         context['contract_type_dist'] = dict(type_counter) or {'General': 0}
         
         # Milestone type distribution - with explicit organization filtering
-        milestone_type_dist = ContractMilestone.objects.filter(organization=org).values_list('milestone_type', flat=True)
+        milestone_qs = ContractMilestone.objects.filter(organization=org)
+        if not filter_all:
+            mq = Q(due_date__year__in=year_ints)
+            if month_ints:
+                mq &= Q(due_date__month__in=month_ints)
+            milestone_qs = milestone_qs.filter(mq)
+        milestone_type_dist = milestone_qs.values_list('milestone_type', flat=True)
         milestone_type_counter = Counter(milestone_type_dist)
         context['milestone_type_dist'] = dict(milestone_type_counter) or {'Payment': 0, 'Delivery': 0}
         
         # Milestone status distribution (using is_completed) - with explicit organization filtering
-        milestone_status_dist = ContractMilestone.objects.filter(organization=org).values_list('is_completed', flat=True)
+        milestone_status_dist = milestone_qs.values_list('is_completed', flat=True)
         # Convert boolean values to human-readable strings for charting
         milestone_status_mapped = [
             'Completed' if status else 'Pending' for status in milestone_status_dist
@@ -120,11 +147,19 @@ class ContractsDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, Te
         context['contract_party_dist'] = contract_party_chart or {'No Parties': 0}
         
         # Contract expiry distribution (by year)
-        expiry_dist = Contract.objects.filter(organization=org, end_date__isnull=False).annotate(
+        expiry_base = contract_qs.filter(end_date__isnull=False)
+        expiry_dist = expiry_base.annotate(
             expiry_year=ExtractYear('end_date')
         ).values('expiry_year').annotate(count=Count('id')).order_by('expiry_year')
         contract_expiry_chart = {str(item['expiry_year']): item['count'] for item in expiry_dist}
         context['contract_expiry_dist'] = contract_expiry_chart or {'2024': 0, '2025': 0}
+
+        # Period filter context
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
         
         return context
 

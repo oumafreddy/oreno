@@ -37,11 +37,13 @@ class CustomUser(AbstractUser):
     """
     ROLE_ADMIN = 'admin'
     ROLE_HEAD_OF_UNIT = 'head_of_unit'
+    ROLE_RISK_CHAMPION = 'risk_champion'
     ROLE_MANAGER = 'manager'
     ROLE_STAFF = 'staff'
     ROLE_CHOICES = [
         (ROLE_ADMIN, _('Admin')),
         (ROLE_HEAD_OF_UNIT, _('Head of Unit')),
+        (ROLE_RISK_CHAMPION, _('Risk Champion')),
         (ROLE_MANAGER, _('Manager')),
         (ROLE_STAFF, _('Staff')),
     ]

@@ -180,15 +180,39 @@ class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         org = self.request.organization
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
         
         # Basic counts
-        context['request_count'] = DocumentRequest.objects.filter(organization=org).count()
-        context['document_count'] = Document.objects.filter(organization=org).count()
-        context['pending_count'] = DocumentRequest.objects.filter(organization=org, status='pending').count()
-        context['recent_uploads'] = Document.objects.filter(organization=org).order_by('-uploaded_at')[:5]
+        dr_qs = DocumentRequest.objects.filter(organization=org)
+        doc_qs = Document.objects.filter(organization=org)
+        if not filter_all:
+            drr = Q(created_at__year__in=year_ints)
+            if month_ints:
+                drr &= Q(created_at__month__in=month_ints)
+            dr_qs = dr_qs.filter(drr)
+            dq = Q(uploaded_at__year__in=year_ints)
+            if month_ints:
+                dq &= Q(uploaded_at__month__in=month_ints)
+            doc_qs = doc_qs.filter(dq)
+        context['request_count'] = dr_qs.count()
+        context['document_count'] = doc_qs.count()
+        context['pending_count'] = dr_qs.filter(status='pending').count()
+        context['recent_uploads'] = doc_qs.order_by('-uploaded_at')[:5]
         
         # Analytics: Requests by status
-        status_qs = DocumentRequest.objects.filter(organization=org).values('status').annotate(count=Count('id'))
+        status_qs = dr_qs.values('status').annotate(count=Count('id'))
         status_data = {s['status']: s['count'] for s in status_qs}
         # Ensure we have default values for common statuses
         default_statuses = {'pending': 0, 'approved': 0, 'rejected': 0, 'completed': 0}
@@ -200,15 +224,19 @@ class DocumentManagementDashboardView(OrganizationPermissionMixin, ListView):
         # Analytics: Uploads over last 7 days
         today = now().date()
         days = [today - timedelta(days=i) for i in range(6, -1, -1)]
-        uploads_qs = Document.objects.filter(
-            organization=org, 
-            uploaded_at__date__gte=days[0]
-        ).values('uploaded_at__date').annotate(count=Count('id'))
+        uploads_qs = doc_qs.filter(uploaded_at__date__gte=days[0]).values('uploaded_at__date').annotate(count=Count('id'))
         
         uploads_map = {str(u['uploaded_at__date']): u['count'] for u in uploads_qs}
         uploads_data = {str(day): uploads_map.get(str(day), 0) for day in days}
         context['uploads_chart'] = json.dumps(uploads_data or {str(today): 0})
         
+        # Period filter context
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
+
         return context
 
 class DocumentRequestViewSet(OrganizationScopedQuerysetMixin, viewsets.ModelViewSet):

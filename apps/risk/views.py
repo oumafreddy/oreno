@@ -21,7 +21,7 @@ try:
     import pandas as pd
 except ImportError:
     pd = None
-from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
+from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess, IsRiskChampionOrManagerOrReadOnly
 from django.core.exceptions import PermissionDenied
 
 from .models import (
@@ -60,7 +60,7 @@ class RiskScopedViewSet(viewsets.ModelViewSet):
     """
     queryset = Risk.objects.all()
     serializer_class = RiskSerializer
-    permission_classes = [IsOrgManagerOrReadOnly]
+    permission_classes = [IsRiskChampionOrManagerOrReadOnly]
 
 
 class OrganizationPermissionMixin:
@@ -73,6 +73,12 @@ class OrganizationPermissionMixin:
         # Only check organization context if user is authenticated
         if not hasattr(request, 'organization') or request.organization is None:
             raise PermissionDenied("No organization context found.")
+
+        # Enforce Risk Champion scoped write access within Risk app
+        if request.user.role == 'risk_champion' and request.method not in ('GET', 'HEAD', 'OPTIONS'):
+            # Only allow writes on views explicitly opting in
+            if not getattr(self, 'allow_risk_champion_write', False):
+                raise PermissionDenied("Risk Champion is restricted to core Risk CRUD only.")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -156,6 +162,7 @@ class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Cr
     form_class = RiskRegisterForm
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
@@ -172,6 +179,7 @@ class RiskRegisterUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Up
     form_class = RiskRegisterForm
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
@@ -195,6 +203,7 @@ class RiskRegisterDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, De
     model = RiskRegister
     template_name = 'risk/riskregister_confirm_delete.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
 
@@ -278,6 +287,7 @@ class RiskCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView
     form_class = RiskForm
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
@@ -294,6 +304,7 @@ class RiskUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView
     form_class = RiskForm
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
@@ -308,6 +319,7 @@ class RiskDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView
     model = Risk
     template_name = 'risk/risk_confirm_delete.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
 
@@ -338,6 +350,7 @@ class ControlCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateV
     form_class = ControlForm
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         return super().form_valid(form)
@@ -352,6 +365,7 @@ class ControlUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateV
     form_class = ControlForm
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
@@ -377,6 +391,7 @@ class ControlDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteV
     model = Control
     template_name = 'risk/control_confirm_delete.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
 
@@ -401,6 +416,7 @@ class KRICreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView)
     form_class = KRIForm
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         if form.instance.risk.organization != self.request.organization:
             raise PermissionDenied("Risk does not belong to this organization.")
@@ -416,6 +432,7 @@ class KRIUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView)
     form_class = KRIForm
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         if form.instance.risk.organization != self.request.organization:
             raise PermissionDenied("Risk does not belong to this organization.")
@@ -439,6 +456,7 @@ class KRIDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView)
     model = KRI
     template_name = 'risk/kri_confirm_delete.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(risk__organization=self.request.organization)
 
@@ -463,6 +481,7 @@ class RiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     form_class = RiskAssessmentForm
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.created_by = self.request.user
@@ -479,6 +498,7 @@ class RiskAssessmentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     form_class = RiskAssessmentForm
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
         form.instance.updated_by = self.request.user
@@ -502,6 +522,7 @@ class RiskAssessmentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, 
     model = RiskAssessment
     template_name = 'risk/riskassessment_confirm_delete.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
 
@@ -549,14 +570,49 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         org = self.request.organization
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
         selected_register = self.request.GET.get('register')
         riskregisters = RiskRegister.objects.filter(organization=org)
         risks = Risk.objects.filter(organization=org)
+        if not filter_all:
+            q = Q(date_identified__year__in=year_ints)
+            if month_ints:
+                q &= Q(date_identified__month__in=month_ints)
+            risks = risks.filter(q)
         if selected_register:
             risks = risks.filter(risk_register_id=selected_register)
         controls = Control.objects.filter(organization=org)
+        if not filter_all:
+            cq = Q()
+            # Prefer review dates for period where available
+            cq |= Q(last_review_date__year__in=year_ints)
+            if month_ints:
+                cq &= Q(last_review_date__month__in=month_ints)
+            controls = controls.filter(cq)
         kris = KRI.objects.filter(risk__organization=org)
+        if not filter_all:
+            kq = Q(timestamp__year__in=year_ints)
+            if month_ints:
+                kq &= Q(timestamp__month__in=month_ints)
+            kris = kris.filter(kq)
         assessments = RiskAssessment.objects.filter(risk__organization=org)
+        if not filter_all:
+            aq = Q(assessment_date__year__in=year_ints)
+            if month_ints:
+                aq &= Q(assessment_date__month__in=month_ints)
+            assessments = assessments.filter(aq)
         matrix = get_active_matrix_config(org)
         
         # COBIT Data
@@ -635,6 +691,13 @@ class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListVie
         # Debug output for troubleshooting
         import json
         context['risk_trend_debug'] = json.dumps(context['risk_trend'], indent=2)
+
+        # Period filter context for template
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
         
         # Summary cards
         context['riskregisters'] = riskregisters

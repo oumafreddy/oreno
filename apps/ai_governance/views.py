@@ -63,6 +63,19 @@ class GovernanceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         org = getattr(self.request, 'organization', None)
         if not org:
             raise PermissionDenied("Organization context is required")
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
         
         # Use performance monitoring for metrics
         from .performance import MetricsCollector
@@ -85,19 +98,25 @@ class GovernanceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         
         @performance_monitor.monitor_query_performance('dashboard_recent_test_runs')
         def get_recent_test_runs():
-            return TestRun.objects.filter(
-                organization=org
-            ).select_related('model_asset', 'test_plan').order_by('-created_at')[:10]
+            qs = TestRun.objects.filter(organization=org).select_related('model_asset', 'test_plan')
+            if not filter_all:
+                tq = Q(created_at__year__in=year_ints)
+                if month_ints:
+                    tq &= Q(created_at__month__in=month_ints)
+                qs = qs.filter(tq)
+            return qs.order_by('-created_at')[:10]
         
         context['recent_test_runs'] = get_recent_test_runs()
         
         # Get test results by category (with performance monitoring)
         @performance_monitor.monitor_query_performance('dashboard_test_categories')
         def get_test_categories():
-            recent_results = TestResult.objects.filter(
-                test_run__organization=org,
-                test_run__created_at__gte=timezone.now() - timedelta(days=30)
-            )
+            recent_results = TestResult.objects.filter(test_run__organization=org)
+            if not filter_all:
+                rq = Q(test_run__created_at__year__in=year_ints)
+                if month_ints:
+                    rq &= Q(test_run__created_at__month__in=month_ints)
+                recent_results = recent_results.filter(rq)
             
             return {
                 'fairness_passed': recent_results.filter(
@@ -126,6 +145,13 @@ class GovernanceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         context['available_models'] = ModelAsset.objects.filter(organization=org)
         context['available_datasets'] = DatasetAsset.objects.filter(organization=org)
         context['available_test_plans'] = TestPlan.objects.filter(organization=org)
+
+        # Period filter context
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
         
         return context
 

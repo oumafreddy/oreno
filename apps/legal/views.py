@@ -367,36 +367,65 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
             context['task_status_chart'] = {'Completed': 0, 'Pending': 0, 'Overdue': 0}
             return context
         
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
+
+        case_qs = LegalCase.objects.filter(organization=org)
+        if not filter_all:
+            cq = Q(created_at__year__in=year_ints)
+            if month_ints:
+                cq &= Q(created_at__month__in=month_ints)
+            case_qs = case_qs.filter(cq)
+
         # Case counts
-        context['case_count'] = LegalCase.objects.filter(organization=org).count()
+        context['case_count'] = case_qs.count()
         context['open_cases'] = LegalCase.objects.filter(organization=org, status='intake').count() + \
                                  LegalCase.objects.filter(organization=org, status='investigation').count() + \
                                  LegalCase.objects.filter(organization=org, status='litigation').count() + \
                                  LegalCase.objects.filter(organization=org, status='settlement_negotiation').count()
-        context['closed_cases'] = LegalCase.objects.filter(organization=org, status='closed').count()
-        context['archived_cases'] = LegalCase.objects.filter(organization=org, status='archived').count()
+        context['closed_cases'] = case_qs.filter(status='closed').count()
+        context['archived_cases'] = case_qs.filter(status='archived').count()
         
         # Party, document, task counts
-        context['party_count'] = LegalParty.objects.filter(organization=org).count()
-        context['document_count'] = LegalDocument.objects.filter(organization=org).count()
-        context['task_count'] = LegalTask.objects.filter(organization=org).count()
+        party_qs = LegalParty.objects.filter(organization=org)
+        doc_qs = LegalDocument.objects.filter(organization=org)
+        task_qs = LegalTask.objects.filter(organization=org)
+        if not filter_all:
+            if month_ints:
+                task_qs = task_qs.filter(created_at__year__in=year_ints, created_at__month__in=month_ints)
+                doc_qs = doc_qs.filter(id__isnull=False)  # no date field; keep unfiltered safely
+            else:
+                task_qs = task_qs.filter(created_at__year__in=year_ints)
+        context['party_count'] = party_qs.count()
+        context['document_count'] = doc_qs.count()
+        context['task_count'] = task_qs.count()
         
         # Overdue tasks: status is 'overdue'
-        context['overdue_tasks'] = LegalTask.objects.filter(organization=org, status='overdue').count()
+        context['overdue_tasks'] = task_qs.filter(status='overdue').count()
         
         # Task status chart data
-        context['completed_tasks'] = LegalTask.objects.filter(organization=org, status='completed').count()
-        context['pending_tasks'] = LegalTask.objects.filter(organization=org, status='pending').count() + \
-                                   LegalTask.objects.filter(organization=org, status='in_progress').count()
+        context['completed_tasks'] = task_qs.filter(status='completed').count()
+        context['pending_tasks'] = task_qs.filter(status__in=['pending','in_progress']).count()
         
         # Recent activity (latest 8 cases, documents, or tasks)
-        context['recent_cases'] = LegalCase.objects.filter(organization=org).order_by('-created_at')[:4]
-        context['recent_documents'] = LegalDocument.objects.filter(organization=org).order_by('-id')[:2]
-        context['recent_tasks'] = LegalTask.objects.filter(organization=org).order_by('-id')[:2]
+        context['recent_cases'] = case_qs.order_by('-created_at')[:4]
+        context['recent_documents'] = doc_qs.order_by('-id')[:2]
+        context['recent_tasks'] = task_qs.order_by('-id')[:2]
         
         # Chart data for Plotly - Case Status Distribution
         from collections import Counter
-        case_status_qs = LegalCase.objects.filter(organization=org).values_list('status', flat=True)
+        case_status_qs = case_qs.values_list('status', flat=True)
         case_status_counter = Counter(case_status_qs)
         # Map status values to display names
         status_mapping = {
@@ -417,7 +446,7 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
         context['case_status_chart'] = case_status_chart or {'Open': 0, 'Closed': 0, 'Archived': 0}
         
         # Task Status Distribution
-        task_status_qs = LegalTask.objects.filter(organization=org).values_list('status', flat=True)
+        task_status_qs = task_qs.values_list('status', flat=True)
         task_status_counter = Counter(task_status_qs)
         # Map task status values to display names
         task_status_mapping = {
@@ -432,6 +461,13 @@ class LegalDashboardView(LoginRequiredMixin, TemplateView):
             task_status_chart[display_name] = count
         context['task_status_chart'] = task_status_chart or {'Pending': 0, 'In Progress': 0, 'Completed': 0, 'Overdue': 0}
         
+        # Period filter context
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
+
         return context
 
 # ─── REPORTS VIEW ────────────────────────────────────────────────────────────

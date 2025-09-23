@@ -419,6 +419,19 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         org = self.request.organization
+        # --- Period Filter Logic (aligned with Audit) ---
+        from django.utils import timezone
+        import calendar
+        from django.db.models import Q
+        org_created = getattr(org, 'created_at', timezone.now()).date()
+        today = timezone.now().date()
+        years = list(range(org_created.year, today.year + 1))
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_years = self.request.GET.getlist('year') or [str(today.year)]
+        selected_months = self.request.GET.getlist('month')
+        filter_all = 'All' in selected_years
+        year_ints = [int(y) for y in selected_years if y.isdigit()]
+        month_ints = [int(m) for m in selected_months if m.isdigit()]
         
         # Basic counts
         context['framework_count'] = ComplianceFramework.objects.filter(organization=org).count()
@@ -428,23 +441,34 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         context['policydocument_count'] = PolicyDocument.objects.filter(organization=org).count()
 
         # Advanced analytics: Requirement counts by framework, jurisdiction, mandatory
-        framework_dist = ComplianceRequirement.objects.filter(organization=org).values_list('regulatory_framework__name', flat=True)
+        req_qs = ComplianceRequirement.objects.filter(organization=org)
+        if not filter_all:
+            rq = Q(updated_at__year__in=year_ints)
+            if month_ints:
+                rq &= Q(updated_at__month__in=month_ints)
+            req_qs = req_qs.filter(rq)
+        framework_dist = req_qs.values_list('regulatory_framework__name', flat=True)
         framework_counter = Counter(framework_dist)
         context['requirement_framework_dist'] = dict(framework_counter) or {'General': 0}
         
         # Jurisdiction distribution
-        jurisdiction_qs = ComplianceRequirement.objects.filter(organization=org).values_list('jurisdiction', flat=True)
+        jurisdiction_qs = req_qs.values_list('jurisdiction', flat=True)
         jurisdiction_counter = Counter(jurisdiction_qs)
         context['requirement_jurisdiction_chart'] = dict(jurisdiction_counter) or {'General': 0}
         
         # Mandatory vs Optional distribution
-        mandatory_dist = ComplianceRequirement.objects.filter(organization=org).values_list('mandatory', flat=True)
+        mandatory_dist = req_qs.values_list('mandatory', flat=True)
         mandatory_count = sum(1 for m in mandatory_dist if m)
         optional_count = sum(1 for m in mandatory_dist if not m)
         context['requirement_mandatory_dist'] = {'Mandatory': mandatory_count, 'Optional': optional_count}
 
         # Obligation overdue vs. on-time, completion rates, owner workload
         obligations = ComplianceObligation.objects.filter(organization=org)
+        if not filter_all:
+            oq = Q(updated_at__year__in=year_ints) | Q(due_date__year__in=year_ints)
+            if month_ints:
+                oq &= Q(updated_at__month__in=month_ints) | Q(due_date__month__in=month_ints)
+            obligations = obligations.filter(oq)
         today = timezone.now().date()
         
         # Overdue obligations (status is open/in_progress and due_date is past)
@@ -478,19 +502,18 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         context['obligation_owner_workload'] = dict(owner_counter) or {'No Owner': 0}
 
         # Policy document expiry distribution
-        expiring_soon = PolicyDocument.objects.filter(
-            organization=org, 
+        pol_qs = PolicyDocument.objects.filter(organization=org)
+        if not filter_all:
+            pq = Q(updated_at__year__in=year_ints)
+            if month_ints:
+                pq &= Q(updated_at__month__in=month_ints)
+            pol_qs = pol_qs.filter(pq)
+        expiring_soon = pol_qs.filter(
             expiration_date__gte=today, 
             expiration_date__lte=today.replace(year=today.year+1)
         ).count()
-        expired = PolicyDocument.objects.filter(
-            organization=org, 
-            expiration_date__lt=today
-        ).count()
-        no_expiry = PolicyDocument.objects.filter(
-            organization=org, 
-            expiration_date__isnull=True
-        ).count()
+        expired = pol_qs.filter(expiration_date__lt=today).count()
+        no_expiry = pol_qs.filter(expiration_date__isnull=True).count()
         
         context['policy_expiry_dist'] = {
             'Expiring Soon': expiring_soon, 
@@ -511,7 +534,13 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
             (ComplianceEvidence, 'Evidence', 'bi-file-earmark-check'),
             (PolicyDocument, 'Policy Document', 'bi-file-earmark-text'),
         ]:
-            for obj in model.objects.filter(organization=org).order_by('-updated_at')[:3]:
+            base_qs = model.objects.filter(organization=org)
+            if not filter_all and hasattr(model, 'updated_at'):
+                bq = Q(updated_at__year__in=year_ints)
+                if month_ints:
+                    bq &= Q(updated_at__month__in=month_ints)
+                base_qs = base_qs.filter(bq)
+            for obj in base_qs.order_by('-updated_at')[:3]:
                 recent.append({
                     'message': f"{label}: {getattr(obj, 'title', getattr(obj, 'name', getattr(obj, 'requirement_id', getattr(obj, 'obligation_id', ''))))}",
                     'timestamp': getattr(obj, 'updated_at', timezone.now()),
@@ -521,6 +550,13 @@ class ComplianceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         # Sort by timestamp, most recent first, and limit to 10
         context['recent_activity'] = sorted(recent, key=lambda x: x['timestamp'], reverse=True)[:10]
         
+        # Period filter context
+        context['available_years'] = years
+        context['available_months'] = months
+        context['selected_years'] = selected_years
+        context['selected_months'] = selected_months
+        context['filter_all'] = filter_all
+
         return context
 
 # ─── REPORTS VIEW ────────────────────────────────────────────────────────────

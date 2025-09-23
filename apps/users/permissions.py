@@ -18,6 +18,18 @@ class IsOrgManagerOrReadOnly(permissions.BasePermission):
             return True
         return user.role in ['admin', 'manager']
 
+
+class IsRiskChampionOrManagerOrReadOnly(permissions.BasePermission):
+    """Allows admin/manager/risk_champion write access; others read-only."""
+    def has_permission(self, request, view):
+        user = request.user
+        org = getattr(user, 'organization', None)
+        if not user.is_authenticated or not org:
+            return False
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return user.role in ['admin', 'manager', 'risk_champion']
+
 class IsOrgStaffOrReadOnly(permissions.BasePermission):
     """Allows staff full access, others read-only."""
     def has_permission(self, request, view):
