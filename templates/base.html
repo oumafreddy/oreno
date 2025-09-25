@@ -245,15 +245,17 @@
                 {% if request.user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/audit/dashboard/">Audit</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/risk/">Risk</a></li>    
-                    <li class="nav-item"><a class="nav-link" href="/compliance/">Compliance</a></li>                
-                    <li class="nav-item"><a class="nav-link" href="/legal/">Legal</a></li>                    
-                    <li class="nav-item"><a class="nav-link" href="/contracts/">Contracts</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'document_management:dashboard' %}">Documents</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/accounts/">Users</a></li>
-                    <!--li class="nav-item"><a class="nav-link" href="/organizations/">Organizations</a></li-->
+                    {% if request.user.role != 'risk_champion' %}
+                        <li class="nav-item"><a class="nav-link" href="/audit/dashboard/">Audit</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/compliance/">Compliance</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/legal/">Legal</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/contracts/">Contracts</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'document_management:dashboard' %}">Documents</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/accounts/">Users</a></li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="/risk/">Risk</a></li>
+                    {% endif %}
                 </ul>
                 {% else %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>

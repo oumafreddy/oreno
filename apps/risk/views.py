@@ -74,10 +74,13 @@ class OrganizationPermissionMixin:
         if not hasattr(request, 'organization') or request.organization is None:
             raise PermissionDenied("No organization context found.")
 
-        # Enforce Risk Champion scoped write access within Risk app
-        if request.user.role == 'risk_champion' and request.method not in ('GET', 'HEAD', 'OPTIONS'):
-            # Only allow writes on views explicitly opting in
-            if not getattr(self, 'allow_risk_champion_write', False):
+        # Enforce Risk Champion scope within Risk app
+        if request.user.role == 'risk_champion':
+            # Require explicit opt-in for ANY access on class-based views
+            if not getattr(self, 'allow_risk_champion_access', False):
+                raise PermissionDenied("Risk Champion is restricted to specific Risk features only.")
+            # Additionally require explicit opt-in for write operations
+            if request.method not in ('GET', 'HEAD', 'OPTIONS') and not getattr(self, 'allow_risk_champion_write', False):
                 raise PermissionDenied("Risk Champion is restricted to core Risk CRUD only.")
         return super().dispatch(request, *args, **kwargs)
 
@@ -90,6 +93,7 @@ class RiskListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     template_name = 'risk/risk_list.html'
     context_object_name = 'risks'
     paginate_by = 20
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.filter(organization=self.request.organization)
@@ -128,6 +132,7 @@ class RiskDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView
     model = Risk
     template_name = 'risk/risk_detail.html'
     context_object_name = 'risk'
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organization=self.request.organization)
@@ -139,6 +144,7 @@ class RiskRegisterListView(OrganizationPermissionMixin, LoginRequiredMixin, List
     template_name = 'risk/riskregister_list.html'
     context_object_name = 'riskregisters'
     paginate_by = 20
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.filter(organization=self.request.organization)
@@ -162,6 +168,7 @@ class RiskRegisterCreateView(OrganizationPermissionMixin, LoginRequiredMixin, Cr
     form_class = RiskRegisterForm
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -179,6 +186,7 @@ class RiskRegisterUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, Up
     form_class = RiskRegisterForm
     template_name = 'risk/riskregister_form.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -194,6 +202,7 @@ class RiskRegisterDetailView(OrganizationPermissionMixin, LoginRequiredMixin, De
     model = RiskRegister
     template_name = 'risk/riskregister_detail.html'
     context_object_name = 'riskregister'
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organization=self.request.organization)
@@ -203,6 +212,7 @@ class RiskRegisterDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, De
     model = RiskRegister
     template_name = 'risk/riskregister_confirm_delete.html'
     success_url = reverse_lazy('risk:riskregister_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
@@ -287,6 +297,7 @@ class RiskCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView
     form_class = RiskForm
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -304,6 +315,7 @@ class RiskUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView
     form_class = RiskForm
     template_name = 'risk/risk_form.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -319,6 +331,7 @@ class RiskDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView
     model = Risk
     template_name = 'risk/risk_confirm_delete.html'
     success_url = reverse_lazy('risk:risk_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
@@ -330,6 +343,7 @@ class ControlListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView)
     template_name = 'risk/control_list.html'
     context_object_name = 'controls'
     paginate_by = 20
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.filter(organization=self.request.organization)
@@ -350,6 +364,7 @@ class ControlCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateV
     form_class = ControlForm
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -365,6 +380,7 @@ class ControlUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateV
     form_class = ControlForm
     template_name = 'risk/control_form.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -382,6 +398,7 @@ class ControlDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailV
     model = Control
     template_name = 'risk/control_detail.html'
     context_object_name = 'control'
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organization=self.request.organization)
@@ -391,6 +408,7 @@ class ControlDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteV
     model = Control
     template_name = 'risk/control_confirm_delete.html'
     success_url = reverse_lazy('risk:control_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
@@ -402,6 +420,7 @@ class KRIListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     template_name = 'risk/kri_list.html'
     context_object_name = 'kris'
     paginate_by = 20
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(risk__organization=self.request.organization)
@@ -416,6 +435,7 @@ class KRICreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView)
     form_class = KRIForm
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         if form.instance.risk.organization != self.request.organization:
@@ -432,6 +452,7 @@ class KRIUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView)
     form_class = KRIForm
     template_name = 'risk/kri_form.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         if form.instance.risk.organization != self.request.organization:
@@ -447,6 +468,7 @@ class KRIDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView)
     model = KRI
     template_name = 'risk/kri_detail.html'
     context_object_name = 'kri'
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(risk__organization=self.request.organization)
@@ -456,6 +478,7 @@ class KRIDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, DeleteView)
     model = KRI
     template_name = 'risk/kri_confirm_delete.html'
     success_url = reverse_lazy('risk:kri_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(risk__organization=self.request.organization)
@@ -467,6 +490,7 @@ class RiskAssessmentListView(OrganizationPermissionMixin, LoginRequiredMixin, Li
     template_name = 'risk/riskassessment_list.html'
     context_object_name = 'riskassessments'
     paginate_by = 20
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organization=self.request.organization)
@@ -481,6 +505,7 @@ class RiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     form_class = RiskAssessmentForm
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -498,6 +523,7 @@ class RiskAssessmentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, 
     form_class = RiskAssessmentForm
     template_name = 'risk/riskassessment_form.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def form_valid(self, form):
         form.instance.organization = self.request.organization
@@ -513,6 +539,7 @@ class RiskAssessmentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, 
     model = RiskAssessment
     template_name = 'risk/riskassessment_detail.html'
     context_object_name = 'assessment'
+    allow_risk_champion_access = True
     def get_queryset(self):
         qs = super().get_queryset()
         return qs.filter(organization=self.request.organization)
@@ -522,6 +549,7 @@ class RiskAssessmentDeleteView(OrganizationPermissionMixin, LoginRequiredMixin, 
     model = RiskAssessment
     template_name = 'risk/riskassessment_confirm_delete.html'
     success_url = reverse_lazy('risk:riskassessment_list')
+    allow_risk_champion_access = True
     allow_risk_champion_write = True
     def get_queryset(self):
         return super().get_queryset().filter(organization=self.request.organization)
@@ -565,6 +593,7 @@ def _bucket_risk_levels(risks, matrix):
 class RiskDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
     template_name = 'risk/list.html'
     context_object_name = 'dashboard'
+    allow_risk_champion_access = True
     def get_queryset(self):
         return []  # Not used
     def get_context_data(self, **kwargs):
