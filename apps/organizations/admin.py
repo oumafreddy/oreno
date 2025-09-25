@@ -77,6 +77,8 @@ class OrganizationSettingsAdminForm(forms.ModelForm):
         ('compliance', 'Compliance'),
         ('contracts', 'Contracts'),
         ('document_management', 'Document Management'),
+        ('ai_governance', 'AI Governance'),
+        ('users', 'Users'),
     ]
     subscribed_apps = forms.MultipleChoiceField(
         choices=APP_CHOICES,
