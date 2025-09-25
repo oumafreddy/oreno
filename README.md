@@ -22,6 +22,7 @@ Oreno GRC is built around a set of modular Django apps, each handling a specific
 - **Users** – Provides a custom user model and authentication mechanisms, including OTP-based login flows.
 - **Core** – Contains common abstract models, mixins, and utilities used across the platform.
 - **Admin Module** – Provides administrative functionalities for managing the platform.
+- **AI Governance** – Handles AI models registration, setting up datasets, running tests using frameworks like EU AI act, NIST RSF and OECD guidelines.
 - **Legal** – Handles legal aspects of the organization, including legal documents and compliance.
 - **Reports** – Generates reports and analytics for various aspects of the platform.
 
