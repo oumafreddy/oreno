@@ -1,8 +1,8 @@
 # config/urls_public.py
 
 from django.contrib import admin
-from django.urls import path, include
-from django.http import HttpResponse
+from django.urls import path, include, re_path
+from django.http import HttpResponse, HttpResponseNotFound
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
@@ -48,10 +48,16 @@ class CookiePolicyView(TemplateView):
         context['page_title'] = 'Cookie Policy - Hashrate Solutions'
         return context
 
+# Local simple 404 view for blocked admin path (public schema)
+def _blocked_admin_404(request, *args, **kwargs):
+    return HttpResponseNotFound('Not Found')
+
 # Define URL patterns for public schema
 urlpatterns = [
-    # Public Admin
-    path('admin/', admin.site.urls),
+    # Public Admin - mount only at secret path
+    path(settings.ADMIN_URL, admin.site.urls),
+    # Block default /admin/
+    re_path(r'^admin(/.*)?$', _blocked_admin_404),
     
     # Public Pages
     path('', PublicHomeView.as_view(), name='public-home'),

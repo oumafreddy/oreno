@@ -578,7 +578,6 @@ LOGOUT_REDIRECT_URL = '/accounts/logout/'
 LOGIN_REQUIRED_EXEMPT_URLS = [
     '/accounts/login/',         # login view
     '/accounts/logout/',        # logout view
-    '/admin/',
     '/accounts/register/',     # your registration view
     '/accounts/password-reset/',   # if applicable
     '/accounts/password-reset/done/',
@@ -588,6 +587,13 @@ LOGIN_REQUIRED_EXEMPT_URLS = [
     '/organizations/create/',
     '/',                       # home page
 ]
+
+# ------------------------------------------------------------------------------
+# Admin hardening: secret admin URL path
+# ------------------------------------------------------------------------------
+# Example: set ADMIN_URL to a non-guessable path like "super-omega-portal-9f1c3e/"
+# Ensure it ends with a trailing slash to match Django's admin path behavior.
+ADMIN_URL = os.getenv('ADMIN_URL', 'super-admin-portal/')
 
 # ------------------------------------------------------------------------------
 # File Upload Settings

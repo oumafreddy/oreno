@@ -1,10 +1,10 @@
 # C:\Users\ouma.fred\Desktop\GRC\oreno\config\urls.py
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.views.generic import TemplateView
 from django.views.defaults import (
     page_not_found,
@@ -31,10 +31,16 @@ handler403 = 'core.views.permission_denied'
 handler404 = 'core.views.page_not_found'
 handler500 = 'core.views.server_error'
 
+# Local simple 404 view for blocked admin path
+def _blocked_admin_404(request, *args, **kwargs):
+    return HttpResponseNotFound('Not Found')
+
 # Define URL patterns
 urlpatterns = [
-    # Admin URLs
-    path('admin/', admin.site.urls),
+    # Admin URLs - mount only at secret path
+    path(settings.ADMIN_URL, admin.site.urls),
+    # Explicitly make the default /admin/ return 404 to avoid leaked login
+    re_path(r'^admin(/.*)?$', _blocked_admin_404),
     
     # API Documentation
     path('api/docs/', TemplateView.as_view(
