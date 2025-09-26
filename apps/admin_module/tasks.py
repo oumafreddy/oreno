@@ -15,6 +15,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 import csv
 import io
+from core.utils import send_tenant_email as send_mail
+from django.template.loader import render_to_string
 
 from .models import DataExportLog
 
@@ -574,9 +576,6 @@ def send_export_completion_notification(export_id):
         export = DataExportLog.objects.get(id=export_id)
         
         # Send email notification
-        from django.core.mail import send_mail
-        from django.template.loader import render_to_string
-        
         subject = f"Data Export Completed - {export.export_type}"
         context = {
             'export': export,

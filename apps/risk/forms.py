@@ -122,6 +122,12 @@ class RiskForm(OrganizationScopedModelForm):
                 qs = qs.filter(organization=organization)
             self.fields['objectives'].queryset = qs.filter(status='active')
 
+    def clean(self):
+        # Ensure organization is set on instance before model.clean() runs
+        if not getattr(self.instance, 'organization', None) and getattr(self, 'organization', None):
+            self.instance.organization = self.organization
+        return super().clean()
+
 class ControlForm(OrganizationScopedModelForm):
     class Meta:
         model = Control

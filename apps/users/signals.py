@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.cache import cache
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from core.utils import send_tenant_email as send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone

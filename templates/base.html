@@ -246,14 +246,36 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
                     {% if request.user.role != 'risk_champion' %}
-                        <li class="nav-item"><a class="nav-link" href="/audit/dashboard/">Audit</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/compliance/">Compliance</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/legal/">Legal</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/contracts/">Contracts</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'document_management:dashboard' %}">Documents</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/accounts/">Users</a></li>
+                        {% if request.tenant and request.tenant.settings %}
+                            {% with subs=request.tenant.settings.subscribed_apps %}
+                                {% if 'risk' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/risk/">Risk</a></li>
+                                {% endif %}
+                                {% if 'audit' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/audit/dashboard/">Audit</a></li>
+                                {% endif %}
+                                {% if 'compliance' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/compliance/">Compliance</a></li>
+                                {% endif %}
+                                {% if 'legal' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/legal/">Legal</a></li>
+                                {% endif %}
+                                {% if 'contracts' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/contracts/">Contracts</a></li>
+                                {% endif %}
+                                {% if 'document_management' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'document_management:dashboard' %}">Documents</a></li>
+                                {% endif %}
+                                {% if 'ai_governance' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                                {% endif %}
+                                {% if 'users' in subs %}
+                                <li class="nav-item"><a class="nav-link" href="/accounts/">Users</a></li>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
                     {% else %}
+                        {# Risk Champion: only Risk, regardless of other subscriptions #}
                         <li class="nav-item"><a class="nav-link" href="/risk/">Risk</a></li>
                     {% endif %}
                 </ul>

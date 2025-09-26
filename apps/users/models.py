@@ -11,7 +11,7 @@ from core.models.abstract_models import TimeStampedModel
 from django.core.exceptions import ValidationError
 from django.db.models import F
 from django.utils.crypto import get_random_string
-from django.core.mail import send_mail
+from core.utils import send_tenant_email as send_mail
 from django.template.loader import render_to_string
 
 
