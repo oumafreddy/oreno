@@ -4,11 +4,11 @@ project:
   name: "Oreno GRC v2"
   description: "Enterprise GRC solution with audit management"
   standards: ["GIAS 2024", "IPPF", "ISO31000", "COSO ERM"]
-  tech_stack: ["Python 3.11", "Django", "PostgreSQL", "HTMX", "Django REST Framework"]
+  tech_stack: ["Python 3.12.5", "Django", "PostgreSQL", "HTMX", "Django REST Framework"]
 
 # Environment Configuration
 environment:
-  python: "3.11"
+  python: "3.12.5"
   venv: ".venv"
   requirements: "requirements.txt"
   settings_module: "config.settings"
@@ -151,7 +151,7 @@ documentation:
 git:
   branch_naming: "^(feature|bugfix|hotfix|release)/[a-z0-9-]+$"
   commit_message: "conventional-commits"
-  protected_branches: ["main", "develop"]
+  protected_branches: ["master", "main"]
   pr_required: true
   required_checks: ["test", "lint"]
 
@@ -174,12 +174,14 @@ custom:
     entities:
       - "Engagement"
       - "Objective"
+      - "Risk"
       - "Procedure"
       - "ProcedureResult"
       - "Issue"
       - "Note"
     relationships:
       - "Engagement -> Objective (OneToMany)"
+      - "Objective -> Risk (OneToMany)"
       - "Objective -> Procedure (OneToMany)"
       - "Procedure -> ProcedureResult (OneToMany)"
       - "ProcedureResult -> Issue (OneToMany, optional)"

@@ -20,14 +20,32 @@ def send_welcome_email(user_id, email, username):
     message = render_to_string('users/email/welcome.txt', context)
     html_message = render_to_string('users/email/welcome.html', context)
     
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
-        html_message=html_message,
-        fail_silently=False,
-    )
+    # Try tenant email first, fallback to standard Django send_mail
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        # Log the error and try fallback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Tenant email failed for welcome email, trying fallback: {e}")
+        
+        # Fallback to Django's standard send_mail
+        from django.core.mail import send_mail as django_send_mail
+        django_send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            html_message=html_message,
+            fail_silently=False,
+        )
 
 @shared_task
 def cleanup_old_otps(user_id):

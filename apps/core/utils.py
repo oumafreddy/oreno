@@ -91,6 +91,10 @@ def send_tenant_email(subject, message, recipient_list, request_or_org=None, fro
     use_ssl = getattr(settings, 'EMAIL_USE_SSL', False)
     timeout = getattr(settings, 'EMAIL_TIMEOUT', 30)
     default_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'info@oreno.tech')
+    
+    # Enforce mutual exclusivity to prevent Django errors (same logic as production.py)
+    if use_ssl:
+        use_tls = False
 
     # If tenants.py provided tenant overrides, prefer them
     try:
@@ -99,7 +103,12 @@ def send_tenant_email(subject, message, recipient_list, request_or_org=None, fro
         host_user = getattr(settings, 'TENANT_EMAIL_HOST_USER', host_user)
         host_password = getattr(settings, 'TENANT_EMAIL_HOST_PASSWORD', host_password)
         use_tls = getattr(settings, 'TENANT_EMAIL_USE_TLS', use_tls)
+        use_ssl = getattr(settings, 'TENANT_EMAIL_USE_SSL', use_ssl)
         default_from = getattr(settings, 'TENANT_DEFAULT_FROM_EMAIL', default_from)
+        
+        # Apply mutual exclusivity to tenant settings as well
+        if use_ssl:
+            use_tls = False
     except Exception:
         pass
 
@@ -113,6 +122,9 @@ def send_tenant_email(subject, message, recipient_list, request_or_org=None, fro
     from_addr = from_email or default_from
 
     try:
+        # Log email configuration for debugging (without sensitive data)
+        logger.debug(f"Email config: host={host}, port={port}, use_tls={use_tls}, use_ssl={use_ssl}, timeout={timeout}")
+        
         connection = get_connection(
             backend=backend,
             host=host,
@@ -131,9 +143,11 @@ def send_tenant_email(subject, message, recipient_list, request_or_org=None, fro
         if sent:
             logger.info(f"Tenant email sent to {', '.join(recipient_list)} with subject '{subject}'.")
             return True
+        logger.warning(f"Email send returned 0 (no messages sent) to {', '.join(recipient_list)}")
         return False
     except Exception as e:
-        logger.error(f"Error sending tenant email: {e}")
+        logger.error(f"Error sending tenant email to {', '.join(recipient_list)}: {e}")
+        logger.error(f"Email config was: host={host}, port={port}, use_tls={use_tls}, use_ssl={use_ssl}")
         if fail_silently:
             return False
         raise
