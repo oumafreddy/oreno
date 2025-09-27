@@ -180,9 +180,9 @@ TENANT_EMAIL_HOST_USER = os.getenv('TENANT_EMAIL_HOST_USER', EMAIL_HOST_USER)
 # Email password for tenant-specific emails
 TENANT_EMAIL_HOST_PASSWORD = os.getenv('TENANT_EMAIL_HOST_PASSWORD', EMAIL_HOST_PASSWORD)
 # Whether to use TLS for tenant-specific emails
-TENANT_EMAIL_USE_TLS = os.getenv('TENANT_EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+TENANT_EMAIL_USE_TLS = os.getenv('TENANT_EMAIL_USE_TLS', 'False').lower() in ('true', '1', 'yes')
 # Whether to use SSL for tenant-specific emails
-TENANT_EMAIL_USE_SSL = os.getenv('TENANT_EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
+TENANT_EMAIL_USE_SSL = os.getenv('TENANT_EMAIL_USE_SSL', 'True').lower() in ('true', '1', 'yes')
 # Default from email for tenant-specific emails
 TENANT_DEFAULT_FROM_EMAIL = os.getenv('TENANT_DEFAULT_FROM_EMAIL', DEFAULT_FROM_EMAIL)
 # Email timeout for tenant-specific emails

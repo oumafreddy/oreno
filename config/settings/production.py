@@ -126,18 +126,20 @@ LOGGING = {
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zoho.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true','1','yes')
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true','1','yes')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 465))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() in ('true','1','yes')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() in ('true','1','yes')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@oreno.tech')
 SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'info@oreno.tech')
-EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 30))
 
 # Enforce mutual exclusivity to prevent Django errors
 if EMAIL_USE_SSL:
     EMAIL_USE_TLS = False
+elif EMAIL_USE_TLS:
+    EMAIL_USE_SSL = False
 
 # Admin settings
 ADMINS = [

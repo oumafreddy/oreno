@@ -245,6 +245,10 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
     template_name = 'users/first_time_setup.html'
     
     def dispatch(self, request, *args, **kwargs):
+        # Ensure user is authenticated
+        if not request.user.is_authenticated:
+            return redirect('users:login')
+        
         # Check if user actually needs first-time setup
         if not request.user.requires_first_time_setup():
             return redirect('home')
@@ -818,6 +822,14 @@ class UserPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'users/password_reset_confirm.html'
     success_url = reverse_lazy('users:password_reset_complete')
     form_class = CustomSetPasswordForm
+    
+    def get_form_kwargs(self):
+        """Override to pass user to the form"""
+        kwargs = super().get_form_kwargs()
+        user = self.get_user(self.kwargs['uidb64'])
+        if user:
+            kwargs['user'] = user
+        return kwargs
     
     def get_user(self, uidb64):
         """

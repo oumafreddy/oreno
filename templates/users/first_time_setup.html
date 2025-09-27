@@ -50,7 +50,7 @@
                             </h6>
                             <p class="text-muted small">
                                 We've sent a 6-digit verification code to <strong>{{ user.email }}</strong>. 
-                                The code expires in 10 minutes.
+                                The code expires in <span id="countdown" class="fw-bold text-primary">10:00</span>.
                             </p>
                             
                             <div class="mb-3">
@@ -73,11 +73,11 @@
                                         class="btn btn-outline-secondary btn-sm"
                                         id="resendOtpBtn">
                                     <i class="fas fa-redo me-1"></i>
-                                    Resend Code
+                                    <span class="btn-text">Resend Code</span>
                                 </button>
                                 <small class="text-muted">
                                     <i class="fas fa-clock me-1"></i>
-                                    Expires in <span id="countdown">10:00</span>
+                                    Code expires in <span id="countdown-display" class="fw-bold">10:00</span>
                                 </small>
                             </div>
                         </div>
@@ -160,7 +160,7 @@
     </div>
 </div>
 
-<!-- Resend OTP Form -->
+<!-- Hidden Resend OTP Form -->
 <form id="resendForm" method="post" action="{% url 'users:resend-otp-setup' %}" style="display: none;">
     {% csrf_token %}
     <input type="hidden" name="resend_otp" value="1">
@@ -169,119 +169,161 @@
 
 {% block extra_js %}
 <script nonce="{{ request.csp_nonce }}">
-// Countdown timer for OTP expiration
-function startCountdown() {
-    console.log('Starting countdown...');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('First Time Setup: DOM loaded, initializing...');
+    
+    // Initialize countdown timer
+    initCountdown();
+    
+    // Initialize resend button
+    initResendButton();
+    
+    // Initialize form validation
+    initFormValidation();
+    
+    console.log('First Time Setup: All components initialized');
+});
+
+// Countdown Timer
+function initCountdown() {
     let timeLeft = 10 * 60; // 10 minutes in seconds
     const countdownElement = document.getElementById('countdown');
+    const countdownDisplay = document.getElementById('countdown-display');
     
-    if (!countdownElement) {
-        console.error('Countdown element not found');
+    if (!countdownElement || !countdownDisplay) {
+        console.error('Countdown elements not found');
         return;
     }
     
-    console.log('Countdown element found:', countdownElement);
+    console.log('Starting countdown timer...');
     
     const timer = setInterval(function() {
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
+        const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
-        countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Update both countdown displays
+        countdownElement.textContent = timeString;
+        countdownDisplay.textContent = timeString;
         
         if (timeLeft <= 0) {
             clearInterval(timer);
             countdownElement.textContent = 'Expired';
+            countdownDisplay.textContent = 'Expired';
             countdownElement.classList.add('text-danger');
+            countdownDisplay.classList.add('text-danger');
+            
+            // Disable resend button when expired
+            const resendBtn = document.getElementById('resendOtpBtn');
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.classList.add('disabled');
+            }
         }
         
         timeLeft--;
     }, 1000);
-    
-    console.log('Countdown timer started');
 }
 
-// Resend OTP function
-function resendOTP(event) {
-    if (confirm('Send a new verification code to your email?')) {
-        // Show loading state
-        const button = event.target.closest('button');
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
-        button.disabled = true;
-        
-        // Submit the form
-        document.getElementById('resendForm').submit();
-    }
-}
-
-// Password confirmation validation
-document.getElementById('confirm_password').addEventListener('input', function() {
-    const password = document.getElementById('new_password').value;
-    const confirmPassword = this.value;
-    
-    if (password !== confirmPassword) {
-        this.setCustomValidity('Passwords do not match');
-    } else {
-        this.setCustomValidity('');
-    }
-});
-
-// OTP input formatting
-document.getElementById('otp_code').addEventListener('input', function() {
-    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
-});
-
-// Form validation
-document.getElementById('setupForm').addEventListener('submit', function(e) {
-    const password = document.getElementById('new_password').value;
-    const confirmPassword = document.getElementById('confirm_password').value;
-    
-    if (password !== confirmPassword) {
-        e.preventDefault();
-        alert('Passwords do not match. Please try again.');
-        return false;
-    }
-    
-    if (password.length < 8) {
-        e.preventDefault();
-        alert('Password must be at least 8 characters long.');
-        return false;
-    }
-});
-
-// Start countdown when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, starting countdown...');
-    startCountdown();
-    
-    // Attach event listeners
+// Resend Button Handler
+function initResendButton() {
     const resendBtn = document.getElementById('resendOtpBtn');
-    if (resendBtn) {
-        resendBtn.addEventListener('click', resendOTP);
-        console.log('Resend button event listener attached');
-    } else {
+    const resendForm = document.getElementById('resendForm');
+    
+    if (!resendBtn) {
         console.error('Resend button not found');
+        return;
     }
-});
-
-// Also try to start countdown immediately if DOM is already loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        startCountdown();
+    
+    if (!resendForm) {
+        console.error('Resend form not found');
+        return;
+    }
+    
+    console.log('Initializing resend button...');
+    
+    resendBtn.addEventListener('click', function(event) {
+        event.preventDefault();
+        console.log('Resend button clicked');
         
-        // Attach event listeners
-        const resendBtn = document.getElementById('resendOtpBtn');
-        if (resendBtn) {
-            resendBtn.addEventListener('click', resendOTP);
+        if (confirm('Send a new verification code to your email?')) {
+            // Show loading state
+            const btnText = resendBtn.querySelector('.btn-text');
+            const originalText = btnText ? btnText.textContent : 'Resend Code';
+            
+            resendBtn.disabled = true;
+            resendBtn.classList.add('disabled');
+            
+            if (btnText) {
+                btnText.textContent = 'Sending...';
+            }
+            
+            // Add spinner
+            const icon = resendBtn.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-spinner fa-spin me-1';
+            }
+            
+            console.log('Submitting resend form...');
+            
+            // Submit the form
+            resendForm.submit();
         }
     });
-} else {
-    startCountdown();
     
-    // Attach event listeners
-    const resendBtn = document.getElementById('resendOtpBtn');
-    if (resendBtn) {
-        resendBtn.addEventListener('click', resendOTP);
+    console.log('Resend button initialized successfully');
+}
+
+// Form Validation
+function initFormValidation() {
+    const otpInput = document.getElementById('otp_code');
+    const passwordInput = document.getElementById('new_password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const setupForm = document.getElementById('setupForm');
+    
+    // OTP input formatting
+    if (otpInput) {
+        otpInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+    }
+    
+    // Password confirmation validation
+    if (confirmPasswordInput && passwordInput) {
+        confirmPasswordInput.addEventListener('input', function() {
+            const password = passwordInput.value;
+            const confirmPassword = this.value;
+            
+            if (password !== confirmPassword) {
+                this.setCustomValidity('Passwords do not match');
+                this.classList.add('is-invalid');
+            } else {
+                this.setCustomValidity('');
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+    
+    // Form submission validation
+    if (setupForm) {
+        setupForm.addEventListener('submit', function(e) {
+            const password = passwordInput ? passwordInput.value : '';
+            const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match. Please try again.');
+                return false;
+            }
+            
+            if (password.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long.');
+                return false;
+            }
+            
+            console.log('Form submission validated successfully');
+        });
     }
 }
 </script>
