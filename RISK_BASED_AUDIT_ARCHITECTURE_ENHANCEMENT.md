@@ -1,6 +1,6 @@
 # Risk-Based Audit Architecture Enhancement
 
-## Executive Summary
+## Executive Summary 27/09/2025
 
 This document outlines a critical architectural improvement needed to transform the Oreno GRC system from "risk-aware" auditing to truly "risk-based" auditing. Currently, the system maintains separate risk management systems that prevent true integration between audit activities and organizational risk management.
 
