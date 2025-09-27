@@ -35,6 +35,7 @@ class AppAccessControlMiddleware:
                 '/accounts/logout',
                 '/accounts/password',
                 '/accounts/first-time-setup',
+                '/accounts/resend-otp-setup',
             )
             if any(path.startswith(p) for p in auth_allowed_prefixes):
                 return self.get_response(request)

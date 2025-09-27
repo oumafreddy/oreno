@@ -10,6 +10,9 @@ class LoginRequiredMiddleware:
     """
     Middleware that forces a user to be logged in to view any page except a defined whitelist.
     
+    IMPORTANT: This middleware only applies to tenant sites (e.g., org001.localhost:8000),
+    NOT to the public site (127.0.0.1:8000 or localhost:8000).
+    
     Configure settings.LOGIN_REQUIRED_EXEMPT_URLS in your settings file to provide a list
     of URLs (or URL names) that should be exempt from authentication (e.g. login, signup pages).
     """
@@ -17,6 +20,11 @@ class LoginRequiredMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Check if this is a public site (no tenant context)
+        # Public sites should not enforce login requirements
+        if not hasattr(request, 'tenant') or request.tenant is None:
+            return self.get_response(request)
+        
         # List of URL paths to exempt from login requirement
         exempt_urls = getattr(settings, "LOGIN_REQUIRED_EXEMPT_URLS", [])
         # Alternatively, you could use URL names here and reverse them if desired.
@@ -36,6 +44,9 @@ class AjaxLoginRequiredMiddleware:
     """
     Middleware that returns a JSON 401 for AJAX/htmx/fetch unauthenticated requests,
     instead of redirecting to the login page. This prevents JSON.parse errors in JS/htmx.
+    
+    IMPORTANT: This middleware only applies to tenant sites, NOT to the public site.
+    
     Handles:
       - htmx (HX-Request header)
       - XMLHttpRequest (x-requested-with)
@@ -45,6 +56,11 @@ class AjaxLoginRequiredMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Check if this is a public site (no tenant context)
+        # Public sites should not enforce login requirements
+        if not hasattr(request, 'tenant') or request.tenant is None:
+            return self.get_response(request)
+        
         if not request.user.is_authenticated:
             is_htmx = request.headers.get('HX-Request')
             is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'

@@ -203,12 +203,14 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',  # Must be before any middleware that uses messages
+    'users.middleware.FirstTimeSetupMiddleware',  # Enforce first-time setup completion
+    'users.middleware.FirstTimeSetupSessionMiddleware',  # Manage first-time setup sessions
     'apps.core.middleware.OrganizationMiddleware',  # Enhanced tenant access control & org context
     'apps.common.middleware.OrganizationActiveMiddleware',
     'apps.common.middleware.AppAccessControlMiddleware',
     'common.middleware.AjaxLoginRequiredMiddleware',
     'common.middleware.LoginRequiredMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
     'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
@@ -576,16 +578,22 @@ LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
 LOGOUT_REDIRECT_URL = '/accounts/logout/'
 LOGIN_REQUIRED_EXEMPT_URLS = [
-    '/accounts/login/',         # login view
-    '/accounts/logout/',        # logout view
-    '/accounts/register/',     # your registration view
-    '/accounts/password-reset/',   # if applicable
-    '/accounts/password-reset/done/',
-    '/accounts/password-reset/confirm/',
-    '/accounts/password-reset/complete/',
+    # Public site pages (accessible without login)
+    '/',                        # public home page
+    '/privacy-policy/',         # privacy policy
+    '/cookie-policy/',          # cookie policy
+    '/docs/',                   # documentation
+    '/sitemap.xml',             # sitemap
+    '/robots.txt',              # robots file
+    '/health/',                 # health check
+    
+    # Static files and assets
     '/static/', '/media/', '/favicon.ico',
-    '/organizations/create/',
-    '/',                       # home page
+    
+    # Note: Authentication pages are NOT exempt here because:
+    # 1. Public site (127.0.0.1:8000) blocks /accounts/* routes entirely
+    # 2. Tenant sites (org001.localhost:8000) handle authentication via middleware
+    # 3. This prevents confusion between public and tenant authentication
 ]
 
 # ------------------------------------------------------------------------------

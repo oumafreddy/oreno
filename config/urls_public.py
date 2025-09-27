@@ -1,6 +1,7 @@
 # config/urls_public.py
 
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include, re_path
 from django.http import HttpResponse, HttpResponseNotFound
 from django.conf import settings
@@ -14,6 +15,8 @@ from django.views.defaults import (
 )
 from django.views.generic import TemplateView
 from django.urls import path
+
+from .sitemaps import PublicSitemap, StaticSitemap
 
 # Define error handlers for public schema
 handler400 = 'core.views.bad_request'
@@ -52,12 +55,21 @@ class CookiePolicyView(TemplateView):
 def _blocked_admin_404(request, *args, **kwargs):
     return HttpResponseNotFound('Not Found')
 
+# Sitemap configuration
+sitemaps = {
+    'public': PublicSitemap,
+    'static': StaticSitemap,
+}
+
 # Define URL patterns for public schema
 urlpatterns = [
     # Public Admin - mount only at secret path
     path(settings.ADMIN_URL, admin.site.urls),
     # Block default /admin/
     re_path(r'^admin(/.*)?$', _blocked_admin_404),
+    
+    # Sitemap
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     
     # Public Pages
     path('', PublicHomeView.as_view(), name='public-home'),
@@ -69,9 +81,10 @@ urlpatterns = [
         template_name='public/docs.html'
     ), name='public-docs'),
     
-    # Public Authentication
-    path('accounts/', include('users.urls', namespace='public-users')),
-    path('organizations/', include('organizations.urls', namespace='organizations')),
+    # Public Authentication - BLOCKED (tenant-specific only)
+    # Note: Authentication should only be available on tenant sites
+    re_path(r'^accounts(/.*)?$', _blocked_admin_404, name='blocked-accounts'),
+    re_path(r'^organizations(/.*)?$', _blocked_admin_404, name='blocked-organizations'),
     
     # Public API Documentation
     path('api/docs/', TemplateView.as_view(
@@ -79,13 +92,31 @@ urlpatterns = [
         extra_context={'schema_url': 'public-api-schema'}
     ), name='public-swagger-ui'),
     
-    # Public API Endpoints
-    path('api/', include('rest_framework.urls', namespace='public-rest-framework')),
-    path('api/users/', include(('users.urls', 'users'), namespace='public-users-api')),
-    path('api/organizations/', include(('organizations.urls', 'organizations'), namespace='public-organizations-api')),
+    # Public API Endpoints - BLOCKED (tenant-specific only)
+    # Note: User and organization APIs should only be available on tenant sites
+    re_path(r'^api/users(/.*)?$', _blocked_admin_404, name='blocked-api-users'),
+    re_path(r'^api/organizations(/.*)?$', _blocked_admin_404, name='blocked-api-organizations'),
+    re_path(r'^api/auth(/.*)?$', _blocked_admin_404, name='blocked-api-auth'),
     
     # Public Health Check
     path('health/', lambda r: HttpResponse('OK'), name='public-health-check'),
+    
+    # Robots.txt
+    path('robots.txt', lambda r: HttpResponse(
+        'User-agent: *\n'
+        'Allow: /\n'
+        'Allow: /privacy-policy/\n'
+        'Allow: /cookie-policy/\n'
+        'Allow: /docs/\n'
+        'Allow: /health/\n'
+        'Disallow: /admin/\n'
+        'Disallow: /accounts/\n'
+        'Disallow: /organizations/\n'
+        'Disallow: /api/\n'
+        'Sitemap: http://127.0.0.1:8000/sitemap.xml\n'
+        'Sitemap: https://oreno.tech/sitemap.xml\n',
+        content_type='text/plain'
+    ), name='robots-txt'),
     
     # Public Error Pages (for testing in development)
     path('400/', bad_request, kwargs={'exception': Exception('Bad Request')}),
