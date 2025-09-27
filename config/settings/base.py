@@ -613,8 +613,8 @@ ADMIN_URL = os.getenv('ADMIN_URL', 'super-admin-portal/')
 # ------------------------------------------------------------------------------
 # File Upload Settings
 # ------------------------------------------------------------------------------
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
 # ------------------------------------------------------------------------------
