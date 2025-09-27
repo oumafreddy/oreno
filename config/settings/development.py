@@ -155,7 +155,7 @@ STATIC_URL = '/static/'
 if DEBUG:
     import time
     # Force cache refresh every time in development
-    STATIC_URL = STATIC_URL + '?v=' + str(int(time.time()))
+    #STATIC_URL = STATIC_URL + '?v=' + str(int(time.time()))
     
     # Add cache-busting headers
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
