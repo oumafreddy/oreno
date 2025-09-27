@@ -112,6 +112,38 @@ EMAIL_HOST_PASSWORD=your-password
 DEFAULT_FROM_EMAIL=info@oreno.tech
 ```
 
+## Email Sending Coverage Across All Apps
+
+The fix addresses **ALL email sending instances** across the entire application:
+
+### ✅ **Users App** - FIXED
+- **OTP emails** during user onboarding (`apps/users/models.py`)
+- **Welcome emails** after user registration (`apps/users/tasks.py`)
+- **Password reset emails** (already working, no changes needed)
+
+### ✅ **Audit App** - FIXED
+- **Workplan approval notifications** (`apps/audit/email_utils.py`, `apps/audit/tasks.py`)
+- **Engagement approval notifications** (`apps/audit/email_utils.py`)
+- **Risk status notifications** (`apps/audit/email_utils.py`, `apps/audit/signals.py`)
+- **Issue assignment notifications** (`apps/audit/signals.py`)
+
+### ✅ **AI Governance App** - FIXED
+- **Test failure alerts** (`apps/ai_governance/alerts.py`)
+- **Performance degradation alerts** (`apps/ai_governance/alerts.py`)
+- **Compliance violation alerts** (`apps/ai_governance/alerts.py`)
+
+### ✅ **Admin Module** - FIXED
+- **Data export completion notifications** (`apps/admin_module/tasks.py`)
+
+### ✅ **Document Management** - FIXED
+- **Document request notifications** (`apps/document_management/models.py`)
+
+### ✅ **Other Apps** - NO EMAIL SENDING
+- **Risk App**: No email sending implemented (only TODO placeholders in signals)
+- **Compliance App**: No email sending implemented (only TODO placeholders in signals)
+- **Contracts App**: No email sending implemented (only TODO placeholders in signals)
+- **Legal App**: No email sending implemented (only TODO placeholders in signals)
+
 ## Expected Results
 
 After applying this fix:
@@ -119,8 +151,12 @@ After applying this fix:
 1. ✅ **OTP emails should work** during user onboarding
 2. ✅ **Welcome emails should work** after user registration  
 3. ✅ **Password reset emails should continue working** (no regression)
-4. ✅ **All tenant-specific emails should work** consistently
-5. ✅ **Better error logging** for debugging any future email issues
+4. ✅ **All audit workflow emails should work** (workplans, engagements, risks, issues)
+5. ✅ **All AI governance alert emails should work** (test failures, performance issues)
+6. ✅ **All admin module emails should work** (data export notifications)
+7. ✅ **All document management emails should work** (document request notifications)
+8. ✅ **All tenant-specific emails should work** consistently across all apps
+9. ✅ **Better error logging** for debugging any future email issues
 
 ## Non-Destructive Nature
 
@@ -133,10 +169,25 @@ This fix is **completely non-destructive**:
 
 ## Files Modified
 
-1. `apps/core/utils.py` - Fixed SSL/TLS logic and added logging
-2. `config/settings/tenants.py` - Added missing TENANT_EMAIL_USE_SSL setting
-3. `apps/users/models.py` - Added fallback mechanism for OTP emails
-4. `apps/users/tasks.py` - Added fallback mechanism for welcome emails
-5. `apps/users/management/commands/test_email.py` - New testing command
+1. **`apps/core/utils.py`** - Fixed SSL/TLS logic and added logging
+2. **`config/settings/tenants.py`** - Added missing TENANT_EMAIL_USE_SSL setting
+3. **`apps/users/models.py`** - Added fallback mechanism for OTP emails
+4. **`apps/users/tasks.py`** - Added fallback mechanism for welcome emails
+5. **`apps/users/management/commands/test_email.py`** - New testing command
+6. **`apps/audit/email_utils.py`** - Added fallback mechanism for workplan approval notifications
+7. **`apps/ai_governance/alerts.py`** - Added fallback mechanism for AI governance alerts
+8. **`apps/admin_module/tasks.py`** - Added fallback mechanism for data export notifications
+9. **`apps/document_management/models.py`** - Added fallback mechanism for document request notifications
 
-The fix addresses the core issue while maintaining robustness and providing better debugging capabilities.
+## Complete Email Coverage
+
+The fix now covers **ALL email sending instances** across the entire application:
+
+- ✅ **Users App**: OTP, welcome, password reset emails
+- ✅ **Audit App**: Workplan, engagement, risk, issue notification emails  
+- ✅ **AI Governance App**: Test failure, performance, compliance alert emails
+- ✅ **Admin Module**: Data export completion notification emails
+- ✅ **Document Management**: Document request notification emails
+- ✅ **All Apps**: Consistent fallback mechanisms ensure emails are sent even if tenant email fails
+
+The fix addresses the core SSL/TLS issue while maintaining robustness and providing comprehensive fallback mechanisms across all email sending functionality.

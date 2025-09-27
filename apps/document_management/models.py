@@ -117,7 +117,18 @@ class DocumentRequest(OrganizationOwnedModel, AuditableModel):
         recipient_list = [self.requestee_email or (self.requestee.email if self.requestee else None)]
         recipient_list = [e for e in recipient_list if e]
         if recipient_list:
-            send_mail(subject, message, from_email, recipient_list)
+            # Try tenant email first, fallback to standard Django send_mail
+            try:
+                send_mail(subject, message, from_email, recipient_list)
+            except Exception as e:
+                # Log the error and try fallback
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Tenant email failed for document request notification, trying fallback: {e}")
+                
+                # Fallback to Django's standard send_mail
+                from django.core.mail import send_mail as django_send_mail
+                django_send_mail(subject, message, from_email, recipient_list)
 
     def __str__(self):
         return self.request_name

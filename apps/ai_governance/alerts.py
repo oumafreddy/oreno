@@ -162,14 +162,28 @@ class AlertManager:
             plain_message = render_to_string('ai_governance/emails/alert.txt', context)
             
             # Send email
-            sent_count = send_mail(
-                subject=subject,
-                message=plain_message,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@oreno.com'),
-                recipient_list=admin_emails,
-                html_message=html_message,
-                fail_silently=False
-            )
+            try:
+                sent_count = send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@oreno.com'),
+                    recipient_list=admin_emails,
+                    html_message=html_message,
+                    fail_silently=False
+                )
+            except Exception as e:
+                logger.error(f"Tenant email failed for AI governance alert, trying fallback: {e}")
+                
+                # Fallback to Django's standard send_mail
+                from django.core.mail import send_mail as django_send_mail
+                sent_count = django_send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@oreno.com'),
+                    recipient_list=admin_emails,
+                    html_message=html_message,
+                    fail_silently=False
+                )
             
             return {
                 'sent': sent_count,

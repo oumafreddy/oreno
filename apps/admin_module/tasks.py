@@ -586,14 +586,30 @@ def send_export_completion_notification(export_id):
         html_message = render_to_string('admin_module/email/export_completed.html', context)
         text_message = render_to_string('admin_module/email/export_completed.txt', context)
         
-        send_mail(
-            subject=subject,
-            message=text_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[export.requested_by.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
+        # Try tenant email first, fallback to standard Django send_mail
+        try:
+            send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[export.requested_by.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log the error and try fallback
+            logger.error(f"Tenant email failed for export notification, trying fallback: {e}")
+            
+            # Fallback to Django's standard send_mail
+            from django.core.mail import send_mail as django_send_mail
+            django_send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[export.requested_by.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
         
         logger.info(f"Export completion notification sent for export {export_id}")
         

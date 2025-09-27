@@ -59,7 +59,22 @@ def send_workplan_approval_notification(workplan, status, request):
         )
         logger.info(f"Workplan approval notification sent for {workplan.id} with status {status}")
     except Exception as e:
-        logger.error(f"Failed to send workplan approval notification: {e}")
+        logger.error(f"Tenant email failed for workplan approval notification, trying fallback: {e}")
+        
+        # Fallback to Django's standard send_mail
+        try:
+            from django.core.mail import send_mail as django_send_mail
+            django_send_mail(
+                subject=subject,
+                message="",  # Plain text version - we're using HTML email
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipients,
+                fail_silently=True,
+                html_message=html_message
+            )
+            logger.info(f"Workplan approval notification sent via fallback for {workplan.id} with status {status}")
+        except Exception as fallback_e:
+            logger.error(f"Fallback email also failed for workplan approval notification: {fallback_e}")
 
 def send_engagement_approval_notification(engagement, status, request):
     """
