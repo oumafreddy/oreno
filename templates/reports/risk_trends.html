@@ -1,8 +1,495 @@
 {% extends "reports/base_report.html" %}
 {% block content %}
-<h2>Risk Identification Trends</h2>
-<p>This chart shows the number of risks identified per month.</p>
-<div class="text-center">
-  <img src="data:image/png;base64,{{ image_base64 }}" alt="Risk Trends" style="max-width:100%; height:auto;">
+
+<!-- Executive Summary -->
+<div class="section-header">Executive Summary</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Key Metrics Overview</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25 text-center">Total Risks</th>
+            <th class="col-25 text-center">High Risk Items</th>
+            <th class="col-25 text-center">Trend Change</th>
+            <th class="col-25 text-center">Average Risk Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center"><strong>{{ total_risks }}</strong></td>
+            <td class="text-center"><strong>{{ high_risk_count }}</strong></td>
+            <td class="text-center"><strong>{{ trend_percentage|floatformat:1 }}%</strong></td>
+            <td class="text-center"><strong>{{ avg_risk_score|floatformat:1 }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="field-group">
+    <div class="field-label">Key Insights</div>
+    <div class="field-value">
+      <ul>
+        {% if trend_direction == 'increasing' %}
+          <li><strong>Risk Identification Trend:</strong> <span class="status-badge status-high">Increasing</span> - {{ trend_percentage|floatformat:1 }}% increase in risk identification over the reporting period</li>
+        {% elif trend_direction == 'decreasing' %}
+          <li><strong>Risk Identification Trend:</strong> <span class="status-badge status-low">Decreasing</span> - {{ trend_percentage|floatformat:1 }}% decrease in risk identification over the reporting period</li>
+        {% else %}
+          <li><strong>Risk Identification Trend:</strong> <span class="status-badge status-medium">Stable</span> - Minimal change in risk identification patterns</li>
+        {% endif %}
+        
+        {% if peak_month %}
+          <li><strong>Peak Risk Month:</strong> {{ peak_month }} with {{ peak_count }} risks identified</li>
+        {% endif %}
+        
+        {% if top_category %}
+          <li><strong>Primary Risk Category:</strong> {{ top_category }} ({{ top_category_count }} risks, {{ top_category_percentage|floatformat:1 }}%)</li>
+        {% endif %}
+        
+        {% if avg_time_to_closure %}
+          <li><strong>Average Time to Closure:</strong> {{ avg_time_to_closure }} days</li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
 </div>
+
+<!-- Risk Identification Trends -->
+<div class="section-header">Risk Identification Trends</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Monthly Risk Identification Chart</div>
+    <div class="field-value">
+<div class="text-center">
+        <img src="data:image/png;base64,{{ image_base64 }}" alt="Risk Identification Trends" style="max-width:100%; height:auto;">
+      </div>
+    </div>
+  </div>
+  
+  <div class="field-group">
+    <div class="field-label">Trend Analysis</div>
+    <div class="field-value">
+      <p>This chart illustrates the monthly pattern of risk identification within the organization. The trend analysis helps identify seasonal patterns, emerging risk areas, and the effectiveness of risk identification processes.</p>
+      
+      {% if trend_analysis %}
+        <ul>
+          {% for insight in trend_analysis %}
+            <li>{{ insight }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Risk Category Distribution -->
+<div class="section-header">Risk Category Analysis</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Risk Distribution by Category</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-30">Risk Category</th>
+            <th class="col-15 text-center">Count</th>
+            <th class="col-15 text-center">Percentage</th>
+            <th class="col-20 text-center">Average Score</th>
+            <th class="col-20 text-center">High Risk Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category in category_distribution %}
+            <tr>
+              <td>{{ category.category_name }}</td>
+              <td class="text-center">{{ category.count }}</td>
+              <td class="text-center">{{ category.percentage|floatformat:1 }}%</td>
+              <td class="text-center">{{ category.avg_score|floatformat:1 }}</td>
+              <td class="text-center">
+                {% if category.high_risk_count > 0 %}
+                  <span class="status-badge status-high">{{ category.high_risk_count }}</span>
+                {% else %}
+                  <span class="status-badge status-low">{{ category.high_risk_count }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Status Analysis -->
+<div class="section-header">Risk Status & Lifecycle Analysis</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Risk Status Overview</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25 text-center">Open Risks</th>
+            <th class="col-25 text-center">In Progress</th>
+            <th class="col-25 text-center">Closed Risks</th>
+            <th class="col-25 text-center">Overdue Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center"><strong>{{ open_risks }}</strong></td>
+            <td class="text-center"><strong>{{ in_progress_risks }}</strong></td>
+            <td class="text-center"><strong>{{ closed_risks }}</strong></td>
+            <td class="text-center"><strong>{{ overdue_risks }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="field-group">
+    <div class="field-label">Risk Status Distribution</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25">Status</th>
+            <th class="col-15 text-center">Count</th>
+            <th class="col-15 text-center">Percentage</th>
+            <th class="col-20 text-center">Average Days Open</th>
+            <th class="col-25">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for status in status_distribution %}
+            <tr>
+              <td>
+                {% if status.status == 'open' %}
+                  <span class="status-badge status-active">{{ status.status|title }}</span>
+                {% elif status.status == 'in_progress' %}
+                  <span class="status-badge status-pending">{{ status.status|title }}</span>
+                {% elif status.status == 'closed' %}
+                  <span class="status-badge status-approved">{{ status.status|title }}</span>
+                {% else %}
+                  <span class="status-badge status-draft">{{ status.status|title }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ status.count }}</td>
+              <td class="text-center">{{ status.percentage|floatformat:1 }}%</td>
+              <td class="text-center">{{ status.avg_days_open|floatformat:0 }}</td>
+              <td>
+                {% if status.trend == 'increasing' %}
+                  <span class="status-badge status-high">↗ Increasing</span>
+                {% elif status.trend == 'decreasing' %}
+                  <span class="status-badge status-low">↘ Decreasing</span>
+                {% else %}
+                  <span class="status-badge status-medium">→ Stable</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Owner Analysis -->
+<div class="section-header">Risk Ownership & Accountability</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Top Risk Owners</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-30">Risk Owner</th>
+            <th class="col-15 text-center">Total Risks</th>
+            <th class="col-15 text-center">High Risk</th>
+            <th class="col-15 text-center">Overdue</th>
+            <th class="col-25 text-center">Avg. Risk Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for owner in top_risk_owners %}
+            <tr>
+              <td>{{ owner.owner_name }}</td>
+              <td class="text-center">{{ owner.total_risks }}</td>
+              <td class="text-center">
+                {% if owner.high_risk_count > 0 %}
+                  <span class="status-badge status-high">{{ owner.high_risk_count }}</span>
+                {% else %}
+                  <span class="status-badge status-low">{{ owner.high_risk_count }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if owner.overdue_count > 0 %}
+                  <span class="status-badge status-critical">{{ owner.overdue_count }}</span>
+                {% else %}
+                  <span class="status-badge status-low">{{ owner.overdue_count }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ owner.avg_risk_score|floatformat:1 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Assessment Trends -->
+<div class="section-header">Risk Assessment & Scoring Trends</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Risk Score Distribution</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-20">Risk Level</th>
+            <th class="col-15 text-center">Count</th>
+            <th class="col-15 text-center">Percentage</th>
+            <th class="col-20 text-center">Score Range</th>
+            <th class="col-30">Trend Analysis</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for level in risk_level_distribution %}
+            <tr>
+              <td>
+                {% if level.level == 'critical' %}
+                  <span class="status-badge status-critical">{{ level.level|title }}</span>
+                {% elif level.level == 'high' %}
+                  <span class="status-badge status-high">{{ level.level|title }}</span>
+                {% elif level.level == 'medium' %}
+                  <span class="status-badge status-medium">{{ level.level|title }}</span>
+                {% else %}
+                  <span class="status-badge status-low">{{ level.level|title }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ level.count }}</td>
+              <td class="text-center">{{ level.percentage|floatformat:1 }}%</td>
+              <td class="text-center">{{ level.score_range }}</td>
+              <td>{{ level.trend_analysis }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="field-group">
+    <div class="field-label">Assessment Activity</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25 text-center">Total Assessments</th>
+            <th class="col-25 text-center">Avg. Assessments/Risk</th>
+            <th class="col-25 text-center">Days Since Last Assessment</th>
+            <th class="col-25 text-center">Risks Due for Assessment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center"><strong>{{ total_assessments }}</strong></td>
+            <td class="text-center"><strong>{{ avg_assessments_per_risk|floatformat:1 }}</strong></td>
+            <td class="text-center"><strong>{{ days_since_last_assessment }}</strong></td>
+            <td class="text-center"><strong>{{ risks_due_assessment }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Control Effectiveness Trends -->
+<div class="section-header">Control Implementation & Effectiveness</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Control Status Distribution</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25">Control Status</th>
+            <th class="col-15 text-center">Count</th>
+            <th class="col-15 text-center">Percentage</th>
+            <th class="col-20 text-center">Avg. Risk Score</th>
+            <th class="col-25">Effectiveness</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for control in control_status_distribution %}
+            <tr>
+              <td>
+                {% if control.status == 'fully_implemented' %}
+                  <span class="status-badge status-approved">{{ control.status|title }}</span>
+                {% elif control.status == 'partially_implemented' %}
+                  <span class="status-badge status-pending">{{ control.status|title }}</span>
+                {% else %}
+                  <span class="status-badge status-inactive">{{ control.status|title }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">{{ control.count }}</td>
+              <td class="text-center">{{ control.percentage|floatformat:1 }}%</td>
+              <td class="text-center">{{ control.avg_risk_score|floatformat:1 }}</td>
+              <td>
+                {% if control.effectiveness == 'high' %}
+                  <span class="status-badge status-low">High</span>
+                {% elif control.effectiveness == 'medium' %}
+                  <span class="status-badge status-medium">Medium</span>
+                {% else %}
+                  <span class="status-badge status-high">Low</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Key Risk Indicators -->
+<div class="section-header">Key Risk Indicators (KRI) Analysis</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">KRI Performance Summary</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-25 text-center">Total KRIs</th>
+            <th class="col-25 text-center">Above Threshold</th>
+            <th class="col-25 text-center">Critical Level</th>
+            <th class="col-25 text-center">Improving Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center"><strong>{{ total_kris }}</strong></td>
+            <td class="text-center"><strong>{{ kris_above_threshold }}</strong></td>
+            <td class="text-center"><strong>{{ kris_critical }}</strong></td>
+            <td class="text-center"><strong>{{ kris_trend_improving }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  {% if top_kris %}
+  <div class="field-group">
+    <div class="field-label">Top Performing KRIs</div>
+    <div class="field-value">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-30">KRI Name</th>
+            <th class="col-15 text-center">Current Value</th>
+            <th class="col-15 text-center">Threshold</th>
+            <th class="col-15 text-center">Status</th>
+            <th class="col-25">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for kri in top_kris %}
+            <tr>
+              <td>{{ kri.name }}</td>
+              <td class="text-center">{{ kri.current_value|floatformat:1 }} {{ kri.unit }}</td>
+              <td class="text-center">{{ kri.threshold_warning|floatformat:1 }}</td>
+              <td class="text-center">
+                {% if kri.status == 'critical' %}
+                  <span class="status-badge status-critical">Critical</span>
+                {% elif kri.status == 'warning' %}
+                  <span class="status-badge status-high">Warning</span>
+                {% else %}
+                  <span class="status-badge status-low">Normal</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if kri.trend == 'improving' %}
+                  <span class="status-badge status-low">↗ Improving</span>
+                {% elif kri.trend == 'deteriorating' %}
+                  <span class="status-badge status-high">↘ Deteriorating</span>
+                {% else %}
+                  <span class="status-badge status-medium">→ Stable</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Recommendations & Next Steps -->
+<div class="section-header">Recommendations & Next Steps</div>
+<div class="report-card">
+  <div class="field-group">
+    <div class="field-label">Key Recommendations</div>
+    <div class="field-value">
+      <div class="recommendations-grid">
+        {% for recommendation in recommendations %}
+          <div class="recommendation-card">
+            <h4>{{ recommendation.title }}</h4>
+            <p>{{ recommendation.description }}</p>
+            <ul>
+              {% for action in recommendation.actions %}
+                <li>{{ action }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="field-group">
+    <div class="field-label">Priority Actions</div>
+    <div class="field-value">
+      <div class="next-steps-grid">
+        {% for action in priority_actions %}
+          <div class="step-item">
+            <strong>{{ action.priority }} Priority:</strong> {{ action.description }}
+            <ul>
+              {% for step in action.steps %}
+                <li>{{ step }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Methodology & Data Sources -->
+<div class="section-header">Methodology & Data Sources</div>
+<div class="report-card">
+  <div class="methodology-section">
+    <h4>Data Collection Methodology</h4>
+    <ul>
+      <li>Risk data collected from the organization's risk register and assessment records</li>
+      <li>Trend analysis based on monthly aggregation of risk identification dates</li>
+      <li>Risk scoring follows ISO 31000:2018 Risk Management Guidelines</li>
+      <li>Control effectiveness measured against implementation status and risk reduction</li>
+      <li>KRI analysis based on threshold monitoring and trend identification</li>
+    </ul>
+    
+    <h4>Report Generation Details</h4>
+    <ul>
+      <li><strong>Report Generated:</strong> {{ generation_timestamp|default:"Not specified" }}</li>
+      <li><strong>Data Period:</strong> {{ data_period|default:"All available data" }}</li>
+      <li><strong>Total Records Analyzed:</strong> {{ total_records_analyzed|default:"Not specified" }}</li>
+      <li><strong>Report Version:</strong> 2.0 - Enhanced Risk Trends Analysis</li>
+    </ul>
+  </div>
+</div>
+
 {% endblock %} 

@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
 from risk.models import Risk, RiskRegister, Control, KRI, RiskAssessment
-from django.db.models import Count, Q, Avg, Sum
+from django.db.models import Count, Q, Avg, Sum, F, Case, When, DurationField
 from django.db import models
 import tempfile
 import matplotlib.pyplot as plt
@@ -335,6 +335,25 @@ def risk_heatmap_pdf(request):
 def risk_trends_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
+    
+    # Apply filters if provided
+    register_filter = request.GET.get('register')
+    category_filter = request.GET.get('category')
+    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if register_filter:
+        risks = risks.filter(risk_register__register_name__icontains=register_filter)
+    if category_filter:
+        risks = risks.filter(category=category_filter)
+    if status_filter:
+        risks = risks.filter(status=status_filter)
+    if date_from:
+        risks = risks.filter(date_identified__gte=date_from)
+    if date_to:
+        risks = risks.filter(date_identified__lte=date_to)
+    
     # Group by month using TruncMonth for DB compatibility
     risks_by_month = (
         risks.annotate(month=TruncMonth('date_identified'))
@@ -344,26 +363,354 @@ def risk_trends_pdf(request):
     )
     months = [r['month'].strftime('%Y-%m') if r['month'] else '' for r in risks_by_month]
     counts = [r['count'] for r in risks_by_month]
-    # Generate trend chart
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(months, counts, marker='o')
-    ax.set_xlabel('Month')
-    ax.set_ylabel('Number of Risks Identified')
-    ax.set_title('Risk Identification Trend')
-    plt.xticks(rotation=45)
+    
+    # Enhanced chart generation
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(months, counts, marker='o', linewidth=2, markersize=6, color='#2563eb')
+    ax.set_xlabel('Month', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Number of Risks Identified', fontsize=12, fontweight='bold')
+    ax.set_title('Risk Identification Trend Analysis', fontsize=14, fontweight='bold', pad=20)
+    ax.grid(True, alpha=0.3)
+    ax.set_facecolor('#f8fafc')
+    plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
+    
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
     plt.close(fig)
     buf.seek(0)
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    html_string = render_to_string('reports/risk_trends.html', {
+    
+    # Comprehensive data analysis
+    total_risks = risks.count()
+    
+    # Risk level distribution
+    high_risk_count = risks.filter(residual_risk_score__gte=15).count()
+    medium_risk_count = risks.filter(residual_risk_score__range=(5, 14)).count()
+    low_risk_count = risks.filter(residual_risk_score__lt=5).count()
+    
+    # Calculate overdue risks for use in recommendations
+    overdue_risks = risks.filter(
+        action_due_date__lt=timezone.now().date(),
+        action_plan_status__in=['not-started', 'in-progress']
+    ).count()
+    
+    # Calculate trend percentage
+    if len(counts) >= 2:
+        first_half = sum(counts[:len(counts)//2])
+        second_half = sum(counts[len(counts)//2:])
+        if first_half > 0:
+            trend_percentage = ((second_half - first_half) / first_half) * 100
+            trend_direction = 'increasing' if trend_percentage > 5 else 'decreasing' if trend_percentage < -5 else 'stable'
+        else:
+            trend_percentage = 0
+            trend_direction = 'stable'
+    else:
+        trend_percentage = 0
+        trend_direction = 'stable'
+    
+    # Peak month analysis
+    if counts:
+        peak_index = counts.index(max(counts))
+        peak_month = months[peak_index]
+        peak_count = counts[peak_index]
+    else:
+        peak_month = None
+        peak_count = 0
+    
+    # Category distribution
+    category_distribution = []
+    categories = risks.values('category').annotate(
+        count=Count('id'),
+        avg_score=Avg('residual_risk_score'),
+        high_risk_count=Count('id', filter=Q(residual_risk_score__gte=15))
+    ).order_by('-count')
+    
+    total_cat_risks = sum(cat['count'] for cat in categories)
+    for cat in categories:
+        category_distribution.append({
+            'category_name': cat['category'],
+            'count': cat['count'],
+            'percentage': (cat['count'] / total_cat_risks * 100) if total_cat_risks > 0 else 0,
+            'avg_score': cat['avg_score'] or 0,
+            'high_risk_count': cat['high_risk_count']
+        })
+    
+    # Top category
+    if category_distribution:
+        top_category = category_distribution[0]['category_name']
+        top_category_count = category_distribution[0]['count']
+        top_category_percentage = category_distribution[0]['percentage']
+    else:
+        top_category = None
+        top_category_count = 0
+        top_category_percentage = 0
+    
+    # Status distribution
+    status_distribution = []
+    statuses = risks.values('status').annotate(
+        count=Count('id'),
+        avg_days_open=Avg(
+            Case(
+                When(status='closed', then=F('closure_date') - F('date_identified')),
+                default=timezone.now().date() - F('date_identified'),
+                output_field=DurationField()
+            )
+        )
+    ).order_by('-count')
+    
+    total_status_risks = sum(status['count'] for status in statuses)
+    for status in statuses:
+        status_distribution.append({
+            'status': status['status'],
+            'count': status['count'],
+            'percentage': (status['count'] / total_status_risks * 100) if total_status_risks > 0 else 0,
+            'avg_days_open': status['avg_days_open'].days if status['avg_days_open'] else 0,
+            'trend': 'stable'  # Could be enhanced with historical comparison
+        })
+    
+    # Risk owner analysis
+    top_risk_owners = []
+    owners = risks.values('risk_owner').annotate(
+        total_risks=Count('id'),
+        high_risk_count=Count('id', filter=Q(residual_risk_score__gte=15)),
+        overdue_count=Count('id', filter=Q(
+            action_due_date__lt=timezone.now().date(),
+            action_plan_status__in=['not-started', 'in-progress']
+        )),
+        avg_risk_score=Avg('residual_risk_score')
+    ).order_by('-total_risks')[:10]
+    
+    for owner in owners:
+        top_risk_owners.append({
+            'owner_name': owner['risk_owner'],
+            'total_risks': owner['total_risks'],
+            'high_risk_count': owner['high_risk_count'],
+            'overdue_count': owner['overdue_count'],
+            'avg_risk_score': owner['avg_risk_score'] or 0
+        })
+    
+    # Risk level distribution with trend analysis
+    risk_level_distribution = []
+    risk_levels = [
+        {'level': 'critical', 'min_score': 20, 'max_score': 25},
+        {'level': 'high', 'min_score': 15, 'max_score': 19},
+        {'level': 'medium', 'min_score': 5, 'max_score': 14},
+        {'level': 'low', 'min_score': 1, 'max_score': 4}
+    ]
+    
+    for level in risk_levels:
+        level_risks = risks.filter(residual_risk_score__range=(level['min_score'], level['max_score']))
+        count = level_risks.count()
+        risk_level_distribution.append({
+            'level': level['level'],
+            'count': count,
+            'percentage': (count / total_risks * 100) if total_risks > 0 else 0,
+            'score_range': f"{level['min_score']}-{level['max_score']}",
+            'trend_analysis': f"Risk level distribution shows {count} risks in {level['level']} category"
+        })
+    
+    # Assessment analysis
+    assessments = RiskAssessment.objects.filter(risk__organization=org)
+    total_assessments = assessments.count()
+    avg_assessments_per_risk = total_assessments / total_risks if total_risks > 0 else 0
+    
+    last_assessment = assessments.order_by('-assessment_date').first()
+    days_since_last_assessment = (timezone.now().date() - last_assessment.assessment_date).days if last_assessment else 0
+    
+    risks_due_assessment = risks.filter(
+        next_review_date__lt=timezone.now().date()
+    ).count()
+    
+    # Control effectiveness analysis
+    control_status_distribution = []
+    control_statuses = risks.values('control_status').annotate(
+        count=Count('id'),
+        avg_risk_score=Avg('residual_risk_score')
+    ).order_by('-count')
+    
+    total_control_risks = sum(control['count'] for control in control_statuses)
+    for control in control_statuses:
+        effectiveness = 'high' if control['avg_risk_score'] < 8 else 'medium' if control['avg_risk_score'] < 15 else 'low'
+        control_status_distribution.append({
+            'status': control['control_status'],
+            'count': control['count'],
+            'percentage': (control['count'] / total_control_risks * 100) if total_control_risks > 0 else 0,
+            'avg_risk_score': control['avg_risk_score'] or 0,
+            'effectiveness': effectiveness
+        })
+    
+    # KRI analysis
+    kris = KRI.objects.filter(risk__organization=org)
+    total_kris = kris.count()
+    kris_above_threshold = kris.filter(value__gte=F('threshold_warning')).count()
+    kris_critical = kris.filter(value__gte=F('threshold_critical')).count()
+    kris_trend_improving = 0  # Could be enhanced with trend analysis
+    
+    # Top KRIs
+    top_kris = []
+    for kri in kris.order_by('-value')[:5]:
+        status = 'critical' if kri.value >= kri.threshold_critical else 'warning' if kri.value >= kri.threshold_warning else 'normal'
+        trend = 'stable'  # Could be enhanced with historical data
+        top_kris.append({
+            'name': kri.name,
+            'current_value': kri.value,
+            'unit': kri.unit or '',
+            'threshold_warning': kri.threshold_warning,
+            'status': status,
+            'trend': trend
+        })
+    
+    # Generate recommendations
+    recommendations = []
+    if trend_direction == 'increasing':
+        recommendations.append({
+            'title': 'Risk Identification Process Enhancement',
+            'description': 'The increasing trend in risk identification suggests the need for enhanced risk identification processes.',
+            'actions': [
+                'Implement regular risk identification workshops',
+                'Enhance risk awareness training programs',
+                'Establish risk identification KPIs',
+                'Review and update risk identification procedures'
+            ]
+        })
+    
+    if high_risk_count > total_risks * 0.3:  # More than 30% high risk
+        recommendations.append({
+            'title': 'High Risk Management Focus',
+            'description': 'A significant portion of risks are classified as high risk, requiring immediate attention.',
+            'actions': [
+                'Prioritize high-risk mitigation activities',
+                'Implement enhanced monitoring for high-risk items',
+                'Review risk appetite and tolerance levels',
+                'Establish high-risk escalation procedures'
+            ]
+        })
+    
+    if overdue_risks > 0:
+        recommendations.append({
+            'title': 'Overdue Action Management',
+            'description': 'There are overdue risk actions that require immediate attention.',
+            'actions': [
+                'Review all overdue actions and update timelines',
+                'Implement action tracking and escalation procedures',
+                'Establish regular action review meetings',
+                'Update risk owners on overdue items'
+            ]
+        })
+    
+    # Priority actions
+    priority_actions = []
+    if high_risk_count > 0:
+        priority_actions.append({
+            'priority': 'High',
+            'description': 'Address high-risk items immediately',
+            'steps': [
+                'Review all high-risk items',
+                'Implement immediate mitigation measures',
+                'Assign dedicated resources',
+                'Establish monitoring protocols'
+            ]
+        })
+    
+    if overdue_risks > 0:
+        priority_actions.append({
+            'priority': 'Critical',
+            'description': 'Resolve overdue risk actions',
+            'steps': [
+                'Contact risk owners for status updates',
+                'Reassess action timelines',
+                'Implement escalation procedures',
+                'Update action plans as needed'
+            ]
+        })
+    
+    # Trend analysis insights
+    trend_analysis = []
+    if trend_direction == 'increasing':
+        trend_analysis.append("Risk identification is increasing, indicating either improved risk awareness or emerging threats")
+    elif trend_direction == 'decreasing':
+        trend_analysis.append("Risk identification is decreasing, suggesting either effective risk management or potential under-identification")
+    else:
+        trend_analysis.append("Risk identification trend is stable, indicating consistent risk management processes")
+    
+    if peak_month:
+        trend_analysis.append(f"Peak risk identification occurred in {peak_month} with {peak_count} risks identified")
+    
+    # Calculate average time to closure
+    closed_risks = risks.filter(status='closed', closure_date__isnull=False)
+    if closed_risks.exists():
+        avg_time_to_closure = closed_risks.aggregate(
+            avg_days=Avg(F('closure_date') - F('date_identified'))
+        )['avg_days']
+        avg_time_to_closure = avg_time_to_closure.days if avg_time_to_closure else 0
+    else:
+        avg_time_to_closure = 0
+    
+    # Generate comprehensive context
+    context = {
         'organization': org,
         'image_base64': image_base64,
-    })
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'title': 'Risk Trends Analysis Report',
+        'description': 'Comprehensive analysis of risk identification, assessment, and management trends',
+        'filters_summary': f"Register: {register_filter}, Category: {category_filter}, Status: {status_filter}" if any([register_filter, category_filter, status_filter]) else None,
+        'report_period': f"{date_from} to {date_to}" if date_from and date_to else "All Time",
+        'show_cover_page': True,
+        
+        # Executive Summary
+        'total_risks': total_risks,
+        'high_risk_count': high_risk_count,
+        'trend_percentage': abs(trend_percentage),
+        'trend_direction': trend_direction,
+        'avg_risk_score': risks.aggregate(avg=Avg('residual_risk_score'))['avg'] or 0,
+        'peak_month': peak_month,
+        'peak_count': peak_count,
+        'top_category': top_category,
+        'top_category_count': top_category_count,
+        'top_category_percentage': top_category_percentage,
+        'avg_time_to_closure': avg_time_to_closure,
+        
+        # Detailed Analysis
+        'category_distribution': category_distribution,
+        'status_distribution': status_distribution,
+        'top_risk_owners': top_risk_owners,
+        'risk_level_distribution': risk_level_distribution,
+        'control_status_distribution': control_status_distribution,
+        
+        # Assessment Data
+        'total_assessments': total_assessments,
+        'avg_assessments_per_risk': avg_assessments_per_risk,
+        'days_since_last_assessment': days_since_last_assessment,
+        'risks_due_assessment': risks_due_assessment,
+        
+        # Status counts
+        'open_risks': risks.filter(status='open').count(),
+        'in_progress_risks': risks.filter(status='in_progress').count(),
+        'closed_risks': risks.filter(status='closed').count(),
+        'overdue_risks': overdue_risks,
+        
+        # KRI Data
+        'total_kris': total_kris,
+        'kris_above_threshold': kris_above_threshold,
+        'kris_critical': kris_critical,
+        'kris_trend_improving': kris_trend_improving,
+        'top_kris': top_kris,
+        
+        # Recommendations and Actions
+        'recommendations': recommendations,
+        'priority_actions': priority_actions,
+        'trend_analysis': trend_analysis,
+        
+        # Methodology
+        'data_period': f"{date_from} to {date_to}" if date_from and date_to else "All available data",
+        'total_records_analyzed': total_risks
+    }
+    
+    html_string = render_to_string('reports/risk_trends.html', context)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_risk_trends.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_risk_trends_analysis.pdf"'
     return response
 
 def control_effectiveness_pdf(request):
