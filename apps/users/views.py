@@ -10,6 +10,7 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView, PasswordResetCompleteView,
 )
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import TemplateView, FormView, ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -30,8 +31,9 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
-from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm, CustomSetPasswordForm
+from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm, CustomSetPasswordForm, PasswordChangeForm
 from .models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, AccountLockout, SecurityAuditLog
+from .email_utils import send_password_change_notification, get_user_ip_address, get_user_agent
 from .serializers import (
     UserRegisterSerializer,
     OTPVerifySerializer,
@@ -669,29 +671,61 @@ class UserPasswordChangeView(PasswordChangeView):
     """Blacklists all tokens on password change."""
     template_name = 'users/password_change.html'
     success_url = reverse_lazy('users:password_change_done')
+    form_class = PasswordChangeForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         user = self.request.user
         new_password = form.cleaned_data['new_password1']
+        expiration_period = form.cleaned_data['password_expiration_period']
         
         # Store current password in history before changing it
         PasswordHistory.store_password(user, user.password, reason='change', is_hashed=True)
         
-        response = super().form_valid(form)
+        # Update user's password expiration period
+        user.password_expiration_period = expiration_period
+        user.save(update_fields=['password_expiration_period'])
         
-        # Store new password in history
-        PasswordHistory.store_password(user, new_password, reason='change')
+        # Change the password
+        user.set_password(new_password)
+        user.save()
+        
+        # Store new password in history with user-specific expiration
+        expiration_days = user.get_password_expiration_days()
+        PasswordHistory.store_password(user, new_password, reason='change', expires_in_days=expiration_days)
         
         # Cleanup old password history
         PasswordHistory.cleanup_old_passwords(user)
         
+        # Blacklist all tokens
         if self.request.user.is_authenticated:
             try:
                 for token in OutstandingToken.objects.filter(user=self.request.user):
                     BlacklistedToken.objects.get_or_create(token=token)
             except Exception:
                 pass
-        return response
+        
+        # Send password change notification email
+        try:
+            ip_address = get_user_ip_address(self.request)
+            user_agent = get_user_agent(self.request)
+            send_password_change_notification(
+                user=user,
+                request=self.request,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            # Log the error but don't fail the password change
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send password change notification to {user.email}: {e}")
+        
+        return HttpResponseRedirect(self.get_success_url())
 
 @method_decorator(login_required, name='dispatch')
 class UserPasswordChangeDoneView(PasswordChangeDoneView):

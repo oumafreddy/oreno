@@ -23,10 +23,10 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
     """
     list_display = (
         'email', 'username', 'get_full_name', 'organization', 'role',
-        'is_staff', 'is_active', 'setup_status', 'last_login', 'date_joined'
+        'is_staff', 'is_active', 'password_expiration_period', 'setup_status', 'last_login', 'date_joined'
     )
     list_filter = (
-        'organization', 'role', 'is_staff', 'is_active',
+        'organization', 'role', 'is_staff', 'is_active', 'password_expiration_period',
         'date_joined', 'last_login'
     )
     search_fields = (
@@ -45,6 +45,10 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
         }),
         (_('Organization'), {
             'fields': ('organization', 'role')
+        }),
+        (_('Password Settings'), {
+            'fields': ('password_expiration_period',),
+            'classes': ('collapse',)
         }),
         (_('Account Setup'), {
             'fields': ('is_admin_created', 'is_first_time_setup_complete'),
@@ -68,7 +72,7 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
             'classes': ('wide',),
             'fields': (
                 'email', 'username', 'password1', 'password2',
-                'organization', 'role', 'is_staff', 'is_active', 'is_admin_created'
+                'organization', 'role', 'password_expiration_period', 'is_staff', 'is_active', 'is_admin_created'
             )
         }),
     )

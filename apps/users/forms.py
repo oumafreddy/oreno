@@ -325,10 +325,11 @@ class AdminUserCreationForm(BaseUserForm, UserCreationForm):
 class CustomUserChangeForm(BaseUserForm, UserChangeForm):
     class Meta:
         model = CustomUser
-        fields = ('email', 'username', 'first_name', 'last_name', 'organization', 'role')
+        fields = ('email', 'username', 'first_name', 'last_name', 'organization', 'role', 'password_expiration_period')
         widgets = {
             'organization': forms.Select(attrs={'class': 'form-select'}),
             'role': forms.Select(attrs={'class': 'form-select'}),
+            'password_expiration_period': forms.Select(attrs={'class': 'form-select'}),
         }
 
 class ProfileForm(forms.ModelForm):
@@ -494,6 +495,13 @@ class PasswordChangeForm(forms.Form):
         }),
         strip=False,
     )
+    password_expiration_period = forms.ChoiceField(
+        label=_("Password Expiration Period"),
+        choices=CustomUser.PASSWORD_EXPIRATION_CHOICES,
+        initial=CustomUser.PASSWORD_EXPIRATION_3_MONTHS,
+        help_text=_("Choose how often your password should expire. This setting overrides organization policy."),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
@@ -501,6 +509,9 @@ class PasswordChangeForm(forms.Form):
         
         # Set the user for password validation
         self.fields['new_password1'].set_user(user)
+        
+        # Set the current user's password expiration period
+        self.fields['password_expiration_period'].initial = user.password_expiration_period
         
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -514,6 +525,10 @@ class PasswordChangeForm(forms.Form):
                 HTML('<div id="password-strength-meter" class="mt-2"></div>'),
                 HTML(render_password_policy_hints(user=user)),
                 'new_password2',
+            ),
+            Fieldset(
+                _('Password Expiration Settings'),
+                'password_expiration_period',
             ),
             ButtonHolder(
                 Submit('submit', _('Change Password'), css_class='btn-primary'),
@@ -539,6 +554,22 @@ class PasswordChangeForm(forms.Form):
                 })
         
         return cleaned_data
+    
+    def save(self):
+        """Save the password change and update expiration period"""
+        user = self.user
+        new_password = self.cleaned_data['new_password1']
+        expiration_period = self.cleaned_data['password_expiration_period']
+        
+        # Update the user's password expiration period
+        user.password_expiration_period = expiration_period
+        user.save(update_fields=['password_expiration_period'])
+        
+        # Change the password
+        user.set_password(new_password)
+        user.save()
+        
+        return user
 
 
 class PasswordPolicyForm(forms.ModelForm):

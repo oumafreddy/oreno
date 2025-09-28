@@ -18,6 +18,15 @@
           <dd class="col-sm-8">{{ user.get_full_name }}</dd>
           <dt class="col-sm-4">Role</dt>
           <dd class="col-sm-8">{{ user.get_role_display }}</dd>
+          <dt class="col-sm-4">Password Expiration</dt>
+          <dd class="col-sm-8">
+            <span class="badge bg-info">{{ user.get_password_expiration_period_display }}</span>
+            {% if user.password_expiration_period == 'never' %}
+              <small class="text-muted d-block">Password will never expire</small>
+            {% else %}
+              <small class="text-muted d-block">Password expires every {{ user.get_password_expiration_period_display|lower }}</small>
+            {% endif %}
+          </dd>
         </dl>
         <div class="text-end mt-4">
           <a href="{% url 'users:password_change' %}" class="btn btn-warning">Change Password</a>

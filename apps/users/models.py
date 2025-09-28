@@ -83,6 +83,29 @@ class CustomUser(AbstractUser):
         verbose_name=_("Admin Created"),
         help_text=_("Whether this user was created by an admin (requires first-time setup).")
     )
+    
+    # Password expiration settings
+    PASSWORD_EXPIRATION_NEVER = 'never'
+    PASSWORD_EXPIRATION_MONTHLY = 'monthly'
+    PASSWORD_EXPIRATION_3_MONTHS = '3_months'
+    PASSWORD_EXPIRATION_6_MONTHS = '6_months'
+    PASSWORD_EXPIRATION_1_YEAR = '1_year'
+    
+    PASSWORD_EXPIRATION_CHOICES = [
+        (PASSWORD_EXPIRATION_NEVER, _('Never expires')),
+        (PASSWORD_EXPIRATION_MONTHLY, _('Monthly (30 days)')),
+        (PASSWORD_EXPIRATION_3_MONTHS, _('3 months (90 days)')),
+        (PASSWORD_EXPIRATION_6_MONTHS, _('6 months (180 days)')),
+        (PASSWORD_EXPIRATION_1_YEAR, _('1 year (365 days)')),
+    ]
+    
+    password_expiration_period = models.CharField(
+        max_length=20,
+        choices=PASSWORD_EXPIRATION_CHOICES,
+        default=PASSWORD_EXPIRATION_3_MONTHS,
+        verbose_name=_("Password Expiration Period"),
+        help_text=_("How often this user's password should expire. This setting overrides organization policy.")
+    )
 
     # Use email for authentication
     USERNAME_FIELD = 'email'
@@ -160,6 +183,17 @@ class CustomUser(AbstractUser):
         Only superusers can delete users, not organization admins.
         """
         return self.is_superuser
+    
+    def get_password_expiration_days(self):
+        """Get the number of days for password expiration based on user's setting"""
+        expiration_mapping = {
+            self.PASSWORD_EXPIRATION_NEVER: None,
+            self.PASSWORD_EXPIRATION_MONTHLY: 30,
+            self.PASSWORD_EXPIRATION_3_MONTHS: 90,
+            self.PASSWORD_EXPIRATION_6_MONTHS: 180,
+            self.PASSWORD_EXPIRATION_1_YEAR: 365,
+        }
+        return expiration_mapping.get(self.password_expiration_period, 90)
 
 
 class Profile(models.Model):
@@ -387,8 +421,12 @@ class PasswordHistory(models.Model):
         
         password_hash = password if is_hashed else make_password(password)
         
-        # Calculate expiration if specified
+        # Calculate expiration - use user's setting if not specified
         expires_at = None
+        if expires_in_days is None:
+            # Use user's password expiration period if not specified
+            expires_in_days = user.get_password_expiration_days()
+        
         if expires_in_days:
             expires_at = timezone.now() + timezone.timedelta(days=expires_in_days)
         
@@ -847,6 +885,297 @@ class AccountLockout(models.Model):
         ).update(is_active=False)
         
         return expired_count
+
+
+class UserEmailPreferences(models.Model):
+    """
+    Model to store user email notification preferences.
+    Future-ready for comprehensive notification control.
+    """
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='email_preferences',
+        verbose_name=_("User")
+    )
+    
+    # Password-related notifications
+    password_change_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Password Change Notifications"),
+        help_text=_("Receive email notifications when password is changed")
+    )
+    password_expiry_warnings = models.BooleanField(
+        default=True,
+        verbose_name=_("Password Expiry Warnings"),
+        help_text=_("Receive email warnings before password expires")
+    )
+    password_expiry_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Password Expiry Notifications"),
+        help_text=_("Receive email notifications when password expires")
+    )
+    
+    # Security notifications
+    security_alerts = models.BooleanField(
+        default=True,
+        verbose_name=_("Security Alerts"),
+        help_text=_("Receive email alerts for security events")
+    )
+    login_notifications = models.BooleanField(
+        default=False,
+        verbose_name=_("Login Notifications"),
+        help_text=_("Receive email notifications for successful logins")
+    )
+    suspicious_activity_alerts = models.BooleanField(
+        default=True,
+        verbose_name=_("Suspicious Activity Alerts"),
+        help_text=_("Receive email alerts for suspicious account activity")
+    )
+    
+    # Account notifications
+    account_locked_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Account Locked Notifications"),
+        help_text=_("Receive email notifications when account is locked")
+    )
+    account_unlocked_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Account Unlocked Notifications"),
+        help_text=_("Receive email notifications when account is unlocked")
+    )
+    
+    # System notifications
+    system_maintenance_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("System Maintenance Notifications"),
+        help_text=_("Receive email notifications about system maintenance")
+    )
+    policy_update_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Policy Update Notifications"),
+        help_text=_("Receive email notifications about policy updates")
+    )
+    
+    # Frequency settings
+    notification_frequency = models.CharField(
+        max_length=20,
+        choices=[
+            ('immediate', _('Immediate')),
+            ('daily', _('Daily Digest')),
+            ('weekly', _('Weekly Digest')),
+            ('disabled', _('Disabled')),
+        ],
+        default='immediate',
+        verbose_name=_("Notification Frequency"),
+        help_text=_("How often to receive non-critical notifications")
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = _("User Email Preferences")
+        verbose_name_plural = _("User Email Preferences")
+    
+    def __str__(self):
+        return f"Email preferences for {self.user.email}"
+    
+    def should_send_notification(self, notification_type):
+        """
+        Check if a specific notification type should be sent to this user.
+        
+        Args:
+            notification_type (str): Type of notification to check
+            
+        Returns:
+            bool: True if notification should be sent
+        """
+        notification_mapping = {
+            'password_change': self.password_change_notifications,
+            'password_expiry_warning': self.password_expiry_warnings,
+            'password_expiry': self.password_expiry_notifications,
+            'security_alert': self.security_alerts,
+            'login': self.login_notifications,
+            'suspicious_activity': self.suspicious_activity_alerts,
+            'account_locked': self.account_locked_notifications,
+            'account_unlocked': self.account_unlocked_notifications,
+            'system_maintenance': self.system_maintenance_notifications,
+            'policy_update': self.policy_update_notifications,
+        }
+        
+        return notification_mapping.get(notification_type, True)
+    
+    @classmethod
+    def get_or_create_preferences(cls, user):
+        """
+        Get or create email preferences for a user.
+        
+        Args:
+            user (CustomUser): User to get preferences for
+            
+        Returns:
+            UserEmailPreferences: User's email preferences
+        """
+        preferences, created = cls.objects.get_or_create(user=user)
+        return preferences
+
+
+class EmailLog(models.Model):
+    """
+    Model to log all email notifications for audit trail and debugging.
+    Future-ready for comprehensive email tracking and analytics.
+    """
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='email_logs',
+        verbose_name=_("User"),
+        null=True,
+        blank=True
+    )
+    
+    email_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('password_change', _('Password Change Notification')),
+            ('password_expiry_warning', _('Password Expiry Warning')),
+            ('password_expiry', _('Password Expiry Notification')),
+            ('security_alert', _('Security Alert')),
+            ('login_notification', _('Login Notification')),
+            ('account_locked', _('Account Locked Notification')),
+            ('account_unlocked', _('Account Unlocked Notification')),
+            ('system_maintenance', _('System Maintenance Notification')),
+            ('policy_update', _('Policy Update Notification')),
+            ('welcome', _('Welcome Email')),
+            ('otp', _('OTP Email')),
+            ('marketing', _('Marketing Email')),
+        ],
+        verbose_name=_("Email Type")
+    )
+    
+    recipient_email = models.EmailField(
+        verbose_name=_("Recipient Email")
+    )
+    
+    subject = models.CharField(
+        max_length=255,
+        verbose_name=_("Email Subject")
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('sent', _('Sent Successfully')),
+            ('failed', _('Failed to Send')),
+            ('skipped', _('Skipped (User Preference)')),
+            ('pending', _('Pending')),
+        ],
+        default='pending',
+        verbose_name=_("Status")
+    )
+    
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Error Message"),
+        help_text=_("Error details if email failed to send")
+    )
+    
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Sent At")
+    )
+    
+    # Context information
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name=_("IP Address"),
+        help_text=_("IP address from which the action was triggered")
+    )
+    
+    user_agent = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("User Agent"),
+        help_text=_("User agent string from the request")
+    )
+    
+    # Additional context
+    context_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Context Data"),
+        help_text=_("Additional context data for the email")
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = _("Email Log")
+        verbose_name_plural = _("Email Logs")
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'email_type']),
+            models.Index(fields=['recipient_email', 'status']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.email_type} to {self.recipient_email} - {self.status}"
+    
+    @classmethod
+    def log_email_attempt(cls, user, email_type, recipient_email, subject, 
+                         ip_address=None, user_agent=None, context_data=None):
+        """
+        Log an email attempt for audit trail.
+        
+        Args:
+            user (CustomUser, optional): User who triggered the email
+            email_type (str): Type of email being sent
+            recipient_email (str): Email address of recipient
+            subject (str): Email subject
+            ip_address (str, optional): IP address from request
+            user_agent (str, optional): User agent from request
+            context_data (dict, optional): Additional context data
+            
+        Returns:
+            EmailLog: The created log entry
+        """
+        return cls.objects.create(
+            user=user,
+            email_type=email_type,
+            recipient_email=recipient_email,
+            subject=subject,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            context_data=context_data or {}
+        )
+    
+    def mark_sent(self):
+        """Mark the email as successfully sent."""
+        from django.utils import timezone
+        self.status = 'sent'
+        self.sent_at = timezone.now()
+        self.save(update_fields=['status', 'sent_at', 'updated_at'])
+    
+    def mark_failed(self, error_message):
+        """Mark the email as failed with error message."""
+        self.status = 'failed'
+        self.error_message = error_message
+        self.save(update_fields=['status', 'error_message', 'updated_at'])
+    
+    def mark_skipped(self, reason="User preference"):
+        """Mark the email as skipped with reason."""
+        self.status = 'skipped'
+        self.error_message = reason
+        self.save(update_fields=['status', 'error_message', 'updated_at'])
 
 
 class SecurityAuditLog(models.Model):

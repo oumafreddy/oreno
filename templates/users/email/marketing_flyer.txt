@@ -47,4 +47,4 @@ ORENO GRC - Enterprise Governance, Risk & Compliance Platform
 oreno.tech | info@oreno.tech
 
 This email was sent in response to a password reset request. 
-If you believe this was sent in error, please contact us at security@oreno.tech
+If you believe this was sent in error, please contact us at info@oreno.tech
