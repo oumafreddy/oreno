@@ -4,68 +4,110 @@
 {% block title %}COBIT Domain - {{ cobitdomain.domain_name }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">COBIT Domain: {{ cobitdomain.domain_name }}</h3>
-                    <div class="card-tools">
-                        <a href="{% url 'risk:cobitdomain_update' cobitdomain.pk %}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <a href="{% url 'risk:cobitdomain_delete' cobitdomain.pk %}" class="btn btn-danger btn-sm">
-                            <i class="fas fa-trash"></i> Delete
-                        </a>
-                        <a href="{% url 'risk:cobitdomain_list' %}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Basic Information</h5>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th>Domain Code:</th>
-                                    <td>{{ cobitdomain.domain_code }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Domain Name:</th>
-                                    <td>{{ cobitdomain.domain_name }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Created:</th>
-                                    <td>{{ cobitdomain.created_at|date:"F j, Y" }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Last Updated:</th>
-                                    <td>{{ cobitdomain.updated_at|date:"F j, Y" }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Description</h5>
-                            <div class="border p-3 rounded">
-                                {{ cobitdomain.description|safe|default:"No description provided." }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if cobitdomain.objectives %}
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h5>Objectives</h5>
-                            <div class="border p-3 rounded">
-                                {{ cobitdomain.objectives|safe }}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">COBIT Domain: {{ cobitdomain.domain_name }}</h2>
+      <div class="text-muted">Domain Code: <span class="badge bg-primary">{{ cobitdomain.domain_code }}</span></div>
     </div>
+    <div class="btn-group">
+      <a href="{% url 'risk:cobitdomain_update' cobitdomain.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+      <a href="{% url 'risk:cobitdomain_delete' cobitdomain.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+      <a href="{% url 'risk:cobitdomain_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to List</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Main Column -->
+    <div class="col-lg-8">
+      <!-- Domain Information -->
+      <div class="card">
+        <div class="card-header"><strong>Domain Information</strong></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <table class="table table-sm mb-0">
+                <tr>
+                  <th class="w-25">Domain Code</th>
+                  <td>{{ cobitdomain.domain_code }}</td>
+                </tr>
+                <tr>
+                  <th>Domain Name</th>
+                  <td>{{ cobitdomain.domain_name }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <table class="table table-sm mb-0">
+                <tr>
+                  <th class="w-25">Created</th>
+                  <td>{{ cobitdomain.created_at|date:"M j, Y" }}</td>
+                </tr>
+                <tr>
+                  <th>Last Updated</th>
+                  <td>{{ cobitdomain.updated_at|date:"M j, Y" }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="card mt-3">
+        <div class="card-header"><strong>Description</strong></div>
+        <div class="card-body">
+          <div class="content-wrapper">{{ cobitdomain.description|safe|default:"No description provided." }}</div>
+        </div>
+      </div>
+
+      {% if cobitdomain.objectives %}
+      <!-- Objectives -->
+      <div class="card mt-3">
+        <div class="card-header"><strong>Objectives</strong></div>
+        <div class="card-body">
+          <div class="content-wrapper">{{ cobitdomain.objectives|safe }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'risk:cobitprocess_create' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-diagram-3"></i> Add Process</a>
+          <a href="{% url 'risk:cobitcapability_create' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-bar-chart"></i> Add Capability</a>
+          <a href="{% url 'risk:cobitcontrol_create' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-shield-check"></i> Add Control</a>
+        </div>
+      </div>
+
+      <!-- Related Items -->
+      <div class="card mt-3">
+        <div class="card-header"><strong>Related Items</strong></div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>Processes</div>
+            <span class="badge bg-secondary">{{ cobitdomain.cobitprocess_set.count }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>Capabilities</div>
+            <span class="badge bg-secondary">{{ cobitdomain.cobitprocess_set.all|length|add:'0'|yesno:' , ' }}</span>
+            
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div>Controls</div>
+            <span class="badge bg-secondary">{% with 0 as controls_count %}{% for p in cobitdomain.cobitprocess_set.all %}{% with p.cobitcontrol_set.count as c %}{% if forloop.first %}{% widthratio c 1 1 %}{% endif %}{% endwith %}{% endfor %}{% endwith %}</span>
+          </div>
+          <div class="mt-3">
+            <a href="{% url 'risk:cobitprocess_list' %}" class="btn btn-outline-secondary btn-sm">View Processes</a>
+            <a href="{% url 'risk:cobitcontrol_list' %}" class="btn btn-outline-secondary btn-sm">View Controls</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -2,21 +2,14 @@
 {% load static %}
 {% block title %}Workplan: {{ workplan.name }} | Oreno GRC{% endblock %}
 {% block content %}
-<div class="container main-container">
-  <!-- Header Section with Professional Button Layout -->
-  <div class="card mb-4">
-    <div class="card-header bg-white">
-      <div class="d-flex justify-content-between align-items-start">
-        <div class="flex-grow-1">
-          <h1 class="h3 mb-1">{{ workplan.name }}</h1>
-          <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-info fs-6">{{ workplan.approval_status|capfirst }}</span>
-            <span class="text-muted">Fiscal Year: {{ workplan.fiscal_year }}</span>
-          </div>
-        </div>
-        
-        <!-- Action Buttons - Organized by Priority -->
-        <div class="d-flex flex-column gap-2 align-items-end">
+<div class="container-fluid mt-3">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">{{ workplan.name }}</h2>
+      <div class="text-muted">Status: <span class="badge bg-info">{{ workplan.approval_status|capfirst }}</span> · Fiscal Year: {{ workplan.fiscal_year }}</div>
+    </div>
+    <div class="d-flex flex-column gap-2 align-items-end">
           <!-- Primary Actions -->
           <div class="btn-group" role="group" aria-label="Primary actions">
             {% if workplan.approval_status == 'draft' %}
@@ -63,18 +56,29 @@
           
           <!-- Secondary Actions -->
           <div class="btn-group" role="group" aria-label="Secondary actions">
-            <a href="{% url 'audit:workplan-engagement-add' workplan.pk %}" class="btn btn-success">
-              <i class="bi bi-plus-circle me-1"></i> Add Engagement
-            </a>
-            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary">
-              <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-            </a>
+            <a href="{% url 'audit:workplan-engagement-add' workplan.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle me-1"></i> Add Engagement</a>
+            <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Back</a>
+          </div>
+        </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Workplan Overview</strong></div>
+        <div class="card-body">
+          <div class="content-wrapper">
+            <h6>Description</h6>
+            <div>{{ workplan.description|safe }}</div>
+            <h6 class="mt-3">Objectives</h6>
+            <div>{{ workplan.objectives|safe }}</div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-  <ul class="nav nav-tabs mb-3" id="workplanTabs" role="tablist">
+
+      <div class="card mt-3">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs" id="workplanTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
     </li>
@@ -83,16 +87,7 @@
     </li>
   </ul>
   <div class="tab-content" id="workplanTabsContent">
-    <div class="tab-pane fade show active" id="overview" role="tabpanel">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5>Description</h5>
-          <div>{{ workplan.description|safe }}</div>
-          <h5 class="mt-4">Objectives</h5>
-          <div>{{ workplan.objectives|safe }}</div>
-        </div>
-      </div>
-    </div>
+    <div class="tab-pane fade show active" id="overview" role="tabpanel"></div>
     <div class="tab-pane fade" id="engagements" role="tabpanel">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -132,6 +127,18 @@
       </div>
     </div>
   </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'audit:workplan-engagement-add' workplan.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle"></i> Add Engagement</a>
+          <a href="{% url 'audit:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-pane fade" id="notes" role="tabpanel">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3 class="h5 mb-0">Notes</h3>

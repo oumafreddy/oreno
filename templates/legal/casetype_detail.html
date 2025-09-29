@@ -1,27 +1,40 @@
 {% extends 'base.html' %}
 {% block title %}Case Type: {{ object.name }}{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid mt-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Case Type: {{ object.name }}</h2>
     <div>
-      <a href="{% url 'legal:casetype_update' object.pk %}" class="btn btn-secondary">Edit</a>
-      <a href="{% url 'legal:casetype_delete' object.pk %}" class="btn btn-danger">Delete</a>
-      <a href="{% url 'legal:casetype_list' %}" class="btn btn-outline-primary">Back to List</a>
+      <h2 class="mb-1">Case Type: {{ object.name }}</h2>
+      <div class="text-muted">Default Priority: {{ object.default_priority }}</div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'legal:casetype_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'legal:casetype_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+      <a href="{% url 'legal:casetype_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
     </div>
   </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <dl class="row mb-0">
-        <dt class="col-sm-3">Name</dt>
-        <dd class="col-sm-9">{{ object.name }}</dd>
-        <dt class="col-sm-3">Description</dt>
-        <dd class="col-sm-9">{{ object.description|safe }}</dd>
-        <dt class="col-sm-3">Default Priority</dt>
-        <dd class="col-sm-9">{{ object.default_priority }}</dd>
-        <dt class="col-sm-3">Organization</dt>
-        <dd class="col-sm-9">{{ object.organization }}</dd>
-      </dl>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Case Type Information</strong></div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr><th class="w-25">Name</th><td>{{ object.name }}</td></tr>
+            <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+            <tr><th>Default Priority</th><td>{{ object.default_priority }}</td></tr>
+            <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'legal:casetype_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Case Type</a>
+          <a href="{% url 'legal:casetype_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>

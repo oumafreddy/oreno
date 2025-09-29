@@ -1,47 +1,50 @@
 {% extends 'base.html' %}
 {% block title %}Legal Case: {{ object.title }}{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid mt-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Legal Case: {{ object.title }}</h2>
     <div>
-      <a href="{% url 'legal:legalcase_update' object.pk %}" class="btn btn-secondary">Edit</a>
-      <a href="{% url 'legal:legalcase_delete' object.pk %}" class="btn btn-danger">Delete</a>
-      <a href="{% url 'legal:legalcase_list' %}" class="btn btn-outline-primary">Back to List</a>
+      <h2 class="mb-1">Legal Case: {{ object.title }}</h2>
+      <div class="text-muted">Type: {{ object.case_type }} · Status: <span class="badge bg-secondary">{{ object.get_status_display }}</span> · Priority: <span class="badge bg-secondary">{{ object.get_priority_display }}</span></div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'legal:legalcase_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'legal:legalcase_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+      <a href="{% url 'legal:legalcase_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
     </div>
   </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <dl class="row mb-0">
-        <dt class="col-sm-3">Title</dt>
-        <dd class="col-sm-9">{{ object.title }}</dd>
-        <dt class="col-sm-3">Type</dt>
-        <dd class="col-sm-9">{{ object.case_type }}</dd>
-        <dt class="col-sm-3">Status</dt>
-        <dd class="col-sm-9">{{ object.get_status_display }}</dd>
-        <dt class="col-sm-3">Priority</dt>
-        <dd class="col-sm-9">{{ object.get_priority_display }}</dd>
-        <dt class="col-sm-3">Lead Attorney</dt>
-        <dd class="col-sm-9">{{ object.lead_attorney }}</dd>
-        <dt class="col-sm-3">Attorneys</dt>
-        <dd class="col-sm-9">{% for a in object.attorneys.all %}{{ a }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</dd>
-        <dt class="col-sm-3">Opened Date</dt>
-        <dd class="col-sm-9">{{ object.opened_date }}</dd>
-        <dt class="col-sm-3">Closed Date</dt>
-        <dd class="col-sm-9">{{ object.closed_date|default:'-' }}</dd>
-        <dt class="col-sm-3">Estimated Resolution</dt>
-        <dd class="col-sm-9">{{ object.estimated_resolution_date|default:'-' }}</dd>
-        <dt class="col-sm-3">Parties</dt>
-        <dd class="col-sm-9">{% for p in object.parties.all %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</dd>
-        <dt class="col-sm-3">Risk Description</dt>
-        <dd class="col-sm-9">{{ object.risk_description|safe }}</dd>
-        <dt class="col-sm-3">Compliance Description</dt>
-        <dd class="col-sm-9">{{ object.compliance_description|safe }}</dd>
-        <dt class="col-sm-3">Internal Notes</dt>
-        <dd class="col-sm-9">{{ object.internal_notes|linebreaks }}</dd>
-        <dt class="col-sm-3">Organization</dt>
-        <dd class="col-sm-9">{{ object.organization }}</dd>
-      </dl>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Case Information</strong></div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr><th class="w-25">Title</th><td>{{ object.title }}</td></tr>
+            <tr><th>Type</th><td>{{ object.case_type }}</td></tr>
+            <tr><th>Status</th><td>{{ object.get_status_display }}</td></tr>
+            <tr><th>Priority</th><td>{{ object.get_priority_display }}</td></tr>
+            <tr><th>Lead Attorney</th><td>{{ object.lead_attorney }}</td></tr>
+            <tr><th>Attorneys</th><td>{% for a in object.attorneys.all %}{{ a }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</td></tr>
+            <tr><th>Opened Date</th><td>{{ object.opened_date }}</td></tr>
+            <tr><th>Closed Date</th><td>{{ object.closed_date|default:'-' }}</td></tr>
+            <tr><th>Estimated Resolution</th><td>{{ object.estimated_resolution_date|default:'-' }}</td></tr>
+            <tr><th>Parties</th><td>{% for p in object.parties.all %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</td></tr>
+            <tr><th>Risk Description</th><td><div class="content-wrapper">{{ object.risk_description|safe }}</div></td></tr>
+            <tr><th>Compliance Description</th><td><div class="content-wrapper">{{ object.compliance_description|safe }}</div></td></tr>
+            <tr><th>Internal Notes</th><td>{{ object.internal_notes|linebreaks }}</td></tr>
+            <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'legal:legalcase_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Case</a>
+          <a href="{% url 'legal:legalcase_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>

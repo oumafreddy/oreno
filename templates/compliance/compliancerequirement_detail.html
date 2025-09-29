@@ -1,21 +1,46 @@
 {% extends 'base.html' %}
 {% block title %}Requirement: {{ object.requirement_id }}{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2>Requirement: {{ object.requirement_id }} - {{ object.title }}</h2>
-    <dl class="row">
-        <dt class="col-sm-3">Requirement ID</dt><dd class="col-sm-9">{{ object.requirement_id }}</dd>
-        <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ object.title }}</dd>
-        <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ object.description|safe }}</dd>
-        <dt class="col-sm-3">Regulatory Framework</dt><dd class="col-sm-9">{{ object.regulatory_framework }}</dd>
-        <dt class="col-sm-3">Policy Document</dt><dd class="col-sm-9">{{ object.policy_document }}</dd>
-        <dt class="col-sm-3">Policy Section</dt><dd class="col-sm-9">{{ object.policy_section }}</dd>
-        <dt class="col-sm-3">Jurisdiction</dt><dd class="col-sm-9">{{ object.jurisdiction }}</dd>
-        <dt class="col-sm-3">Mandatory</dt><dd class="col-sm-9">{{ object.mandatory|yesno:"Yes,No" }}</dd>
-        <dt class="col-sm-3">Tags</dt><dd class="col-sm-9">{{ object.tags }}</dd>
-    </dl>
-    <a href="{% url 'compliance:requirement_update' object.pk %}" class="btn btn-warning">Edit</a>
-    <a href="{% url 'compliance:requirement_delete' object.pk %}" class="btn btn-danger">Delete</a>
-    <a href="{% url 'compliance:requirement_list' %}" class="btn btn-secondary">Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Requirement: {{ object.requirement_id }} - {{ object.title }}</h2>
+            <div class="text-muted">Framework: {{ object.regulatory_framework }} · Jurisdiction: {{ object.jurisdiction }}</div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'compliance:requirement_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'compliance:requirement_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+            <a href="{% url 'compliance:requirement_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>Requirement Information</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Requirement ID</th><td>{{ object.requirement_id }}</td></tr>
+                        <tr><th>Title</th><td>{{ object.title }}</td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+                        <tr><th>Regulatory Framework</th><td>{{ object.regulatory_framework }}</td></tr>
+                        <tr><th>Policy Document</th><td>{{ object.policy_document }}</td></tr>
+                        <tr><th>Policy Section</th><td>{{ object.policy_section }}</td></tr>
+                        <tr><th>Jurisdiction</th><td>{{ object.jurisdiction }}</td></tr>
+                        <tr><th>Mandatory</th><td>{{ object.mandatory|yesno:"Yes,No" }}</td></tr>
+                        <tr><th>Tags</th><td>{{ object.tags }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'compliance:requirement_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Requirement</a>
+                    <a href="{% url 'compliance:requirement_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %} 

@@ -1,40 +1,43 @@
 {% extends 'base.html' %}
 {% block title %}Control Detail{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Control: {{ control.name }}</h2>
-            <a href="{% url 'risk:control_update' control.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
-            <a href="{% url 'risk:control_delete' control.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
-            <a href="{% url 'risk:control_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Control: {{ control.name }}</h2>
+            <div class="text-muted">Status: <span class="badge bg-secondary">{{ control.get_status_display }}</span></div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'risk:control_update' control.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:control_delete' control.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:control_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Control Details</strong></div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>Control Details</strong></div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Code</dt><dd class="col-sm-8">{{ control.code }}</dd>
-                        <dt class="col-sm-4">Type</dt><dd class="col-sm-8">{{ control.get_control_type_display }}</dd>
-                        <dt class="col-sm-4">Nature</dt><dd class="col-sm-8">{{ control.get_control_nature_display }}</dd>
-                        <dt class="col-sm-4">Frequency</dt><dd class="col-sm-8">{{ control.get_control_frequency_display }}</dd>
-                        <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ control.get_status_display }}</dd>
-                        <dt class="col-sm-4">Effectiveness</dt><dd class="col-sm-8">{{ control.get_effectiveness_rating_display }}</dd>
-                        <dt class="col-sm-4">Owner</dt><dd class="col-sm-8">{{ control.control_owner }}</dd>
-                        <dt class="col-sm-4">Owner Department</dt><dd class="col-sm-8">{{ control.owner_department }}</dd>
-                        <dt class="col-sm-4">Last Review Date</dt><dd class="col-sm-8">{{ control.last_review_date }}</dd>
-                        <dt class="col-sm-4">Next Review Date</dt><dd class="col-sm-8">{{ control.next_review_date }}</dd>
-                        <dt class="col-sm-4">Documentation</dt><dd class="col-sm-8">{% if control.documentation %}<a href="{{ control.documentation.url }}">Download</a>{% else %}<span class="text-muted">None</span>{% endif %}</dd>
-                        <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ control.description|safe }}</dd>
-                    </dl>
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Code</th><td>{{ control.code }}</td></tr>
+                        <tr><th>Type</th><td>{{ control.get_control_type_display }}</td></tr>
+                        <tr><th>Nature</th><td>{{ control.get_control_nature_display }}</td></tr>
+                        <tr><th>Frequency</th><td>{{ control.get_control_frequency_display }}</td></tr>
+                        <tr><th>Status</th><td>{{ control.get_status_display }}</td></tr>
+                        <tr><th>Effectiveness</th><td>{{ control.get_effectiveness_rating_display }}</td></tr>
+                        <tr><th>Owner</th><td>{{ control.control_owner }}</td></tr>
+                        <tr><th>Owner Department</th><td>{{ control.owner_department }}</td></tr>
+                        <tr><th>Last Review Date</th><td>{{ control.last_review_date }}</td></tr>
+                        <tr><th>Next Review Date</th><td>{{ control.next_review_date }}</td></tr>
+                        <tr><th>Documentation</th><td>{% if control.documentation %}<a href="{{ control.documentation.url }}">Download</a>{% else %}<span class="text-muted">None</span>{% endif %}</td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ control.description|safe }}</div></td></tr>
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Related Risks</strong></div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Related Risks</strong></div>
                 <div class="card-body">
                     {% if control.risks.all %}
                         <ul class="list-group list-group-flush">

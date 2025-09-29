@@ -1,23 +1,50 @@
 {% extends 'base.html' %}
 {% block title %}Contract Detail{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark mb-3 float-end">Back to Dashboard</a>
-    <h2>{{ contract.title }}</h2>
-    <div class="mb-3"><strong>Code:</strong> {{ contract.code }}</div>
-    <div class="mb-3"><strong>Type:</strong> {{ contract.contract_type.name }}</div>
-    <div class="mb-3"><strong>Status:</strong> {{ contract.get_status_display }}</div>
-    <div class="mb-3"><strong>Start Date:</strong> {{ contract.start_date }}</div>
-    <div class="mb-3"><strong>End Date:</strong> {{ contract.end_date }}</div>
-    <div class="mb-3"><strong>Value:</strong> {{ contract.value }} {{ contract.currency }}</div>
-    <div class="mb-3"><strong>Description:</strong><br>{{ contract.description|safe }}</div>
-    <div class="mb-3"><strong>Payment Terms:</strong><br>{{ contract.payment_terms|safe }}</div>
-    <div class="mb-3"><strong>Governing Law:</strong> {{ contract.governing_law }}</div>
-    <div class="mb-3"><strong>Jurisdiction:</strong> {{ contract.jurisdiction }}</div>
-    <div class="mb-3"><strong>Termination Clause:</strong><br>{{ contract.termination_clause|safe }}</div>
-    <div class="mb-3"><strong>Parties:</strong> {% for party in contract.parties.all %}<span class="badge bg-info">{{ party.name }}</span> {% endfor %}</div>
-    <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-outline-info">Edit</a>
-    <a href="{% url 'contracts:contract-delete' contract.pk %}" class="btn btn-outline-danger">Delete</a>
-    <a href="{% url 'contracts:contract-list' %}" class="btn btn-secondary">Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">{{ contract.title }}</h2>
+            <div class="text-muted">Code: <span class="badge bg-primary">{{ contract.code }}</span> · Type: {{ contract.contract_type.name }} · Status: <span class="badge bg-secondary">{{ contract.get_status_display }}</span></div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'contracts:contract-delete' contract.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+            <a href="{% url 'contracts:contract-list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>Contract Information</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Code</th><td>{{ contract.code }}</td></tr>
+                        <tr><th>Type</th><td>{{ contract.contract_type.name }}</td></tr>
+                        <tr><th>Status</th><td>{{ contract.get_status_display }}</td></tr>
+                        <tr><th>Start Date</th><td>{{ contract.start_date }}</td></tr>
+                        <tr><th>End Date</th><td>{{ contract.end_date }}</td></tr>
+                        <tr><th>Value</th><td>{{ contract.value }} {{ contract.currency }}</td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ contract.description|safe }}</div></td></tr>
+                        <tr><th>Payment Terms</th><td><div class="content-wrapper">{{ contract.payment_terms|safe }}</div></td></tr>
+                        <tr><th>Governing Law</th><td>{{ contract.governing_law }}</td></tr>
+                        <tr><th>Jurisdiction</th><td>{{ contract.jurisdiction }}</td></tr>
+                        <tr><th>Termination Clause</th><td><div class="content-wrapper">{{ contract.termination_clause|safe }}</div></td></tr>
+                        <tr><th>Parties</th><td>{% for party in contract.parties.all %}<span class="badge bg-info me-1">{{ party.name }}</span>{% empty %}<span class="text-muted">None</span>{% endfor %}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'contracts:contract-edit' contract.pk %}" class="btn btn-outline-primary btn-sm">Edit Contract</a>
+                    <a href="{% url 'contracts:contract-list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+                    <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-dark btn-sm">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %} 

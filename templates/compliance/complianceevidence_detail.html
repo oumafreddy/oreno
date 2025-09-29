@@ -1,17 +1,42 @@
 {% extends 'base.html' %}
 {% block title %}Evidence for Obligation: {{ object.obligation }}{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2>Evidence for Obligation: {{ object.obligation }}</h2>
-    <dl class="row">
-        <dt class="col-sm-3">Obligation</dt><dd class="col-sm-9">{{ object.obligation }}</dd>
-        <dt class="col-sm-3">Document</dt><dd class="col-sm-9">{{ object.document }}</dd>
-        <dt class="col-sm-3">Validity Start</dt><dd class="col-sm-9">{{ object.validity_start }}</dd>
-        <dt class="col-sm-3">Validity End</dt><dd class="col-sm-9">{{ object.validity_end }}</dd>
-        <dt class="col-sm-3">Notes</dt><dd class="col-sm-9">{{ object.notes|safe }}</dd>
-    </dl>
-    <a href="{% url 'compliance:evidence_update' object.pk %}" class="btn btn-warning">Edit</a>
-    <a href="{% url 'compliance:evidence_delete' object.pk %}" class="btn btn-danger">Delete</a>
-    <a href="{% url 'compliance:evidence_list' %}" class="btn btn-secondary">Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Evidence for Obligation</h2>
+            <div class="text-muted">Obligation: {{ object.obligation }}</div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'compliance:evidence_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'compliance:evidence_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+            <a href="{% url 'compliance:evidence_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>Evidence Information</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Obligation</th><td>{{ object.obligation }}</td></tr>
+                        <tr><th>Document</th><td>{{ object.document }}</td></tr>
+                        <tr><th>Validity Start</th><td>{{ object.validity_start }}</td></tr>
+                        <tr><th>Validity End</th><td>{{ object.validity_end }}</td></tr>
+                        <tr><th>Notes</th><td><div class="content-wrapper">{{ object.notes|safe }}</div></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'compliance:evidence_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Evidence</a>
+                    <a href="{% url 'compliance:evidence_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %} 

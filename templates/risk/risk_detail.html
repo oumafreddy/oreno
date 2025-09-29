@@ -1,59 +1,62 @@
 {% extends 'base.html' %}
 {% block title %}Risk Detail{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Risk: {{ risk.risk_name }}</h2>
-            <a href="{% url 'risk:risk_update' risk.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
-            <a href="{% url 'risk:risk_delete' risk.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
-            <a href="{% url 'risk:risk_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Risk: {{ risk.risk_name }}</h2>
+            <div class="text-muted">Category: {{ risk.get_category_display }} · Status: <span class="badge bg-secondary">{{ risk.get_status_display }}</span></div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'risk:risk_update' risk.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:risk_delete' risk.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:risk_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
-    <div class="row mb-4">
+    <div class="row g-3">
         <div class="col-md-8">
             <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Risk Details</strong></div>
+                <div class="card-header"><strong>Risk Details</strong></div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Code</dt><dd class="col-sm-8">{{ risk.code }}</dd>
-                        <dt class="col-sm-4">Category</dt><dd class="col-sm-8">{{ risk.get_category_display }}</dd>
-                        <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ risk.get_status_display }}</dd>
-                        <dt class="col-sm-4">Owner</dt><dd class="col-sm-8">{{ risk.risk_owner }}</dd>
-                        <dt class="col-sm-4">Department</dt><dd class="col-sm-8">{{ risk.department }}</dd>
-                        <dt class="col-sm-4">Date Identified</dt><dd class="col-sm-8">{{ risk.date_identified }}</dd>
-                        <dt class="col-sm-4">External Context</dt><dd class="col-sm-8">{{ risk.external_context|safe }}</dd>
-                        <dt class="col-sm-4">Internal Context</dt><dd class="col-sm-8">{{ risk.internal_context|safe }}</dd>
-                        <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ risk.risk_description|safe }}</dd>
-                        <dt class="col-sm-4">Inherent Impact</dt><dd class="col-sm-8">{{ risk.inherent_impact_score }}</dd>
-                        <dt class="col-sm-4">Inherent Likelihood</dt><dd class="col-sm-8">{{ risk.inherent_likelihood_score }}</dd>
-                        <dt class="col-sm-4">Inherent Risk Score</dt><dd class="col-sm-8">{{ risk.inherent_risk_score }}</dd>
-                        <dt class="col-sm-4">Residual Impact</dt><dd class="col-sm-8">{{ risk.residual_impact_score }}</dd>
-                        <dt class="col-sm-4">Residual Likelihood</dt><dd class="col-sm-8">{{ risk.residual_likelihood_score }}</dd>
-                        <dt class="col-sm-4">Residual Risk Score</dt><dd class="col-sm-8">{{ risk.residual_risk_score }}</dd>
-                        <dt class="col-sm-4">Risk Appetite</dt><dd class="col-sm-8">{{ risk.risk_appetite }}</dd>
-                        <dt class="col-sm-4">Controls Description</dt><dd class="col-sm-8">{{ risk.controls_description|safe }}</dd>
-                        <dt class="col-sm-4">Control Status</dt><dd class="col-sm-8">{{ risk.get_control_status_display }}</dd>
-                        <dt class="col-sm-4">Control Rating</dt><dd class="col-sm-8">{{ risk.get_control_rating_display }}</dd>
-                        <dt class="col-sm-4">Action Plan</dt><dd class="col-sm-8">{{ risk.action_plan|safe }}</dd>
-                        <dt class="col-sm-4">Action Plan Status</dt><dd class="col-sm-8">{{ risk.get_action_plan_status_display }}</dd>
-                        <dt class="col-sm-4">Action Owner</dt><dd class="col-sm-8">{{ risk.action_owner }}</dd>
-                        <dt class="col-sm-4">Action Due Date</dt><dd class="col-sm-8">{{ risk.action_due_date }}</dd>
-                        <dt class="col-sm-4">KRI Description</dt><dd class="col-sm-8">{{ risk.kri_description|safe }}</dd>
-                        <dt class="col-sm-4">KRI Threshold</dt><dd class="col-sm-8">{{ risk.kri_threshold }}</dd>
-                        <dt class="col-sm-4">Next Review Date</dt><dd class="col-sm-8">{{ risk.next_review_date }}</dd>
-                        <dt class="col-sm-4">Last Reviewed Date</dt><dd class="col-sm-8">{{ risk.last_reviewed_date }}</dd>
-                        <dt class="col-sm-4">Last Reviewed By</dt><dd class="col-sm-8">{{ risk.last_reviewed_by }}</dd>
-                        <dt class="col-sm-4">Closure Date</dt><dd class="col-sm-8">{{ risk.closure_date }}</dd>
-                        <dt class="col-sm-4">Closure Justification</dt><dd class="col-sm-8">{{ risk.closure_justification|safe }}</dd>
-                        <dt class="col-sm-4">Additional Notes</dt><dd class="col-sm-8">{{ risk.additional_notes|safe }}</dd>
-                    </dl>
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Code</th><td>{{ risk.code }}</td></tr>
+                        <tr><th>Category</th><td>{{ risk.get_category_display }}</td></tr>
+                        <tr><th>Status</th><td>{{ risk.get_status_display }}</td></tr>
+                        <tr><th>Owner</th><td>{{ risk.risk_owner }}</td></tr>
+                        <tr><th>Department</th><td>{{ risk.department }}</td></tr>
+                        <tr><th>Date Identified</th><td>{{ risk.date_identified }}</td></tr>
+                        <tr><th>External Context</th><td><div class="content-wrapper">{{ risk.external_context|safe }}</div></td></tr>
+                        <tr><th>Internal Context</th><td><div class="content-wrapper">{{ risk.internal_context|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ risk.risk_description|safe }}</div></td></tr>
+                        <tr><th>Inherent Impact</th><td>{{ risk.inherent_impact_score }}</td></tr>
+                        <tr><th>Inherent Likelihood</th><td>{{ risk.inherent_likelihood_score }}</td></tr>
+                        <tr><th>Inherent Risk Score</th><td>{{ risk.inherent_risk_score }}</td></tr>
+                        <tr><th>Residual Impact</th><td>{{ risk.residual_impact_score }}</td></tr>
+                        <tr><th>Residual Likelihood</th><td>{{ risk.residual_likelihood_score }}</td></tr>
+                        <tr><th>Residual Risk Score</th><td>{{ risk.residual_risk_score }}</td></tr>
+                        <tr><th>Risk Appetite</th><td>{{ risk.risk_appetite }}</td></tr>
+                        <tr><th>Controls Description</th><td><div class="content-wrapper">{{ risk.controls_description|safe }}</div></td></tr>
+                        <tr><th>Control Status</th><td>{{ risk.get_control_status_display }}</td></tr>
+                        <tr><th>Control Rating</th><td>{{ risk.get_control_rating_display }}</td></tr>
+                        <tr><th>Action Plan</th><td><div class="content-wrapper">{{ risk.action_plan|safe }}</div></td></tr>
+                        <tr><th>Action Plan Status</th><td>{{ risk.get_action_plan_status_display }}</td></tr>
+                        <tr><th>Action Owner</th><td>{{ risk.action_owner }}</td></tr>
+                        <tr><th>Action Due Date</th><td>{{ risk.action_due_date }}</td></tr>
+                        <tr><th>KRI Description</th><td><div class="content-wrapper">{{ risk.kri_description|safe }}</div></td></tr>
+                        <tr><th>KRI Threshold</th><td>{{ risk.kri_threshold }}</td></tr>
+                        <tr><th>Next Review Date</th><td>{{ risk.next_review_date }}</td></tr>
+                        <tr><th>Last Reviewed Date</th><td>{{ risk.last_reviewed_date }}</td></tr>
+                        <tr><th>Last Reviewed By</th><td>{{ risk.last_reviewed_by }}</td></tr>
+                        <tr><th>Closure Date</th><td>{{ risk.closure_date }}</td></tr>
+                        <tr><th>Closure Justification</th><td><div class="content-wrapper">{{ risk.closure_justification|safe }}</div></td></tr>
+                        <tr><th>Additional Notes</th><td><div class="content-wrapper">{{ risk.additional_notes|safe }}</div></td></tr>
+                    </table>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Related Controls</strong></div>
+                <div class="card-header"><strong>Related Controls</strong></div>
                 <div class="card-body">
                     {% if risk.controls.all %}
                         <ul class="list-group list-group-flush">
@@ -70,7 +73,7 @@
                 </div>
             </div>
             <div class="card mb-3">
-                <div class="card-header bg-light"><strong>KRIs</strong></div>
+                <div class="card-header"><strong>KRIs</strong></div>
                 <div class="card-body">
                     {% if risk.kris.all %}
                         <ul class="list-group list-group-flush">
@@ -87,7 +90,7 @@
                 </div>
             </div>
             <div class="card mb-3">
-                <div class="card-header bg-light"><strong>Assessments</strong></div>
+                <div class="card-header"><strong>Assessments</strong></div>
                 <div class="card-body">
                     {% if risk.assessments.all %}
                         <ul class="list-group list-group-flush">
@@ -101,6 +104,13 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'risk:risk_update' risk.pk %}" class="btn btn-outline-primary btn-sm">Edit Risk</a>
+                    <a href="{% url 'risk:risk_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
                 </div>
             </div>
         </div>

@@ -5,98 +5,67 @@
 {% block title %}Engagement Detail - {{ engagement.title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <!-- Breadcrumb -->
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{% url 'audit:dashboard' %}">Audit Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="{% url 'audit:engagement-list' %}">Engagements</a></li>
-          <li class="breadcrumb-item active">{{ engagement.title }}</li>
-        </ol>
-      </nav>
+<div class="container-fluid mt-3">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">{{ engagement.title }}</h2>
+      <div class="text-muted">Code: <span class="badge bg-primary">{{ engagement.code }}</span> · Status: <span class="badge bg-info">{{ engagement.get_project_status_display }}</span></div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+      <a href="{% url 'audit:objective-add' engagement_pk=engagement.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle"></i> Add Objective</a>
+      <a href="{% url 'audit:note-add' %}?content_type_id={{ content_type_id }}&object_id={{ engagement.pk }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journal-plus"></i> Add Note</a>
+    </div>
+  </div>
 
-      <!-- Engagement Header -->
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="mb-0">{{ engagement.title }}</h3>
-          <div class="btn-group" role="group">
-            <a href="{% url 'audit:engagement-update' engagement.pk %}" class="btn btn-primary">Edit Engagement</a>
-            <a href="{% url 'audit:objective-add' engagement_pk=engagement.pk %}" class="btn btn-success">Add Objective</a>
-            <a href="{% url 'audit:note-add' %}?content_type_id={{ content_type_id }}&object_id={{ engagement.pk }}" class="btn btn-info">Add Note</a>
-          </div>
-        </div>
+  <div class="row g-3">
+    <!-- Main column -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Engagement Information</strong></div>
         <div class="card-body">
-          <!-- Engagement Details -->
           <div class="row">
-            <div class="col-md-8">
-              <h5>Executive Summary</h5>
-              <p>{{ engagement.executive_summary|safe }}</p>
-              
-              <h5>Purpose</h5>
-              <p>{{ engagement.purpose|safe }}</p>
-              
-              <h5>Background</h5>
-              <p>{{ engagement.background|safe }}</p>
-              
-              <h5>Scope</h5>
-              <p>{{ engagement.scope|safe }}</p>
-              
-              {% if engagement.criteria %}
-                <h5>Criteria</h5>
-                <p>{{ engagement.criteria|safe }}</p>
-              {% endif %}
+            <div class="col-md-6">
+              <table class="table table-sm mb-0">
+                <tr><th class="w-25">Code</th><td>{{ engagement.code }}</td></tr>
+                <tr><th>Type</th><td>{{ engagement.get_engagement_type_display }}</td></tr>
+                <tr><th>Start</th><td>{{ engagement.project_start_date }}</td></tr>
+              </table>
             </div>
-            <div class="col-md-4">
-              <div class="card">
-                <div class="card-header">
-                  <h6 class="mb-0">Engagement Information</h6>
-                </div>
-                <div class="card-body">
-                  <dl class="row mb-0">
-                    <dt class="col-sm-4">Code:</dt>
-                    <dd class="col-sm-8">{{ engagement.code }}</dd>
-                    
-                    <dt class="col-sm-4">Type:</dt>
-                    <dd class="col-sm-8">{{ engagement.get_engagement_type_display }}</dd>
-                    
-                    <dt class="col-sm-4">Status:</dt>
-                    <dd class="col-sm-8">
-                      <span class="badge bg-{% if engagement.project_status == 'draft' %}secondary{% elif engagement.project_status == 'fieldwork' %}warning{% elif engagement.project_status == 'draft_report' %}info{% elif engagement.project_status == 'final_report' %}success{% else %}primary{% endif %}">
-                        {{ engagement.get_project_status_display }}
-                      </span>
-                    </dd>
-                    
-                    <dt class="col-sm-4">Start Date:</dt>
-                    <dd class="col-sm-8">{{ engagement.project_start_date }}</dd>
-                    
-                    <dt class="col-sm-4">Target End:</dt>
-                    <dd class="col-sm-8">{{ engagement.target_end_date }}</dd>
-                    
-                    <dt class="col-sm-4">Assigned To:</dt>
-                    <dd class="col-sm-8">
-                      {% if engagement.assigned_to %}
-                        {{ engagement.assigned_to.get_full_name|default:engagement.assigned_to.username }}
-                      {% else %}
-                        <span class="text-muted">Not assigned</span>
-                      {% endif %}
-                    </dd>
-                    
-                    {% if engagement.estimated_hours %}
-                      <dt class="col-sm-4">Est. Hours:</dt>
-                      <dd class="col-sm-8">{{ engagement.estimated_hours }}</dd>
-                    {% endif %}
-                  </dl>
-                </div>
-              </div>
+            <div class="col-md-6">
+              <table class="table table-sm mb-0">
+                <tr><th class="w-25">Target End</th><td>{{ engagement.target_end_date }}</td></tr>
+                <tr><th>Assigned To</th><td>{% if engagement.assigned_to %}{{ engagement.assigned_to.get_full_name|default:engagement.assigned_to.username }}{% else %}<span class="text-muted">Not assigned</span>{% endif %}</td></tr>
+                {% if engagement.estimated_hours %}<tr><th>Est. Hours</th><td>{{ engagement.estimated_hours }}</td></tr>{% endif %}
+              </table>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Tabs for Related Items -->
-      <div class="card">
+      <div class="card mt-3">
+        <div class="card-header"><strong>Executive Summary & Details</strong></div>
+        <div class="card-body">
+          <div class="content-wrapper">
+            <h6>Executive Summary</h6>
+            <div>{{ engagement.executive_summary|safe }}</div>
+            <h6 class="mt-3">Purpose</h6>
+            <div>{{ engagement.purpose|safe }}</div>
+            <h6 class="mt-3">Background</h6>
+            <div>{{ engagement.background|safe }}</div>
+            <h6 class="mt-3">Scope</h6>
+            <div>{{ engagement.scope|safe }}</div>
+            {% if engagement.criteria %}
+              <h6 class="mt-3">Criteria</h6>
+              <div>{{ engagement.criteria|safe }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs for related lists -->
+      <div class="card mt-3">
         <div class="card-header">
           <ul class="nav nav-tabs card-header-tabs" id="engagementTabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -153,6 +122,18 @@
               {% include 'audit/_note_list_tab_partial.html' with notes=engagement.notes.all content_type_id=content_type_id object_id=engagement.pk %}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'audit:objective-add' engagement_pk=engagement.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle"></i> Add Objective</a>
+          <a href="{% url 'audit:note-add' %}?content_type_id={{ content_type_id }}&object_id={{ engagement.pk }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journal-plus"></i> Add Note</a>
+          <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to List</a>
         </div>
       </div>
     </div>

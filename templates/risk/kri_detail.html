@@ -1,54 +1,69 @@
 {% extends 'base.html' %}
 {% block title %}KRI Detail{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>KRI: {{ kri.name }}</h2>
-            <a href="{% url 'risk:kri_update' kri.pk %}" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit</a>
-            <a href="{% url 'risk:kri_delete' kri.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</a>
-            <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-primary float-end"><i class="bi bi-arrow-left"></i> Back to List</a>
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">KRI: {{ kri.name }}</h2>
+            <div class="text-muted">For Risk: <a href="{% url 'risk:risk_detail' kri.risk.pk %}">{{ kri.risk.risk_name }}</a></div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'risk:kri_update' kri.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'risk:kri_delete' kri.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+            <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
         </div>
     </div>
-    <div class="card mb-4">
-        <div class="card-header bg-light"><strong>KRI Details</strong></div>
-        <div class="card-body">
-            <dl class="row mb-0">
-                <dt class="col-sm-4">Risk</dt><dd class="col-sm-8"><a href="{% url 'risk:risk_detail' kri.risk.pk %}">{{ kri.risk.risk_name }}</a></dd>
-                <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ kri.name }}</dd>
-                <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ kri.description|safe }}</dd>
-                <dt class="col-sm-4">Value</dt><dd class="col-sm-8">{{ kri.value }}</dd>
-                <dt class="col-sm-4">Unit</dt><dd class="col-sm-8">{{ kri.unit }}</dd>
-                <dt class="col-sm-4">Timestamp</dt><dd class="col-sm-8">{{ kri.timestamp|date:'Y-m-d H:i' }}</dd>
-                <dt class="col-sm-4">Warning Threshold</dt><dd class="col-sm-8">{{ kri.threshold_warning }}</dd>
-                <dt class="col-sm-4">Critical Threshold</dt><dd class="col-sm-8">{{ kri.threshold_critical }}</dd>
-                <dt class="col-sm-4">Direction</dt><dd class="col-sm-8">{{ kri.get_direction_display }}</dd>
-                <dt class="col-sm-4">Data Source</dt><dd class="col-sm-8">{{ kri.data_source }}</dd>
-                <dt class="col-sm-4">Collection Frequency</dt><dd class="col-sm-8">{{ kri.collection_frequency }}</dd>
-                <dt class="col-sm-4">Status</dt><dd class="col-sm-8">
-                    {% with mband=kri.get_matrix_status %}
-                        {% if mband %}
-                            {% if mband == 'low' %}
-                                <span class="badge bg-success">{{ kri.get_status|title }}</span>
-                            {% elif mband == 'medium' %}
-                                <span class="badge bg-warning text-dark">{{ kri.get_status|title }}</span>
-                            {% elif mband == 'high' or mband == 'very_high' or mband == 'critical' %}
-                                <span class="badge bg-danger">{{ kri.get_status|title }}</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ kri.get_status|title }}</span>
-                            {% endif %}
-                        {% else %}
-                            {% if kri.get_status == 'critical' %}
-                                <span class="badge bg-danger">Critical</span>
-                            {% elif kri.get_status == 'warning' %}
-                                <span class="badge bg-warning text-dark">Warning</span>
-                            {% else %}
-                                <span class="badge bg-success">Normal</span>
-                            {% endif %}
-                        {% endif %}
-                    {% endwith %}
-                </dd>
-            </dl>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>KRI Details</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Name</th><td>{{ kri.name }}</td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ kri.description|safe }}</div></td></tr>
+                        <tr><th>Value</th><td>{{ kri.value }}</td></tr>
+                        <tr><th>Unit</th><td>{{ kri.unit }}</td></tr>
+                        <tr><th>Timestamp</th><td>{{ kri.timestamp|date:'Y-m-d H:i' }}</td></tr>
+                        <tr><th>Warning Threshold</th><td>{{ kri.threshold_warning }}</td></tr>
+                        <tr><th>Critical Threshold</th><td>{{ kri.threshold_critical }}</td></tr>
+                        <tr><th>Direction</th><td>{{ kri.get_direction_display }}</td></tr>
+                        <tr><th>Data Source</th><td>{{ kri.data_source }}</td></tr>
+                        <tr><th>Collection Frequency</th><td>{{ kri.collection_frequency }}</td></tr>
+                        <tr><th>Status</th><td>
+                            {% with mband=kri.get_matrix_status %}
+                                {% if mband %}
+                                    {% if mband == 'low' %}
+                                        <span class="badge bg-success">{{ kri.get_status|title }}</span>
+                                    {% elif mband == 'medium' %}
+                                        <span class="badge bg-warning text-dark">{{ kri.get_status|title }}</span>
+                                    {% elif mband == 'high' or mband == 'very_high' or mband == 'critical' %}
+                                        <span class="badge bg-danger">{{ kri.get_status|title }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ kri.get_status|title }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if kri.get_status == 'critical' %}
+                                        <span class="badge bg-danger">Critical</span>
+                                    {% elif kri.get_status == 'warning' %}
+                                        <span class="badge bg-warning text-dark">Warning</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
+                        </td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'risk:kri_update' kri.pk %}" class="btn btn-outline-primary btn-sm">Edit KRI</a>
+                    <a href="{% url 'risk:kri_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

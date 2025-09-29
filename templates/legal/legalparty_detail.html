@@ -1,36 +1,44 @@
 {% extends 'base.html' %}
 {% block title %}Legal Party: {{ object.name }}{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid mt-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Legal Party: {{ object.name }}</h2>
     <div>
-      <a href="{% url 'legal:dashboard' %}" class="btn btn-outline-dark me-2">Back to Dashboard</a>
-      <a href="{% url 'legal:legalparty_update' object.pk %}" class="btn btn-secondary">Edit</a>
-      <a href="{% url 'legal:legalparty_delete' object.pk %}" class="btn btn-danger">Delete</a>
-      <a href="{% url 'legal:legalparty_list' %}" class="btn btn-outline-primary">Back to List</a>
+      <h2 class="mb-1">Legal Party: {{ object.name }}</h2>
+      <div class="text-muted">Type: {{ object.party_type }} · Role: {{ object.role }} · Case: {{ object.legal_case }}</div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'legal:legalparty_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'legal:legalparty_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+      <a href="{% url 'legal:legalparty_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
     </div>
   </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <dl class="row mb-0">
-        <dt class="col-sm-3">Name</dt>
-        <dd class="col-sm-9">{{ object.name }}</dd>
-        <dt class="col-sm-3">Type</dt>
-        <dd class="col-sm-9">{{ object.party_type }}</dd>
-        <dt class="col-sm-3">Role</dt>
-        <dd class="col-sm-9">{{ object.role }}</dd>
-        <dt class="col-sm-3">Case</dt>
-        <dd class="col-sm-9">{{ object.legal_case }}</dd>
-        <dt class="col-sm-3">Contact Person</dt>
-        <dd class="col-sm-9">{{ object.contact_person }}</dd>
-        <dt class="col-sm-3">Email</dt>
-        <dd class="col-sm-9">{{ object.contact_email }}</dd>
-        <dt class="col-sm-3">Phone</dt>
-        <dd class="col-sm-9">{{ object.contact_phone }}</dd>
-        <dt class="col-sm-3">Organization</dt>
-        <dd class="col-sm-9">{{ object.organization }}</dd>
-      </dl>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Party Information</strong></div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr><th class="w-25">Name</th><td>{{ object.name }}</td></tr>
+            <tr><th>Type</th><td>{{ object.party_type }}</td></tr>
+            <tr><th>Role</th><td>{{ object.role }}</td></tr>
+            <tr><th>Case</th><td>{{ object.legal_case }}</td></tr>
+            <tr><th>Contact Person</th><td>{{ object.contact_person }}</td></tr>
+            <tr><th>Email</th><td>{{ object.contact_email }}</td></tr>
+            <tr><th>Phone</th><td>{{ object.contact_phone }}</td></tr>
+            <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'legal:legalparty_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Party</a>
+          <a href="{% url 'legal:legalparty_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>

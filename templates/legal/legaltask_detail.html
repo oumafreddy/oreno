@@ -1,33 +1,43 @@
 {% extends 'base.html' %}
 {% block title %}Legal Task: {{ object.title }}{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid mt-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Legal Task: {{ object.title }}</h2>
     <div>
-      <a href="{% url 'legal:legaltask_update' object.pk %}" class="btn btn-secondary">Edit</a>
-      <a href="{% url 'legal:legaltask_delete' object.pk %}" class="btn btn-danger">Delete</a>
-      <a href="{% url 'legal:legaltask_list' %}" class="btn btn-outline-primary">Back to List</a>
+      <h2 class="mb-1">Legal Task: {{ object.title }}</h2>
+      <div class="text-muted">Case: {{ object.legal_case }} · Status: <span class="badge bg-secondary">{{ object.get_status_display }}</span> · Due: {{ object.due_date }}</div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'legal:legaltask_update' object.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+      <a href="{% url 'legal:legaltask_delete' object.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+      <a href="{% url 'legal:legaltask_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
     </div>
   </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <dl class="row mb-0">
-        <dt class="col-sm-3">Title</dt>
-        <dd class="col-sm-9">{{ object.title }}</dd>
-        <dt class="col-sm-3">Case</dt>
-        <dd class="col-sm-9">{{ object.legal_case }}</dd>
-        <dt class="col-sm-3">Assigned To</dt>
-        <dd class="col-sm-9">{{ object.assigned_to }}</dd>
-        <dt class="col-sm-3">Status</dt>
-        <dd class="col-sm-9">{{ object.get_status_display }}</dd>
-        <dt class="col-sm-3">Due Date</dt>
-        <dd class="col-sm-9">{{ object.due_date }}</dd>
-        <dt class="col-sm-3">Description</dt>
-        <dd class="col-sm-9">{{ object.description|linebreaks }}</dd>
-        <dt class="col-sm-3">Organization</dt>
-        <dd class="col-sm-9">{{ object.organization }}</dd>
-      </dl>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Task Information</strong></div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr><th class="w-25">Title</th><td>{{ object.title }}</td></tr>
+            <tr><th>Case</th><td>{{ object.legal_case }}</td></tr>
+            <tr><th>Assigned To</th><td>{{ object.assigned_to }}</td></tr>
+            <tr><th>Status</th><td>{{ object.get_status_display }}</td></tr>
+            <tr><th>Due Date</th><td>{{ object.due_date }}</td></tr>
+            <tr><th>Description</th><td>{{ object.description|linebreaks }}</td></tr>
+            <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a href="{% url 'legal:legaltask_update' object.pk %}" class="btn btn-outline-primary btn-sm">Edit Task</a>
+          <a href="{% url 'legal:legaltask_list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>

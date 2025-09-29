@@ -1,26 +1,41 @@
 {% extends 'base.html' %}
 {% block title %}Contract Type Detail{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2>{{ contracttype.name }}</h2>
-    <div class="mb-3">
-        <strong>Description:</strong><br>
-        {{ contracttype.description|safe }}
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">{{ contracttype.name }}</h2>
+            <div class="text-muted">Standard Template: {% if contracttype.is_standard_template %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'contracts:contracttype-edit' contracttype.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            <a href="{% url 'contracts:contracttype-delete' contracttype.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+            <a href="{% url 'contracts:contracttype-list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
     </div>
-    <div class="mb-3">
-        <strong>Standard Template:</strong>
-        {% if contracttype.is_standard_template %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><strong>Contract Type Information</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><th class="w-25">Name</th><td>{{ contracttype.name }}</td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ contracttype.description|safe }}</div></td></tr>
+                        <tr><th>Standard Template</th><td>{% if contracttype.is_standard_template %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td></tr>
+                        <tr><th>Template File</th><td>{% if contracttype.template_file %}<a href="{{ contracttype.template_file.url }}" target="_blank">Download</a>{% else %}<span class="text-muted">None</span>{% endif %}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header"><strong>Quick Actions</strong></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'contracts:contracttype-edit' contracttype.pk %}" class="btn btn-outline-primary btn-sm">Edit Contract Type</a>
+                    <a href="{% url 'contracts:contracttype-list' %}" class="btn btn-outline-secondary btn-sm">Back to List</a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <strong>Template File:</strong>
-        {% if contracttype.template_file %}
-            <a href="{{ contracttype.template_file.url }}" target="_blank">Download</a>
-        {% else %}
-            <span class="text-muted">None</span>
-        {% endif %}
-    </div>
-    <a href="{% url 'contracts:contracttype-edit' contracttype.pk %}" class="btn btn-outline-info">Edit</a>
-    <a href="{% url 'contracts:contracttype-delete' contracttype.pk %}" class="btn btn-outline-danger">Delete</a>
-    <a href="{% url 'contracts:contracttype-list' %}" class="btn btn-secondary">Back to List</a>
 </div>
 {% endblock %} 

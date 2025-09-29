@@ -1,34 +1,74 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container mt-3">
-  <h2>{{ objective.code }} – {{ objective.name }}</h2>
-  <div class="mb-2">
-    <a class="btn btn-outline-primary btn-sm" href="{% url 'risk:objective_update' objective.pk %}">Edit</a>
-    <a class="btn btn-outline-danger btn-sm" href="{% url 'risk:objective_delete' objective.pk %}">Delete</a>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'risk:objective_list' %}">Back</a>
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">{{ objective.code }} – {{ objective.name }}</h2>
+      <div class="text-muted">Status: <span class="badge bg-secondary">{{ objective.get_status_display }}</span></div>
+    </div>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'risk:objective_update' objective.pk %}">Edit</a>
+      <a class="btn btn-outline-danger btn-sm" href="{% url 'risk:objective_delete' objective.pk %}">Delete</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'risk:objective_list' %}">Back</a>
+    </div>
   </div>
-  <table class="table table-sm">
-    <tr><th>Status</th><td>{{ objective.get_status_display }}</td></tr>
-    <tr><th>Perpetual</th><td>{{ objective.is_perpetual|yesno:"Yes,No" }}</td></tr>
-    <tr><th>Start</th><td>{{ objective.start_date|default:"-" }}</td></tr>
-    <tr><th>End</th><td>{{ objective.end_date|default:"-" }}</td></tr>
-    <tr><th>Origin/Source</th><td>{{ objective.origin_source|default:"-" }}</td></tr>
-  </table>
-  {% if objective.description %}
-  <div class="mb-3">
-    <h5>Description</h5>
-    <div>{{ objective.description|safe }}</div>
-  </div>
-  {% endif %}
 
-  <h5>Linked Risks</h5>
-  <ul>
-    {% for r in objective.risks.all %}
-      <li>{{ r.code }} – {{ r.risk_name }} ({{ r.get_status_display }})</li>
-    {% empty %}
-      <li class="text-muted">No risks linked yet.</li>
-    {% endfor %}
-  </ul>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><strong>Objective Information</strong></div>
+        <div class="card-body">
+          <table class="table table-sm mb-0">
+            <tr><th class="w-25">Status</th><td>{{ objective.get_status_display }}</td></tr>
+            <tr><th>Perpetual</th><td>{{ objective.is_perpetual|yesno:"Yes,No" }}</td></tr>
+            <tr><th>Start</th><td>{{ objective.start_date|default:"-" }}</td></tr>
+            <tr><th>End</th><td>{{ objective.end_date|default:"-" }}</td></tr>
+            <tr><th>Origin/Source</th><td>{{ objective.origin_source|default:"-" }}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      {% if objective.description %}
+      <div class="card mt-3">
+        <div class="card-header"><strong>Description</strong></div>
+        <div class="card-body"><div class="content-wrapper">{{ objective.description|safe }}</div></div>
+      </div>
+      {% endif %}
+
+      <div class="card mt-3">
+        <div class="card-header"><strong>Linked Risks</strong></div>
+        <div class="card-body">
+          {% if objective.risks.all %}
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Code</th><th>Name</th><th>Status</th></tr></thead>
+              <tbody>
+              {% for r in objective.risks.all %}
+                <tr>
+                  <td>{{ r.code }}</td>
+                  <td><a href="{% url 'risk:risk_detail' r.pk %}">{{ r.risk_name }}</a></td>
+                  <td>{{ r.get_status_display }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted">No risks linked yet.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><strong>Quick Actions</strong></div>
+        <div class="card-body d-grid gap-2">
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'risk:objective_update' objective.pk %}">Edit Objective</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'risk:objective_list' %}">Back to List</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

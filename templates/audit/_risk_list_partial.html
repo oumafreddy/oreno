@@ -40,8 +40,20 @@
                     {{ risk.get_risk_level_display }}
                   </span>
                 </td>
-                <td>{{ risk.get_impact_display|default:"Not specified" }}</td>
-                <td>{{ risk.get_likelihood_display|default:"Not specified" }}</td>
+                <td>
+                  {% if risk.impact %}
+                    {{ risk.get_impact_display }} ({{ risk.impact }})
+                  {% else %}
+                    <span class="text-muted">Not specified</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if risk.likelihood %}
+                    {{ risk.get_likelihood_display }} ({{ risk.likelihood }})
+                  {% else %}
+                    <span class="text-muted">Not specified</span>
+                  {% endif %}
+                </td>
                 <td>
                   {% if risk.objective %}
                     <a href="{% url 'audit:objective-detail' risk.objective.pk %}" class="text-decoration-none">
