@@ -139,7 +139,18 @@ def risk_register_summary_pdf(request):
         risks = risks.filter(status=status)
     if register:
         risks = risks.filter(risk_register__register_name__icontains=register)
+    # Totals for KPI row
+    total_risks = risks.count()
+    active_risks = risks.exclude(status__in=['closed', 'archived']).count()
+    # Treat residual risk score >= 15 as high priority (3x5 scale)
+    high_priority = risks.filter(residual_risk_score__gte=15).count()
+    categories_count = risks.values('category').distinct().count()
+
     summary = {
+        'total_risks': total_risks,
+        'active_risks': active_risks,
+        'high_priority': high_priority,
+        'categories': categories_count,
         'by_status': risks.values('status').annotate(count=Count('id')),
         'by_category': risks.values('category').annotate(count=Count('id')),
         'by_owner': risks.values('risk_owner').annotate(count=Count('id')),
@@ -715,22 +726,74 @@ def risk_trends_pdf(request):
 
 def control_effectiveness_pdf(request):
     org = request.tenant
+    owner = request.GET.get('owner')
+    ctype = request.GET.get('type')
+    nature = request.GET.get('nature')
+    frequency = request.GET.get('frequency')
+
     controls = Control.objects.filter(organization=org)
+    if owner:
+        controls = controls.filter(control_owner__icontains=owner)
+    if ctype:
+        controls = controls.filter(control_type=ctype)
+    if nature:
+        controls = controls.filter(control_nature=nature)
+    if frequency:
+        controls = controls.filter(control_frequency=frequency)
+
+    # Distribution for pie chart
     effectiveness = controls.values('effectiveness_rating').annotate(count=Count('id'))
     labels = [e['effectiveness_rating'] for e in effectiveness]
     counts = [e['count'] for e in effectiveness]
-    # Pie chart
     fig, ax = plt.subplots()
-    ax.pie(counts, labels=labels, autopct='%1.1f%%', startangle=90)
+    if counts:
+        ax.pie(counts, labels=labels, autopct='%1.1f%%', startangle=90)
     ax.set_title('Control Effectiveness Distribution')
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     plt.close(fig)
     buf.seek(0)
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+
+    # Totals for KPI row
+    totals = {
+        'total_controls': controls.count(),
+        'effective': controls.filter(effectiveness_rating='effective').count(),
+        'partially_effective': controls.filter(effectiveness_rating='partially-effective').count(),
+        'not_effective': controls.filter(effectiveness_rating='not-effective').count(),
+    }
+
+    # Effectiveness by control type
+    by_type_qs = controls.values('control_type').annotate(
+        total=Count('id'),
+        effective=Count('id', filter=models.Q(effectiveness_rating='effective')),
+        partially_effective=Count('id', filter=models.Q(effectiveness_rating='partially-effective')),
+        not_effective=Count('id', filter=models.Q(effectiveness_rating='not-effective')),
+    ).order_by('control_type')
+
+    # Effectiveness by owner
+    by_owner_qs = controls.values('control_owner').annotate(
+        total=Count('id'),
+        effective=Count('id', filter=models.Q(effectiveness_rating='effective')),
+        partially_effective=Count('id', filter=models.Q(effectiveness_rating='partially-effective')),
+        not_effective=Count('id', filter=models.Q(effectiveness_rating='not-effective')),
+    ).order_by('-effective')[:10]
+
+    # Simple insights
+    top_owner = by_owner_qs[0]['control_owner'] if by_owner_qs else None
+    weak_type = None
+    if by_type_qs:
+        weak = min(by_type_qs, key=lambda r: (r['effective'] / r['total']) if r['total'] else 0)
+        weak_type = weak['control_type']
+
     html_string = render_to_string('reports/control_effectiveness.html', {
         'organization': org,
         'image_base64': image_base64,
+        'totals': totals,
+        'by_type': by_type_qs,
+        'by_owner': by_owner_qs,
+        'insights': {'top_owner': top_owner, 'weak_type': weak_type},
+        'filters': {'owner': owner, 'type': ctype, 'nature': nature, 'frequency': frequency},
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

@@ -38,24 +38,20 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Risk Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ summary.total_risks|default:0 }}</div>
-      <div class="stat-label">Total Risks</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ summary.active_risks|default:0 }}</div>
-      <div class="stat-label">Active Risks</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ summary.high_priority|default:0 }}</div>
-      <div class="stat-label">High Priority</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ summary.categories|default:0 }}</div>
-      <div class="stat-label">Categories</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: 0.5cm;">
+    <colgroup>
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ summary.total_risks|default:0 }}</div><div class="stat-label" style="margin:0;">Total Risks</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ summary.active_risks|default:0 }}</div><div class="stat-label" style="margin:0;">Active Risks</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ summary.high_priority|default:0 }}</div><div class="stat-label" style="margin:0;">High Priority</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ summary.categories|default:0 }}</div><div class="stat-label" style="margin:0;">Categories</div></td>
+    </tr>
+  </table>
   
   <table class="report-table" style="margin-top: 0.5cm;">
     <tr>

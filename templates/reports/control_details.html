@@ -38,26 +38,17 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Control Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ controls.count }}</div>
-      <div class="stat-label">Total Controls</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ controls|dictsort:"status"|length }}</div>
-      <div class="stat-label">Active Controls</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ controls|dictsort:"control_owner"|length }}</div>
-      <div class="stat-label">Control Owners</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ controls|dictsort:"control_type"|length }}</div>
-      <div class="stat-label">Control Types</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: .4cm;">
+    <colgroup><col style="width:25%"><col style="width:25%"><col style="width:25%"><col style="width:25%"></colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ total_controls }}</div><div class="stat-label" style="margin:0;">Total Controls</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ effective_controls }}</div><div class="stat-label" style="margin:0;">Effective</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ ineffective_controls }}</div><div class="stat-label" style="margin:0;">Ineffective</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ control_owners }}</div><div class="stat-label" style="margin:0;">Control Owners</div></td>
+    </tr>
+  </table>
   
-  <table class="report-table" style="margin-top: 0.5cm;">
+  <table class="report-table" style="margin-top: 0;">
     <tr>
       <th style="width:25%">Control Type</th>
       <td>{{ filters.control_type|default:"All Types" }}</td>

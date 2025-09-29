@@ -1,8 +1,113 @@
 {% extends "reports/base_report.html" %}
 {% block content %}
-<h2>Control Effectiveness Distribution</h2>
-<p>This pie chart shows the distribution of control effectiveness ratings.</p>
-<div class="text-center">
-  <img src="data:image/png;base64,{{ image_base64 }}" alt="Control Effectiveness" style="max-width:100%; height:auto;">
+<div class="report-header">
+  <div class="header-content">
+    <div class="header-left">Report ID: Control Effectiveness Analytics</div>
+    <div class="header-right">
+      {% if organization.logo and organization.logo.url %}
+        <img src="{{ organization.logo.url }}" alt="{{ organization.name }} Logo" class="organization-logo" />
+      {% else %}<span>{{ organization.name }}</span>{% endif %}
+    </div>
+  </div>
 </div>
-{% endblock %} 
+<div class="header-separator"></div>
+
+<h2 class="section-header">A. Control Effectiveness Summary</h2>
+
+<div class="report-card">
+  <h3>Overview & Filters</h3>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: .4cm;">
+    <colgroup><col style="width:25%"><col style="width:25%"><col style="width:25%"><col style="width:25%"></colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ totals.total_controls }}</div><div class="stat-label" style="margin:0;">Total Controls</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ totals.effective }}</div><div class="stat-label" style="margin:0;">Effective</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ totals.partially_effective }}</div><div class="stat-label" style="margin:0;">Partially Effective</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ totals.not_effective }}</div><div class="stat-label" style="margin:0;">Not Effective</div></td>
+    </tr>
+  </table>
+
+  <table class="report-table" style="margin-top:0;">
+    <tr>
+      <th style="width:25%">Owner</th><td>{{ filters.owner|default:"All Owners" }}</td>
+      <th style="width:25%">Type</th><td>{{ filters.type|default:"All Types" }}</td>
+    </tr>
+    <tr>
+      <th>Nature</th><td>{{ filters.nature|default:"All Natures" }}</td>
+      <th>Frequency</th><td>{{ filters.frequency|default:"All Frequencies" }}</td>
+    </tr>
+  </table>
+</div>
+
+<div class="report-card">
+  <h3>Effectiveness Distribution</h3>
+  <div class="text-center">
+    <img src="data:image/png;base64,{{ image_base64 }}" alt="Control Effectiveness" style="max-width:70%; height:auto;">
+  </div>
+</div>
+
+<div class="report-card">
+  <h3>Effectiveness by Control Type</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-25">Control Type</th>
+        <th class="col-15 text-center">Total</th>
+        <th class="col-15 text-center">Effective</th>
+        <th class="col-15 text-center">Partially</th>
+        <th class="col-15 text-center">Not</th>
+        <th class="col-15 text-center">Effectiveness %</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in by_type %}
+      <tr>
+        <td><strong>{{ row.control_type|title }}</strong></td>
+        <td class="text-center"><strong>{{ row.total }}</strong></td>
+        <td class="text-center">{{ row.effective }}</td>
+        <td class="text-center">{{ row.partially_effective }}</td>
+        <td class="text-center">{{ row.not_effective }}</td>
+        <td class="text-center">{% widthratio row.effective row.total 100 %}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="report-card">
+  <h3>Effectiveness by Owner</h3>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th class="col-30">Owner</th>
+        <th class="col-15 text-center">Total</th>
+        <th class="col-15 text-center">Effective</th>
+        <th class="col-15 text-center">Partially</th>
+        <th class="col-15 text-center">Not</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in by_owner %}
+      <tr>
+        <td><strong>{{ row.control_owner|default:"Unassigned" }}</strong></td>
+        <td class="text-center"><strong>{{ row.total }}</strong></td>
+        <td class="text-center">{{ row.effective }}</td>
+        <td class="text-center">{{ row.partially_effective }}</td>
+        <td class="text-center">{{ row.not_effective }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="report-card">
+  <h3>Insights & Recommendations</h3>
+  <div class="field-label">Key Insights</div>
+  <div class="field-value">
+    <ul>
+      <li>Overall effectiveness: <strong>{% widthratio totals.effective totals.total_controls 100 %}%</strong> controls rated effective.</li>
+      <li>Top owner by effective controls: <strong>{{ insights.top_owner }}</strong>.</li>
+      <li>Weakest control type: <strong>{{ insights.weak_type|default:"N/A" }}</strong>.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
