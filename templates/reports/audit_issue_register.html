@@ -57,24 +57,20 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Issues Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ total_issues|default:issues.count }}</div>
-      <div class="stat-label">Total Issues</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ open_issues|default:issues|dictsort:"issue_status"|length }}</div>
-      <div class="stat-label">Open Issues</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ high_priority_issues|default:issues|dictsort:"risk_level"|length }}</div>
-      <div class="stat-label">High Priority</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ escalated_issues|default:0 }}</div>
-      <div class="stat-label">Escalated</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: 0.5cm;">
+    <colgroup>
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ total_issues|default:issues.count }}</div><div class="stat-label" style="margin:0;">Total Issues</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ open_issues }}</div><div class="stat-label" style="margin:0;">Open Issues</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ high_priority_issues }}</div><div class="stat-label" style="margin:0;">High Priority</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ escalated_issues }}</div><div class="stat-label" style="margin:0;">Escalated</div></td>
+    </tr>
+  </table>
   
   <table class="report-table" style="margin-top: 0.5cm;">
     <tr>

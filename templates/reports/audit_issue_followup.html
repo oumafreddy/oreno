@@ -53,43 +53,28 @@
 <div class="section-header">Issue Statistics Dashboard</div>
 <div class="content-wrapper">
   {% if total_issues > 0 %}
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ total_issues }}</div>
-      <div class="stat-label">TOTAL ISSUES</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ open_issues }}</div>
-      <div class="stat-label">OPEN ISSUES</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ in_progress_issues }}</div>
-      <div class="stat-label">IN PROGRESS</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ closed_issues }}</div>
-      <div class="stat-label">CLOSED ISSUES</div>
-    </div>
-  </div>
-  
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ critical_risk_issues }}</div>
-      <div class="stat-label">CRITICAL RISK</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ high_risk_issues }}</div>
-      <div class="stat-label">HIGH RISK</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ medium_risk_issues }}</div>
-      <div class="stat-label">MEDIUM RISK</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ low_risk_issues }}</div>
-      <div class="stat-label">LOW RISK</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0;">
+    <colgroup>
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+      <col style="width:12.5%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ total_issues }}</div><div class="stat-label" style="margin:0;">Total</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ open_issues }}</div><div class="stat-label" style="margin:0;">Open</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ in_progress_issues }}</div><div class="stat-label" style="margin:0;">In Progress</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ closed_issues }}</div><div class="stat-label" style="margin:0;">Closed</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ critical_risk_issues }}</div><div class="stat-label" style="margin:0;">Critical</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ high_risk_issues }}</div><div class="stat-label" style="margin:0;">High</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ medium_risk_issues }}</div><div class="stat-label" style="margin:0;">Medium</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ low_risk_issues }}</div><div class="stat-label" style="margin:0;">Low</div></td>
+    </tr>
+  </table>
   {% else %}
   <div class="alert alert-warning">
     <strong>No Data Available:</strong> No audit issues found matching the current filter criteria.

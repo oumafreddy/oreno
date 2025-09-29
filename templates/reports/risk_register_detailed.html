@@ -38,24 +38,20 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Risk Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ risks.count }}</div>
-      <div class="stat-label">Total Risks</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ risks|dictsort:"status"|length }}</div>
-      <div class="stat-label">Active Risks</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ risks|dictsort:"residual_risk_score"|length }}</div>
-      <div class="stat-label">High Priority</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ risks|dictsort:"category"|length }}</div>
-      <div class="stat-label">Categories</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: 0.5cm;">
+    <colgroup>
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ risks.count }}</div><div class="stat-label" style="margin:0;">Total Risks</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ risks|dictsort:"status"|length }}</div><div class="stat-label" style="margin:0;">Active Risks</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ risks|dictsort:"residual_risk_score"|length }}</div><div class="stat-label" style="margin:0;">High Priority</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ risks|dictsort:"category"|length }}</div><div class="stat-label" style="margin:0;">Categories</div></td>
+    </tr>
+  </table>
   
   <table class="report-table" style="margin-top: 0.5cm;">
     <tr>
@@ -76,17 +72,27 @@
 <!-- Risk Summary Table -->
 <div class="report-card">
   <h3>Risk Summary by Category and Status</h3>
-  <table class="report-table">
+  <table class="report-table" style="table-layout: fixed;">
+    <colgroup>
+      <col style="width:10%">
+      <col style="width:20%">
+      <col style="width:15%">
+      <col style="width:15%">
+      <col style="width:10%">
+      <col style="width:10%">
+      <col style="width:10%">
+      <col style="width:10%">
+    </colgroup>
     <thead>
       <tr>
-        <th class="col-12">Risk Code</th>
-        <th class="col-20">Risk Name</th>
-        <th class="col-15">Category</th>
-        <th class="col-15">Owner</th>
-        <th class="col-12 text-center">Inherent Risk</th>
-        <th class="col-12 text-center">Residual Risk</th>
-        <th class="col-10 text-center">Status</th>
-        <th class="col-14">Response Strategy</th>
+        <th>Risk Code</th>
+        <th>Risk Name</th>
+        <th>Category</th>
+        <th>Owner</th>
+        <th class="text-center">Inherent Risk</th>
+        <th class="text-center">Residual Risk</th>
+        <th class="text-center">Status</th>
+        <th>Response Strategy</th>
       </tr>
     </thead>
     <tbody>

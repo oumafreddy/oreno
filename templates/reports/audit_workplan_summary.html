@@ -20,20 +20,18 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Workplan Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ total_workplans|default:summary|length }}</div>
-      <div class="stat-label">Total Workplans</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ active_workplans|default:summary|dictsort:"state"|length }}</div>
-      <div class="stat-label">Active Workplans</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ fiscal_years|default:summary|dictsort:"fiscal_year"|length }}</div>
-      <div class="stat-label">Fiscal Years</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: 0.5cm;">
+    <colgroup>
+      <col style="width:33.33%">
+      <col style="width:33.33%">
+      <col style="width:33.33%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ total_workplans }}</div><div class="stat-label" style="margin:0;">Total Workplans</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ active_workplans }}</div><div class="stat-label" style="margin:0;">Active Workplans</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ fiscal_years }}</div><div class="stat-label" style="margin:0;">Fiscal Years</div></td>
+    </tr>
+  </table>
   
   <table class="report-table" style="margin-top: 0.5cm;">
     <tr>

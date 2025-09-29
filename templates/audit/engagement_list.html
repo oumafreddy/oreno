@@ -47,10 +47,10 @@
                   <td>{{ engagement.code }}</td>
                   <td>{{ engagement.title }}</td>
                   <td>
-                    {% if engagement.audit_workplan and engagement.audit_workplan.code %}
-                      {{ engagement.audit_workplan.code }}
+                    {% if engagement.annual_workplan %}
+                      {{ engagement.annual_workplan.code }} - {{ engagement.annual_workplan.name }}
                     {% else %}
-                      {{ engagement.audit_workplan }}
+                      <span class="text-muted">-</span>
                     {% endif %}
                   </td>
                   <td>{{ engagement.assigned_to }}</td>

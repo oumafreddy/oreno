@@ -53,20 +53,18 @@
 <!-- Summary Statistics & Filters -->
 <div class="report-card">
   <h3>Engagement Overview & Filters</h3>
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ total_engagements|default:summary|length }}</div>
-      <div class="stat-label">Total Engagements</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ active_engagements|default:summary|dictsort:"project_status"|length }}</div>
-      <div class="stat-label">Active Engagements</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ assigned_auditors|default:summary|dictsort:"assigned_to__email"|length }}</div>
-      <div class="stat-label">Assigned Auditors</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; margin-top: 0; margin-bottom: 0.5cm;">
+    <colgroup>
+      <col style="width:33.33%">
+      <col style="width:33.33%">
+      <col style="width:33.33%">
+    </colgroup>
+    <tr>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ total_engagements }}</div><div class="stat-label" style="margin:0;">Total Engagements</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ active_engagements }}</div><div class="stat-label" style="margin:0;">Active Engagements</div></td>
+      <td class="text-center"><div class="stat-number" style="margin:0;">{{ assigned_auditors }}</div><div class="stat-label" style="margin:0;">Assigned Auditors</div></td>
+    </tr>
+  </table>
   
   <table class="report-table" style="margin-top: 0.5cm;">
     <tr>
