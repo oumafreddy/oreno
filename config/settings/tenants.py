@@ -65,6 +65,7 @@ SHARED_APPS = [
     'django.contrib.messages',
     'django.contrib.admin',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
 
     'reversion',          # Version control
     'django_ckeditor_5',  # Rich text editor

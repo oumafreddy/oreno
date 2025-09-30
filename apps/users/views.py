@@ -892,9 +892,11 @@ class UserPasswordResetConfirmView(PasswordResetConfirmView):
         except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
             return None
     
-    def get_form_kwargs(self):
+    # NOTE: This duplicate was overriding the correct implementation above and dropping the 'user'.
+    # Keeping here renamed for reference; not used.
+    def get_form_kwargs_dup(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.user
+        # Intentionally do not override; use the primary get_form_kwargs above.
         return kwargs
     
     def form_valid(self, form):
