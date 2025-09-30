@@ -40,7 +40,6 @@
         </div>
         <div class="btn-group">
           <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-outline-secondary btn-sm">Edit Issue</a>
-          <a href="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" class="btn btn-outline-primary btn-sm">Add Recommendation</a>
           <a href="{% url 'audit:followupaction-add' issue_pk=issue.pk %}" class="btn btn-outline-primary btn-sm">Add Follow-up</a>
           <a href="{% url 'audit:issueretest-add' issue_pk=issue.pk %}" class="btn btn-outline-primary btn-sm">Add Retest</a>
           <a href="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" class="btn btn-outline-secondary btn-sm">Add Working Paper</a>

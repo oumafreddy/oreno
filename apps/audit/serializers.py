@@ -182,7 +182,7 @@ class IssueSerializer(BaseAuditSerializer):
         fields = [
             'id', 'code', 'issue_title', 'issue_description', 'root_cause',
             'risks', 'date_identified', 'issue_owner', 'issue_owner_title',
-            'audit_procedures', 'engagement',
+            'engagement',
             'risk_level', 'issue_status', 'remediation_status',
             'target_date', 'actual_remediation_date',
             'management_action_plan', 'organization',

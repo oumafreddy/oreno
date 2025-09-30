@@ -2,15 +2,6 @@
   <div class="card shadow-sm mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Recommendations</h5>
-      {% if issue and issue.pk %}
-        <button class="btn btn-primary btn-sm" hx-get="{% url 'audit:recommendation-add' issue_pk=issue.pk %}" hx-target="#modal-body" data-bs-toggle="modal" data-bs-target="#mainModal">
-          <i class="bi bi-plus-circle"></i> Add Recommendation
-        </button>
-      {% else %}
-        <button class="btn btn-primary btn-sm" disabled data-bs-toggle="tooltip" title="Cannot add recommendation: Issue not saved.">
-          <i class="bi bi-plus-circle"></i> Add Recommendation
-        </button>
-      {% endif %}
     </div>
     <div class="card-body p-0">
       {% if recommendations %}

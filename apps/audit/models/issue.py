@@ -82,11 +82,6 @@ class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         null=True,
         verbose_name=_('Issue Owner Title'),
     )
-    audit_procedures = CKEditor5Field(
-        _('Audit Procedures'),
-        config_name='extends',
-        default='Bank reconciliation reperformance',
-    )
     procedure = models.ForeignKey(
         'Procedure',
         on_delete=models.CASCADE,

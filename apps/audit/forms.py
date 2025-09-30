@@ -254,7 +254,7 @@ class IssueForm(BaseAuditForm):
             'code', 'issue_title', 'issue_description', 'root_cause',
             'risks', 'date_identified', 'issue_owner', 'secondary_owner',
             'issue_owner_email', 'issue_owner_title',
-            'audit_procedures', 'issue_status', 'remediation_status',
+            'issue_status', 'remediation_status',
             'target_date', 'actual_remediation_date',
             'procedure', 'impact', 'likelihood', 'risk_level',
             'issue_type', 'is_repeat_issue', 'prior_issue_reference',
