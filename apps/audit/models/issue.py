@@ -48,11 +48,12 @@ class Issue(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
         blank=True,
         null=True,
     )
-    risks = CKEditor5Field(
-        _('Risks'),
-        config_name='extends',
+    risks = models.ManyToManyField(
+        'risk.Risk',
+        related_name='audit_issues',
         blank=True,
-        null=True,
+        verbose_name=_('Related Risks'),
+        help_text=_('Select risks from the organization\'s risk register that are relevant to this audit finding')
     )
     date_identified = models.DateField(
         verbose_name=_("Date Identified"),

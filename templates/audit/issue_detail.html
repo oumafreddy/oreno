@@ -82,7 +82,12 @@
         <div class="card-header">
           <ul class="nav nav-tabs card-header-tabs" id="issueTabs" role="tablist">
             <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">
+              <button class="nav-link active" id="risks-tab" data-bs-toggle="tab" data-bs-target="#risks" type="button" role="tab">
+                Risks
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">
                 Recommendations
               </button>
             </li>
@@ -105,8 +110,13 @@
         </div>
         <div class="card-body">
           <div class="tab-content" id="issueTabsContent">
+            <!-- Risks Tab -->
+            <div class="tab-pane fade show active" id="risks" role="tabpanel">
+              {% include 'audit/_risks_list_partial.html' with risks=issue.risks.all issue=issue %}
+            </div>
+            
             <!-- Recommendations Tab -->
-            <div class="tab-pane fade show active" id="recommendations" role="tabpanel">
+            <div class="tab-pane fade" id="recommendations" role="tabpanel">
               {% include 'audit/_recommendation_list_partial.html' with recommendations=issue.recommendations.all %}
             </div>
             

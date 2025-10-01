@@ -2358,3 +2358,32 @@ def api_cobit_nist_summary(request):
     }
     
     return JsonResponse(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_riskregister_list(request):
+    """API endpoint to list risk registers for audit integration"""
+    org = request.organization
+    registers = RiskRegister.objects.filter(organization=org).values('id', 'register_name')
+    return JsonResponse(list(registers), safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsOrgManagerOrReadOnly])
+def api_risk_list(request):
+    """API endpoint to list risks for audit integration"""
+    org = request.organization
+    risks = Risk.objects.filter(organization=org).select_related('risk_register').values(
+        'id', 'code', 'risk_name', 'risk_description', 'residual_risk_score', 
+        'category', 'risk_register__register_name'
+    )
+    
+    # Convert to list and add risk_register_name for easier access
+    risk_list = []
+    for risk in risks:
+        risk_dict = dict(risk)
+        risk_dict['risk_register_name'] = risk_dict.pop('risk_register__register_name')
+        risk_list.append(risk_dict)
+    
+    return JsonResponse(risk_list, safe=False)

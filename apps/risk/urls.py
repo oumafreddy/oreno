@@ -142,6 +142,10 @@ urlpatterns = [
     path('api/kri-advanced-filter/', views.api_kri_advanced_filter, name='api_kri_advanced_filter'),
     path('api/assessment-advanced-filter/', views.api_assessment_advanced_filter, name='api_assessment_advanced_filter'),
     
+    # API endpoints for audit integration
+    path('api/riskregisters/', views.api_riskregister_list, name='riskregister-list'),
+    path('api/risks/', views.api_risk_list, name='risk-list'),
+    
     # COBIT API Endpoints
     path('api/cobit/domain-distribution/', views.api_cobit_domain_distribution, name='api_cobit_domain_distribution'),
     path('api/cobit/control-status/', views.api_cobit_control_status, name='api_cobit_control_status'),

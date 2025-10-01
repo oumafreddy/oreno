@@ -1,0 +1,47 @@
+<div id="risks-list-container">
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Related Risks</h5>
+      <div class="btn-group">
+        <a href="{% url 'audit:issue-risks' issue.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-gear"></i> Manage Risks
+        </a>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      {% if risks %}
+        <div class="list-group">
+          {% for risk in risks %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">{{ risk.code }}: {{ risk.risk_name }}</h6>
+                  <p class="mb-1 text-muted">{{ risk.risk_description|truncatewords:30|safe }}</p>
+                  <div class="d-flex gap-2">
+                    <span class="badge bg-primary">{{ risk.risk_register.register_name }}</span>
+                    <span class="badge bg-{% if risk.residual_risk_score >= 20 %}danger{% elif risk.residual_risk_score >= 10 %}warning{% else %}success{% endif %}">
+                      Risk Score: {{ risk.residual_risk_score }}
+                    </span>
+                    <span class="badge bg-secondary">{{ risk.get_category_display }}</span>
+                  </div>
+                </div>
+                <div class="btn-group" role="group">
+                  <a href="{% url 'risk:risk_detail' risk.pk %}" class="btn btn-sm btn-outline-primary" target="_blank">View</a>
+                  <a href="{% url 'audit:issue-risks' issue.pk %}" class="btn btn-sm btn-outline-secondary">Manage</a>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-4">
+          <p class="text-muted mb-3">No risks linked to this issue yet.</p>
+          <a href="{% url 'audit:issue-risks' issue.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-link-45deg"></i> Link or Add Risks
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<!-- Modals and inline JS removed per template rules. Use full-page management. -->

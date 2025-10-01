@@ -271,6 +271,7 @@ class IssueForm(BaseAuditForm):
             'verification_date': forms.DateInput(attrs={'type': 'date'}),
             'issue_description': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'root_cause': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'risks': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'business_impact': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'management_action_plan': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'verification_method': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),

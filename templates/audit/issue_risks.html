@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Risks - {{ issue.issue_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Manage Risks</h2>
+      <div class="text-muted">Issue: {{ issue.issue_title }} ({{ issue.code }})</div>
+    </div>
+    <div class="btn-group">
+      <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-outline-secondary btn-sm">Back to Issue</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header"><strong>Linked Risks</strong></div>
+        <div class="card-body">
+          {% if linked_risks %}
+            <div class="list-group">
+              {% for risk in linked_risks %}
+                <div class="list-group-item d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <strong>{{ risk.code }}: {{ risk.risk_name }}</strong>
+                    <div class="text-muted small">{{ risk.risk_register.register_name }} · Score: {{ risk.residual_risk_score }}</div>
+                  </div>
+                  <form method="post" action="{% url 'audit:issue-unlink-risk' issue.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="risk_id" value="{{ risk.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Unlink</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No risks linked yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header"><strong>Link Existing Risk</strong></div>
+        <div class="card-body">
+          <form method="post" action="{% url 'audit:issue-link-risk' issue.pk %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Filter by Register (optional)</label>
+              <select class="form-select" id="register_filter" onchange="filterRisks()">
+                <option value="">All Registers</option>
+                {% for reg in risk_registers %}
+                  <option value="{{ reg.id }}" {% if selected_register_id == reg.id|stringformat:"s" %}selected{% endif %}>{{ reg.register_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Select Risk</label>
+              <select class="form-select" id="risk_select" name="risk_id" required>
+                <option value="">Select Risk</option>
+                {% for risk in available_risks %}
+                  <option value="{{ risk.id }}" data-register="{{ risk.risk_register.id }}">{{ risk.code }}: {{ risk.risk_name }} ({{ risk.risk_register.register_name }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary">Link Selected Risk</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><strong>Add New Risk</strong></div>
+        <div class="card-body">
+          <a class="btn btn-success" href="{% url 'risk:risk_create' %}" target="_blank">Open Full Risk Form</a>
+          <p class="text-muted mt-2 mb-0 small">After creating the risk, return here to link it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterRisks() {
+    const registerFilter = document.getElementById('register_filter');
+    const riskSelect = document.getElementById('risk_select');
+    const selectedRegisterId = registerFilter.value;
+    
+    // Get all risk options
+    const allRiskOptions = riskSelect.querySelectorAll('option[data-register]');
+    
+    // Hide all risk options first
+    allRiskOptions.forEach(option => {
+        option.style.display = 'none';
+    });
+    
+    // Show only risks from selected register, or all if no register selected
+    allRiskOptions.forEach(option => {
+        if (!selectedRegisterId || option.getAttribute('data-register') === selectedRegisterId) {
+            option.style.display = 'block';
+        }
+    });
+    
+    // Reset the risk selection
+    riskSelect.value = '';
+}
+
+// Initialize the filter on page load
+document.addEventListener('DOMContentLoaded', function() {
+    filterRisks();
+});
+</script>
+{% endblock %}
+
+

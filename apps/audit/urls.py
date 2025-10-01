@@ -97,6 +97,9 @@ urlpatterns = [
     path('issues/<int:pk>/update/', IssueUpdateView.as_view(), name='issue-update'),
     path('issues/<int:pk>/close/', views.close_issue, name='issue-close'),
     path('issues/<int:pk>/reopen/', views.reopen_issue, name='issue-reopen'),
+    path('issues/<int:pk>/risks/', views.IssueRiskManageView.as_view(), name='issue-risks'),
+    path('issues/<int:pk>/link-risk/', views.link_risk_to_issue, name='issue-link-risk'),
+    path('issues/<int:pk>/unlink-risk/', views.unlink_risk_from_issue, name='issue-unlink-risk'),
     
     # ─── APPROVAL URLS ──────────────────────────────────────────────────────
     path('approvals/create/', ApprovalCreateView.as_view(), name='approval-create'),

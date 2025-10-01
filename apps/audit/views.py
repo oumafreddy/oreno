@@ -1858,6 +1858,32 @@ def close_issue(request, pk):
     messages.success(request, _("Issue closed successfully."))
     return redirect('audit:issue-detail', pk=pk)
 
+class IssueRiskManageView(AuditPermissionMixin, DetailView):
+    model = Issue
+    template_name = 'audit/issue_risks.html'
+    context_object_name = 'issue'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        issue = self.object
+        # Provide risks queryset for current organization (tenant-aware)
+        from risk.models import Risk
+        from risk.models import RiskRegister
+        
+        # Get selected register from GET parameter
+        selected_register_id = self.request.GET.get('register_id')
+        
+        # Filter risks by selected register if provided
+        risks_queryset = Risk.objects.filter(organization=self.request.organization)
+        if selected_register_id:
+            risks_queryset = risks_queryset.filter(risk_register_id=selected_register_id)
+        
+        context['available_risks'] = risks_queryset
+        context['linked_risks'] = issue.risks.all()
+        context['risk_registers'] = RiskRegister.objects.filter(organization=self.request.organization)
+        context['selected_register_id'] = selected_register_id
+        return context
+
 @login_required
 def reopen_issue(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
@@ -1865,6 +1891,72 @@ def reopen_issue(request, pk):
     issue.save()
     messages.success(request, _("Issue reopened successfully."))
     return redirect('audit:issue-detail', pk=pk)
+
+@login_required
+def link_risk_to_issue(request, pk):
+    """Link a risk from the risk app to an audit issue"""
+    if request.method == 'POST':
+        try:
+            issue = get_object_or_404(Issue, pk=pk)
+            risk_id = request.POST.get('risk_id')
+            
+            if not risk_id:
+                messages.error(request, 'Risk ID is required')
+                return redirect('audit:issue-risks', pk=pk)
+            
+            # Import here to avoid circular imports
+            from risk.models import Risk
+            risk = get_object_or_404(Risk, pk=risk_id)
+            
+            # Check if risk is already linked
+            if risk in issue.risks.all():
+                messages.warning(request, f'Risk "{risk.risk_name}" is already linked to this issue')
+                return redirect('audit:issue-risks', pk=pk)
+            
+            # Link the risk
+            issue.risks.add(risk)
+            messages.success(request, f'Risk "{risk.risk_name}" linked successfully')
+            
+            return redirect('audit:issue-risks', pk=pk)
+            
+        except Exception as e:
+            messages.error(request, f'Error linking risk: {str(e)}')
+            return redirect('audit:issue-risks', pk=pk)
+    
+    return redirect('audit:issue-risks', pk=pk)
+
+@login_required
+def unlink_risk_from_issue(request, pk):
+    """Unlink a risk from an audit issue"""
+    if request.method == 'POST':
+        try:
+            issue = get_object_or_404(Issue, pk=pk)
+            risk_id = request.POST.get('risk_id')
+            
+            if not risk_id:
+                messages.error(request, 'Risk ID is required')
+                return redirect('audit:issue-risks', pk=pk)
+            
+            # Import here to avoid circular imports
+            from risk.models import Risk
+            risk = get_object_or_404(Risk, pk=risk_id)
+            
+            # Check if risk is linked
+            if risk not in issue.risks.all():
+                messages.warning(request, f'Risk "{risk.risk_name}" is not linked to this issue')
+                return redirect('audit:issue-risks', pk=pk)
+            
+            # Unlink the risk
+            issue.risks.remove(risk)
+            messages.success(request, f'Risk "{risk.risk_name}" unlinked successfully')
+            
+            return redirect('audit:issue-risks', pk=pk)
+            
+        except Exception as e:
+            messages.error(request, f'Error unlinking risk: {str(e)}')
+            return redirect('audit:issue-risks', pk=pk)
+    
+    return redirect('audit:issue-risks', pk=pk)
 
 @login_required
 def approve_approval(request, pk):
