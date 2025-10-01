@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('audit', '0009_add_risks_to_historicalissue'),
+        ('audit', '0006_restore_issue_risks_text'),
         ('risk', '0004_objective_risk_objectives_and_more'),
     ]
 

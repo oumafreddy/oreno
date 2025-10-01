@@ -302,7 +302,7 @@ class RiskCreateView(AuditPermissionMixin, LoginRequiredMixin, SuccessMessageMix
             raise
     
     def form_invalid(self, form):
-        return super().form_invalid(form)
+            return super().form_invalid(form)
     
     def get_context_data(self, **kwargs):
         try:
@@ -1555,7 +1555,7 @@ def submit_workplan(request, pk):
         if can_proceed(workplan.submit_for_approval):
             workplan.submit_for_approval()
             workplan.save()
-            
+
             # Create approval record
             from django.contrib.contenttypes.models import ContentType
             Approval.objects.create(
@@ -1574,7 +1574,7 @@ def submit_workplan(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send workplan approval notification: {str(e)}")
-            
+
             messages.success(request, _("Workplan submitted for approval successfully."))
         else:
             messages.error(request, _("Cannot submit workplan for approval in its current state."))
@@ -1606,7 +1606,7 @@ def approve_workplan(request, pk):
         if can_proceed(workplan.approve):
             workplan.approve()
             workplan.save()
-            
+
             # Update approval record
             approval = Approval.objects.filter(
                 content_type=ContentType.objects.get_for_model(AuditWorkplan),
@@ -1628,7 +1628,7 @@ def approve_workplan(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send workplan approval notification: {str(e)}")
-            
+
             messages.success(request, _("Workplan approved successfully."))
         else:
             messages.error(request, _("Cannot approve workplan in its current state."))
@@ -1660,7 +1660,7 @@ def reject_workplan(request, pk):
         if can_proceed(workplan.reject):
             workplan.reject()
             workplan.save()
-            
+
             # Update approval record
             approval = Approval.objects.filter(
                 content_type=ContentType.objects.get_for_model(AuditWorkplan),
@@ -1682,7 +1682,7 @@ def reject_workplan(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send workplan rejection notification: {str(e)}")
-            
+
             messages.success(request, _("Workplan rejected."))
         else:
             messages.error(request, _("Cannot reject workplan in its current state."))
@@ -1714,7 +1714,7 @@ def submit_engagement(request, pk):
         if can_proceed(engagement.submit_for_approval):
             engagement.submit_for_approval()
             engagement.save()
-            
+
             # Create approval record
             from django.contrib.contenttypes.models import ContentType
             Approval.objects.create(
@@ -1733,7 +1733,7 @@ def submit_engagement(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send engagement approval notification: {str(e)}")
-            
+
             messages.success(request, _("Engagement submitted for approval successfully."))
         else:
             messages.error(request, _("Cannot submit engagement for approval in its current state."))
@@ -1765,7 +1765,7 @@ def approve_engagement(request, pk):
         if can_proceed(engagement.approve):
             engagement.approve()
             engagement.save()
-            
+
             # Update approval record
             approval = Approval.objects.filter(
                 content_type=ContentType.objects.get_for_model(Engagement),
@@ -1787,7 +1787,7 @@ def approve_engagement(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send engagement approval notification: {str(e)}")
-            
+
             messages.success(request, _("Engagement approved successfully."))
         else:
             messages.error(request, _("Cannot approve engagement in its current state."))
@@ -1819,7 +1819,7 @@ def reject_engagement(request, pk):
         if can_proceed(engagement.reject):
             engagement.reject()
             engagement.save()
-            
+
             # Update approval record
             approval = Approval.objects.filter(
                 content_type=ContentType.objects.get_for_model(Engagement),
@@ -1841,7 +1841,7 @@ def reject_engagement(request, pk):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send engagement rejection notification: {str(e)}")
-            
+
             messages.success(request, _("Engagement rejected."))
         else:
             messages.error(request, _("Cannot reject engagement in its current state."))
@@ -3170,7 +3170,7 @@ class NoteDeleteView(AuditPermissionMixin, DeleteView):
     def get_queryset(self):
         # Ensure user can only delete notes in their organization
         return super().get_queryset().filter(organization=self.request.organization)
-    
+
     def get_success_url(self):
         # Redirect back to the parent object if it exists
         if hasattr(self.object, 'content_object') and self.object.content_object:

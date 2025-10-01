@@ -580,7 +580,7 @@ if (typeof window.ensureCkeditorClass === 'undefined') {
         }
     }
     
-        /**
+    /**
      * Initialize components inside modal forms
      */
     function initializeFormElements(target) {
