@@ -29,5 +29,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_table_forward, create_table_reverse),
+        # No-op migration - table creation is handled in migration 0014
+        # This migration is kept for historical consistency but does nothing
     ]

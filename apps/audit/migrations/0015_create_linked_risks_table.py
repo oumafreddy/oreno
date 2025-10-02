@@ -48,5 +48,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_linked_risks_table_forward, create_linked_risks_table_reverse),
+        # No-op migration - table creation is handled in migration 0014
+        # This migration is kept for historical consistency but does nothing
     ]
