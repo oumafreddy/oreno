@@ -1879,7 +1879,7 @@ class IssueRiskManageView(AuditPermissionMixin, DetailView):
             risks_queryset = risks_queryset.filter(risk_register_id=selected_register_id)
         
         context['available_risks'] = risks_queryset
-        context['linked_risks'] = issue.risks.all()
+        context['linked_risks'] = issue.linked_risks.all()
         context['risk_registers'] = RiskRegister.objects.filter(organization=self.request.organization)
         context['selected_register_id'] = selected_register_id
         return context
@@ -1909,12 +1909,12 @@ def link_risk_to_issue(request, pk):
             risk = get_object_or_404(Risk, pk=risk_id)
             
             # Check if risk is already linked
-            if risk in issue.risks.all():
+            if risk in issue.linked_risks.all():
                 messages.warning(request, f'Risk "{risk.risk_name}" is already linked to this issue')
                 return redirect('audit:issue-risks', pk=pk)
             
             # Link the risk
-            issue.risks.add(risk)
+            issue.linked_risks.add(risk)
             messages.success(request, f'Risk "{risk.risk_name}" linked successfully')
             
             return redirect('audit:issue-risks', pk=pk)
@@ -1942,12 +1942,12 @@ def unlink_risk_from_issue(request, pk):
             risk = get_object_or_404(Risk, pk=risk_id)
             
             # Check if risk is linked
-            if risk not in issue.risks.all():
+            if risk not in issue.linked_risks.all():
                 messages.warning(request, f'Risk "{risk.risk_name}" is not linked to this issue')
                 return redirect('audit:issue-risks', pk=pk)
             
             # Unlink the risk
-            issue.risks.remove(risk)
+            issue.linked_risks.remove(risk)
             messages.success(request, f'Risk "{risk.risk_name}" unlinked successfully')
             
             return redirect('audit:issue-risks', pk=pk)

@@ -112,7 +112,7 @@
           <div class="tab-content" id="issueTabsContent">
             <!-- Risks Tab -->
             <div class="tab-pane fade show active" id="risks" role="tabpanel">
-              {% include 'audit/_risks_list_partial.html' with risks=issue.risks.all issue=issue %}
+              {% include 'audit/_risks_list_partial.html' with risks=issue.linked_risks.all issue=issue %}
             </div>
             
             <!-- Recommendations Tab -->

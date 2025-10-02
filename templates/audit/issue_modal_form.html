@@ -46,7 +46,7 @@
     {{ form.issue_title|as_crispy_field }}
     {% include 'audit/_ckeditor_field.html' with field=form.issue_description %}
     {% include 'audit/_ckeditor_field.html' with field=form.root_cause %}
-    {{ form.risks|as_crispy_field }}
+    {% include 'audit/_ckeditor_field.html' with field=form.risks %}
     {{ form.date_identified|as_crispy_field }}
     {{ form.issue_owner|as_crispy_field }}
     {{ form.secondary_owner|as_crispy_field }}
