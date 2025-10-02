@@ -29,7 +29,7 @@
             <div class="col-md-6">
               <table class="table table-sm mb-0">
                 <tr><th class="w-25">Code</th><td>{{ engagement.code }}</td></tr>
-                <tr><th>Type</th><td>{{ engagement.get_engagement_type_display }}</td></tr>
+                <tr><th>Type</th><td>{{ engagement.engagement_type|default:"Not specified" }}</td></tr>
                 <tr><th>Start</th><td>{{ engagement.project_start_date }}</td></tr>
               </table>
             </div>

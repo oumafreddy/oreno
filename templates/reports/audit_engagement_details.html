@@ -133,9 +133,29 @@
       {% endif %}
     {% endwith %}
 
-    {% if issue.risks %}
+    {% if issue.risks or issue.linked_risks.all %}
     <div class="field-label">Risks</div>
-    <div class="field-value">{{ issue.risks|safe }}</div>
+    <div class="field-value">
+      {% if issue.risks %}
+        {{ issue.risks|safe }}
+      {% endif %}
+      
+      {% if issue.linked_risks.all %}
+        {% if issue.risks %}<br><br>{% endif %}
+        <div style="font-weight: bold; margin-bottom: 8px;">Risks from Risk App:</div>
+        {% for risk in issue.linked_risks.all %}
+          <div style="margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #007bff;">
+            <div style="font-weight: bold;">{{ risk.risk_name }}</div>
+            {% if risk.risk_description %}
+              <div style="margin: 4px 0; font-size: 0.9em;">{{ risk.risk_description|safe }}</div>
+            {% endif %}
+            <div style="font-size: 0.8em; color: #666; font-style: italic;">
+              Register: {{ risk.risk_register.register_name|default:"Not specified" }}
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
     {% endif %}
 
     {% if issue.management_action_plan %}
