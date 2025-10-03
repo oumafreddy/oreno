@@ -537,6 +537,7 @@ class UserListView(UserPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        context['can_change_roles'] = self.request.user.role == CustomUser.ROLE_ADMIN
         return context
 
 class UserDetailView(UserPermissionMixin, DetailView):
@@ -553,6 +554,7 @@ class UserDetailView(UserPermissionMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        context['can_change_roles'] = self.request.user.role == CustomUser.ROLE_ADMIN
         return context
 
 class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
@@ -567,9 +569,15 @@ class UserUpdateView(UserPermissionMixin, SuccessMessageMixin, UpdateView):
     def get_organization(self):
         return self.get_object().organization
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['can_create_users'] = self.request.user.role == CustomUser.ROLE_ADMIN
+        context['can_change_roles'] = self.request.user.role == CustomUser.ROLE_ADMIN
         return context
 
 class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
@@ -922,6 +930,12 @@ class OrganizationRoleCreateView(UserPermissionMixin, SuccessMessageMixin, Creat
     template_name = 'users/organization_role_form.html'
     success_message = _("Organization role created successfully")
 
+    def dispatch(self, request, *args, **kwargs):
+        # Only allow admin users to create organization roles
+        if request.user.role != CustomUser.ROLE_ADMIN:
+            raise PermissionDenied(_("Only administrators can create organization roles."))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse_lazy('users:user-detail', kwargs={'pk': self.object.user.pk})
 
@@ -935,6 +949,12 @@ class OrganizationRoleUpdateView(UserPermissionMixin, SuccessMessageMixin, Updat
     template_name = 'users/organization_role_form.html'
     success_message = _("Organization role updated successfully")
 
+    def dispatch(self, request, *args, **kwargs):
+        # Only allow admin users to update organization roles
+        if request.user.role != CustomUser.ROLE_ADMIN:
+            raise PermissionDenied(_("Only administrators can update organization roles."))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse_lazy('users:user-detail', kwargs={'pk': self.object.user.pk})
 
@@ -942,6 +962,12 @@ class OrganizationRoleDeleteView(UserPermissionMixin, SuccessMessageMixin, Delet
     model = OrganizationRole
     template_name = 'users/organization_role_confirm_delete.html'
     success_message = _("Organization role deleted successfully")
+
+    def dispatch(self, request, *args, **kwargs):
+        # Only allow admin users to delete organization roles
+        if request.user.role != CustomUser.ROLE_ADMIN:
+            raise PermissionDenied(_("Only administrators can delete organization roles."))
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse_lazy('users:user-detail', kwargs={'pk': self.object.user.pk})

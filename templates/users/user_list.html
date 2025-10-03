@@ -61,7 +61,11 @@
               </td>
               <td>
                 <a href="{% url 'users:user-detail' user.pk %}" class="btn btn-sm btn-outline-info">View</a>
-                <a href="{% url 'users:user-update' user.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                {% if can_change_roles %}
+                  <a href="{% url 'users:user-update' user.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                {% else %}
+                  <a href="{% url 'users:user-update' user.pk %}" class="btn btn-sm btn-outline-secondary" title="Limited editing - role changes not allowed">Edit</a>
+                {% endif %}
                 {% if request.user.can_delete_users %}
                 <a href="{% url 'users:user-delete' user.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                 {% endif %}

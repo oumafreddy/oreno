@@ -332,6 +332,27 @@ class CustomUserChangeForm(BaseUserForm, UserChangeForm):
             'password_expiration_period': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        # Extract the current user from kwargs to check if they're admin
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        
+        # If current user is not admin, disable the role field
+        if self.current_user and self.current_user.role != CustomUser.ROLE_ADMIN:
+            self.fields['role'].widget.attrs['disabled'] = True
+            self.fields['role'].widget.attrs['class'] = 'form-select form-control-plaintext'
+            self.fields['role'].help_text = _("Only administrators can change user roles.")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # If current user is not admin and role field is disabled, preserve the original role
+        if self.current_user and self.current_user.role != CustomUser.ROLE_ADMIN:
+            if self.instance and self.instance.pk:
+                cleaned_data['role'] = self.instance.role
+        
+        return cleaned_data
+
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile

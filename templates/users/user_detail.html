@@ -30,6 +30,11 @@
         </dl>
         <div class="text-end mt-4">
           <a href="{% url 'users:password_change' %}" class="btn btn-warning">Change Password</a>
+          {% if can_change_roles %}
+            <a href="{% url 'users:user-update' user.pk %}" class="btn btn-primary ms-2">Edit User</a>
+          {% else %}
+            <a href="{% url 'users:user-update' user.pk %}" class="btn btn-outline-primary ms-2">View Details</a>
+          {% endif %}
         </div>
       </div>
     </div>

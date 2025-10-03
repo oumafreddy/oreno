@@ -28,6 +28,14 @@
         <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
           {{ form|crispy }}
+          
+          {% if not can_change_roles %}
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Only administrators can change user roles. The role field is read-only for your current permission level.
+          </div>
+          {% endif %}
+          
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success">Save Changes</button>
             <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-secondary ms-2">Cancel</a>
