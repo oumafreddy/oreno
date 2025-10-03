@@ -153,24 +153,16 @@ class OTPVerifySerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6, write_only=True)
 
     def validate_code(self, value):
-        try:
-            otp = OTP.objects.get(
-                user=self.context['request'].user,
-                code=value,
-                is_verified=False
-            )
-        except OTP.DoesNotExist:
+        user = self.context['request'].user
+        otp = OTP.get_latest_active(user)
+        if not otp or otp.otp != value:
             raise serializers.ValidationError(_("Invalid code."))
-
-        if otp.is_expired():
+        if otp.has_expired():
             raise serializers.ValidationError(_("Code has expired."))
         return value
 
     def save(self):
-        otp = OTP.objects.get(
-            user=self.context['request'].user,
-            code=self.validated_data['code']
-        )
+        otp = OTP.get_latest_active(self.context['request'].user)
         otp.is_verified = True
         otp.save()
         return otp
@@ -179,13 +171,8 @@ class OTPResendSerializer(serializers.Serializer):
     """Serializer for requesting new OTP"""
     def save(self):
         user = self.context['request'].user
-        # Expire old codes
-        OTP.objects.filter(
-            user=user,
-            is_verified=False
-        ).update(is_expired=True)
-        # Create and send new OTP
-        new_otp = OTP.objects.create(user=user)
+        # Generate or reuse OTP with throttling, preserving resend behavior
+        new_otp = OTP.generate_or_reuse(user)
         new_otp.send_via_email()
         return new_otp
 

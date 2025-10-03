@@ -271,12 +271,12 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         
-        # Get or create OTP for the user
-        otp, created = OTP.objects.get_or_create(
-            user=user,
-            is_verified=False,
-            defaults={'is_expired': False}
-        )
+        # Deterministically reuse latest active OTP, otherwise create a new one
+        otp = OTP.get_latest_active(user)
+        created = False
+        if not otp:
+            otp = OTP.generate_or_reuse(user)
+            created = True
         
         if created:
             # Send OTP via email
@@ -418,14 +418,8 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
         """Handle OTP resend request."""
         user = request.user
         
-        # Expire old OTPs
-        OTP.objects.filter(
-            user=user,
-            is_verified=False
-        ).update(is_expired=True)
-        
-        # Create new OTP
-        new_otp = OTP.objects.create(user=user)
+        # Generate or reuse OTP with throttling
+        new_otp = OTP.generate_or_reuse(user)
         
         try:
             new_otp.send_via_email()

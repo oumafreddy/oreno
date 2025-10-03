@@ -7,6 +7,8 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.utils.translation import gettext_lazy as _
+from django.db import transaction
+from django.db.models import Q
 from core.models.abstract_models import TimeStampedModel
 from django.core.exceptions import ValidationError
 from django.db.models import F
@@ -264,6 +266,13 @@ class OTP(models.Model):
             models.Index(fields=['expires_at']),
         ]
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=Q(is_verified=False, is_expired=False),
+                name='unique_active_otp_per_user'
+            )
+        ]
 
     def __str__(self):
         return f"OTP for {self.user.email} - {self.otp} (Verified: {self.is_verified})"
@@ -302,6 +311,34 @@ class OTP(models.Model):
             return True
         self.increment_attempts()
         return False
+
+    @classmethod
+    def get_latest_active(cls, user):
+        return cls.objects.filter(
+            user=user,
+            is_verified=False,
+            is_expired=False
+        ).order_by('-created_at').first()
+
+    @classmethod
+    def generate_or_reuse(cls, user, throttle_seconds: int = 60):
+        """
+        Create a new OTP for the user, expiring previous unverified ones.
+        Throttle generation if a recent active OTP exists within throttle_seconds.
+        Returns an OTP instance (existing or newly created).
+        """
+        from django.utils import timezone
+        with transaction.atomic():
+            latest = cls.get_latest_active(user)
+            if latest and (timezone.now() - latest.created_at).total_seconds() < throttle_seconds:
+                return latest
+
+            # Expire any existing unverified OTPs deterministically
+            cls.objects.filter(user=user, is_verified=False, is_expired=False).update(is_expired=True)
+
+            # Create a fresh OTP
+            new_otp = cls.objects.create(user=user)
+            return new_otp
 
     @classmethod
     def cleanup_expired(cls):
