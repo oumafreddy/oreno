@@ -301,6 +301,11 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
             'otp': otp,
             'is_admin_created': user.is_admin_created,
             'policy_hints': policy_hints,
+            # Prevent duplicate message rendering: base.html shows messages
+            # unless a specific context is set. By scoping messages to this
+            # page, the global renderer is suppressed and only the in-card
+            # alerts in this template are shown.
+            'message_context': 'first_time_setup',
         })
         return context
     
