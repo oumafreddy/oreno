@@ -1,5 +1,6 @@
 # Virtual environment directories
 .venv/
+.env/
 venv/
 env/
 
@@ -9,6 +10,7 @@ config/db.sqlite3
 
 # Database dump files
 *.dump
+*.csv
 
 # Compiled Python files and caches
 __pycache__/
@@ -24,6 +26,7 @@ __pycache__/
 # Logs and temporary files
 config/logs/
 *.log
+*.md
 
 # Other unnecessary files
 media/
