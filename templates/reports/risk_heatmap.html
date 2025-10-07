@@ -82,24 +82,26 @@
 <div class="section-header">Risk Statistics Dashboard</div>
 <div class="content-wrapper">
   {% if total_risks > 0 %}
-  <div class="stats-grid">
-    <div class="stat-item">
-      <div class="stat-number">{{ total_risks }}</div>
-      <div class="stat-label">TOTAL RISKS</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ high_risk_count }}</div>
-      <div class="stat-label">HIGH RISK</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ medium_risk_count }}</div>
-      <div class="stat-label">MEDIUM RISK</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-number">{{ low_risk_count }}</div>
-      <div class="stat-label">LOW RISK</div>
-    </div>
-  </div>
+  <table class="report-table" style="table-layout: fixed; width: 100%;">
+    <tr>
+      <td style="text-align:center;">
+        <div class="stat-number">{{ total_risks }}</div>
+        <div class="stat-label">TOTAL RISKS</div>
+      </td>
+      <td style="text-align:center;">
+        <div class="stat-number">{{ high_risk_count }}</div>
+        <div class="stat-label">HIGH RISK</div>
+      </td>
+      <td style="text-align:center;">
+        <div class="stat-number">{{ medium_risk_count }}</div>
+        <div class="stat-label">MEDIUM RISK</div>
+      </td>
+      <td style="text-align:center;">
+        <div class="stat-number">{{ low_risk_count }}</div>
+        <div class="stat-label">LOW RISK</div>
+      </td>
+    </tr>
+  </table>
   {% else %}
   <div class="alert alert-warning">
     <strong>No Data Available:</strong> No risk statistics can be calculated without risk data.
