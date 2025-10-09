@@ -215,7 +215,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
     'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
-    'audit.views.RequestWrapper',  # For HTMX attribute handling
 ]
 
 # Content Security Policy
@@ -420,7 +419,7 @@ SECURITY_SETTINGS = {
 # Internationalization
 # ------------------------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = os.getenv('DJANGO_TIME_ZONE', 'UTC')
+TIME_ZONE = os.getenv('DJANGO_TIME_ZONE', 'Africa/Nairobi')
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
