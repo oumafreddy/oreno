@@ -343,7 +343,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'users.validators.EnhancedPasswordStrengthValidator',
         'OPTIONS': {
-            'min_length': 12,
+            'min_length': 8,
             'max_length': 128,
         }
     },
@@ -354,7 +354,7 @@ AUTH_PASSWORD_VALIDATORS = [
             'require_lowercase': True,
             'require_digits': True,
             'require_special': True,
-            'min_length': 12,
+            'min_length': 8,
         }
     },
     {
@@ -387,7 +387,7 @@ PASSWORD_HASHERS = [
 
 # Password policy settings
 PASSWORD_POLICY = {
-    'DEFAULT_MIN_LENGTH': 12,
+    'DEFAULT_MIN_LENGTH': 8,
     'DEFAULT_MAX_LENGTH': 128,
     'DEFAULT_HISTORY_COUNT': 8,
     'DEFAULT_EXPIRATION_DAYS': 90,
