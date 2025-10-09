@@ -42,3 +42,4 @@ oreno/
 .env.validations.local
 .env.oreno.backup
 *.md
+!README.md
