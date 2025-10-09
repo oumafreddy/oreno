@@ -92,6 +92,7 @@ TENANT_APPS = [
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
     'ai_governance.apps.AIGovernanceConfig',
+    'services.agent.apps.AgentConfig',
 
     # Third-party integrations
     'rest_framework',

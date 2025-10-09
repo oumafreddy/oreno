@@ -19,7 +19,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from common.views import service_paused
-from audit import views as audit_views
+from audit import views as audit_views  # type: ignore[reportMissingImports]
 
 # Define a simple home view
 def home(request):
@@ -99,6 +99,8 @@ urlpatterns = [
 
     # AI Assistant API - Keep this one
     path('api/ai/', include('services.ai.urls')),
+    # Agent endpoints
+    path('api/agent/', include(('services.agent.urls','agent'), namespace='agent')),
 ]
 
 # Debug-specific URL patterns
