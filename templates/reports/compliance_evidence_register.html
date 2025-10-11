@@ -81,12 +81,15 @@
     .evidence-summary-table {
       font-size: 7pt !important;
       margin: 0.3cm 0 !important;
+      table-layout: fixed !important;
     }
     .evidence-summary-table th,
     .evidence-summary-table td {
       padding: 4px 3px !important;
       font-size: 7pt !important;
       line-height: 1.2 !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
     }
     .evidence-summary-table th {
       font-size: 7pt !important;
@@ -97,6 +100,7 @@
       font-size: 6pt !important;
       padding: 2px 4px !important;
       min-width: 50px !important;
+      white-space: nowrap !important;
     }
     .evidence-summary-table strong {
       font-size: 7pt !important;
@@ -146,14 +150,43 @@
 <!-- Evidence Status Distribution -->
 <div class="report-card">
   <h3>Evidence Status Distribution</h3>
-  <table class="report-table">
+  <style>
+    /* Specific styling for Evidence Status Distribution table */
+    .status-distribution-table {
+      font-size: 8pt !important;
+      margin: 0.3cm 0 !important;
+      table-layout: fixed !important;
+    }
+    .status-distribution-table th,
+    .status-distribution-table td {
+      padding: 4px 6px !important;
+      font-size: 8pt !important;
+      line-height: 1.2 !important;
+    }
+    .status-distribution-table th {
+      font-size: 8pt !important;
+      font-weight: 600 !important;
+    }
+    .status-distribution-table .risk-level {
+      font-size: 7pt !important;
+      padding: 2px 6px !important;
+      white-space: nowrap !important;
+    }
+    /* Specific column widths for better fit */
+    .status-distribution-table .col-status { width: 20%; }
+    .status-distribution-table .col-count { width: 15%; }
+    .status-distribution-table .col-percentage { width: 15%; }
+    .status-distribution-table .col-obligations { width: 15%; }
+    .status-distribution-table .col-risk { width: 35%; }
+  </style>
+  <table class="report-table status-distribution-table">
     <thead>
       <tr>
-        <th class="col-25">Status</th>
-        <th class="col-15 text-center">Count</th>
-        <th class="col-15 text-center">Percentage</th>
-        <th class="col-15 text-center">Obligations</th>
-        <th class="col-30 text-center">Risk Level</th>
+        <th class="col-status">Status</th>
+        <th class="col-count text-center">Count</th>
+        <th class="col-percentage text-center">Percentage</th>
+        <th class="col-obligations text-center">Obligations</th>
+        <th class="col-risk text-center">Risk Level</th>
       </tr>
     </thead>
     <tbody>
@@ -177,21 +210,52 @@
 <!-- Obligation Evidence Coverage -->
 <div class="report-card">
   <h3>Obligation Evidence Coverage</h3>
-  <table class="report-table">
+  <style>
+    /* Specific styling for Obligation Evidence Coverage table */
+    .obligation-coverage-table {
+      font-size: 8pt !important;
+      margin: 0.3cm 0 !important;
+      table-layout: fixed !important;
+    }
+    .obligation-coverage-table th,
+    .obligation-coverage-table td {
+      padding: 4px 6px !important;
+      font-size: 8pt !important;
+      line-height: 1.2 !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
+    }
+    .obligation-coverage-table th {
+      font-size: 8pt !important;
+      font-weight: 600 !important;
+    }
+    .obligation-coverage-table .status-badge {
+      font-size: 7pt !important;
+      padding: 2px 6px !important;
+      white-space: nowrap !important;
+    }
+    /* Specific column widths for better fit */
+    .obligation-coverage-table .col-obligation { width: 20%; }
+    .obligation-coverage-table .col-requirement { width: 35%; }
+    .obligation-coverage-table .col-count { width: 12%; }
+    .obligation-coverage-table .col-valid { width: 12%; }
+    .obligation-coverage-table .col-status { width: 21%; }
+  </style>
+  <table class="report-table obligation-coverage-table">
     <thead>
       <tr>
-        <th class="col-25">Obligation</th>
-        <th class="col-20">Requirement</th>
-        <th class="col-15 text-center">Evidence Count</th>
-        <th class="col-15 text-center">Valid Evidence</th>
-        <th class="col-25 text-center">Coverage Status</th>
+        <th class="col-obligation">Obligation ID</th>
+        <th class="col-requirement">Requirement</th>
+        <th class="col-count text-center">Evidence Count</th>
+        <th class="col-valid text-center">Valid Evidence</th>
+        <th class="col-status text-center">Coverage Status</th>
       </tr>
     </thead>
     <tbody>
       {% for obligation in obligation_evidence_coverage %}
       <tr>
-        <td><strong>{{ obligation.obligation_id }}</strong></td>
-        <td>{{ obligation.requirement_title|truncatechars:25 }}</td>
+        <td><strong>{{ obligation.obligation_id|truncatechars:15 }}</strong></td>
+        <td>{{ obligation.requirement_title|truncatechars:40 }}</td>
         <td class="text-center">{{ obligation.evidence_count }}</td>
         <td class="text-center">{{ obligation.valid_evidence_count }}</td>
         <td class="text-center">
