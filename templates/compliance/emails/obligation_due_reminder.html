@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Obligation Due Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #f59e0b;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #f59e0b;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .alert-box {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .priority-high {
+            background-color: #fee2e2;
+            border-color: #dc2626;
+            color: #991b1b;
+        }
+        .priority-medium {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        .priority-low {
+            background-color: #dcfce7;
+            border-color: #16a34a;
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>⚠️ Compliance Obligation Due Soon</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ owner_name }},</p>
+        
+        <div class="alert-box">
+            <strong>Reminder:</strong> You have a compliance obligation that is due in 7 days and requires your attention.
+        </div>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Obligation ID:</strong></td>
+                <td>{{ obligation.obligation_id }}</td>
+            </tr>
+            <tr>
+                <td><strong>Requirement:</strong></td>
+                <td>{{ obligation.requirement.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Due Date:</strong></td>
+                <td>{{ obligation.due_date|date:"F j, Y" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Priority:</strong></td>
+                <td>
+                    <span class="priority-{% if obligation.priority >= 4 %}high{% elif obligation.priority >= 3 %}medium{% else %}low{% endif %}">
+                        Priority {{ obligation.priority }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>{{ obligation.get_status_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ organization.name }}</td>
+            </tr>
+            {% if obligation.description %}
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td>{{ obligation.description|safe|truncatewords:20 }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p><strong>Action Required:</strong> Please review and take necessary action to ensure compliance with this obligation before the due date.</p>
+        
+        {% if obligation.evidence_required %}
+        <p><strong>Note:</strong> This obligation requires evidence collection. Please ensure you have the necessary documentation ready.</p>
+        {% endif %}
+        
+        <a href="{{ obligation_url }}" class="button">View Obligation Details</a>
+        
+        <p>Thank you,<br>
+        {{ organization.name }} Compliance Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated reminder from the Oreno GRC system. Please do not reply to this email.</p>
+        <p>{{ organization.name }} &copy; {% now "Y" %}</p>
+    </div>
+</body>
+</html>

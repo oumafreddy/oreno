@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Milestone Overdue Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #dc2626;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background-color: #dc2626;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .alert-box {
+            background-color: #fee2e2;
+            border: 1px solid #dc2626;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .milestone-type {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🚨 Contract Milestone Overdue</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ owner_name }},</p>
+        
+        <div class="alert-box">
+            <strong>URGENT:</strong> You have a contract milestone that is now overdue and requires immediate attention.
+        </div>
+        
+        <table class="info-table">
+            <tr>
+                <td><strong>Contract:</strong></td>
+                <td>{{ milestone.contract.code }} - {{ milestone.contract.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Milestone:</strong></td>
+                <td>{{ milestone.title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Type:</strong></td>
+                <td>
+                    <span class="milestone-type">{{ milestone.get_milestone_type_display }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Due Date:</strong></td>
+                <td>{{ milestone.due_date|date:"F j, Y" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Days Overdue:</strong></td>
+                <td>{{ days_overdue }} day{{ days_overdue|pluralize }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>
+                    {% if milestone.is_completed %}
+                        <span style="color: #16a34a; font-weight: bold;">Completed</span>
+                    {% else %}
+                        <span style="color: #dc2626; font-weight: bold;">Overdue</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ organization.name }}</td>
+            </tr>
+            {% if milestone.description %}
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td>{{ milestone.description|truncatewords:20 }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        <p><strong>Immediate Action Required:</strong> This milestone is now overdue and may result in contract violations or penalties. Please take immediate action to address this milestone.</p>
+        
+        {% if milestone.milestone_type == 'payment' %}
+        <p><strong>Note:</strong> This is a payment milestone. Late payments may result in penalties or contract termination.</p>
+        {% elif milestone.milestone_type == 'delivery' %}
+        <p><strong>Note:</strong> This is a delivery milestone. Late deliveries may result in penalties or contract breach.</p>
+        {% elif milestone.milestone_type == 'renewal' %}
+        <p><strong>Note:</strong> This is a renewal milestone. Missing renewal deadlines may result in contract expiration.</p>
+        {% endif %}
+        
+        <p><strong>Risk:</strong> Overdue milestones may result in contract penalties, breach of contract, or legal consequences.</p>
+        
+        <a href="{{ milestone_url }}" class="button">View Milestone Details</a>
+        
+        <p>Thank you,<br>
+        {{ organization.name }} Contracts Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated alert from the Oreno GRC system. Please do not reply to this email.</p>
+        <p>{{ organization.name }} &copy; {% now "Y" %}</p>
+    </div>
+</body>
+</html>
