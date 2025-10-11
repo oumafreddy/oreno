@@ -25,25 +25,25 @@
     <!-- Executive Summary -->
     <div class="section">
         <h2 class="section-header">Executive Summary</h2>
-        <div class="summary-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_cases }}</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_cases|default:0 }}</div>
                 <div class="stat-label">Total Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ open_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ open_cases|default:0 }}</div>
                 <div class="stat-label">Open Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ closed_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ closed_cases|default:0 }}</div>
                 <div class="stat-label">Closed Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ archived_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ archived_cases|default:0 }}</div>
                 <div class="stat-label">Archived Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ overdue_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ overdue_cases|default:0 }}</div>
                 <div class="stat-label">Overdue Cases</div>
             </div>
         </div>

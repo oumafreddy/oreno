@@ -24,25 +24,25 @@
     <!-- Executive Summary -->
     <div class="section">
         <h2 class="section-header">Executive Summary</h2>
-        <div class="summary-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_parties }}</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_parties|default:0 }}</div>
                 <div class="stat-label">Total Parties</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ plaintiffs }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ plaintiffs|default:0 }}</div>
                 <div class="stat-label">Plaintiffs</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ defendants }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ defendants|default:0 }}</div>
                 <div class="stat-label">Defendants</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ witnesses }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ witnesses|default:0 }}</div>
                 <div class="stat-label">Witnesses</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ third_parties }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ third_parties|default:0 }}</div>
                 <div class="stat-label">Third Parties</div>
             </div>
         </div>

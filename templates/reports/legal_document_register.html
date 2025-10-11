@@ -24,21 +24,21 @@
     <!-- Executive Summary -->
     <div class="section">
         <h2 class="section-header">Executive Summary</h2>
-        <div class="summary-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_documents }}</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_documents|default:0 }}</div>
                 <div class="stat-label">Total Documents</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ confidential_documents }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ confidential_documents|default:0 }}</div>
                 <div class="stat-label">Confidential</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ non_confidential_documents }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ non_confidential_documents|default:0 }}</div>
                 <div class="stat-label">Non-Confidential</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ recent_documents|length }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ recent_documents|length|default:0 }}</div>
                 <div class="stat-label">Recent Documents</div>
             </div>
         </div>

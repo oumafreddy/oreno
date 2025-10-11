@@ -21,25 +21,25 @@
     <!-- Executive Summary -->
     <div class="section">
         <h2 class="section-header">Executive Summary</h2>
-        <div class="summary-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_cases }}</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_cases|default:0 }}</div>
                 <div class="stat-label">Total Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ active_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ active_cases|default:0 }}</div>
                 <div class="stat-label">Active Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ closed_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ closed_cases|default:0 }}</div>
                 <div class="stat-label">Closed Cases</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ high_priority_cases }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ high_priority_cases|default:0 }}</div>
                 <div class="stat-label">High Priority</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ total_tasks }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ total_tasks|default:0 }}</div>
                 <div class="stat-label">Total Tasks</div>
             </div>
         </div>
@@ -122,28 +122,28 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for task in case_tasks %}
+                    {% for task in tasks %}
                     <tr>
                         <td>{{ task.title }}</td>
                         <td>
                             <span class="status-badge status-{{ task.status }}">
-                                {{ task.status|title }}
+                                {{ task.get_status_display }}
                             </span>
                         </td>
                         <td>
                             <span class="priority-badge priority-{{ task.priority }}">
-                                {{ task.priority|title }}
+                                {{ task.get_priority_display|default:task.priority }}
                             </span>
                         </td>
                         <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.email|default:"Not assigned" }}</td>
                         <td>{{ task.due_date|date:"M j, Y"|default:"Not specified" }}</td>
                         <td>{{ task.created_at|date:"M j, Y" }}</td>
-      </tr>
-    {% empty %}
+                    </tr>
+                    {% empty %}
                     <tr>
                         <td colspan="6" class="no-data">No tasks associated with this case</td>
                     </tr>
-    {% endfor %}
+                    {% endfor %}
                 </tbody>
   </table>
         </div>
@@ -164,19 +164,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for document in case_documents %}
+                    {% for document in documents %}
                     <tr>
                         <td>{{ document.title }}</td>
                         <td>{{ document.document_type|default:"Not specified" }}</td>
                         <td>{{ document.version|default:"1.0" }}</td>
-                        <td>{{ document.uploaded_by.get_full_name|default:document.uploaded_by.email|default:"-" }}</td>
-                        <td>{{ document.uploaded_at|date:"M j, Y" }}</td>
-      </tr>
-    {% empty %}
+                        <td>{{ document.created_by.get_full_name|default:document.created_by.email|default:"-" }}</td>
+                        <td>{{ document.created_at|date:"M j, Y" }}</td>
+                    </tr>
+                    {% empty %}
                     <tr>
                         <td colspan="5" class="no-data">No documents associated with this case</td>
                     </tr>
-    {% endfor %}
+                    {% endfor %}
                 </tbody>
   </table>
         </div>
@@ -197,23 +197,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for party in case_parties %}
+                    {% for party in parties %}
                     <tr>
                         <td>{{ party.name }}</td>
                         <td>
                             <span class="party-type-badge party-{{ party.party_type }}">
-                                {{ party.party_type|title }}
+                                {{ party.get_party_type_display }}
                             </span>
                         </td>
                         <td>{{ party.contact_person|default:"-" }}</td>
                         <td>{{ party.contact_email|default:"-" }}</td>
                         <td>{{ party.contact_phone|default:"-" }}</td>
-      </tr>
-    {% empty %}
+                    </tr>
+                    {% empty %}
                     <tr>
                         <td colspan="5" class="no-data">No parties associated with this case</td>
                     </tr>
-    {% endfor %}
+                    {% endfor %}
                 </tbody>
   </table>
         </div>
@@ -247,13 +247,13 @@
             <div class="insight-item">
                 <h4>Task Management</h4>
                 <p>
-                    {% if case_tasks %}
-                    <strong>Task Overview:</strong> {{ case_tasks.count }} tasks associated with this case.
-                    {% for task in case_tasks %}
+                    {% if tasks %}
+                    <strong>Task Overview:</strong> {{ tasks.count }} tasks associated with this case.
+                    {% for task in tasks %}
                     {% if forloop.first %}
                     <strong>Task Status:</strong> 
                     {% endif %}
-                    {{ task.title }} ({{ task.status|title }}){% if not forloop.last %}, {% endif %}
+                    {{ task.title }} ({{ task.get_status_display }}){% if not forloop.last %}, {% endif %}
                     {% endfor %}
                     {% else %}
                     <strong>Task Status:</strong> No tasks currently associated with this case. 
@@ -265,9 +265,9 @@
             <div class="insight-item">
                 <h4>Document Management</h4>
                 <p>
-                    {% if case_documents %}
-                    <strong>Documentation:</strong> {{ case_documents.count }} documents uploaded for this case.
-                    {% for document in case_documents %}
+                    {% if documents %}
+                    <strong>Documentation:</strong> {{ documents.count }} documents uploaded for this case.
+                    {% for document in documents %}
                     {% if forloop.first %}
                     <strong>Document Types:</strong> 
                     {% endif %}
@@ -283,13 +283,13 @@
             <div class="insight-item">
                 <h4>Party Involvement</h4>
                 <p>
-                    {% if case_parties %}
-                    <strong>Parties:</strong> {{ case_parties.count }} parties involved in this case.
-                    {% for party in case_parties %}
+                    {% if parties %}
+                    <strong>Parties:</strong> {{ parties.count }} parties involved in this case.
+                    {% for party in parties %}
                     {% if forloop.first %}
                     <strong>Party Types:</strong> 
                     {% endif %}
-                    {{ party.party_type|title }}{% if not forloop.last %}, {% endif %}
+                    {{ party.get_party_type_display }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                     {% else %}
                     <strong>Parties:</strong> No parties currently associated with this case. 

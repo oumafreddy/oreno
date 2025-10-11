@@ -1731,18 +1731,34 @@ def legal_case_details_pdf(request):
     parties = []
     tasks = []
     documents = []
+    
+    # Calculate summary statistics for all cases
+    all_cases = LegalCase.objects.filter(organization=org)
+    total_cases = all_cases.count()
+    active_cases = all_cases.filter(status__in=['intake', 'investigation', 'litigation', 'settlement_negotiation']).count()
+    closed_cases = all_cases.filter(status='closed').count()
+    high_priority_cases = all_cases.filter(priority__gte=4).count()
+    total_tasks = LegalTask.objects.filter(organization=org).count()
+    
     if case_name:
         case = LegalCase.objects.filter(organization=org, title__icontains=case_name).first()
         if case:
             parties = case.parties.all()
             tasks = case.tasks.all()
             documents = case.documents.all()
+    
     html_string = render_to_string('reports/legal_case_details.html', {
         'organization': org,
         'case': case,
         'parties': parties,
         'tasks': tasks,
         'documents': documents,
+        'total_cases': total_cases,
+        'active_cases': active_cases,
+        'closed_cases': closed_cases,
+        'high_priority_cases': high_priority_cases,
+        'total_tasks': total_tasks,
+        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
     })
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
     response = HttpResponse(pdf_file, content_type='application/pdf')

@@ -24,25 +24,25 @@
     <!-- Executive Summary -->
     <div class="section">
         <h2 class="section-header">Executive Summary</h2>
-        <div class="summary-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_archives }}</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_archives|default:0 }}</div>
                 <div class="stat-label">Total Archives</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ case_files }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ case_files|default:0 }}</div>
                 <div class="stat-label">Case Files</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ evidence_files }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ evidence_files|default:0 }}</div>
                 <div class="stat-label">Evidence Files</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ correspondence_files }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ correspondence_files|default:0 }}</div>
                 <div class="stat-label">Correspondence</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ other_files }}</div>
+            <div class="stat-item">
+                <div class="stat-number">{{ other_files|default:0 }}</div>
                 <div class="stat-label">Other Files</div>
             </div>
         </div>
