@@ -205,7 +205,7 @@
             <span class="status-badge status-active">Valid</span>
           {% endif %}
         </td>
-        <td>{{ evidence.notes|truncatechars:50|default:"-" }}</td>
+        <td>{{ evidence.notes|safe|truncatechars:50|default:"-" }}</td>
         </tr>
         {% endfor %}
       </tbody>
