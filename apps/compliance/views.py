@@ -573,7 +573,7 @@ class ComplianceReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Tem
         
         # Get requirement jurisdictions for filters
         jurisdictions = ComplianceRequirement.objects.filter(organization=organization).values_list('jurisdiction', flat=True).distinct()
-        context['jurisdictions'] = sorted(list(jurisdictions))
+        context['jurisdictions'] = sorted([j for j in jurisdictions if j is not None])
         
         # Get obligation statuses for filters
         obligation_statuses = ComplianceObligation.objects.filter(organization=organization).values_list('status', flat=True).distinct()
@@ -581,15 +581,15 @@ class ComplianceReportsView(OrganizationPermissionMixin, LoginRequiredMixin, Tem
         
         # Get obligation owners for filters
         obligation_owners = ComplianceObligation.objects.filter(organization=organization).values_list('owner__email', flat=True).distinct()
-        context['obligation_owners'] = sorted(list(obligation_owners))
+        context['obligation_owners'] = sorted([owner for owner in obligation_owners if owner is not None])
         
         # Get evidence types for filters (using document titles instead since evidence_type doesn't exist)
         evidence_documents = ComplianceEvidence.objects.filter(organization=organization).values_list('document__title', flat=True).distinct()
-        context['evidence_types'] = sorted(list(evidence_documents))
+        context['evidence_types'] = sorted([doc for doc in evidence_documents if doc is not None])
         
         # Get policy document titles for filters (since PolicyDocument doesn't have a status field)
         policy_titles = PolicyDocument.objects.filter(organization=organization).values_list('title', flat=True).distinct()
-        context['policy_statuses'] = sorted(list(policy_titles))
+        context['policy_statuses'] = sorted([title for title in policy_titles if title is not None])
         
         # Get requirements for detailed reports filter
         requirements = ComplianceRequirement.objects.filter(organization=organization).order_by('title')
