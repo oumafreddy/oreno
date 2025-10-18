@@ -1179,7 +1179,7 @@ class ModelRiskAssessmentApprovalView(OrganizationPermissionMixin, LoginRequired
     """Special view for approving/rejecting risk assessments"""
     model = ModelRiskAssessment
     template_name = 'ai_governance/modelriskassessment_approval.html'
-    fields = ['approval_status', 'approver', 'approval_notes', 'production_approved']
+    fields = ['approval_status', 'approver', 'approval_date', 'approval_notes', 'production_approved']
     success_url = reverse_lazy('ai_governance:modelriskassessment_list')
 
     def get_queryset(self):
@@ -1188,7 +1188,10 @@ class ModelRiskAssessmentApprovalView(OrganizationPermissionMixin, LoginRequired
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
         form.instance.approver = self.request.user
-        form.instance.approval_date = timezone.now()
+        
+        # Set approval date if not provided and status is approved/rejected
+        if not form.instance.approval_date and form.instance.approval_status in ['approved', 'rejected']:
+            form.instance.approval_date = timezone.now()
         
         # Set production deployment date if approved for production
         if form.instance.production_approved and form.instance.approval_status == 'approved':

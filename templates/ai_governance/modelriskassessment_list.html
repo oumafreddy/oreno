@@ -8,10 +8,16 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="bi bi-shield-exclamation me-2"></i>
-                    Model Risk Assessments
-                </h2>
+                <div>
+                    <a href="{% url 'ai_governance:dashboard' %}" class="btn btn-outline-secondary mb-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to AI Governance Dashboard
+                    </a>
+                    <h2 class="mb-0">
+                        <i class="bi bi-shield-exclamation me-2"></i>
+                        Model Risk Assessments
+                    </h2>
+                </div>
                 <a href="{% url 'ai_governance:modelriskassessment_create' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>
                     New Risk Assessment

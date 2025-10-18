@@ -9,10 +9,16 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="bi bi-check-circle me-2"></i>
-                    Approve Risk Assessment
-                </h2>
+                <div>
+                    <a href="{% url 'ai_governance:dashboard' %}" class="btn btn-outline-secondary mb-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to AI Governance Dashboard
+                    </a>
+                    <h2 class="mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Approve Risk Assessment
+                    </h2>
+                </div>
                 <a href="{% url 'ai_governance:modelriskassessment_detail' risk_assessment.pk %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>
                     Back to Details
@@ -52,6 +58,17 @@
                                     {% if form.approval_status.errors %}
                                         <div class="text-danger">{{ form.approval_status.errors }}</div>
                                     {% endif %}
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="{{ form.approval_date.id_for_label }}" class="form-label">
+                                        <strong>Approval Date *</strong>
+                                    </label>
+                                    {{ form.approval_date }}
+                                    {% if form.approval_date.errors %}
+                                        <div class="text-danger">{{ form.approval_date.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Date and time when the approval decision was made.</div>
                                 </div>
 
                                 <div class="mb-4">
@@ -151,4 +168,41 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const approvalStatusField = document.getElementById('id_approval_status');
+    const approvalDateField = document.getElementById('id_approval_date');
+    
+    if (approvalStatusField && approvalDateField) {
+        // Set current date and time on page load
+        if (!approvalDateField.value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            approvalDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        approvalStatusField.addEventListener('change', function() {
+            if (this.value === 'approved' || this.value === 'rejected') {
+                // Set current date and time if not already set
+                if (!approvalDateField.value) {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    
+                    approvalDateField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

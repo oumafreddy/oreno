@@ -8,10 +8,16 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="bi bi-shield-exclamation me-2"></i>
-                    Risk Assessment Details
-                </h2>
+                <div>
+                    <a href="{% url 'ai_governance:dashboard' %}" class="btn btn-outline-secondary mb-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to AI Governance Dashboard
+                    </a>
+                    <h2 class="mb-0">
+                        <i class="bi bi-shield-exclamation me-2"></i>
+                        Risk Assessment Details
+                    </h2>
+                </div>
                 <div class="btn-group">
                     <a href="{% url 'ai_governance:modelriskassessment_update' risk_assessment.pk %}" class="btn btn-outline-secondary">
                         <i class="bi bi-pencil me-1"></i>
@@ -80,7 +86,50 @@
                         </div>
                         <div class="card-body">
                             {% if risk_assessment.risk_factors %}
-                                <pre class="bg-light p-3 rounded">{{ risk_assessment.risk_factors|pprint }}</pre>
+                                {% if risk_assessment.risk_factors|length > 0 %}
+                                    {% if risk_assessment.risk_factors.0 is string %}
+                                        <!-- List format -->
+                                        <ul class="list-group list-group-flush">
+                                            {% for factor in risk_assessment.risk_factors %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    {{ factor }}
+                                                    <span class="badge bg-primary rounded-pill">Factor</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <!-- Dictionary format -->
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Factor</th>
+                                                        <th>Score</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for factor, details in risk_assessment.risk_factors.items %}
+                                                        <tr>
+                                                            <td><strong>{{ factor|title }}</strong></td>
+                                                            <td>
+                                                                <span class="badge 
+                                                                    {% if details.score <= 2 %}bg-success
+                                                                    {% elif details.score <= 3 %}bg-warning
+                                                                    {% else %}bg-danger{% endif %}">
+                                                                    {{ details.score }}
+                                                                </span>
+                                                            </td>
+                                                            <td>{{ details.description|default:"No description" }}</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-muted">No risk factors documented.</p>
+                                {% endif %}
                             {% else %}
                                 <p class="text-muted">No risk factors documented.</p>
                             {% endif %}
@@ -94,7 +143,20 @@
                         </div>
                         <div class="card-body">
                             {% if risk_assessment.mitigation_measures %}
-                                <pre class="bg-light p-3 rounded">{{ risk_assessment.mitigation_measures|pprint }}</pre>
+                                {% if risk_assessment.mitigation_measures|length > 0 and risk_assessment.mitigation_measures.0 is string %}
+                                    <!-- List format -->
+                                    <ul class="list-group list-group-flush">
+                                        {% for measure in risk_assessment.mitigation_measures %}
+                                            <li class="list-group-item">
+                                                <i class="bi bi-check-circle text-success me-2"></i>
+                                                {{ measure }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <!-- Dictionary or other format -->
+                                    <pre class="bg-light p-3 rounded">{{ risk_assessment.mitigation_measures|pprint }}</pre>
+                                {% endif %}
                             {% else %}
                                 <p class="text-muted">No mitigation measures documented.</p>
                             {% endif %}
@@ -108,7 +170,20 @@
                         </div>
                         <div class="card-body">
                             {% if risk_assessment.compliance_requirements %}
-                                <pre class="bg-light p-3 rounded">{{ risk_assessment.compliance_requirements|pprint }}</pre>
+                                {% if risk_assessment.compliance_requirements|length > 0 and risk_assessment.compliance_requirements.0 is string %}
+                                    <!-- List format -->
+                                    <ul class="list-group list-group-flush">
+                                        {% for requirement in risk_assessment.compliance_requirements %}
+                                            <li class="list-group-item">
+                                                <i class="bi bi-shield-check text-info me-2"></i>
+                                                {{ requirement }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <!-- Dictionary or other format -->
+                                    <pre class="bg-light p-3 rounded">{{ risk_assessment.compliance_requirements|pprint }}</pre>
+                                {% endif %}
                             {% else %}
                                 <p class="text-muted">No compliance requirements documented.</p>
                             {% endif %}
@@ -122,7 +197,20 @@
                         </div>
                         <div class="card-body">
                             {% if risk_assessment.evidence_documents %}
-                                <pre class="bg-light p-3 rounded">{{ risk_assessment.evidence_documents|pprint }}</pre>
+                                {% if risk_assessment.evidence_documents|length > 0 and risk_assessment.evidence_documents.0 is string %}
+                                    <!-- List format -->
+                                    <ul class="list-group list-group-flush">
+                                        {% for document in risk_assessment.evidence_documents %}
+                                            <li class="list-group-item">
+                                                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                                {{ document }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <!-- Dictionary or other format -->
+                                    <pre class="bg-light p-3 rounded">{{ risk_assessment.evidence_documents|pprint }}</pre>
+                                {% endif %}
                             {% else %}
                                 <p class="text-muted">No evidence documents referenced.</p>
                             {% endif %}

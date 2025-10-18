@@ -704,10 +704,22 @@ class ModelRiskAssessment(OrganizationOwnedModel, AuditableModel, SoftDeletionMo
         total_score = 0
         factor_count = 0
         
-        for factor, details in self.risk_factors.items():
-            if isinstance(details, dict) and 'score' in details:
-                total_score += details['score']
-                factor_count += 1
+        # Handle both list and dictionary formats
+        if isinstance(self.risk_factors, list):
+            # If risk_factors is a list, calculate score based on list length
+            # This is a simple scoring mechanism for list format
+            factor_count = len(self.risk_factors)
+            total_score = factor_count * 2  # Default score of 2 per factor
+        elif isinstance(self.risk_factors, dict):
+            # If risk_factors is a dictionary, use the detailed scoring
+            for factor, details in self.risk_factors.items():
+                if isinstance(details, dict) and 'score' in details:
+                    total_score += details['score']
+                    factor_count += 1
+                elif isinstance(details, (int, float)):
+                    # Handle simple numeric scores
+                    total_score += details
+                    factor_count += 1
         
         return total_score / factor_count if factor_count > 0 else 0
     

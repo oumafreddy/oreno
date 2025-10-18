@@ -444,7 +444,7 @@ class ModelRiskAssessmentForm(forms.ModelForm):
         model = ModelRiskAssessment
         fields = [
             'model_asset', 'risk_level', 'assessor', 'approval_status',
-            'approver', 'approval_notes', 'risk_factors', 'mitigation_measures',
+            'approver', 'approval_date', 'approval_notes', 'risk_factors', 'mitigation_measures',
             'compliance_requirements', 'evidence_documents', 'production_approved',
             'deployment_conditions', 'review_frequency_months'
         ]
@@ -454,6 +454,7 @@ class ModelRiskAssessmentForm(forms.ModelForm):
             'assessor': forms.Select(attrs={'class': 'form-select'}),
             'approval_status': forms.Select(attrs={'class': 'form-select'}),
             'approver': forms.Select(attrs={'class': 'form-select'}),
+            'approval_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'approval_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'risk_factors': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
             'mitigation_measures': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
@@ -480,6 +481,9 @@ class ModelRiskAssessmentForm(forms.ModelForm):
             ),
             Row(
                 Column('approver', css_class='col-md-6'),
+                Column('approval_date', css_class='col-md-6'),
+            ),
+            Row(
                 Column('review_frequency_months', css_class='col-md-6'),
             ),
             'approval_notes',
