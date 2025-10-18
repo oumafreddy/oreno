@@ -25,6 +25,7 @@ from .models import (
     ComplianceMapping,
     ConnectorConfig,
     WebhookSubscription,
+    ModelRiskAssessment,
 )
 from .serializers import (
     ModelAssetSerializer,
@@ -53,6 +54,7 @@ from .forms import (
     ComplianceMappingForm,
     ConnectorConfigForm,
     WebhookSubscriptionForm,
+    ModelRiskAssessmentForm,
 )
 
 
@@ -160,6 +162,7 @@ class GovernanceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         context['total_connectors'] = ConnectorConfig.objects.filter(organization=org).count()
         context['total_webhooks'] = WebhookSubscription.objects.filter(organization=org).count()
         context['total_metrics'] = Metric.objects.filter(organization=org).count()
+        context['total_risk_assessments'] = ModelRiskAssessment.objects.filter(organization=org).count()
 
         # Get recent activity for dashboard
         from django.contrib.contenttypes.models import ContentType
@@ -1121,4 +1124,75 @@ class WebhookSubscriptionUpdateView(OrganizationPermissionMixin, LoginRequiredMi
 
     def form_valid(self, form):
         form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+# Model Risk Assessment Views
+class ModelRiskAssessmentListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = ModelRiskAssessment
+    template_name = 'ai_governance/modelriskassessment_list.html'
+    context_object_name = 'risk_assessments'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return ModelRiskAssessment.objects.filter(organization=self.request.organization).order_by('-assessment_date')
+
+
+class ModelRiskAssessmentCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = ModelRiskAssessment
+    form_class = ModelRiskAssessmentForm
+    template_name = 'ai_governance/modelriskassessment_form.html'
+    success_url = reverse_lazy('ai_governance:modelriskassessment_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        form.instance.assessor = self.request.user
+        return super().form_valid(form)
+
+
+class ModelRiskAssessmentDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = ModelRiskAssessment
+    template_name = 'ai_governance/modelriskassessment_detail.html'
+    context_object_name = 'risk_assessment'
+
+    def get_queryset(self):
+        return ModelRiskAssessment.objects.filter(organization=self.request.organization)
+
+
+class ModelRiskAssessmentUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = ModelRiskAssessment
+    form_class = ModelRiskAssessmentForm
+    template_name = 'ai_governance/modelriskassessment_form.html'
+    success_url = reverse_lazy('ai_governance:modelriskassessment_list')
+
+    def get_queryset(self):
+        return ModelRiskAssessment.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ModelRiskAssessmentApprovalView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    """Special view for approving/rejecting risk assessments"""
+    model = ModelRiskAssessment
+    template_name = 'ai_governance/modelriskassessment_approval.html'
+    fields = ['approval_status', 'approver', 'approval_notes', 'production_approved']
+    success_url = reverse_lazy('ai_governance:modelriskassessment_list')
+
+    def get_queryset(self):
+        return ModelRiskAssessment.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        form.instance.approver = self.request.user
+        form.instance.approval_date = timezone.now()
+        
+        # Set production deployment date if approved for production
+        if form.instance.production_approved and form.instance.approval_status == 'approved':
+            form.instance.production_deployment_date = timezone.now()
+        
+        messages.success(self.request, f'Risk assessment {form.instance.approval_status} successfully.')
         return super().form_valid(form)

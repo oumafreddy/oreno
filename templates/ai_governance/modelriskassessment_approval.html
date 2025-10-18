@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Approve Risk Assessment - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-check-circle me-2"></i>
+                    Approve Risk Assessment
+                </h2>
+                <a href="{% url 'ai_governance:modelriskassessment_detail' risk_assessment.pk %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to Details
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Approval Decision</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="mb-4">
+                                    <h6>Model Information</h6>
+                                    <p><strong>Model:</strong> {{ risk_assessment.model_asset.name }}</p>
+                                    <p><strong>Risk Level:</strong> 
+                                        <span class="badge 
+                                            {% if risk_assessment.risk_level == 'minimal' %}bg-success
+                                            {% elif risk_assessment.risk_level == 'limited' %}bg-info
+                                            {% elif risk_assessment.risk_level == 'high' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ risk_assessment.get_risk_level_display }}
+                                        </span>
+                                    </p>
+                                    <p><strong>Assessor:</strong> {{ risk_assessment.assessor.get_full_name|default:risk_assessment.assessor.email }}</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="{{ form.approval_status.id_for_label }}" class="form-label">
+                                        <strong>Approval Decision *</strong>
+                                    </label>
+                                    {{ form.approval_status }}
+                                    {% if form.approval_status.errors %}
+                                        <div class="text-danger">{{ form.approval_status.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="{{ form.approval_notes.id_for_label }}" class="form-label">
+                                        <strong>Approval Notes</strong>
+                                    </label>
+                                    {{ form.approval_notes }}
+                                    {% if form.approval_notes.errors %}
+                                        <div class="text-danger">{{ form.approval_notes.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Provide detailed notes about your approval decision.</div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        {{ form.production_approved }}
+                                        <label class="form-check-label" for="{{ form.production_approved.id_for_label }}">
+                                            <strong>Approve for Production Deployment</strong>
+                                        </label>
+                                    </div>
+                                    {% if form.production_approved.errors %}
+                                        <div class="text-danger">{{ form.production_approved.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Check this box only if the model is approved for production use.</div>
+                                </div>
+
+                                <div class="d-flex justify-content-end mt-4">
+                                    <a href="{% url 'ai_governance:modelriskassessment_detail' risk_assessment.pk %}" class="btn btn-secondary me-2">
+                                        Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Submit Approval Decision
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Approval Guidelines</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Approval Criteria</h6>
+                            <ul>
+                                <li>Risk assessment is complete and accurate</li>
+                                <li>Risk factors are properly identified</li>
+                                <li>Mitigation measures are adequate</li>
+                                <li>Compliance requirements are met</li>
+                                <li>Evidence is sufficient</li>
+                            </ul>
+                            
+                            <h6 class="mt-4">Production Approval</h6>
+                            <p>Only approve for production if:</p>
+                            <ul>
+                                <li>Risk level is acceptable</li>
+                                <li>All controls are in place</li>
+                                <li>Monitoring is adequate</li>
+                                <li>Compliance is verified</li>
+                            </ul>
+                            
+                            <h6 class="mt-4">Risk Level Guidelines</h6>
+                            <ul class="list-unstyled">
+                                <li><span class="badge bg-success me-2">Minimal</span> Usually approved</li>
+                                <li><span class="badge bg-info me-2">Limited</span> Approved with conditions</li>
+                                <li><span class="badge bg-warning me-2">High</span> Requires strong justification</li>
+                                <li><span class="badge bg-danger me-2">Unacceptable</span> Never approved</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Risk Assessment Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Risk Factors</h6>
+                            {% if risk_assessment.risk_factors %}
+                                <pre class="bg-light p-2 rounded small">{{ risk_assessment.risk_factors|pprint }}</pre>
+                            {% else %}
+                                <p class="text-muted small">No risk factors documented.</p>
+                            {% endif %}
+                            
+                            <h6 class="mt-3">Mitigation Measures</h6>
+                            {% if risk_assessment.mitigation_measures %}
+                                <pre class="bg-light p-2 rounded small">{{ risk_assessment.mitigation_measures|pprint }}</pre>
+                            {% else %}
+                                <p class="text-muted small">No mitigation measures documented.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

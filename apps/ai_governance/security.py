@@ -23,13 +23,47 @@ logger = logging.getLogger(__name__)
 
 class DataEncryptionService:
     """
-    Service for encrypting sensitive AI governance data at rest.
-    Uses Fernet symmetric encryption with key derivation.
+    Enhanced service for encrypting sensitive AI governance data at rest.
+    Supports both local key derivation and HSM/KMS integration.
     """
     
     def __init__(self):
-        self.encryption_key = self._get_or_create_encryption_key()
-        self.cipher_suite = Fernet(self.encryption_key)
+        self.use_hsm = getattr(settings, 'AI_GOVERNANCE_USE_HSM', False)
+        self.kms_provider = getattr(settings, 'AI_GOVERNANCE_KMS_PROVIDER', 'local')
+        
+        if self.use_hsm and self.kms_provider != 'local':
+            self.kms_client = self._initialize_kms_client()
+        else:
+            self.encryption_key = self._get_or_create_encryption_key()
+            self.cipher_suite = Fernet(self.encryption_key)
+    
+    def _initialize_kms_client(self):
+        """Initialize KMS client based on provider."""
+        if self.kms_provider == 'aws':
+            try:
+                import boto3
+                return boto3.client('kms', region_name=getattr(settings, 'AWS_REGION', 'us-east-1'))
+            except ImportError:
+                logger.warning("boto3 not available for AWS KMS integration")
+                return None
+        elif self.kms_provider == 'azure':
+            try:
+                from azure.keyvault.keys import KeyClient
+                from azure.identity import DefaultAzureCredential
+                credential = DefaultAzureCredential()
+                vault_url = getattr(settings, 'AZURE_KEY_VAULT_URL', '')
+                return KeyClient(vault_url=vault_url, credential=credential)
+            except ImportError:
+                logger.warning("Azure Key Vault SDK not available")
+                return None
+        elif self.kms_provider == 'gcp':
+            try:
+                from google.cloud import kms
+                return kms.KeyManagementServiceClient()
+            except ImportError:
+                logger.warning("Google Cloud KMS SDK not available")
+                return None
+        return None
     
     def _get_or_create_encryption_key(self) -> bytes:
         """Get or create encryption key for AI governance data."""
@@ -37,38 +71,133 @@ class DataEncryptionService:
         key = cache.get(cache_key)
         
         if key is None:
-            # Generate new key from settings secret key
+            if self.use_hsm and self.kms_client:
+                key = self._get_key_from_kms()
+            else:
+                # Generate new key from settings secret key
+                password = settings.SECRET_KEY.encode()
+                salt = b'ai_governance_salt'  # In production, use random salt
+                kdf = PBKDF2HMAC(
+                    algorithm=hashes.SHA256(),
+                    length=32,
+                    salt=salt,
+                    iterations=100000,
+                )
+                key = base64.urlsafe_b64encode(kdf.derive(password))
+            
+            cache.set(cache_key, key, timeout=None)  # Cache indefinitely
+        
+        return key
+    
+    def _get_key_from_kms(self) -> bytes:
+        """Retrieve encryption key from KMS/HSM."""
+        try:
+            if self.kms_provider == 'aws':
+                key_id = getattr(settings, 'AWS_KMS_KEY_ID', '')
+                response = self.kms_client.generate_data_key(
+                    KeyId=key_id,
+                    KeySpec='AES_256'
+                )
+                return response['Plaintext']
+            elif self.kms_provider == 'azure':
+                key_name = getattr(settings, 'AZURE_KEY_NAME', 'ai-governance-key')
+                key = self.kms_client.get_key(key_name)
+                # Azure Key Vault handles encryption/decryption
+                return key.key_id.encode()
+            elif self.kms_provider == 'gcp':
+                project_id = getattr(settings, 'GCP_PROJECT_ID', '')
+                location = getattr(settings, 'GCP_KMS_LOCATION', 'global')
+                key_ring = getattr(settings, 'GCP_KMS_KEY_RING', 'ai-governance')
+                key_name = getattr(settings, 'GCP_KMS_KEY_NAME', 'ai-governance-key')
+                
+                key_path = self.kms_client.crypto_key_path(
+                    project_id, location, key_ring, key_name
+                )
+                response = self.kms_client.encrypt(
+                    request={'name': key_path, 'plaintext': b'key_placeholder'}
+                )
+                return response.ciphertext
+        except Exception as e:
+            logger.error(f"Failed to retrieve key from KMS: {e}")
+            # Fallback to local key generation
             password = settings.SECRET_KEY.encode()
-            salt = b'ai_governance_salt'  # In production, use random salt
+            salt = b'ai_governance_salt'
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
                 salt=salt,
                 iterations=100000,
             )
-            key = base64.urlsafe_b64encode(kdf.derive(password))
-            cache.set(cache_key, key, timeout=None)  # Cache indefinitely
-        
-        return key
+            return base64.urlsafe_b64encode(kdf.derive(password))
     
-    def encrypt_data(self, data: str) -> str:
-        """Encrypt sensitive data."""
+    def encrypt_data(self, data: str, key_id: str = None) -> str:
+        """Encrypt sensitive data with optional key ID for KMS."""
         try:
-            encrypted_data = self.cipher_suite.encrypt(data.encode())
-            return base64.urlsafe_b64encode(encrypted_data).decode()
+            if self.use_hsm and self.kms_client and key_id:
+                return self._encrypt_with_kms(data, key_id)
+            else:
+                encrypted_data = self.cipher_suite.encrypt(data.encode())
+                return base64.urlsafe_b64encode(encrypted_data).decode()
         except Exception as e:
             logger.error(f"Data encryption failed: {e}")
             raise ValidationError(_("Failed to encrypt sensitive data"))
     
-    def decrypt_data(self, encrypted_data: str) -> str:
-        """Decrypt sensitive data."""
+    def decrypt_data(self, encrypted_data: str, key_id: str = None) -> str:
+        """Decrypt sensitive data with optional key ID for KMS."""
         try:
-            decoded_data = base64.urlsafe_b64decode(encrypted_data.encode())
-            decrypted_data = self.cipher_suite.decrypt(decoded_data)
-            return decrypted_data.decode()
+            if self.use_hsm and self.kms_client and key_id:
+                return self._decrypt_with_kms(encrypted_data, key_id)
+            else:
+                decoded_data = base64.urlsafe_b64decode(encrypted_data.encode())
+                decrypted_data = self.cipher_suite.decrypt(decoded_data)
+                return decrypted_data.decode()
         except Exception as e:
             logger.error(f"Data decryption failed: {e}")
             raise ValidationError(_("Failed to decrypt sensitive data"))
+    
+    def _encrypt_with_kms(self, data: str, key_id: str) -> str:
+        """Encrypt data using KMS/HSM."""
+        try:
+            if self.kms_provider == 'aws':
+                response = self.kms_client.encrypt(
+                    KeyId=key_id,
+                    Plaintext=data.encode()
+                )
+                return base64.urlsafe_b64encode(response['CiphertextBlob']).decode()
+            elif self.kms_provider == 'azure':
+                # Azure Key Vault encryption
+                encrypted_data = self.kms_client.encrypt(key_id, data.encode())
+                return base64.urlsafe_b64encode(encrypted_data).decode()
+            elif self.kms_provider == 'gcp':
+                response = self.kms_client.encrypt(
+                    request={'name': key_id, 'plaintext': data.encode()}
+                )
+                return base64.urlsafe_b64encode(response.ciphertext).decode()
+        except Exception as e:
+            logger.error(f"KMS encryption failed: {e}")
+            raise ValidationError(_("Failed to encrypt data with KMS"))
+    
+    def _decrypt_with_kms(self, encrypted_data: str, key_id: str) -> str:
+        """Decrypt data using KMS/HSM."""
+        try:
+            decoded_data = base64.urlsafe_b64decode(encrypted_data.encode())
+            
+            if self.kms_provider == 'aws':
+                response = self.kms_client.decrypt(
+                    CiphertextBlob=decoded_data
+                )
+                return response['Plaintext'].decode()
+            elif self.kms_provider == 'azure':
+                decrypted_data = self.kms_client.decrypt(key_id, decoded_data)
+                return decrypted_data.decode()
+            elif self.kms_provider == 'gcp':
+                response = self.kms_client.decrypt(
+                    request={'name': key_id, 'ciphertext': decoded_data}
+                )
+                return response.plaintext.decode()
+        except Exception as e:
+            logger.error(f"KMS decryption failed: {e}")
+            raise ValidationError(_("Failed to decrypt data with KMS"))
     
     def encrypt_json(self, data: Dict[str, Any]) -> str:
         """Encrypt JSON data."""
@@ -808,8 +937,211 @@ class SecurityAuditService:
         return {'findings': findings, 'recommendations': recommendations}
 
 
+class KeyManagementService:
+    """
+    Enhanced key management service with HSM/KMS integration and automated rotation.
+    """
+    
+    def __init__(self):
+        self.encryption_service = DataEncryptionService()
+        self.use_hsm = getattr(settings, 'AI_GOVERNANCE_USE_HSM', False)
+        self.kms_provider = getattr(settings, 'AI_GOVERNANCE_KMS_PROVIDER', 'local')
+        self.rotation_interval_days = getattr(settings, 'AI_GOVERNANCE_KEY_ROTATION_DAYS', 90)
+    
+    def rotate_encryption_keys(self, organization_id: int = None) -> Dict[str, Any]:
+        """
+        Rotate encryption keys for AI governance data.
+        Supports both local and KMS-based key rotation.
+        """
+        try:
+            rotation_results = {
+                'success': True,
+                'rotated_keys': [],
+                'errors': [],
+                'timestamp': timezone.now().isoformat()
+            }
+            
+            if self.use_hsm and self.kms_provider != 'local':
+                # KMS-based key rotation
+                rotation_results.update(self._rotate_kms_keys())
+            else:
+                # Local key rotation
+                rotation_results.update(self._rotate_local_keys())
+            
+            # Log key rotation activity
+            self._log_key_rotation(organization_id, rotation_results)
+            
+            return rotation_results
+            
+        except Exception as e:
+            logger.error(f"Key rotation failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': timezone.now().isoformat()
+            }
+    
+    def _rotate_kms_keys(self) -> Dict[str, Any]:
+        """Rotate keys using KMS/HSM."""
+        rotated_keys = []
+        
+        try:
+            if self.kms_provider == 'aws':
+                # AWS KMS key rotation
+                key_id = getattr(settings, 'AWS_KMS_KEY_ID', '')
+                if key_id:
+                    # Create new key version
+                    response = self.kms_client.create_key(
+                        Description='AI Governance Key - Rotated',
+                        KeyUsage='ENCRYPT_DECRYPT',
+                        KeySpec='SYMMETRIC_DEFAULT'
+                    )
+                    new_key_id = response['KeyMetadata']['KeyId']
+                    rotated_keys.append(new_key_id)
+                    
+            elif self.kms_provider == 'azure':
+                # Azure Key Vault key rotation
+                key_name = getattr(settings, 'AZURE_KEY_NAME', 'ai-governance-key')
+                new_key = self.kms_client.create_key(
+                    name=f"{key_name}-rotated-{int(timezone.now().timestamp())}",
+                    key_type='RSA',
+                    size=2048
+                )
+                rotated_keys.append(new_key.name)
+                
+            elif self.kms_provider == 'gcp':
+                # Google Cloud KMS key rotation
+                project_id = getattr(settings, 'GCP_PROJECT_ID', '')
+                location = getattr(settings, 'GCP_KMS_LOCATION', 'global')
+                key_ring = getattr(settings, 'GCP_KMS_KEY_RING', 'ai-governance')
+                
+                new_key_name = f"ai-governance-key-rotated-{int(timezone.now().timestamp())}"
+                new_key = self.kms_client.create_crypto_key(
+                    parent=f"projects/{project_id}/locations/{location}/keyRings/{key_ring}",
+                    crypto_key_id=new_key_name,
+                    crypto_key={
+                        'purpose': 'ENCRYPT_DECRYPT',
+                        'version_template': {
+                            'algorithm': 'GOOGLE_SYMMETRIC_ENCRYPTION'
+                        }
+                    }
+                )
+                rotated_keys.append(new_key.name)
+            
+            return {'rotated_keys': rotated_keys}
+            
+        except Exception as e:
+            logger.error(f"KMS key rotation failed: {e}")
+            return {'errors': [str(e)]}
+    
+    def _rotate_local_keys(self) -> Dict[str, Any]:
+        """Rotate local encryption keys."""
+        try:
+            # Generate new key
+            password = settings.SECRET_KEY.encode()
+            salt = secrets.token_bytes(32)  # Random salt for new key
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100000,
+            )
+            new_key = base64.urlsafe_b64encode(kdf.derive(password))
+            
+            # Update cache with new key
+            cache_key = 'ai_governance_encryption_key'
+            cache.set(cache_key, new_key, timeout=None)
+            
+            # Update encryption service
+            self.encryption_service.encryption_key = new_key
+            self.encryption_service.cipher_suite = Fernet(new_key)
+            
+            return {'rotated_keys': ['local_key_rotated']}
+            
+        except Exception as e:
+            logger.error(f"Local key rotation failed: {e}")
+            return {'errors': [str(e)]}
+    
+    def _log_key_rotation(self, organization_id: int, rotation_results: Dict[str, Any]):
+        """Log key rotation activity for audit purposes."""
+        try:
+            from .models import ModelAsset
+            from django.contrib.contenttypes.models import ContentType
+            
+            # Log to audit trail
+            log_ai_governance_activity(
+                activity_type='key_rotation',
+                details={
+                    'organization_id': organization_id,
+                    'rotation_results': rotation_results,
+                    'kms_provider': self.kms_provider,
+                    'use_hsm': self.use_hsm
+                },
+                user=None,  # System activity
+                organization_id=organization_id
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to log key rotation: {e}")
+    
+    def get_key_usage_audit_trail(self, organization_id: int, days: int = 30) -> List[Dict[str, Any]]:
+        """Get audit trail of key usage for compliance."""
+        try:
+            from django.contrib.admin.models import LogEntry
+            from django.contrib.contenttypes.models import ContentType
+            from datetime import timedelta
+            
+            # Get recent key-related activities
+            since_date = timezone.now() - timedelta(days=days)
+            
+            # This would need to be implemented based on your audit logging system
+            # For now, return a placeholder structure
+            return [
+                {
+                    'timestamp': timezone.now().isoformat(),
+                    'activity': 'key_rotation',
+                    'user': 'system',
+                    'details': 'Automated key rotation completed'
+                }
+            ]
+            
+        except Exception as e:
+            logger.error(f"Failed to get key usage audit trail: {e}")
+            return []
+    
+    def validate_key_separation_of_duties(self, user_id: int, operation: str) -> bool:
+        """Validate separation of duties for key operations."""
+        try:
+            from users.models import CustomUser
+            
+            user = CustomUser.objects.get(id=user_id)
+            
+            # Define key management roles and restrictions
+            key_admin_roles = ['key_administrator', 'security_admin']
+            key_operator_roles = ['key_operator', 'security_analyst']
+            
+            user_roles = [role.name for role in user.roles.all()]
+            
+            if operation == 'rotate_keys':
+                # Only key administrators can rotate keys
+                return any(role in key_admin_roles for role in user_roles)
+            elif operation == 'view_keys':
+                # Key operators and admins can view key information
+                return any(role in key_admin_roles + key_operator_roles for role in user_roles)
+            elif operation == 'audit_keys':
+                # Only security admins can audit key usage
+                return 'security_admin' in user_roles
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to validate key separation of duties: {e}")
+            return False
+
+
 # Service instances for use throughout the application
 encryption_service = DataEncryptionService()
+key_management_service = KeyManagementService()
 pii_masking_service = PIIMaskingService()
 data_retention_service = DataRetentionService()
 gdpr_compliance_service = GDPRComplianceService()

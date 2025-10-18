@@ -15,6 +15,7 @@ from .models import (
     ComplianceMapping,
     ConnectorConfig,
     WebhookSubscription,
+    ModelRiskAssessment,
 )
 
 
@@ -433,6 +434,79 @@ class EvidenceArtifactForm(forms.ModelForm):
                     Column('encryption_key_id', css_class='col-md-3'),
                     Column('retention_date', css_class='col-md-3'),
                 ),
+                css_class='border-top pt-3 mt-3'
+            ),
+        )
+
+
+class ModelRiskAssessmentForm(forms.ModelForm):
+    class Meta:
+        model = ModelRiskAssessment
+        fields = [
+            'model_asset', 'risk_level', 'assessor', 'approval_status',
+            'approver', 'approval_notes', 'risk_factors', 'mitigation_measures',
+            'compliance_requirements', 'evidence_documents', 'production_approved',
+            'deployment_conditions', 'review_frequency_months'
+        ]
+        widgets = {
+            'model_asset': forms.Select(attrs={'class': 'form-select'}),
+            'risk_level': forms.Select(attrs={'class': 'form-select'}),
+            'assessor': forms.Select(attrs={'class': 'form-select'}),
+            'approval_status': forms.Select(attrs={'class': 'form-select'}),
+            'approver': forms.Select(attrs={'class': 'form-select'}),
+            'approval_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'risk_factors': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+            'mitigation_measures': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+            'compliance_requirements': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'evidence_documents': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'production_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'deployment_conditions': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'review_frequency_months': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Save Risk Assessment'))
+        self.helper.layout = Layout(
+            Row(
+                Column('model_asset', css_class='col-md-6'),
+                Column('risk_level', css_class='col-md-6'),
+            ),
+            Row(
+                Column('assessor', css_class='col-md-6'),
+                Column('approval_status', css_class='col-md-6'),
+            ),
+            Row(
+                Column('approver', css_class='col-md-6'),
+                Column('review_frequency_months', css_class='col-md-6'),
+            ),
+            'approval_notes',
+            Div(
+                'risk_factors',
+                css_class='border-top pt-3 mt-3'
+            ),
+            Div(
+                'mitigation_measures',
+                css_class='border-top pt-3 mt-3'
+            ),
+            Div(
+                'compliance_requirements',
+                css_class='border-top pt-3 mt-3'
+            ),
+            Div(
+                'evidence_documents',
+                css_class='border-top pt-3 mt-3'
+            ),
+            Div(
+                Row(
+                    Column('production_approved', css_class='col-md-6'),
+                ),
+                css_class='border-top pt-3 mt-3'
+            ),
+            Div(
+                'deployment_conditions',
                 css_class='border-top pt-3 mt-3'
             ),
         )

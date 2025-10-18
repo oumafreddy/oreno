@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from core.models.abstract_models import (
     OrganizationOwnedModel,
@@ -550,3 +551,178 @@ class WebhookSubscription(OrganizationOwnedModel, AuditableModel, SoftDeletionMo
 
     def __str__(self):
         return self.url
+
+
+class ModelRiskAssessment(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
+    """
+    Formal risk assessment for AI/ML models with approval workflow.
+    Required before production deployment in regulated environments.
+    """
+    RISK_LEVEL_CHOICES = [
+        ('minimal', 'Minimal Risk'),
+        ('limited', 'Limited Risk'),
+        ('high', 'High Risk'),
+        ('unacceptable', 'Unacceptable Risk'),
+    ]
+    
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('requires_changes', 'Requires Changes'),
+    ]
+    
+    model_asset = models.ForeignKey(
+        ModelAsset, 
+        on_delete=models.CASCADE, 
+        related_name='risk_assessments'
+    )
+    risk_level = models.CharField(
+        max_length=20, 
+        choices=RISK_LEVEL_CHOICES,
+        help_text='Assessed risk level based on model characteristics'
+    )
+    assessment_date = models.DateTimeField(
+        default=timezone.now,
+        help_text='Date when risk assessment was conducted'
+    )
+    assessor = models.ForeignKey(
+        'users.CustomUser',
+        on_delete=models.PROTECT,
+        related_name='conducted_assessments',
+        help_text='User who conducted the risk assessment'
+    )
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='draft',
+        help_text='Current approval status in the workflow'
+    )
+    approver = models.ForeignKey(
+        'users.CustomUser',
+        on_delete=models.PROTECT,
+        related_name='approved_assessments',
+        null=True,
+        blank=True,
+        help_text='User who approved/rejected the assessment'
+    )
+    approval_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date when approval/rejection was given'
+    )
+    approval_notes = models.TextField(
+        blank=True,
+        help_text='Notes from the approver'
+    )
+    
+    # Risk Assessment Details
+    risk_factors = models.JSONField(
+        default=dict,
+        help_text='Detailed risk factors and their scores'
+    )
+    mitigation_measures = models.JSONField(
+        default=dict,
+        help_text='Risk mitigation measures and controls'
+    )
+    compliance_requirements = models.JSONField(
+        default=dict,
+        help_text='Applicable compliance requirements'
+    )
+    evidence_documents = models.JSONField(
+        default=list,
+        help_text='References to evidence documents and artifacts'
+    )
+    
+    # Production Deployment Controls
+    production_approved = models.BooleanField(
+        default=False,
+        help_text='Whether model is approved for production deployment'
+    )
+    production_deployment_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date when model was deployed to production'
+    )
+    deployment_conditions = models.JSONField(
+        default=dict,
+        help_text='Conditions and restrictions for production deployment'
+    )
+    
+    # Review and Monitoring
+    next_review_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Date for next risk assessment review'
+    )
+    review_frequency_months = models.IntegerField(
+        default=12,
+        help_text='Frequency of risk assessment reviews in months'
+    )
+    
+    class Meta:
+        app_label = 'ai_governance'
+        verbose_name = 'Model Risk Assessment'
+        verbose_name_plural = 'Model Risk Assessments'
+        unique_together = ('organization', 'model_asset', 'assessment_date')
+        indexes = [
+            models.Index(fields=['organization']),
+            models.Index(fields=['model_asset']),
+            models.Index(fields=['risk_level']),
+            models.Index(fields=['approval_status']),
+            models.Index(fields=['production_approved']),
+        ]
+
+    def __str__(self):
+        return f"Risk Assessment: {self.model_asset.name} ({self.risk_level})"
+    
+    def clean(self):
+        """Validate risk assessment data."""
+        if self.approval_status in ['approved', 'rejected'] and not self.approver:
+            raise ValidationError("Approver must be specified for approved/rejected assessments")
+        
+        if self.approval_status in ['approved', 'rejected'] and not self.approval_date:
+            raise ValidationError("Approval date must be specified for approved/rejected assessments")
+        
+        if self.production_approved and self.approval_status != 'approved':
+            raise ValidationError("Model cannot be approved for production without risk assessment approval")
+    
+    def can_deploy_to_production(self):
+        """Check if model can be deployed to production."""
+        return (
+            self.approval_status == 'approved' and
+            self.production_approved and
+            self.risk_level != 'unacceptable'
+        )
+    
+    def get_risk_score(self):
+        """Calculate overall risk score based on risk factors."""
+        if not self.risk_factors:
+            return 0
+        
+        total_score = 0
+        factor_count = 0
+        
+        for factor, details in self.risk_factors.items():
+            if isinstance(details, dict) and 'score' in details:
+                total_score += details['score']
+                factor_count += 1
+        
+        return total_score / factor_count if factor_count > 0 else 0
+    
+    def requires_immediate_review(self):
+        """Check if assessment requires immediate review."""
+        if not self.next_review_date:
+            return False
+        
+        return timezone.now() >= self.next_review_date
+    
+    def save(self, *args, **kwargs):
+        """Override save to set next review date."""
+        if not self.next_review_date and self.approval_status == 'approved':
+            from datetime import timedelta
+            self.next_review_date = timezone.now() + timedelta(days=30 * self.review_frequency_months)
+        
+        self.clean()
+        super().save(*args, **kwargs)

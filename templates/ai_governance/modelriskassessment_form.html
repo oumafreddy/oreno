@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Risk Assessment{% else %}New Risk Assessment{% endif %} - AI Governance
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    {% if object %}Edit Risk Assessment{% else %}New Risk Assessment{% endif %}
+                </h2>
+                <a href="{% url 'ai_governance:modelriskassessment_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to List
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Risk Assessment Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ form.media }}
+                                {{ form|crispy }}
+                                
+                                <div class="d-flex justify-content-end mt-4">
+                                    <a href="{% url 'ai_governance:modelriskassessment_list' %}" class="btn btn-secondary me-2">
+                                        Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-1"></i>
+                                        {% if object %}Update{% else %}Create{% endif %} Risk Assessment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Risk Assessment Guidelines</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Risk Levels</h6>
+                            <ul class="list-unstyled">
+                                <li><span class="badge bg-success me-2">Minimal</span> Low impact, well-understood models</li>
+                                <li><span class="badge bg-info me-2">Limited</span> Moderate impact, some uncertainty</li>
+                                <li><span class="badge bg-warning me-2">High</span> Significant impact, high uncertainty</li>
+                                <li><span class="badge bg-danger me-2">Unacceptable</span> Prohibited for production use</li>
+                            </ul>
+                            
+                            <h6 class="mt-4">Assessment Process</h6>
+                            <ol>
+                                <li>Select the model to assess</li>
+                                <li>Evaluate risk factors</li>
+                                <li>Document mitigation measures</li>
+                                <li>Submit for review</li>
+                                <li>Obtain approval before production</li>
+                            </ol>
+                            
+                            <h6 class="mt-4">Required Information</h6>
+                            <ul>
+                                <li>Risk factors and scoring</li>
+                                <li>Mitigation measures</li>
+                                <li>Compliance requirements</li>
+                                <li>Evidence documents</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -67,6 +67,11 @@ from .views import (
     WebhookSubscriptionCreateView,
     WebhookSubscriptionDetailView,
     WebhookSubscriptionUpdateView,
+    ModelRiskAssessmentListView,
+    ModelRiskAssessmentCreateView,
+    ModelRiskAssessmentDetailView,
+    ModelRiskAssessmentUpdateView,
+    ModelRiskAssessmentApprovalView,
     ReportsView,
 )
 
@@ -163,6 +168,13 @@ urlpatterns = [
     path('webhook-subscriptions/create/', WebhookSubscriptionCreateView.as_view(), name='webhooksubscription_create'),
     path('webhook-subscriptions/<int:pk>/', WebhookSubscriptionDetailView.as_view(), name='webhooksubscription_detail'),
     path('webhook-subscriptions/<int:pk>/update/', WebhookSubscriptionUpdateView.as_view(), name='webhooksubscription_update'),
+    
+    # Model Risk Assessments
+    path('risk-assessments/', ModelRiskAssessmentListView.as_view(), name='modelriskassessment_list'),
+    path('risk-assessments/create/', ModelRiskAssessmentCreateView.as_view(), name='modelriskassessment_create'),
+    path('risk-assessments/<int:pk>/', ModelRiskAssessmentDetailView.as_view(), name='modelriskassessment_detail'),
+    path('risk-assessments/<int:pk>/update/', ModelRiskAssessmentUpdateView.as_view(), name='modelriskassessment_update'),
+    path('risk-assessments/<int:pk>/approve/', ModelRiskAssessmentApprovalView.as_view(), name='modelriskassessment_approve'),
     
     # Reports
     path('reports/', ReportsView.as_view(), name='reports'),

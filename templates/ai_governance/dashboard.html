@@ -411,14 +411,18 @@
                         <i class="bi bi-connection me-1"></i>
                         Add Connector
                     </a>
-                    <a href="{% url 'ai_governance:webhooksubscription_create' %}" class="action-btn">
-                        <i class="bi bi-webhook me-1"></i>
-                        Add Webhook
-                    </a>
-                    <a href="{% url 'ai_governance:reports' %}" class="action-btn">
-                        <i class="bi bi-file-earmark-text me-1"></i>
-                        Generate Report
-                    </a>
+                <a href="{% url 'ai_governance:webhooksubscription_create' %}" class="action-btn">
+                    <i class="bi bi-webhook me-1"></i>
+                    Add Webhook
+                </a>
+                <a href="{% url 'ai_governance:modelriskassessment_create' %}" class="action-btn">
+                    <i class="bi bi-shield-exclamation me-1"></i>
+                    Risk Assessment
+                </a>
+                <a href="{% url 'ai_governance:reports' %}" class="action-btn">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    Generate Report
+                </a>
                 </div>
             </div>
 
@@ -577,16 +581,29 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-bg-light h-100 shadow-sm border">
-                <div class="card-body text-center">
-                    <i class="bi bi-webhook display-4 mb-2 text-danger"></i>
-                    <h5 class="card-title text-dark">Webhooks</h5>
-                    <h3><a href="{% url 'ai_governance:webhooksubscription_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_webhooks|default:"0" }}</a></h3>
+            <div class="col-md-2">
+                <div class="card text-bg-light h-100 shadow-sm border">
+                    <div class="card-body text-center">
+                        <i class="bi bi-webhook display-4 mb-2 text-danger"></i>
+                        <h5 class="card-title text-dark">Webhooks</h5>
+                        <h3><a href="{% url 'ai_governance:webhooksubscription_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_webhooks|default:"0" }}</a></h3>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Risk Assessment Management Card -->
+        <div class="row g-4 mb-4 justify-content-center">
+            <div class="col-md-3">
+                <div class="card text-bg-warning h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-shield-exclamation display-4 mb-2"></i>
+                        <h5 class="card-title">Risk Assessments</h5>
+                        <h3><a href="{% url 'ai_governance:modelriskassessment_list' %}" class="stretched-link text-white text-decoration-none">{{ total_risk_assessments|default:"0" }}</a></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <!-- Quick Actions Section -->
     <div class="row mt-4">
