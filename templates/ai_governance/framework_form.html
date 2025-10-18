@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Framework - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:framework_list' %}">Frameworks</a></li>
+                        <li class="breadcrumb-item active">{% if object %}Edit{% else %}Add{% endif %}</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">{% if object %}Edit{% else %}Add{% endif %} Framework</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

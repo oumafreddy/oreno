@@ -45,6 +45,9 @@ from .forms import (
     DatasetAssetForm,
     TestPlanForm,
     TestRunForm,
+    TestResultForm,
+    MetricForm,
+    EvidenceArtifactForm,
     FrameworkForm,
     ClauseForm,
     ComplianceMappingForm,
@@ -145,6 +148,46 @@ class GovernanceDashboardView(OrganizationPermissionMixin, LoginRequiredMixin, T
         context['available_models'] = ModelAsset.objects.filter(organization=org)
         context['available_datasets'] = DatasetAsset.objects.filter(organization=org)
         context['available_test_plans'] = TestPlan.objects.filter(organization=org)
+
+        # Get counts for dashboard management cards
+        context['total_datasets'] = DatasetAsset.objects.filter(organization=org).count()
+        context['total_test_plans'] = TestPlan.objects.filter(organization=org).count()
+        context['total_test_results'] = TestResult.objects.filter(organization=org).count()
+        context['total_frameworks'] = Framework.objects.filter(organization=org).count()
+        context['total_clauses'] = Clause.objects.filter(organization=org).count()
+        context['total_mappings'] = ComplianceMapping.objects.filter(organization=org).count()
+        context['total_artifacts'] = EvidenceArtifact.objects.filter(organization=org).count()
+        context['total_connectors'] = ConnectorConfig.objects.filter(organization=org).count()
+        context['total_webhooks'] = WebhookSubscription.objects.filter(organization=org).count()
+        context['total_metrics'] = Metric.objects.filter(organization=org).count()
+
+        # Get recent activity for dashboard
+        from django.contrib.contenttypes.models import ContentType
+        from django.contrib.admin.models import LogEntry
+        
+        recent_activity = []
+        try:
+            # Get recent model changes
+            recent_models = ModelAsset.objects.filter(organization=org).order_by('-updated_at')[:3]
+            for model in recent_models:
+                recent_activity.append({
+                    'message': f'Model "{model.name}" was updated',
+                    'timestamp': model.updated_at
+                })
+            
+            # Get recent test runs
+            recent_runs = TestRun.objects.filter(organization=org).order_by('-created_at')[:3]
+            for run in recent_runs:
+                recent_activity.append({
+                    'message': f'Test run for "{run.model_asset.name}" was created',
+                    'timestamp': run.created_at
+                })
+            
+            # Sort by timestamp and take the most recent 5
+            recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
+            context['recent_activity'] = recent_activity[:5]
+        except Exception:
+            context['recent_activity'] = []
 
         # Period filter context
         context['available_years'] = years
@@ -710,3 +753,372 @@ class ReportsView(OrganizationPermissionMixin, LoginRequiredMixin, TemplateView)
         ]
         
         return context
+
+
+# Additional Web UI Views for missing models
+class TestResultListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = TestResult
+    template_name = 'ai_governance/testresult_list.html'
+    context_object_name = 'test_results'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return TestResult.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class TestResultCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = TestResult
+    form_class = TestResultForm
+    template_name = 'ai_governance/testresult_form.html'
+    success_url = reverse_lazy('ai_governance:testresult_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class TestResultDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = TestResult
+    template_name = 'ai_governance/testresult_detail.html'
+    context_object_name = 'test_result'
+
+    def get_queryset(self):
+        return TestResult.objects.filter(organization=self.request.organization)
+
+
+class TestResultUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = TestResult
+    form_class = TestResultForm
+    template_name = 'ai_governance/testresult_form.html'
+    success_url = reverse_lazy('ai_governance:testresult_list')
+
+    def get_queryset(self):
+        return TestResult.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class MetricListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = Metric
+    template_name = 'ai_governance/metric_list.html'
+    context_object_name = 'metrics'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Metric.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class MetricCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = Metric
+    form_class = MetricForm
+    template_name = 'ai_governance/metric_form.html'
+    success_url = reverse_lazy('ai_governance:metric_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class MetricDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = Metric
+    template_name = 'ai_governance/metric_detail.html'
+    context_object_name = 'metric'
+
+    def get_queryset(self):
+        return Metric.objects.filter(organization=self.request.organization)
+
+
+class MetricUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = Metric
+    form_class = MetricForm
+    template_name = 'ai_governance/metric_form.html'
+    success_url = reverse_lazy('ai_governance:metric_list')
+
+    def get_queryset(self):
+        return Metric.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class EvidenceArtifactListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = EvidenceArtifact
+    template_name = 'ai_governance/evidenceartifact_list.html'
+    context_object_name = 'evidence_artifacts'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return EvidenceArtifact.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class EvidenceArtifactCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = EvidenceArtifact
+    form_class = EvidenceArtifactForm
+    template_name = 'ai_governance/evidenceartifact_form.html'
+    success_url = reverse_lazy('ai_governance:evidenceartifact_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class EvidenceArtifactDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = EvidenceArtifact
+    template_name = 'ai_governance/evidenceartifact_detail.html'
+    context_object_name = 'evidence_artifact'
+
+    def get_queryset(self):
+        return EvidenceArtifact.objects.filter(organization=self.request.organization)
+
+
+class EvidenceArtifactUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = EvidenceArtifact
+    form_class = EvidenceArtifactForm
+    template_name = 'ai_governance/evidenceartifact_form.html'
+    success_url = reverse_lazy('ai_governance:evidenceartifact_list')
+
+    def get_queryset(self):
+        return EvidenceArtifact.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class FrameworkListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = Framework
+    template_name = 'ai_governance/framework_list.html'
+    context_object_name = 'frameworks'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Framework.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class FrameworkCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = Framework
+    form_class = FrameworkForm
+    template_name = 'ai_governance/framework_form.html'
+    success_url = reverse_lazy('ai_governance:framework_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class FrameworkDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = Framework
+    template_name = 'ai_governance/framework_detail.html'
+    context_object_name = 'framework'
+
+    def get_queryset(self):
+        return Framework.objects.filter(organization=self.request.organization)
+
+
+class FrameworkUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = Framework
+    form_class = FrameworkForm
+    template_name = 'ai_governance/framework_form.html'
+    success_url = reverse_lazy('ai_governance:framework_list')
+
+    def get_queryset(self):
+        return Framework.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ClauseListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = Clause
+    template_name = 'ai_governance/clause_list.html'
+    context_object_name = 'clauses'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Clause.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class ClauseCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = Clause
+    form_class = ClauseForm
+    template_name = 'ai_governance/clause_form.html'
+    success_url = reverse_lazy('ai_governance:clause_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ClauseDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = Clause
+    template_name = 'ai_governance/clause_detail.html'
+    context_object_name = 'clause'
+
+    def get_queryset(self):
+        return Clause.objects.filter(organization=self.request.organization)
+
+
+class ClauseUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = Clause
+    form_class = ClauseForm
+    template_name = 'ai_governance/clause_form.html'
+    success_url = reverse_lazy('ai_governance:clause_list')
+
+    def get_queryset(self):
+        return Clause.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ComplianceMappingListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = ComplianceMapping
+    template_name = 'ai_governance/compliancemapping_list.html'
+    context_object_name = 'compliance_mappings'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return ComplianceMapping.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class ComplianceMappingCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = ComplianceMapping
+    form_class = ComplianceMappingForm
+    template_name = 'ai_governance/compliancemapping_form.html'
+    success_url = reverse_lazy('ai_governance:compliancemapping_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ComplianceMappingDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = ComplianceMapping
+    template_name = 'ai_governance/compliancemapping_detail.html'
+    context_object_name = 'compliance_mapping'
+
+    def get_queryset(self):
+        return ComplianceMapping.objects.filter(organization=self.request.organization)
+
+
+class ComplianceMappingUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = ComplianceMapping
+    form_class = ComplianceMappingForm
+    template_name = 'ai_governance/compliancemapping_form.html'
+    success_url = reverse_lazy('ai_governance:compliancemapping_list')
+
+    def get_queryset(self):
+        return ComplianceMapping.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ConnectorConfigListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = ConnectorConfig
+    template_name = 'ai_governance/connectorconfig_list.html'
+    context_object_name = 'connector_configs'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return ConnectorConfig.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class ConnectorConfigCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = ConnectorConfig
+    form_class = ConnectorConfigForm
+    template_name = 'ai_governance/connectorconfig_form.html'
+    success_url = reverse_lazy('ai_governance:connectorconfig_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class ConnectorConfigDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = ConnectorConfig
+    template_name = 'ai_governance/connectorconfig_detail.html'
+    context_object_name = 'connector_config'
+
+    def get_queryset(self):
+        return ConnectorConfig.objects.filter(organization=self.request.organization)
+
+
+class ConnectorConfigUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = ConnectorConfig
+    form_class = ConnectorConfigForm
+    template_name = 'ai_governance/connectorconfig_form.html'
+    success_url = reverse_lazy('ai_governance:connectorconfig_list')
+
+    def get_queryset(self):
+        return ConnectorConfig.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class WebhookSubscriptionListView(OrganizationPermissionMixin, LoginRequiredMixin, ListView):
+    model = WebhookSubscription
+    template_name = 'ai_governance/webhooksubscription_list.html'
+    context_object_name = 'webhook_subscriptions'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return WebhookSubscription.objects.filter(organization=self.request.organization).order_by('-created_at')
+
+
+class WebhookSubscriptionCreateView(OrganizationPermissionMixin, LoginRequiredMixin, CreateView):
+    model = WebhookSubscription
+    form_class = WebhookSubscriptionForm
+    template_name = 'ai_governance/webhooksubscription_form.html'
+    success_url = reverse_lazy('ai_governance:webhooksubscription_list')
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+
+class WebhookSubscriptionDetailView(OrganizationPermissionMixin, LoginRequiredMixin, DetailView):
+    model = WebhookSubscription
+    template_name = 'ai_governance/webhooksubscription_detail.html'
+    context_object_name = 'webhook_subscription'
+
+    def get_queryset(self):
+        return WebhookSubscription.objects.filter(organization=self.request.organization)
+
+
+class WebhookSubscriptionUpdateView(OrganizationPermissionMixin, LoginRequiredMixin, UpdateView):
+    model = WebhookSubscription
+    form_class = WebhookSubscriptionForm
+    template_name = 'ai_governance/webhooksubscription_form.html'
+    success_url = reverse_lazy('ai_governance:webhooksubscription_list')
+
+    def get_queryset(self):
+        return WebhookSubscription.objects.filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)

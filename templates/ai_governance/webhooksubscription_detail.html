@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Webhook Subscription Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:webhooksubscription_list' %}">Webhook Subscriptions</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Webhook Subscription Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ webhook_subscription.url|truncatechars:50 }}</h4>
+                            <p class="text-muted">Webhook subscription details and configuration.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:webhooksubscription_update' webhook_subscription.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:webhooksubscription_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Webhook Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>URL:</strong></td>
+                                            <td><code>{{ webhook_subscription.url }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if webhook_subscription.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Events:</strong></td>
+                                            <td>
+                                                {% if webhook_subscription.events %}
+                                                    {% for event in webhook_subscription.events %}
+                                                        <span class="badge bg-info me-1">{{ event }}</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">No events configured</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Security & Audit</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Secret:</strong></td>
+                                            <td>
+                                                {% if webhook_subscription.secret %}
+                                                    <code>••••••••••••••••</code>
+                                                    <small class="text-muted">(Hidden for security)</small>
+                                                {% else %}
+                                                    <span class="text-muted">Not set</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ webhook_subscription.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ webhook_subscription.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ webhook_subscription.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ webhook_subscription.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if webhook_subscription.metadata %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Metadata</h5>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ webhook_subscription.metadata|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Supported Events</h5>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-play mdi-24px text-success"></i>
+                                                <h6 class="mt-2">test_run_started</h6>
+                                                <small class="text-muted">When a test run begins</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-check-circle mdi-24px text-primary"></i>
+                                                <h6 class="mt-2">test_run_completed</h6>
+                                                <small class="text-muted">When a test run finishes</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-alert-circle mdi-24px text-warning"></i>
+                                                <h6 class="mt-2">compliance_failed</h6>
+                                                <small class="text-muted">When compliance checks fail</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-shield-check mdi-24px text-success"></i>
+                                                <h6 class="mt-2">compliance_passed</h6>
+                                                <small class="text-muted">When compliance checks pass</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Webhook Payload Example</h5>
+                                    <div class="bg-dark text-light p-3 rounded">
+                                        <pre class="mb-0 text-light"><code>{
+  "event": "test_run_completed",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "test_run_id": 123,
+    "test_plan_id": 45,
+    "status": "completed",
+    "results": {
+      "total_tests": 10,
+      "passed": 8,
+      "failed": 2
+    }
+  },
+  "organization": "your-org-code"
+}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

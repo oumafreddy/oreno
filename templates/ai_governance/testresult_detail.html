@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Test Result Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:testresult_list' %}">Test Results</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Test Result Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ test_result.test_name }}</h4>
+                            <p class="text-muted">Test result details and information.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:testresult_update' test_result.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:testresult_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Basic Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Test Name:</strong></td>
+                                            <td>{{ test_result.test_name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Test Run:</strong></td>
+                                            <td>
+                                                <a href="{% url 'ai_governance:testrun_detail' test_result.test_run.pk %}">
+                                                    {{ test_result.test_run.id }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if test_result.passed %}
+                                                    <span class="badge bg-success">Passed</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Failed</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Data Classification:</strong></td>
+                                            <td>
+                                                <span class="badge bg-info">{{ test_result.data_classification|title }}</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Contains PII:</strong></td>
+                                            <td>
+                                                {% if test_result.contains_pii %}
+                                                    <span class="badge bg-warning">Yes</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">No</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Audit Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ test_result.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ test_result.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ test_result.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ test_result.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Summary</h5>
+                                    {% if test_result.summary %}
+                                        <div class="bg-light p-3 rounded">
+                                            <pre class="mb-0">{{ test_result.summary|pprint }}</pre>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">No summary available.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if test_result.encryption_key_id %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Security Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Encryption Key ID:</strong></td>
+                                            <td><code>{{ test_result.encryption_key_id }}</code></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

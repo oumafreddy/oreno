@@ -7,6 +7,9 @@ from .models import (
     DatasetAsset,
     TestPlan,
     TestRun,
+    TestResult,
+    Metric,
+    EvidenceArtifact,
     Framework,
     Clause,
     ComplianceMapping,
@@ -313,5 +316,123 @@ class WebhookSubscriptionForm(forms.ModelForm):
             Row(
                 Column('secret', css_class='col-md-6'),
                 Column('is_active', css_class='col-md-6'),
+            ),
+        )
+
+
+class TestResultForm(forms.ModelForm):
+    class Meta:
+        model = TestResult
+        fields = [
+            'test_run', 'test_name', 'summary', 'passed',
+            'contains_pii', 'data_classification', 'encryption_key_id'
+        ]
+        widgets = {
+            'test_run': forms.Select(attrs={'class': 'form-select'}),
+            'test_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'passed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'contains_pii': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'data_classification': forms.Select(attrs={'class': 'form-select'}),
+            'encryption_key_id': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Save'))
+        self.helper.layout = Layout(
+            Row(
+                Column('test_run', css_class='col-md-6'),
+                Column('test_name', css_class='col-md-6'),
+            ),
+            'summary',
+            Row(
+                Column('passed', css_class='col-md-4'),
+                Column('contains_pii', css_class='col-md-4'),
+                Column('data_classification', css_class='col-md-4'),
+            ),
+            'encryption_key_id',
+        )
+
+
+class MetricForm(forms.ModelForm):
+    class Meta:
+        model = Metric
+        fields = [
+            'test_result', 'name', 'value', 'threshold', 'passed',
+            'slice_key', 'slice_value', 'extra'
+        ]
+        widgets = {
+            'test_result': forms.Select(attrs={'class': 'form-select'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'threshold': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'passed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'slice_key': forms.TextInput(attrs={'class': 'form-control'}),
+            'slice_value': forms.TextInput(attrs={'class': 'form-control'}),
+            'extra': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Save'))
+        self.helper.layout = Layout(
+            'test_result',
+            Row(
+                Column('name', css_class='col-md-6'),
+                Column('value', css_class='col-md-3'),
+                Column('threshold', css_class='col-md-3'),
+            ),
+            Row(
+                Column('passed', css_class='col-md-4'),
+                Column('slice_key', css_class='col-md-4'),
+                Column('slice_value', css_class='col-md-4'),
+            ),
+            'extra',
+        )
+
+
+class EvidenceArtifactForm(forms.ModelForm):
+    class Meta:
+        model = EvidenceArtifact
+        fields = [
+            'test_run', 'artifact_type', 'file_path', 'file_info',
+            'contains_pii', 'data_classification', 'encryption_key_id', 'retention_date'
+        ]
+        widgets = {
+            'test_run': forms.Select(attrs={'class': 'form-select'}),
+            'artifact_type': forms.Select(attrs={'class': 'form-select'}),
+            'file_path': forms.TextInput(attrs={'class': 'form-control'}),
+            'file_info': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'contains_pii': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'data_classification': forms.Select(attrs={'class': 'form-select'}),
+            'encryption_key_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'retention_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Save'))
+        self.helper.layout = Layout(
+            Row(
+                Column('test_run', css_class='col-md-6'),
+                Column('artifact_type', css_class='col-md-6'),
+            ),
+            'file_path',
+            'file_info',
+            Div(
+                Row(
+                    Column('contains_pii', css_class='col-md-3'),
+                    Column('data_classification', css_class='col-md-3'),
+                    Column('encryption_key_id', css_class='col-md-3'),
+                    Column('retention_date', css_class='col-md-3'),
+                ),
+                css_class='border-top pt-3 mt-3'
             ),
         )

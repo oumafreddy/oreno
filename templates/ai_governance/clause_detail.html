@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clause Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:framework_list' %}">Frameworks</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:clause_list' %}">Clauses</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Clause Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ clause.clause_code }}</h4>
+                            <p class="text-muted">Framework clause details and requirements.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:clause_update' clause.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:clause_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Clause Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Clause Code:</strong></td>
+                                            <td><span class="badge bg-primary">{{ clause.clause_code }}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Framework:</strong></td>
+                                            <td>
+                                                <a href="{% url 'ai_governance:framework_detail' clause.framework.pk %}">
+                                                    <span class="badge bg-info">{{ clause.framework.code }}</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Framework Title:</strong></td>
+                                            <td>{{ clause.framework.title }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Audit Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ clause.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ clause.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ clause.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ clause.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Clause Text</h5>
+                                    <div class="bg-light p-4 rounded">
+                                        <p class="mb-0">{{ clause.text|linebreaks }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if clause.metadata %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Metadata</h5>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ clause.metadata|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if clause.mappings.exists %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Compliance Mappings</h5>
+                                    <p class="text-muted">Tests and metrics mapped to this clause.</p>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Test Name</th>
+                                                    <th>Metric Name</th>
+                                                    <th>Rationale</th>
+                                                    <th>Created</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for mapping in clause.mappings.all %}
+                                                <tr>
+                                                    <td><span class="badge bg-info">{{ mapping.test_name }}</span></td>
+                                                    <td>
+                                                        {% if mapping.metric_name %}
+                                                            <span class="badge bg-secondary">{{ mapping.metric_name }}</span>
+                                                        {% else %}
+                                                            <span class="text-muted">-</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td><small class="text-muted">{{ mapping.rationale|truncatechars:50 }}</small></td>
+                                                    <td><small class="text-muted">{{ mapping.created_at|date:"M d, Y" }}</small></td>
+                                                    <td>
+                                                        <a href="{% url 'ai_governance:compliancemapping_detail' mapping.pk %}" class="btn btn-sm btn-outline-primary">
+                                                            View
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clauses - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:framework_list' %}">Frameworks</a></li>
+                        <li class="breadcrumb-item active">Clauses</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Clauses</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">Framework Clauses</h4>
+                            <p class="text-muted">Manage individual clauses within governance frameworks.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:clause_create' %}" class="btn btn-primary">
+                                    <i class="mdi mdi-plus"></i> Add Clause
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if clauses %}
+                        <div class="table-responsive">
+                            <table class="table table-centered table-nowrap mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Clause Code</th>
+                                        <th>Framework</th>
+                                        <th>Text Preview</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for clause in clauses %}
+                                    <tr>
+                                        <td>
+                                            <h5 class="m-0 fw-normal">{{ clause.clause_code }}</h5>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ clause.framework.code }}</span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ clause.text|truncatechars:100 }}</small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ clause.created_at|date:"M d, Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'ai_governance:clause_detail' clause.pk %}" class="action-icon">
+                                                <i class="mdi mdi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'ai_governance:clause_update' clause.pk %}" class="action-icon">
+                                                <i class="mdi mdi-square-edit-outline"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if is_paginated %}
+                            <div class="row mt-3">
+                                <div class="col-sm-12 col-md-5">
+                                    <div class="dataTables_info">
+                                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                                    </div>
+                                </div>
+                                <div class="col-sm-12 col-md-7">
+                                    <div class="dataTables_paginate paging_simple_numbers">
+                                        <ul class="pagination pagination-rounded justify-content-end">
+                                            {% if page_obj.has_previous %}
+                                                <li class="paginate_button page-item previous">
+                                                    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">Previous</a>
+                                                </li>
+                                            {% endif %}
+                                            
+                                            {% for num in page_obj.paginator.page_range %}
+                                                {% if page_obj.number == num %}
+                                                    <li class="paginate_button page-item active">
+                                                        <span class="page-link">{{ num }}</span>
+                                                    </li>
+                                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                    <li class="paginate_button page-item">
+                                                        <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if page_obj.has_next %}
+                                                <li class="paginate_button page-item next">
+                                                    <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="mdi mdi-text-box mdi-48px text-muted"></i>
+                            <h5 class="mt-2">No Clauses Found</h5>
+                            <p class="text-muted">Get started by adding your first framework clause.</p>
+                            <a href="{% url 'ai_governance:clause_create' %}" class="btn btn-primary">
+                                <i class="mdi mdi-plus"></i> Add Clause
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

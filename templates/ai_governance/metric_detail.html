@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Metric Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:metric_list' %}">Metrics</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Metric Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ metric.name }}</h4>
+                            <p class="text-muted">Metric details and performance information.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:metric_update' metric.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:metric_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Metric Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Name:</strong></td>
+                                            <td>{{ metric.name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Value:</strong></td>
+                                            <td><span class="fw-bold text-primary">{{ metric.value }}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Threshold:</strong></td>
+                                            <td>
+                                                {% if metric.threshold %}
+                                                    <span class="fw-bold">{{ metric.threshold }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">Not set</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if metric.passed %}
+                                                    <span class="badge bg-success">Passed</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Failed</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Test Result:</strong></td>
+                                            <td>
+                                                <a href="{% url 'ai_governance:testresult_detail' metric.test_result.pk %}">
+                                                    {{ metric.test_result.test_name }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Slice Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Slice Key:</strong></td>
+                                            <td>
+                                                {% if metric.slice_key %}
+                                                    <span class="badge bg-info">{{ metric.slice_key }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Slice Value:</strong></td>
+                                            <td>
+                                                {% if metric.slice_value %}
+                                                    <span class="badge bg-secondary">{{ metric.slice_value }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ metric.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ metric.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ metric.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ metric.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if metric.extra %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Additional Information</h5>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ metric.extra|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

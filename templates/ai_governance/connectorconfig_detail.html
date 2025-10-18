@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Connector Config Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:connectorconfig_list' %}">Connector Configs</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Connector Config Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ connector_config.name }}</h4>
+                            <p class="text-muted">Connector configuration details and credentials.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:connectorconfig_update' connector_config.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:connectorconfig_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Configuration Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Name:</strong></td>
+                                            <td>{{ connector_config.name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Type:</strong></td>
+                                            <td><span class="badge bg-info">{{ connector_config.connector_type|title }}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if connector_config.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Audit Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ connector_config.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ connector_config.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ connector_config.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ connector_config.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if connector_config.config %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Configuration Details</h5>
+                                    <div class="alert alert-warning">
+                                        <i class="mdi mdi-shield-alert"></i>
+                                        <strong>Security Notice:</strong> Configuration details are hidden for security reasons. Only authorized users can view and edit these settings.
+                                    </div>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ connector_config.config|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if connector_config.metadata %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Metadata</h5>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ connector_config.metadata|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Connector Types</h5>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-database mdi-24px text-primary"></i>
+                                                <h6 class="mt-2">MLflow</h6>
+                                                <small class="text-muted">Model tracking and registry</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-cloud mdi-24px text-info"></i>
+                                                <h6 class="mt-2">S3</h6>
+                                                <small class="text-muted">Object storage</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-microsoft-azure mdi-24px text-primary"></i>
+                                                <h6 class="mt-2">Azure Blob</h6>
+                                                <small class="text-muted">Cloud storage</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center p-3 border rounded">
+                                                <i class="mdi mdi-google-cloud mdi-24px text-success"></i>
+                                                <h6 class="mt-2">GCS</h6>
+                                                <small class="text-muted">Google Cloud Storage</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

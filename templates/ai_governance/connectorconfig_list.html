@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Connector Configs - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item active">Connector Configs</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Connector Configurations</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">Connector Configurations</h4>
+                            <p class="text-muted">Manage credentials and locations for MLflow, S3, Azure Blob, and other connectors.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:connectorconfig_create' %}" class="btn btn-primary">
+                                    <i class="mdi mdi-plus"></i> Add Connector
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if connector_configs %}
+                        <div class="table-responsive">
+                            <table class="table table-centered table-nowrap mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for config in connector_configs %}
+                                    <tr>
+                                        <td>
+                                            <h5 class="m-0 fw-normal">{{ config.name }}</h5>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ config.connector_type|title }}</span>
+                                        </td>
+                                        <td>
+                                            {% if config.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ config.created_at|date:"M d, Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'ai_governance:connectorconfig_detail' config.pk %}" class="action-icon">
+                                                <i class="mdi mdi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'ai_governance:connectorconfig_update' config.pk %}" class="action-icon">
+                                                <i class="mdi mdi-square-edit-outline"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if is_paginated %}
+                            <div class="row mt-3">
+                                <div class="col-sm-12 col-md-5">
+                                    <div class="dataTables_info">
+                                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                                    </div>
+                                </div>
+                                <div class="col-sm-12 col-md-7">
+                                    <div class="dataTables_paginate paging_simple_numbers">
+                                        <ul class="pagination pagination-rounded justify-content-end">
+                                            {% if page_obj.has_previous %}
+                                                <li class="paginate_button page-item previous">
+                                                    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">Previous</a>
+                                                </li>
+                                            {% endif %}
+                                            
+                                            {% for num in page_obj.paginator.page_range %}
+                                                {% if page_obj.number == num %}
+                                                    <li class="paginate_button page-item active">
+                                                        <span class="page-link">{{ num }}</span>
+                                                    </li>
+                                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                    <li class="paginate_button page-item">
+                                                        <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if page_obj.has_next %}
+                                                <li class="paginate_button page-item next">
+                                                    <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="mdi mdi-connection mdi-48px text-muted"></i>
+                            <h5 class="mt-2">No Connector Configurations Found</h5>
+                            <p class="text-muted">Set up connectors to integrate with MLflow, S3, Azure Blob, and other services.</p>
+                            <a href="{% url 'ai_governance:connectorconfig_create' %}" class="btn btn-primary">
+                                <i class="mdi mdi-plus"></i> Add Connector
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

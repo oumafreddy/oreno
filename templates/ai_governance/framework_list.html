@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Frameworks - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item active">Frameworks</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Frameworks</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">Governance Frameworks</h4>
+                            <p class="text-muted">Manage AI governance frameworks (EU AI Act, OECD, NIST AI RMF).</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:framework_create' %}" class="btn btn-primary">
+                                    <i class="mdi mdi-plus"></i> Add Framework
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if frameworks %}
+                        <div class="table-responsive">
+                            <table class="table table-centered table-nowrap mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Title</th>
+                                        <th>Version</th>
+                                        <th>Clauses</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for framework in frameworks %}
+                                    <tr>
+                                        <td>
+                                            <h5 class="m-0 fw-normal">{{ framework.code }}</h5>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold">{{ framework.title }}</span>
+                                        </td>
+                                        <td>
+                                            {% if framework.version %}
+                                                <span class="badge bg-info">{{ framework.version }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ framework.clauses.count }}</span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ framework.created_at|date:"M d, Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'ai_governance:framework_detail' framework.pk %}" class="action-icon">
+                                                <i class="mdi mdi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'ai_governance:framework_update' framework.pk %}" class="action-icon">
+                                                <i class="mdi mdi-square-edit-outline"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if is_paginated %}
+                            <div class="row mt-3">
+                                <div class="col-sm-12 col-md-5">
+                                    <div class="dataTables_info">
+                                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+                                    </div>
+                                </div>
+                                <div class="col-sm-12 col-md-7">
+                                    <div class="dataTables_paginate paging_simple_numbers">
+                                        <ul class="pagination pagination-rounded justify-content-end">
+                                            {% if page_obj.has_previous %}
+                                                <li class="paginate_button page-item previous">
+                                                    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">Previous</a>
+                                                </li>
+                                            {% endif %}
+                                            
+                                            {% for num in page_obj.paginator.page_range %}
+                                                {% if page_obj.number == num %}
+                                                    <li class="paginate_button page-item active">
+                                                        <span class="page-link">{{ num }}</span>
+                                                    </li>
+                                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                    <li class="paginate_button page-item">
+                                                        <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if page_obj.has_next %}
+                                                <li class="paginate_button page-item next">
+                                                    <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="mdi mdi-book-open-variant mdi-48px text-muted"></i>
+                            <h5 class="mt-2">No Frameworks Found</h5>
+                            <p class="text-muted">Get started by adding your first governance framework.</p>
+                            <a href="{% url 'ai_governance:framework_create' %}" class="btn btn-primary">
+                                <i class="mdi mdi-plus"></i> Add Framework
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

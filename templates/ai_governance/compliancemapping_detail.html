@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compliance Mapping Details - AI Governance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:dashboard' %}">AI Governance</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'ai_governance:compliancemapping_list' %}">Compliance Mappings</a></li>
+                        <li class="breadcrumb-item active">Details</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">Compliance Mapping Details</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">{{ compliance_mapping.test_name }}</h4>
+                            <p class="text-muted">Compliance mapping details and rationale.</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{% url 'ai_governance:compliancemapping_update' compliance_mapping.pk %}" class="btn btn-primary">
+                                    <i class="mdi mdi-square-edit-outline"></i> Edit
+                                </a>
+                                <a href="{% url 'ai_governance:compliancemapping_list' %}" class="btn btn-secondary">
+                                    <i class="mdi mdi-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Mapping Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Test Name:</strong></td>
+                                            <td><span class="badge bg-info">{{ compliance_mapping.test_name }}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Metric Name:</strong></td>
+                                            <td>
+                                                {% if compliance_mapping.metric_name %}
+                                                    <span class="badge bg-secondary">{{ compliance_mapping.metric_name }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">Not specified</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Framework:</strong></td>
+                                            <td>
+                                                <a href="{% url 'ai_governance:framework_detail' compliance_mapping.clause.framework.pk %}">
+                                                    <span class="badge bg-primary">{{ compliance_mapping.clause.framework.code }}</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Clause:</strong></td>
+                                            <td>
+                                                <a href="{% url 'ai_governance:clause_detail' compliance_mapping.clause.pk %}">
+                                                    <span class="badge bg-success">{{ compliance_mapping.clause.clause_code }}</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Audit Information</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ compliance_mapping.created_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created By:</strong></td>
+                                            <td>{{ compliance_mapping.created_by|default:"-" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated:</strong></td>
+                                            <td>{{ compliance_mapping.updated_at|date:"M d, Y H:i" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Updated By:</strong></td>
+                                            <td>{{ compliance_mapping.updated_by|default:"-" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if compliance_mapping.rationale %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Rationale</h5>
+                                    <div class="bg-light p-4 rounded">
+                                        <p class="mb-0">{{ compliance_mapping.rationale|linebreaks }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if compliance_mapping.metadata %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Metadata</h5>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre class="mb-0">{{ compliance_mapping.metadata|pprint }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Related Framework</h5>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ compliance_mapping.clause.framework.title }}</h6>
+                                            <p class="text-muted mb-0">{{ compliance_mapping.clause.framework.code }} v{{ compliance_mapping.clause.framework.version|default:"1.0" }}</p>
+                                        </div>
+                                        <a href="{% url 'ai_governance:framework_detail' compliance_mapping.clause.framework.pk %}" class="btn btn-sm btn-outline-primary">
+                                            View Framework
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Related Clause</h5>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ compliance_mapping.clause.clause_code }}</h6>
+                                            <p class="text-muted mb-0">{{ compliance_mapping.clause.text|truncatechars:60 }}</p>
+                                        </div>
+                                        <a href="{% url 'ai_governance:clause_detail' compliance_mapping.clause.pk %}" class="btn btn-sm btn-outline-primary">
+                                            View Clause
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

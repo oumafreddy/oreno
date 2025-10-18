@@ -35,6 +35,38 @@ from .views import (
     TestRunCreateView,
     TestRunDetailView,
     TestRunUpdateView,
+    TestResultListView,
+    TestResultCreateView,
+    TestResultDetailView,
+    TestResultUpdateView,
+    MetricListView,
+    MetricCreateView,
+    MetricDetailView,
+    MetricUpdateView,
+    EvidenceArtifactListView,
+    EvidenceArtifactCreateView,
+    EvidenceArtifactDetailView,
+    EvidenceArtifactUpdateView,
+    FrameworkListView,
+    FrameworkCreateView,
+    FrameworkDetailView,
+    FrameworkUpdateView,
+    ClauseListView,
+    ClauseCreateView,
+    ClauseDetailView,
+    ClauseUpdateView,
+    ComplianceMappingListView,
+    ComplianceMappingCreateView,
+    ComplianceMappingDetailView,
+    ComplianceMappingUpdateView,
+    ConnectorConfigListView,
+    ConnectorConfigCreateView,
+    ConnectorConfigDetailView,
+    ConnectorConfigUpdateView,
+    WebhookSubscriptionListView,
+    WebhookSubscriptionCreateView,
+    WebhookSubscriptionDetailView,
+    WebhookSubscriptionUpdateView,
     ReportsView,
 )
 
@@ -83,6 +115,54 @@ urlpatterns = [
     path('test-runs/create/', TestRunCreateView.as_view(), name='testrun_create'),
     path('test-runs/<int:pk>/', TestRunDetailView.as_view(), name='testrun_detail'),
     path('test-runs/<int:pk>/update/', TestRunUpdateView.as_view(), name='testrun_update'),
+    
+    # Test Results
+    path('test-results/', TestResultListView.as_view(), name='testresult_list'),
+    path('test-results/create/', TestResultCreateView.as_view(), name='testresult_create'),
+    path('test-results/<int:pk>/', TestResultDetailView.as_view(), name='testresult_detail'),
+    path('test-results/<int:pk>/update/', TestResultUpdateView.as_view(), name='testresult_update'),
+    
+    # Metrics
+    path('metrics/', MetricListView.as_view(), name='metric_list'),
+    path('metrics/create/', MetricCreateView.as_view(), name='metric_create'),
+    path('metrics/<int:pk>/', MetricDetailView.as_view(), name='metric_detail'),
+    path('metrics/<int:pk>/update/', MetricUpdateView.as_view(), name='metric_update'),
+    
+    # Evidence Artifacts
+    path('evidence-artifacts/', EvidenceArtifactListView.as_view(), name='evidenceartifact_list'),
+    path('evidence-artifacts/create/', EvidenceArtifactCreateView.as_view(), name='evidenceartifact_create'),
+    path('evidence-artifacts/<int:pk>/', EvidenceArtifactDetailView.as_view(), name='evidenceartifact_detail'),
+    path('evidence-artifacts/<int:pk>/update/', EvidenceArtifactUpdateView.as_view(), name='evidenceartifact_update'),
+    
+    # Frameworks
+    path('frameworks/', FrameworkListView.as_view(), name='framework_list'),
+    path('frameworks/create/', FrameworkCreateView.as_view(), name='framework_create'),
+    path('frameworks/<int:pk>/', FrameworkDetailView.as_view(), name='framework_detail'),
+    path('frameworks/<int:pk>/update/', FrameworkUpdateView.as_view(), name='framework_update'),
+    
+    # Clauses
+    path('clauses/', ClauseListView.as_view(), name='clause_list'),
+    path('clauses/create/', ClauseCreateView.as_view(), name='clause_create'),
+    path('clauses/<int:pk>/', ClauseDetailView.as_view(), name='clause_detail'),
+    path('clauses/<int:pk>/update/', ClauseUpdateView.as_view(), name='clause_update'),
+    
+    # Compliance Mappings
+    path('compliance-mappings/', ComplianceMappingListView.as_view(), name='compliancemapping_list'),
+    path('compliance-mappings/create/', ComplianceMappingCreateView.as_view(), name='compliancemapping_create'),
+    path('compliance-mappings/<int:pk>/', ComplianceMappingDetailView.as_view(), name='compliancemapping_detail'),
+    path('compliance-mappings/<int:pk>/update/', ComplianceMappingUpdateView.as_view(), name='compliancemapping_update'),
+    
+    # Connector Configs
+    path('connector-configs/', ConnectorConfigListView.as_view(), name='connectorconfig_list'),
+    path('connector-configs/create/', ConnectorConfigCreateView.as_view(), name='connectorconfig_create'),
+    path('connector-configs/<int:pk>/', ConnectorConfigDetailView.as_view(), name='connectorconfig_detail'),
+    path('connector-configs/<int:pk>/update/', ConnectorConfigUpdateView.as_view(), name='connectorconfig_update'),
+    
+    # Webhook Subscriptions
+    path('webhook-subscriptions/', WebhookSubscriptionListView.as_view(), name='webhooksubscription_list'),
+    path('webhook-subscriptions/create/', WebhookSubscriptionCreateView.as_view(), name='webhooksubscription_create'),
+    path('webhook-subscriptions/<int:pk>/', WebhookSubscriptionDetailView.as_view(), name='webhooksubscription_detail'),
+    path('webhook-subscriptions/<int:pk>/update/', WebhookSubscriptionUpdateView.as_view(), name='webhooksubscription_update'),
     
     # Reports
     path('reports/', ReportsView.as_view(), name='reports'),

@@ -165,11 +165,56 @@
                             <a href="?" class="btn btn-outline-secondary ms-2">Reset</a>
                         </div>
                     </form>
-                    <a href="{% url 'ai_governance:testrun_create' %}" class="btn btn-primary">
+                    <a href="{% url 'ai_governance:testrun_create' %}" class="btn btn-primary me-2">
                         <i class="bi bi-play-circle me-1"></i>
                         Run Tests
                     </a>
+                    <a href="{% url 'ai_governance:reports' %}" class="btn btn-outline-warning">
+                        Reports
+                    </a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Core AI Components and Compliance & Governance Side by Side -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h5 class="mb-2 text-primary">
+                <i class="bi bi-cpu me-2"></i>Core AI Components
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'ai_governance:model_list' %}" class="btn btn-primary">Models</a>
+                <a href="{% url 'ai_governance:dataset_list' %}" class="btn btn-outline-success">Datasets</a>
+                <a href="{% url 'ai_governance:testplan_list' %}" class="btn btn-outline-info">Test Plans</a>
+                <a href="{% url 'ai_governance:testrun_list' %}" class="btn btn-outline-warning">Test Runs</a>
+                <a href="{% url 'ai_governance:testresult_list' %}" class="btn btn-outline-secondary">Test Results</a>
+                <a href="{% url 'ai_governance:metric_list' %}" class="btn btn-outline-primary">Metrics</a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h5 class="mb-2 text-success">
+                <i class="bi bi-shield-check me-2"></i>Compliance & Governance
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'ai_governance:framework_list' %}" class="btn btn-outline-primary">Frameworks</a>
+                <a href="{% url 'ai_governance:clause_list' %}" class="btn btn-outline-success">Clauses</a>
+                <a href="{% url 'ai_governance:compliancemapping_list' %}" class="btn btn-outline-info">Mappings</a>
+                <a href="{% url 'ai_governance:evidenceartifact_list' %}" class="btn btn-outline-warning">Artifacts</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration & Configuration -->
+    <div class="row mb-3">
+        <div class="col">
+            <h5 class="mb-2 text-info">
+                <i class="bi bi-gear me-2"></i>Integration & Configuration
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'ai_governance:connectorconfig_list' %}" class="btn btn-outline-secondary">Connectors</a>
+                <a href="{% url 'ai_governance:webhooksubscription_list' %}" class="btn btn-outline-danger">Webhooks</a>
             </div>
         </div>
     </div>
@@ -346,6 +391,30 @@
                         <i class="bi bi-upload me-1"></i>
                         Upload Dataset
                     </a>
+                    <a href="{% url 'ai_governance:framework_create' %}" class="action-btn">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Add Framework
+                    </a>
+                    <a href="{% url 'ai_governance:clause_create' %}" class="action-btn">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Add Clause
+                    </a>
+                    <a href="{% url 'ai_governance:compliancemapping_create' %}" class="action-btn">
+                        <i class="bi bi-link-45deg me-1"></i>
+                        Add Mapping
+                    </a>
+                    <a href="{% url 'ai_governance:evidenceartifact_create' %}" class="action-btn">
+                        <i class="bi bi-file-earmark me-1"></i>
+                        Add Artifact
+                    </a>
+                    <a href="{% url 'ai_governance:connectorconfig_create' %}" class="action-btn">
+                        <i class="bi bi-connection me-1"></i>
+                        Add Connector
+                    </a>
+                    <a href="{% url 'ai_governance:webhooksubscription_create' %}" class="action-btn">
+                        <i class="bi bi-webhook me-1"></i>
+                        Add Webhook
+                    </a>
                     <a href="{% url 'ai_governance:reports' %}" class="action-btn">
                         <i class="bi bi-file-earmark-text me-1"></i>
                         Generate Report
@@ -399,6 +468,188 @@
                         <p class="mt-2">No datasets available</p>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Governance Management Cards -->
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-2">
+            <div class="card text-bg-primary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-cpu display-4 mb-2"></i>
+                    <h5 class="card-title">Models</h5>
+                    <h3><a href="{% url 'ai_governance:model_list' %}" class="stretched-link text-white text-decoration-none">{{ total_models }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-success h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-database display-4 mb-2"></i>
+                    <h5 class="card-title">Datasets</h5>
+                    <h3><a href="{% url 'ai_governance:dataset_list' %}" class="stretched-link text-white text-decoration-none">{{ total_datasets|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-info h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-clipboard-check display-4 mb-2"></i>
+                    <h5 class="card-title">Test Plans</h5>
+                    <h3><a href="{% url 'ai_governance:testplan_list' %}" class="stretched-link text-white text-decoration-none">{{ total_test_plans|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-warning h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-play-circle display-4 mb-2"></i>
+                    <h5 class="card-title">Test Runs</h5>
+                    <h3><a href="{% url 'ai_governance:testrun_list' %}" class="stretched-link text-white text-decoration-none">{{ total_test_runs }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-secondary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-check2-circle display-4 mb-2"></i>
+                    <h5 class="card-title">Test Results</h5>
+                    <h3><a href="{% url 'ai_governance:testresult_list' %}" class="stretched-link text-white text-decoration-none">{{ total_test_results|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-dark h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-check display-4 mb-2"></i>
+                    <h5 class="card-title">Frameworks</h5>
+                    <h3><a href="{% url 'ai_governance:framework_list' %}" class="stretched-link text-white text-decoration-none">{{ total_frameworks|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Management Cards Row -->
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up display-4 mb-2 text-primary"></i>
+                    <h5 class="card-title text-dark">Metrics</h5>
+                    <h3><a href="{% url 'ai_governance:metric_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_metrics|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-text display-4 mb-2 text-success"></i>
+                    <h5 class="card-title text-dark">Clauses</h5>
+                    <h3><a href="{% url 'ai_governance:clause_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_clauses|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-link-45deg display-4 mb-2 text-info"></i>
+                    <h5 class="card-title text-dark">Mappings</h5>
+                    <h3><a href="{% url 'ai_governance:compliancemapping_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_mappings|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark display-4 mb-2 text-warning"></i>
+                    <h5 class="card-title text-dark">Artifacts</h5>
+                    <h3><a href="{% url 'ai_governance:evidenceartifact_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_artifacts|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-connection display-4 mb-2 text-secondary"></i>
+                    <h5 class="card-title text-dark">Connectors</h5>
+                    <h3><a href="{% url 'ai_governance:connectorconfig_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_connectors|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-bg-light h-100 shadow-sm border">
+                <div class="card-body text-center">
+                    <i class="bi bi-webhook display-4 mb-2 text-danger"></i>
+                    <h5 class="card-title text-dark">Webhooks</h5>
+                    <h3><a href="{% url 'ai_governance:webhooksubscription_list' %}" class="stretched-link text-dark text-decoration-none">{{ total_webhooks|default:"0" }}</a></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white"><strong>Recent AI Governance Activity</strong></div>
+                <ul class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                    {% for activity in recent_activity %}
+                        <li class="list-group-item">
+                            <i class="bi bi-robot me-2 text-primary"></i>
+                            <span>{{ activity.message }}</span>
+                            <span class="text-muted float-end">{{ activity.timestamp|date:"M d, Y H:i" }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No recent activity.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light"><strong>Quick Actions</strong></div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-2">Core AI Components</h6>
+                    <a href="{% url 'ai_governance:model_create' %}" class="btn btn-primary mb-2 w-100">Add Model</a>
+                    <a href="{% url 'ai_governance:dataset_create' %}" class="btn btn-outline-success mb-2 w-100">Add Dataset</a>
+                    <a href="{% url 'ai_governance:testplan_create' %}" class="btn btn-outline-info mb-2 w-100">Create Test Plan</a>
+                    <a href="{% url 'ai_governance:testrun_create' %}" class="btn btn-outline-warning mb-2 w-100">Run New Test</a>
+                    
+                    <hr class="my-3">
+                    <h6 class="text-success mb-2">Compliance & Governance</h6>
+                    <a href="{% url 'ai_governance:framework_create' %}" class="btn btn-outline-primary mb-2 w-100">Add Framework</a>
+                    <a href="{% url 'ai_governance:clause_create' %}" class="btn btn-outline-secondary mb-2 w-100">Add Clause</a>
+                    <a href="{% url 'ai_governance:compliancemapping_create' %}" class="btn btn-outline-info mb-2 w-100">Add Mapping</a>
+                    <a href="{% url 'ai_governance:evidenceartifact_create' %}" class="btn btn-outline-warning mb-2 w-100">Add Artifact</a>
+                    
+                    <hr class="my-3">
+                    <h6 class="text-info mb-2">Integration & Config</h6>
+                    <a href="{% url 'ai_governance:connectorconfig_create' %}" class="btn btn-outline-secondary mb-2 w-100">Add Connector</a>
+                    <a href="{% url 'ai_governance:webhooksubscription_create' %}" class="btn btn-outline-danger mb-2 w-100">Add Webhook</a>
+                    <a href="{% url 'ai_governance:metric_create' %}" class="btn btn-outline-primary mb-2 w-100">Add Metric</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Section -->
+    <div class="row mt-5">
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <strong><i class="bi bi-file-earmark-bar-graph"></i> AI Governance Reports</strong>
+                </div>
+                <div class="card-body text-center">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Access Professional AI Governance Reports</strong><br>
+                        Generate and download comprehensive AI governance reports with compliance metrics and test results.
+                    </div>
+                    <a href="{% url 'ai_governance:reports' %}" class="btn btn-warning btn-lg">
+                        <i class="bi bi-file-earmark-text me-2"></i>View All Reports
+                    </a>
+                </div>
             </div>
         </div>
     </div>
