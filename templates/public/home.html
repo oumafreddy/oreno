@@ -3,114 +3,160 @@
 
 {% block title %}Hashrate Solutions | Enterprise IT & GRC SaaS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/public.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/modern-website.js' %}" nonce="{{ request.csp_nonce }}"></script>
+{% endblock %}
+
 {% block content %}
-<!-- Welcome Section -->
-<section class="hero-atlassian" style="position:relative; overflow:hidden;">
-    <!-- Decorative Images -->
-    <img src="{% static 'img/stylingC.png' %}" alt="Decorative Left" class="hero-decor-left">
-    <img src="{% static 'img/stylingD.png' %}" alt="Decorative Right" class="hero-decor-right">
-    <div class="container hero-atlassian-content">
-        <h1 class="hero-atlassian-title">Welcome to Hashrate Solutions</h1>
-        <p class="hero-atlassian-subtitle" id="animated-subtitle">
-            Empowering organizations with enterprise-grade SaaS: <span class="highlight-animated" id="highlight-grc">GRC</span>, <span class="highlight-animated" id="highlight-learning">Learning</span>, and <span class="highlight-animated" id="highlight-digital">Digital Transformation</span>
-        </p>
-        <div class="cta-buttons">
-            <a href="#services" class="btn btn-primary btn-atlassian">
-                <i class="fas fa-rocket"></i>
+<!-- Modern Hero Section -->
+<section class="hero-section" id="hero">
+    <!-- Floating Elements -->
+    <div class="hero-floating">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" opacity="0.1">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>
+        </svg>
+    </div>
+    <div class="hero-floating">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" opacity="0.1">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 9h6v6H9z" fill="currentColor"/>
+        </svg>
+    </div>
+    <div class="hero-floating">
+        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" opacity="0.1">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
+        </svg>
+    </div>
+    
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title fade-in" style="color: #000000 !important;">
+                Welcome to <span style="color: #000000 !important; background: none !important; -webkit-background-clip: unset !important; -webkit-text-fill-color: unset !important;">Hashrate Solutions</span>
+            </h1>
+            <p class="hero-subtitle fade-in" style="color: #000000 !important;">
+                Empowering organizations with enterprise-grade SaaS solutions: 
+                <span style="color: #000000 !important; background: none !important;">GRC</span>, 
+                <span style="color: #000000 !important; background: none !important;">Learning</span>, and 
+                <span style="color: #000000 !important; background: none !important;">Digital Transformation</span>
+            </p>
+            <div class="hero-cta fade-in">
+                <a href="#services" class="hero-btn hero-btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"/>
+                    </svg>
                 Explore Services
             </a>
-            <a href="#contact" class="btn btn-secondary btn-atlassian">
-                <i class="fas fa-envelope"></i>
+                <a href="#contact" class="hero-btn hero-btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
+                    </svg>
                 Get in Touch
             </a>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- Our Services Section -->
-<section id="services" class="services-atlassian" style="position:relative; overflow:hidden;">
-    <!-- Decorative Backgrounds: Mix of StylingE.png and stylingD.png -->
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor Left 1" class="services-bg decor-e decor-e-topleft">
-    <img src="{% static 'img/StylingD.png' %}" alt="Decor Left 2" class="services-bg decor-d decor-d-topmid">
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor Left 3" class="services-bg decor-e decor-e-leftmid">
-    <img src="{% static 'img/StylingD.png' %}" alt="Decor Right 1" class="services-bg decor-d decor-d-topright">
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor Right 2" class="services-bg decor-e decor-e-rightmid">
-    <img src="{% static 'img/StylingD.png' %}" alt="Decor Right 3" class="services-bg decor-d decor-d-bottomright">
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor Bottom Left" class="services-bg decor-e decor-e-bottomleft">
-    <img src="{% static 'img/StylingD.png' %}" alt="Decor Bottom Right" class="services-bg decor-d decor-d-bottomright2">
+<!-- Modern Services Section -->
+<section id="services" class="services-section animate-on-scroll">
     <div class="container">
-        <div class="section-header-atlassian">
-            <h2>Our Services</h2>
-            <p>Comprehensive solutions tailored to your organization's needs</p>
+        <div class="section-header">
+            <h2 class="section-title fade-in">Our Services</h2>
+            <p class="section-subtitle fade-in">Comprehensive solutions tailored to your organization's needs</p>
         </div>
-        <div class="services-atlassian-grid">
+        <div class="services-grid">
             <!-- Data Analysis & Visualization -->
-            <div class="service-atlassian-item">
-                <div class="service-icon service-icon-analytics">
-                    <!-- Bar Chart SVG -->
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="13" width="4" height="8" rx="2" fill="#2196f3"/>
-                        <rect x="10" y="9" width="4" height="12" rx="2" fill="#64b5f6"/>
-                        <rect x="17" y="5" width="4" height="16" rx="2" fill="#90caf9"/>
+            <div class="service-card stagger-item">
+                <div class="service-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="13" width="4" height="8" rx="2" fill="currentColor"/>
+                        <rect x="10" y="9" width="4" height="12" rx="2" fill="currentColor"/>
+                        <rect x="17" y="5" width="4" height="16" rx="2" fill="currentColor"/>
                     </svg>
                 </div>
-                <h3>Data Analysis & Visualization</h3>
-                <p>Transform your data into actionable insights with advanced analytics, Power BI dashboards, and Tableau visualizations. We help you make data-driven decisions.</p>
-                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
+                <h3 class="service-title">Data Analysis & Visualization</h3>
+                <p class="service-description">Transform your data into actionable insights with advanced analytics, Power BI dashboards, and Tableau visualizations. We help you make data-driven decisions.</p>
+                <a href="#contact" class="service-link">
+                    Learn More 
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </a>
             </div>
             <!-- Techno-functional Consultancy -->
-            <div class="service-atlassian-item">
-                <div class="service-icon service-icon-consultancy">
-                    <!-- Briefcase SVG -->
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="7" width="16" height="13" rx="3" fill="#ff7043"/>
-                        <rect x="8" y="3" width="8" height="4" rx="2" fill="#ffa726"/>
-                        <rect x="7" y="12" width="10" height="2" rx="1" fill="#fff3e0"/>
+            <div class="service-card stagger-item">
+                <div class="service-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="7" width="16" height="13" rx="3" fill="currentColor"/>
+                        <rect x="8" y="3" width="8" height="4" rx="2" fill="currentColor"/>
+                        <rect x="7" y="12" width="10" height="2" rx="1" fill="currentColor"/>
                     </svg>
                 </div>
-                <h3>Techno-functional Consultancy</h3>
-                <p>Expert consultancy for Microsoft Dynamics NAV & BC product line. We bridge the gap between technical implementation and business requirements.</p>
-                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
+                <h3 class="service-title">Techno-functional Consultancy</h3>
+                <p class="service-description">Expert consultancy for Microsoft Dynamics NAV & BC product line. We bridge the gap between technical implementation and business requirements.</p>
+                <a href="#contact" class="service-link">
+                    Learn More 
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </a>
             </div>
             <!-- IT Systems Acquisitions, Audits & Reviews -->
-            <div class="service-atlassian-item">
-                <div class="service-icon service-icon-audit">
-                    <!-- Server SVG -->
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="6" width="16" height="12" rx="3" fill="#42a5f5"/>
-                        <rect x="7" y="9" width="10" height="2" rx="1" fill="#fff"/>
-                        <rect x="7" y="13" width="10" height="2" rx="1" fill="#fff"/>
+            <div class="service-card stagger-item">
+                <div class="service-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="6" width="16" height="12" rx="3" fill="currentColor"/>
+                        <rect x="7" y="9" width="10" height="2" rx="1" fill="currentColor"/>
+                        <rect x="7" y="13" width="10" height="2" rx="1" fill="currentColor"/>
                     </svg>
                 </div>
-                <h3>IT Systems Acquisitions, Audits & Reviews</h3>
-                <p>Comprehensive IT systems acquisition, audits, and infrastructure reviews. Ensure your technology investments align with business objectives.</p>
-                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
+                <h3 class="service-title">IT Systems Acquisitions, Audits & Reviews</h3>
+                <p class="service-description">Comprehensive IT systems acquisition, audits, and infrastructure reviews. Ensure your technology investments align with business objectives.</p>
+                <a href="#contact" class="service-link">
+                    Learn More 
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </a>
             </div>
             <!-- Information Security Programs -->
-            <div class="service-atlassian-item">
-                <div class="service-icon service-icon-security">
-                    <!-- Shield SVG -->
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 3L4 7v5c0 5.25 3.75 9.75 8 11 4.25-1.25 8-5.75 8-11V7l-8-4z" fill="#66bb6a"/>
-                        <path d="M12 21c-3.87-1.13-7-5.13-7-9.13V8.14l7-3.5 7 3.5v3.73C19 15.87 15.87 19.87 12 21z" fill="#a5d6a7"/>
+            <div class="service-card stagger-item">
+                <div class="service-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3L4 7v5c0 5.25 3.75 9.75 8 11 4.25-1.25 8-5.75 8-11V7l-8-4z" fill="currentColor"/>
                     </svg>
                 </div>
-                <h3>Information Security Programs</h3>
-                <p>Develop and manage comprehensive information security programs. Protect your organization's data and maintain compliance with industry standards.</p>
-                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
+                <h3 class="service-title">Information Security Programs</h3>
+                <p class="service-description">Develop and manage comprehensive information security programs. Protect your organization's data and maintain compliance with industry standards.</p>
+                <a href="#contact" class="service-link">
+                    Learn More 
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </a>
             </div>
             <!-- Process Digitization & Automation -->
-            <div class="service-atlassian-item">
-                <div class="service-icon service-icon-automation">
-                    <!-- Automation/Process SVG -->
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" fill="#26c6da"/>
-                        <path d="M8 12h8M12 8v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <div class="service-card stagger-item">
+                <div class="service-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" fill="currentColor"/>
+                        <path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </div>
-                <h3>Process Digitization & Automation</h3>
-                <p>Streamline operations with process digitization and automation using Python, Power Automate, and Power Apps. Increase efficiency and reduce manual work.</p>
-                <a href="#contact">Learn More <i class="fas fa-arrow-right"></i></a>
+                <h3 class="service-title">Process Digitization & Automation</h3>
+                <p class="service-description">Streamline operations with process digitization and automation using Python, Power Automate, and Power Apps. Increase efficiency and reduce manual work.</p>
+                <a href="#contact" class="service-link">
+                    Learn More 
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </a>
             </div>
         </div>
         <!-- Floating Product Sections -->
@@ -130,14 +176,24 @@
                 <h3 class="floating-product-title">Udemy Professional Courses</h3>
                 <div class="floating-product-content-wide">
                     <p>Professional courses designed to advance your career in IT audit and GRC. Choose from our comprehensive course offerings:</p>
-                    <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
-                        <div style="text-align: center;">
-                            <strong style="color: #0052cc;">CISA Exam Preparation</strong><br>
-                            <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener" style="color:#0052cc;font-weight:600;">View CISA Course</a>
+                    <div class="course-offerings">
+                        <div class="course-item">
+                            <h4 class="course-title">CISA Exam Preparation</h4>
+                            <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" rel="noopener" class="course-link">
+                                View CISA Course
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </a>
                         </div>
-                        <div style="text-align: center;">
-                            <strong style="color: #0052cc;">Mastering GRC with Oreno</strong><br>
-                            <a href="https://www.udemy.com/course/mastering-grc-with-oreno-governance-risk-compliance/?instructorPreviewMode=guest&couponCode=KEEPLEARNING" target="_blank" rel="noopener" style="color:#0052cc;font-weight:600;">View GRC Course</a>
+                        <div class="course-item">
+                            <h4 class="course-title">Mastering GRC with Oreno</h4>
+                            <a href="https://www.udemy.com/course/mastering-grc-with-oreno-governance-risk-compliance/?instructorPreviewMode=guest&couponCode=KEEPLEARNING" target="_blank" rel="noopener" class="course-link">
+                                View GRC Course
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -150,60 +206,84 @@
     </div>
 </section>
 
-<!-- Contact Us Section -->
-<section id="contact" class="contact-atlassian" style="position:relative; overflow:hidden;">
-    <!-- Decorative Backgrounds for Contact Section -->
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Bottom Left" class="contact-bg decor-e decor-e-bottomleft">
-    <img src="{% static 'img/stylingD.png' %}" alt="Decor D Bottom Right" class="contact-bg decor-d decor-d-bottomright">
-    <img src="{% static 'img/StylingC.png' %}" alt="Decor C Top Left" class="contact-bg decor-c decor-c-topleft">
-    <img src="{% static 'img/StylingD.png' %}" alt="Decor D Top Right" class="contact-bg decor-d decor-d-topright">
-    <img src="{% static 'img/StylingE.png' %}" alt="Decor E Bottom Center" class="contact-bg decor-e decor-e-bottomcenter">
-    <img src="{% static 'img/stylingC.png' %}" alt="Decor C Bottom Far Left" class="contact-bg decor-c decor-c-bottomfarleft">
-    <img src="{% static 'img/stylingC.png' %}" alt="Decor C Bottom Far Right" class="contact-bg decor-c decor-c-bottomfarright">
-    <div class="container contact-atlassian-container">
-        <div class="contact-atlassian-info" style="position:relative;">
-            <!-- Foreground decorative image for circled X, now below contact info and not overlapping -->
-            <div class="contact-foreground-c-final-wrapper">
-                <img src="{% static 'img/stylingC.png' %}" alt="Decor C Foreground" class="contact-foreground-c-final">
+<!-- Modern Contact Section -->
+<section id="contact" class="contact-section animate-on-scroll">
+    <div class="container">
+        <div class="contact-content">
+            <div class="contact-info">
+                <h2 class="contact-title fade-in">Get in Touch</h2>
+                <p class="contact-description fade-in">
+                    Ready to transform your organization? Reach out to our team and let's build something great together.
+                </p>
+                <div class="contact-details">
+                    <div class="contact-item fade-in">
+                        <div class="contact-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+                                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Location</h4>
+                            <p>Nairobi, Kenya</p>
+                        </div>
+                    </div>
+                    <div class="contact-item fade-in">
+                        <div class="contact-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Phone</h4>
+                            <p>+254 711 219 536</p>
+                        </div>
+                    </div>
+                    <div class="contact-item fade-in">
+                        <div class="contact-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2"/>
+                                <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4>Email</h4>
+                            <p><a href="mailto:info@oreno.tech">info@oreno.tech</a></p>
+                        </div>
+                    </div>
             </div>
-            <h2>Contact Us</h2>
-            <p>Ready to transform your organization? Reach out to our team and let's build something great together.</p>
-            <ul class="contact-atlassian-list">
-                <li><i class="fas fa-map-marker-alt"></i> Nairobi, Kenya</li>
-                <li><i class="fas fa-phone"></i> +254 711 219 536</li>
-                <li><i class="fas fa-envelope"></i> <a href="mailto:info@oreno.tech">info@oreno.tech</a></li>
-            </ul>
-            <!-- Place the image below the contact info, not overlapping -->
-            <div class="contact-foreground-c-final-wrapper">
-                <img src="{% static 'img/stylingC.png' %}" alt="Decor C Foreground" class="contact-foreground-c-final">
             </div>
-        </div>
-        <div class="contact-atlassian-form">
+            <div class="contact-form fade-in">
             <form id="contactForm" method="post" action="#">
                 <div class="form-group">
-                    <label for="name">Your Name *</label>
-                    <input type="text" id="name" name="name" required>
+                        <label for="name" class="form-label">Your Name *</label>
+                        <input type="text" id="name" name="name" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label for="email">Your Email *</label>
-                    <input type="email" id="email" name="email" required>
+                        <label for="email" class="form-label">Your Email *</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label for="subject">Subject *</label>
-                    <input type="text" id="subject" name="subject" required>
+                        <label for="subject" class="form-label">Subject *</label>
+                        <input type="text" id="subject" name="subject" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label for="message">Your Message *</label>
-                    <textarea id="message" name="message" required placeholder="Tell us about your project or inquiry..."></textarea>
+                        <label for="message" class="form-label">Your Message *</label>
+                        <textarea id="message" name="message" class="form-input form-textarea" rows="5" required placeholder="Tell us about your project or inquiry..."></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary btn-atlassian">
-                    <i class="fas fa-paper-plane"></i>
+                    <button type="submit" class="form-submit">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2"/>
+                            <polygon points="22,2 15,22 11,13 2,9" stroke="currentColor" stroke-width="2"/>
+                        </svg>
                     Send Message
                 </button>
             </form>
+            </div>
         </div>
     </div>
 </section>
+
 
 <script nonce="{{ request.csp_nonce }}">
 window.addEventListener('DOMContentLoaded', function() {
