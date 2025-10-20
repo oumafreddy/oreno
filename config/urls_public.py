@@ -31,6 +31,20 @@ class PublicHomeView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Home - Hashrate Solutions'
+        # Provide PII placeholders with safe fallbacks for anonymous users
+        user = getattr(self, 'request', None).user if hasattr(self, 'request') else None
+        is_auth = bool(user and getattr(user, 'is_authenticated', False))
+        # External ID: stable unique identifier if authenticated
+        context['pii_external_id'] = str(getattr(user, 'pk', '')) if is_auth else ''
+        # Phone number: attempt common locations; default to empty string
+        phone = ''
+        if is_auth:
+            # common attribute names across apps
+            phone = getattr(user, 'phone', '') or getattr(user, 'phone_number', '')
+            profile = getattr(user, 'profile', None)
+            if not phone and profile is not None:
+                phone = getattr(profile, 'phone', '') or getattr(profile, 'phone_number', '')
+        context['pii_phone'] = phone or ''
         return context
 
 class PrivacyPolicyView(TemplateView):
@@ -40,6 +54,20 @@ class PrivacyPolicyView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Privacy Policy - Hashrate Solutions'
+        # Provide PII placeholders with safe fallbacks for anonymous users
+        user = getattr(self, 'request', None).user if hasattr(self, 'request') else None
+        is_auth = bool(user and getattr(user, 'is_authenticated', False))
+        # External ID: stable unique identifier if authenticated
+        context['pii_external_id'] = str(getattr(user, 'pk', '')) if is_auth else ''
+        # Phone number: attempt common locations; default to empty string
+        phone = ''
+        if is_auth:
+            # common attribute names across apps
+            phone = getattr(user, 'phone', '') or getattr(user, 'phone_number', '')
+            profile = getattr(user, 'profile', None)
+            if not phone and profile is not None:
+                phone = getattr(profile, 'phone', '') or getattr(profile, 'phone_number', '')
+        context['pii_phone'] = phone or ''
         return context
 
 class CookiePolicyView(TemplateView):
@@ -49,6 +77,43 @@ class CookiePolicyView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Cookie Policy - Hashrate Solutions'
+        # Provide PII placeholders with safe fallbacks for anonymous users
+        user = getattr(self, 'request', None).user if hasattr(self, 'request') else None
+        is_auth = bool(user and getattr(user, 'is_authenticated', False))
+        # External ID: stable unique identifier if authenticated
+        context['pii_external_id'] = str(getattr(user, 'pk', '')) if is_auth else ''
+        # Phone number: attempt common locations; default to empty string
+        phone = ''
+        if is_auth:
+            # common attribute names across apps
+            phone = getattr(user, 'phone', '') or getattr(user, 'phone_number', '')
+            profile = getattr(user, 'profile', None)
+            if not phone and profile is not None:
+                phone = getattr(profile, 'phone', '') or getattr(profile, 'phone_number', '')
+        context['pii_phone'] = phone or ''
+        return context
+
+class PublicDocsView(TemplateView):
+    """Public documentation page"""
+    template_name = 'public/docs.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Documentation - Hashrate Solutions'
+        # Provide PII placeholders with safe fallbacks for anonymous users
+        user = getattr(self, 'request', None).user if hasattr(self, 'request') else None
+        is_auth = bool(user and getattr(user, 'is_authenticated', False))
+        # External ID: stable unique identifier if authenticated
+        context['pii_external_id'] = str(getattr(user, 'pk', '')) if is_auth else ''
+        # Phone number: attempt common locations; default to empty string
+        phone = ''
+        if is_auth:
+            # common attribute names across apps
+            phone = getattr(user, 'phone', '') or getattr(user, 'phone_number', '')
+            profile = getattr(user, 'profile', None)
+            if not phone and profile is not None:
+                phone = getattr(profile, 'phone', '') or getattr(profile, 'phone_number', '')
+        context['pii_phone'] = phone or ''
         return context
 
 # Local simple 404 view for blocked admin path (public schema)
@@ -77,9 +142,7 @@ urlpatterns = [
     path('cookie-policy/', CookiePolicyView.as_view(), name='public-cookies'),
     
     # Public Documentation
-    path('docs/', TemplateView.as_view(
-        template_name='public/docs.html'
-    ), name='public-docs'),
+    path('docs/', PublicDocsView.as_view(), name='public-docs'),
     
     # Public Authentication - BLOCKED (tenant-specific only)
     # Note: Authentication should only be available on tenant sites

@@ -9,12 +9,43 @@
 
 {% block extra_js %}
 <script nonce="{{ request.csp_nonce }}">
-// add this before event code to all pages where PII data postback is expected and appropriate 
-ttq.identify({
-	"email": "<hashed_email_address>", // string. The email of the customer if available. It must be hashed with SHA-256 on the client side.
-	"phone_number": "<hashed_phone_number>", // string. The phone number of the customer if available. It must be hashed with SHA-256 on the client side.
-	"external_id": "<hashed_external_id>" // string. Any unique identifier, such as loyalty membership IDs, user IDs, and external cookie IDs.It must be hashed with SHA-256 on the client side.
-});
+// Hash PII client-side and send to TikTok if present
+(function() {
+    function toHex(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var hex = '';
+        for (var i = 0; i < bytes.length; i++) {
+            var h = bytes[i].toString(16);
+            if (h.length === 1) h = '0' + h;
+            hex += h;
+        }
+        return hex;
+    }
+
+    function sha256Hex(text) {
+        if (!text) return Promise.resolve('');
+        var normalized = String(text).trim().toLowerCase();
+        var data = new TextEncoder().encode(normalized);
+        return crypto.subtle.digest('SHA-256', data).then(toHex);
+    }
+
+    var rawEmail = "{{ user.email|default_if_none:''|default:''|escapejs }}";
+    var rawPhone = "{{ pii_phone|default_if_none:''|default:''|escapejs }}";
+    var rawExternalId = "{{ pii_external_id|default_if_none:''|default:''|escapejs }}";
+
+    Promise.all([sha256Hex(rawEmail), sha256Hex(rawPhone), sha256Hex(rawExternalId)])
+        .then(function([hashedEmail, hashedPhone, hashedExternalId]) {
+            if (typeof ttq === 'undefined') return;
+            var payload = {};
+            if (hashedEmail) payload.email = hashedEmail;
+            if (hashedPhone) payload.phone_number = hashedPhone;
+            if (hashedExternalId) payload.external_id = hashedExternalId;
+            if (Object.keys(payload).length > 0) {
+                ttq.identify(payload);
+            }
+        })
+        .catch(function() { /* intentionally silent */ });
+})();
 
 ttq.track('ViewContent', {
 	"contents": [
@@ -119,7 +150,7 @@ ttq.track('CompleteRegistration', {
     <div class="container">
         <div class="hero-content">
             <h1 class="hero-title fade-in" style="color: #000000 !important;">
-                Welcome to <span style="color: #000000 !important; background: none !important; -webkit-background-clip: unset !important; -webkit-text-fill-color: unset !important;">Hashrate Solutions</span>
+                Welcome to <span style="color: #000000 !important; background: none !important; -webkit-background-clip: unset !important; background-clip: unset !important; -webkit-text-fill-color: unset !important;">Hashrate Solutions</span>
             </h1>
             <p class="hero-subtitle fade-in" style="color: #000000 !important;">
                 Empowering organizations with enterprise-grade SaaS solutions: 

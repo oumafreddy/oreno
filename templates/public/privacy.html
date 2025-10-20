@@ -3,6 +3,48 @@
 
 {% block title %}Privacy Policy | Hashrate Solutions{% endblock %}
 
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+// Hash PII client-side and send to TikTok if present
+(function() {
+    function toHex(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var hex = '';
+        for (var i = 0; i < bytes.length; i++) {
+            var h = bytes[i].toString(16);
+            if (h.length === 1) h = '0' + h;
+            hex += h;
+        }
+        return hex;
+    }
+
+    function sha256Hex(text) {
+        if (!text) return Promise.resolve('');
+        var normalized = String(text).trim().toLowerCase();
+        var data = new TextEncoder().encode(normalized);
+        return crypto.subtle.digest('SHA-256', data).then(toHex);
+    }
+
+    var rawEmail = "{{ user.email|default_if_none:''|default:''|escapejs }}";
+    var rawPhone = "{{ pii_phone|default_if_none:''|default:''|escapejs }}";
+    var rawExternalId = "{{ pii_external_id|default_if_none:''|default:''|escapejs }}";
+
+    Promise.all([sha256Hex(rawEmail), sha256Hex(rawPhone), sha256Hex(rawExternalId)])
+        .then(function([hashedEmail, hashedPhone, hashedExternalId]) {
+            if (typeof ttq === 'undefined') return;
+            var payload = {};
+            if (hashedEmail) payload.email = hashedEmail;
+            if (hashedPhone) payload.phone_number = hashedPhone;
+            if (hashedExternalId) payload.external_id = hashedExternalId;
+            if (Object.keys(payload).length > 0) {
+                ttq.identify(payload);
+            }
+        })
+        .catch(function() { /* intentionally silent */ });
+})();
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="privacy-section animate-on-scroll" style="padding: var(--space-24) 0; background: var(--bg-secondary);">
     <div class="container">
