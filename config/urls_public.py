@@ -7,6 +7,7 @@ from django.http import HttpResponse, HttpResponseNotFound
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from common.views import public_contact_submit
 from django.views.defaults import (
     page_not_found,
     server_error,
@@ -31,6 +32,12 @@ class PublicHomeView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Home - Hashrate Solutions'
+        # Timestamp used for spam timing checks on the contact form
+        try:
+            import time as _time
+            context['now_ts'] = int(_time.time())
+        except Exception:
+            context['now_ts'] = 0
         # Provide PII placeholders with safe fallbacks for anonymous users
         user = getattr(self, 'request', None).user if hasattr(self, 'request') else None
         is_auth = bool(user and getattr(user, 'is_authenticated', False))
@@ -143,6 +150,7 @@ urlpatterns = [
     
     # Public Documentation
     path('docs/', PublicDocsView.as_view(), name='public-docs'),
+    path('contact/submit/', public_contact_submit, name='public-contact-submit'),
     
     # Public Authentication - BLOCKED (tenant-specific only)
     # Note: Authentication should only be available on tenant sites

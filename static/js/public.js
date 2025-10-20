@@ -69,7 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Enhanced contact form with validation and better UX
     const contactForm = document.getElementById('contactForm');
-    if (contactForm) {
+    // If ModernWebsite handles forms (dataset.handler === 'modern'), avoid duplicate handling here
+    if (contactForm && (typeof ModernWebsite === 'undefined') && contactForm.dataset.handler !== 'modern') {
         const formInputs = contactForm.querySelectorAll('input, textarea');
         
         // Add floating label effect
@@ -128,16 +129,28 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.textContent = 'Sending...';
             submitBtn.disabled = true;
             
-            // Simulate form submission (replace with actual API call)
-            setTimeout(() => {
-                showNotification('Thank you for your message! We will get back to you soon.', 'success');
-                contactForm.reset();
-                formInputs.forEach(input => {
-                    input.parentElement.classList.remove('focused');
-                });
+            // Delegate to backend if available
+            fetch('/contact/submit/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({}, formObject, {
+                    company: formData.get('company') || '',
+                    form_ts: formData.get('form_ts') || ''
+                }))
+            }).then(r => r.json()).then(data => {
+                if (data && data.success) {
+                    showNotification('Thank you for your message! We will get back to you soon.', 'success');
+                    contactForm.reset();
+                    formInputs.forEach(input => { input.parentElement.classList.remove('focused'); });
+                } else {
+                    showNotification('Failed to send message. Please try again.', 'error');
+                }
+            }).catch(() => {
+                showNotification('Failed to send message. Please try again.', 'error');
+            }).finally(() => {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
-            }, 2000);
+            });
         });
     }
     

@@ -369,6 +369,10 @@ ttq.track('CompleteRegistration', {
             </div>
             <div class="contact-form fade-in">
             <form id="contactForm" method="post" action="#">
+                <!-- Honeypot (should remain empty) -->
+                <input type="text" name="company" style="position:absolute;left:-9999px;opacity:0" tabindex="-1" autocomplete="off">
+                <!-- Load-time timestamp for timing validation -->
+                <input type="hidden" name="form_ts" value="{{ now_ts|default:0 }}">
                 <div class="form-group">
                         <label for="name" class="form-label">Your Name *</label>
                         <input type="text" id="name" name="name" class="form-input" required>

@@ -102,6 +102,8 @@ class ModernWebsite {
     setupFormValidation() {
         const forms = document.querySelectorAll('form');
         forms.forEach(form => {
+            // Mark that ModernWebsite owns this form handler to avoid duplicates
+            try { form.dataset.handler = 'modern'; } catch (e) {}
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.handleFormSubmission(form);
@@ -169,8 +171,35 @@ class ModernWebsite {
         form.classList.add('loading');
 
         try {
-            // Simulate form submission (replace with actual endpoint)
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Submit to backend endpoint
+            const formData = new FormData(form);
+            const payload = {
+                name: formData.get('name') || '',
+                email: formData.get('email') || '',
+                subject: formData.get('subject') || '',
+                message: formData.get('message') || '',
+                // Spam controls
+                company: formData.get('company') || '',
+                form_ts: formData.get('form_ts') || ''
+            };
+
+            // Simple client-side required check (ignoring spam fields)
+            if (!payload.name || !payload.email || !payload.subject || !payload.message) {
+                this.showNotification('Please fill in all required fields.', 'error');
+                throw new Error('Validation failed');
+            }
+
+            const resp = await fetch('/contact/submit/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json().catch(() => ({ success: false }));
+            if (!resp.ok || !data.success) {
+                throw new Error((data && data.error) || 'Request failed');
+            }
             
             // Show success message
             this.showNotification('Message sent successfully!', 'success');
