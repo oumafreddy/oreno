@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: oreno_grc
+      POSTGRES_DB: oreno
       POSTGRES_USER: oreno_user
       POSTGRES_PASSWORD: oreno_password
     volumes:
@@ -27,7 +27,7 @@ services:
     environment:
       - DJANGO_DEBUG=True
       - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=oreno_grc
+      - DB_NAME=oreno
       - DB_USER=oreno_user
       - DB_PASS=oreno_password
       - DB_HOST=db
@@ -44,7 +44,7 @@ services:
     environment:
       - DJANGO_DEBUG=True
       - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=oreno_grc
+      - DB_NAME=oreno
       - DB_USER=oreno_user
       - DB_PASS=oreno_password
       - DB_HOST=db

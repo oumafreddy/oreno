@@ -10,7 +10,7 @@
   
   **A comprehensive, open-source Governance, Risk, and Compliance (GRC) platform**
   
-  [Documentation](https://github.com/yourusername/oreno-grc/wiki) • [Contributing](CONTRIBUTING.md) • [Issues](https://github.com/yourusername/oreno-grc/issues) • [Discussions](https://github.com/yourusername/oreno-grc/discussions)
+  [Documentation](https://github.com/oumafreddy/oreno/wiki) • [Contributing](CONTRIBUTING.md) • [Issues](https://github.com/oumafreddy/oreno/issues) • [Discussions](https://github.com/oumafreddy/oreno/discussions)
 </div>
 
 ---
@@ -38,8 +38,8 @@ Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform bu
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/oreno-grc.git
-   cd oreno-grc
+   git clone https://github.com/oumafreddy/oreno.git
+   cd oreno
    ```
 
 2. **Create virtual environment**
@@ -55,7 +55,7 @@ Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform bu
 
 4. **Configure environment**
    ```bash
-   cp .env.example .env.oreno
+   cp env.example .env.oreno
    # Edit .env.oreno with your configuration
    ```
 
@@ -105,7 +105,7 @@ Oreno GRC follows a modular, multi-tenant architecture designed for scalability 
 ## 📁 Project Structure
 
 ```
-oreno-grc/
+oreno/
 ├── 📁 apps/                    # Django applications
 │   ├── 🔍 audit/               # Audit management
 │   ├── ⚠️ risk/                # Risk management  
@@ -164,11 +164,15 @@ coverage report
 5. Configure static file serving
 6. Set up SSL certificates
 
-### Docker Support
+### Docker Support (Optional)
+Docker configuration is provided for convenience but is not required for development:
+
 ```bash
-# Build and run with Docker
+# Build and run with Docker (requires Docker installed)
 docker-compose up --build
 ```
+
+**Note**: Docker is optional. You can run Oreno GRC directly with Python without Docker.
 
 ## 🤝 Contributing
 
@@ -194,10 +198,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📖 [Documentation](https://github.com/yourusername/oreno-grc/wiki)
-- 💬 [Discussions](https://github.com/yourusername/oreno-grc/discussions)
-- 🐛 [Issue Tracker](https://github.com/yourusername/oreno-grc/issues)
-- 📧 Email: support@oreno.tech
+- 📖 [Documentation](https://github.com/oumafreddy/oreno/wiki)
+- 💬 [Discussions](https://github.com/oumafreddy/oreno/discussions)
+- 🐛 [Issue Tracker](https://github.com/oumafreddy/oreno/issues)
+- 📧 Email: fredouma@oreno.tech | oumafredomondi@gmail.com
 
 ---
 
