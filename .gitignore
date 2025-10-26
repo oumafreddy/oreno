@@ -25,6 +25,7 @@ __pycache__/
 
 # Logs and temporary files
 config/logs/
+logs/
 *.log
 
 # Other unnecessary files
@@ -34,12 +35,57 @@ staticfiles/
 
 oreno-backup.git/
 
-
 # Environment files
-oreno/
 .env.oreno
 .env.validations
 .env.validations.local
 .env.oreno.backup
-*.md
+.env.local
+.env.production
+.env.development
+
+# Sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Python specific
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js (if used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+
+# Keep important documentation
 !README.md
+!CONTRIBUTING.md
+!LICENSE
+!CHANGELOG.md
+!SECURITY.md
+!CODE_OF_CONDUCT.md
+!GOVERNANCE.md
+!CONTRIBUTORS.md
+!DOCKER.md
