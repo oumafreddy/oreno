@@ -62,6 +62,8 @@ Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform bu
 5. **Run migrations**
    ```bash
    python manage.py migrate --settings=config.settings.development
+   or
+   python manage.py migrate --settings=config.settings.tenants
    ```
 
 6. **Create superuser**
@@ -72,6 +74,8 @@ Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform bu
 7. **Start development server**
    ```bash
    python manage.py runserver --settings=config.settings.development
+   or
+   python manage.py runserver --settings=config.settings.tenants
    ```
 
 Visit `http://localhost:8000` to access the application.
