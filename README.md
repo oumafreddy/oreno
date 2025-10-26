@@ -139,12 +139,15 @@ oreno/
 ```bash
 # Run all tests
 python manage.py test --settings=config.settings.development
+python manage.py test --settings=config.settings.tenants
 
 # Run specific app tests
 python manage.py test apps.audit --settings=config.settings.development
+python manage.py test apps.audit --settings=config.settings.tenants
 
 # Run with coverage
 coverage run --source='.' manage.py test --settings=config.settings.development
+coverage run --source='.' manage.py test --settings=config.settings.tenants
 coverage report
 ```
 
@@ -198,7 +201,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📖 [Documentation](https://github.com/oumafreddy/oreno/wiki)
+- 📖 [Documentation](https://oreno.tech/docs/)
 - 💬 [Discussions](https://github.com/oumafreddy/oreno/discussions)
 - 🐛 [Issue Tracker](https://github.com/oumafreddy/oreno/issues)
 - 📧 Email: fredouma@oreno.tech | oumafredomondi@gmail.com
