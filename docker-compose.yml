@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: oreno_grc
+      POSTGRES_USER: oreno_user
+      POSTGRES_PASSWORD: oreno_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000 --settings=config.settings.development
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_DEBUG=True
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=oreno_grc
+      - DB_USER=oreno_user
+      - DB_PASS=oreno_password
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build: .
+    command: celery -A config worker -l info
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_DEBUG=True
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=oreno_grc
+      - DB_USER=oreno_user
+      - DB_PASS=oreno_password
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:

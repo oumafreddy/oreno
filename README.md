@@ -1,73 +1,206 @@
 # Oreno GRC v2
 
-Oreno is a multi-tenant Governance, Risk, and Compliance (GRC) platform built with Django. The system combines several domain-specific apps (audit, risk, compliance, etc.) under one tenant-aware architecture so each organization operates in an isolated schema while sharing the same codebase.
+<div align="center">
+  <img src="static/logo.svg" alt="Oreno GRC Logo" width="200"/>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
+  [![Django](https://img.shields.io/badge/Django-5.1+-green.svg)](https://djangoproject.com)
+  [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  
+  **A comprehensive, open-source Governance, Risk, and Compliance (GRC) platform**
+  
+  [Documentation](https://github.com/yourusername/oreno-grc/wiki) • [Contributing](CONTRIBUTING.md) • [Issues](https://github.com/yourusername/oreno-grc/issues) • [Discussions](https://github.com/yourusername/oreno-grc/discussions)
+</div>
 
-## Features
+---
 
-- **Multi-Tenant Architecture** – Uses [`django_tenants`](https://github.com/django-tenants/django-tenants) so organizations have their own database schema and routing based on domain names.
-- **Custom User Model** – Replaces Django's default user with `CustomUser` from `apps/users` and supports optional OTP-based login flows.
-- **AI Assistant Integration** – `services/ai` provides local LLM integration through Ollama with an optional OpenAI fallback.
-- **Modular Apps** – Business domains such as audit, risk, contracts, and compliance live in their own Django apps under `apps/`.
+Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform built with Django. Designed for organizations of all sizes, it provides comprehensive tools for audit management, risk assessment, compliance tracking, and AI governance - all within a secure, scalable architecture.
 
-## Apps Overview
+## ✨ Key Features
 
-Oreno GRC is built around a set of modular Django apps, each handling a specific domain of governance, risk, and compliance:
+- 🏢 **Multi-Tenant Architecture** - Isolated data per organization using `django-tenants`
+- 🤖 **AI Governance** - EU AI Act compliance, NIST RSF, and OECD guidelines integration
+- 🔍 **Risk-Based Auditing** - Global Internal Audit Standards (GIAS) 2024 compliant
+- 📊 **Advanced Analytics** - Comprehensive reporting and dashboard capabilities
+- 🔐 **Enterprise Security** - OTP authentication, JWT tokens, and advanced security features
+- 📱 **Modern UI** - Responsive design with Bootstrap 5 and modern JavaScript
+- 🔌 **REST API** - Full API support for integrations and custom applications
 
-- **Audit** – Manages the audit lifecycle, including workplans, engagements, objectives, procedures, issues, and recommendations. It follows the Global Internal Audit Standards (GIAS) 2024, ensuring a risk-based, objective-driven approach.
-- **Risk** – Handles risk management, including risk registers, risk matrices, and key risk indicators (KRIs). It supports risk assessment, monitoring, and mitigation strategies.
-- **Compliance** – Manages compliance frameworks, policy documents, compliance requirements, and obligations. It ensures that organizations meet regulatory and internal policy requirements.
-- **Contracts** – Manages contract types, parties, contracts, and milestones. It supports contract lifecycle management, including drafting, execution, and monitoring.
-- **Document Management** – Handles document requests and document uploads. It provides a secure way to manage and track documents within the organization.
-- **Organizations** – Manages organization settings, subscriptions, and user associations. It supports multi-tenancy by isolating data and settings per organization.
-- **Users** – Provides a custom user model and authentication mechanisms, including OTP-based login flows.
-- **Core** – Contains common abstract models, mixins, and utilities used across the platform.
-- **Admin Module** – Provides administrative functionalities for managing the platform.
-- **AI Governance** – Handles AI models registration, setting up datasets, running tests using frameworks like EU AI act, NIST RSF and OECD guidelines.
-- **Legal** – Handles legal aspects of the organization, including legal documents and compliance.
-- **Reports** – Generates reports and analytics for various aspects of the platform.
+## 🚀 Quick Start
 
-## Repository Structure
+### Prerequisites
+- Python 3.11+
+- PostgreSQL (recommended) or SQLite
+- Git
 
-- **config/** – Settings modules, WSGI/ASGI config, URL routing, and Celery setup.
-- **apps/** – Domain-specific applications. Common abstract models and mixins live in `apps/core`.
-- **common/** – Reusable utilities and middleware.
-- **services/** – External integrations like the AI assistant.
-- **templates/** and **static/** – HTML templates and static assets.
-- **tests/** – Unit tests for various apps (e.g., OTP logic under `apps/users/tests`).
+### Installation
 
-## Getting Started
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/oreno-grc.git
+   cd oreno-grc
+   ```
 
-1. Clone the repository and create a Python 3.11 virtual environment.
-2. Install dependencies from `requirements.txt`.
-3. Copy `.env.validations` to `.env.oreno` and update the values with your real secrets.
-4. Run database migrations:
+2. **Create virtual environment**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment**
+   ```bash
+   cp .env.example .env.oreno
+   # Edit .env.oreno with your configuration
+   ```
+
+5. **Run migrations**
    ```bash
    python manage.py migrate --settings=config.settings.development
    ```
-5. (Optional) create a superuser:
+
+6. **Create superuser**
    ```bash
    python manage.py createsuperuser --settings=config.settings.development
    ```
-6. Start the development server:
+
+7. **Start development server**
    ```bash
    python manage.py runserver --settings=config.settings.development
    ```
 
-## Running Tests
+Visit `http://localhost:8000` to access the application.
 
-The repository contains Django test cases. Run them with:
+## 🏗️ Architecture Overview
 
-```bash
-python manage.py test --settings=config.settings.development
+Oreno GRC follows a modular, multi-tenant architecture designed for scalability and maintainability:
+
+### Core Components
+
+- **Multi-Tenant Architecture** - Uses `django-tenants` for complete data isolation per organization
+- **Custom User Model** - Enhanced authentication with OTP support and advanced security
+- **AI Integration** - Local LLM support via Ollama with OpenAI fallback
+- **REST API** - Comprehensive API with JWT authentication and rate limiting
+
+### Application Modules
+
+| Module | Description | Key Features |
+|--------|-------------|--------------|
+| 🔍 **Audit** | Audit lifecycle management | GIAS 2024 compliance, risk-based auditing, workplan management |
+| ⚠️ **Risk** | Risk management system | Risk registers, matrices, KRIs, assessment workflows |
+| ✅ **Compliance** | Regulatory compliance | Framework management, policy tracking, obligation monitoring |
+| 📋 **Contracts** | Contract lifecycle | Contract types, parties, milestones, execution tracking |
+| 📄 **Document Management** | Secure document handling | Upload, versioning, access control, audit trails |
+| 🏢 **Organizations** | Multi-tenant management | Tenant isolation, user associations, subscription management |
+| 👥 **Users** | Authentication & authorization | Custom user model, OTP, role-based access control |
+| 🤖 **AI Governance** | AI compliance & governance | EU AI Act, NIST RSF, OECD guidelines, model registration |
+| ⚖️ **Legal** | Legal document management | Legal frameworks, compliance tracking, document management |
+| 📊 **Reports** | Analytics & reporting | Dashboard, custom reports, data visualization |
+
+## 📁 Project Structure
+
+```
+oreno-grc/
+├── 📁 apps/                    # Django applications
+│   ├── 🔍 audit/               # Audit management
+│   ├── ⚠️ risk/                # Risk management  
+│   ├── ✅ compliance/          # Compliance tracking
+│   ├── 📋 contracts/           # Contract management
+│   ├── 📄 document_management/ # Document handling
+│   ├── 🏢 organizations/        # Multi-tenant management
+│   ├── 👥 users/               # Authentication & users
+│   ├── 🤖 ai_governance/       # AI governance features
+│   ├── ⚖️ legal/               # Legal management
+│   ├── 📊 reports/             # Reporting & analytics
+│   └── 🔧 core/                # Common utilities
+├── 📁 config/                  # Django configuration
+│   ├── settings/              # Environment-specific settings
+│   ├── urls.py                # URL routing
+│   └── wsgi.py                # WSGI configuration
+├── 📁 services/               # External integrations
+│   ├── ai/                    # AI service integration
+│   └── workflows/             # Workflow automation
+├── 📁 templates/              # HTML templates
+├── 📁 static/                 # Static assets (CSS, JS, images)
+├── 📁 tests/                  # Test suites
+├── 📄 requirements.txt        # Python dependencies
+├── 📄 manage.py               # Django management script
+└── 📄 README.md               # This file
 ```
 
-## Database Dumps
+## 🧪 Testing
 
-Database dump files for development are not tracked in version control.
-If you need sample dumps, request them from the maintainers and store them
-outside the repository (for example in a sibling `dumps/` directory).
-Update any local scripts to load the dump from that location.
+### Run Tests
+```bash
+# Run all tests
+python manage.py test --settings=config.settings.development
 
-## Learning More
+# Run specific app tests
+python manage.py test apps.audit --settings=config.settings.development
 
-Explore each app under `apps/` to see how domain logic is implemented. Reviewing tests is a good way to understand expected behavior. The `config/settings` modules show how environments are configured for development or production. To learn about tenant management, inspect the `organizations` app and middleware in `apps/core`.
+# Run with coverage
+coverage run --source='.' manage.py test --settings=config.settings.development
+coverage report
+```
+
+### Test Coverage
+- Unit tests for models and views
+- Integration tests for workflows
+- API endpoint testing
+- Security testing
+
+## 🚀 Deployment
+
+### Production Setup
+1. Configure production settings
+2. Set up PostgreSQL database
+3. Configure Redis for caching
+4. Set up Celery for background tasks
+5. Configure static file serving
+6. Set up SSL certificates
+
+### Docker Support
+```bash
+# Build and run with Docker
+docker-compose up --build
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Ways to Contribute
+- 🐛 Bug reports and fixes
+- ✨ New features
+- 📚 Documentation improvements
+- 🧪 Test coverage
+- 🎨 UI/UX enhancements
+- 🌍 Translations
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Django community for the excellent framework
+- Contributors to django-tenants for multi-tenancy support
+- All contributors and users of Oreno GRC
+
+## 📞 Support
+
+- 📖 [Documentation](https://github.com/yourusername/oreno-grc/wiki)
+- 💬 [Discussions](https://github.com/yourusername/oreno-grc/discussions)
+- 🐛 [Issue Tracker](https://github.com/yourusername/oreno-grc/issues)
+- 📧 Email: support@oreno.tech
+
+---
+
+<div align="center">
+  <strong>Built with ❤️ by the Oreno GRC Team</strong>
+</div>
