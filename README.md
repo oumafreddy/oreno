@@ -10,7 +10,7 @@
   
   **A comprehensive, open-source Governance, Risk, and Compliance (GRC) platform**
   
-  [Documentation](https://github.com/oumafreddy/oreno/wiki) • [Contributing](CONTRIBUTING.md) • [Issues](https://github.com/oumafreddy/oreno/issues) • [Discussions](https://github.com/oumafreddy/oreno/discussions)
+  [Documentation](https://oreno.tech/docs/) • [Contributing](CONTRIBUTING.md) • [Issues](https://github.com/oumafreddy/oreno/issues) • [Discussions](https://github.com/oumafreddy/oreno/discussions)
 </div>
 
 ---
