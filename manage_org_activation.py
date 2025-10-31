@@ -1,15 +1,19 @@
 import os
-import sys
+import sys 
 import django
 from django.db import models
 
 # Setup Django environment
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
+# Ensure local apps/ is importable so "organizations" resolves without the "apps." prefix
+APPS_DIR = os.path.join(BASE_DIR, 'apps')
+if APPS_DIR not in sys.path:
+    sys.path.insert(0, APPS_DIR)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.base')
 django.setup()
 
-from organizations.models import Organization
+from organizations.models import Organization  # type: ignore[import]
 
 
 def set_org_active_status(org_identifier, is_active=True):

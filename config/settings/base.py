@@ -50,9 +50,8 @@ for host in ALLOWED_HOSTS:
 LOCAL_TENANT_DOMAINS = [
     'org001.localhost',
     'org002.localhost',
-    'org003.localhost',
-    'org004.localhost',
-    'org005.localhost',
+    'zim.localhost',
+    'eth.localhost',
     'krcs.localhost',
     'oreno.localhost',
 ]

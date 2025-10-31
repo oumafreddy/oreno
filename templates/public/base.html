@@ -89,7 +89,6 @@
         
         .nav-content {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             padding: var(--space-4) var(--space-6);
             max-width: 1200px;
@@ -105,6 +104,7 @@
             color: var(--primary-color);
             text-decoration: none;
             transition: all var(--transition-normal);
+            margin-right: auto; /* keep logo on the left */
         }
         
         .navbar-logo:hover {
@@ -121,6 +121,12 @@
             color: var(--accent-color);
         }
         
+        .nav-center { 
+            flex: 1; 
+            display: flex; 
+            justify-content: center; /* center the nav */
+        }
+
         .navbar-links {
             display: flex;
             align-items: center;
@@ -168,6 +174,7 @@
             .navbar-links.active {
                 display: flex;
             }
+            .nav-center { justify-content: flex-end; }
         }
         main { margin-top: 0; }
         
@@ -698,13 +705,15 @@
                 <img src="{% static 'img/logo.svg' %}" alt="Hashrate Solutions Logo" class="logo-image">
                 Hashrate <span>Solutions</span>
             </a>
-            <ul class="navbar-links">
-                <li><a href="/#services">Services</a></li>
-                <li><a href="/#contact">Contact</a></li>
-                <li><a href="{% url 'public-docs' %}">Documentation</a></li>
-                <li><a href="{% url 'public-privacy' %}">Privacy</a></li>
-                <li><a href="{% url 'public-cookies' %}">Cookies</a></li>
-            </ul>
+            <div class="nav-center">
+                <ul class="navbar-links">
+                    <li><a href="/#services">Services</a></li>
+                    <li><a href="/#contact">Contact</a></li>
+                    <li><a href="{% url 'public-docs' %}">Documentation</a></li>
+                    <li><a href="{% url 'public-privacy' %}">Privacy</a></li>
+                    <li><a href="{% url 'public-cookies' %}">Cookies</a></li>
+                </ul>
+            </div>
             <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
                 <span></span>
                 <span></span>
