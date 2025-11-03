@@ -1284,13 +1284,37 @@ class SecurityAuditLog(models.Model):
         """
         Log a security event.
         """
+        # Resolve organization robustly; user.organization may be None during login
+        organization = getattr(user, 'organization', None)
+        if organization is None:
+            try:
+                # Prefer organization captured in thread‑local by middleware
+                from apps.core.middleware import get_current_organization
+                organization = get_current_organization()
+            except Exception:
+                organization = None
+        if organization is None:
+            # Fall back to first membership if available
+            try:
+                from organizations.models import OrganizationUser
+                membership = OrganizationUser.objects.filter(user=user).first()
+                if membership:
+                    organization = membership.organization
+            except Exception:
+                organization = None
+
+        # Only create the log if we have an organization; otherwise avoid IntegrityError
+        if organization is None:
+            # Gracefully skip logging to avoid breaking auth flow
+            return None
+
         return cls.objects.create(
             user=user,
             event_type=event_type,
             ip_address=ip_address,
             user_agent=user_agent,
             details=details or {},
-            organization=user.organization
+            organization=organization
         )
     
     @classmethod

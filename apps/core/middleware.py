@@ -101,7 +101,6 @@ class OrganizationMiddleware:
                     # User doesn't have access to this tenant - log them out
                     from django.contrib.auth import logout
                     from django.contrib import messages
-                    from django.shortcuts import redirect
                     from django.utils.translation import gettext_lazy as _
                     
                     logout(request)
