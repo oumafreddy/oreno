@@ -79,13 +79,6 @@ yarn-error.log*
 # Docker
 .dockerignore
 
-# Keep important documentation
+# Ignore all .md files except README.md
+*.md
 !README.md
-!CONTRIBUTING.md
-!LICENSE
-!CHANGELOG.md
-!SECURITY.md
-!CODE_OF_CONDUCT.md
-!GOVERNANCE.md
-!CONTRIBUTORS.md
-!DOCKER.md
