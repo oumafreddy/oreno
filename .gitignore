@@ -79,6 +79,7 @@ yarn-error.log*
 # Docker
 .dockerignore
 
-# Ignore all .md files except README.md
+# Ignore all .md files except README.md and CONTRIBUTING.md
 *.md
 !README.md
+!CONTRIBUTING.md
