@@ -54,37 +54,63 @@ def check_ollama_status():
         logger.error(f"Ollama status check failed: {e}")
         return False
 
-def ask_ollama(prompt: str, user, org, context: str = None) -> str:
+def ask_ollama(prompt: str, user, org, context: str = None, system_prompt: str = None, return_meta: bool = False):
     """
     Send a query to Ollama's local API
+    
+    Args:
+        prompt: User prompt
+        user: User object
+        org: Organization object
+        context: Additional context string
+        system_prompt: Custom system prompt (overrides default)
+        return_meta: If True, returns tuple (response, metadata_dict), else just response string
+    
+    Returns:
+        str if return_meta=False, tuple (str, dict) if return_meta=True
     """
+    import time
+    start_time = time.time()
+    
     if not is_safe_prompt(prompt):
-        return "Sorry, I can't provide that information."
+        error_response = "Sorry, I can't provide that information."
+        if return_meta:
+            return error_response, {'error': 'Unsafe prompt', 'provider': 'ollama', 'model': FORCED_MODEL}
+        return error_response
     
     # Check if Ollama is running
     if not check_ollama_status():
         logger.error("Ollama is not running or not accessible")
-        raise Exception("Ollama service is not available")
+        error_msg = "Ollama service is not available"
+        if return_meta:
+            raise Exception(error_msg)
+        raise Exception(error_msg)
     
-    # Add GRC-specific context to every prompt
-    grc_context = (
-        "GRC stands for Governance, Risk, and Compliance.\n"
-        "- Governance refers to the management and leadership structures and processes that ensure an organization meets its objectives.\n"
-        "- Risk management involves identifying, assessing, and mitigating risks to the organization.\n"
-        "- Compliance means ensuring the organization adheres to all relevant laws, regulations, and standards.\n\n"
-    )
+    # Use custom system prompt or default
+    system_prompt_to_use = system_prompt if system_prompt else SAFE_SYSTEM_PROMPT
     
-    # Add organization context if available
-    org_context = ""
-    if org:
-        org_context = f"\nORGANIZATION CONTEXT: You are assisting {org.name} (ID: {org.id}). Only provide information relevant to this organization.\n"
-    
-    # Combine the GRC context with the user's prompt
-    enhanced_prompt = grc_context + org_context + "Question: " + prompt
+    # Add GRC-specific context to every prompt (unless custom system prompt provided)
+    if not system_prompt:
+        grc_context = (
+            "GRC stands for Governance, Risk, and Compliance.\n"
+            "- Governance refers to the management and leadership structures and processes that ensure an organization meets its objectives.\n"
+            "- Risk management involves identifying, assessing, and mitigating risks to the organization.\n"
+            "- Compliance means ensuring the organization adheres to all relevant laws, regulations, and standards.\n\n"
+        )
+        
+        # Add organization context if available
+        org_context = ""
+        if org:
+            org_context = f"\nORGANIZATION CONTEXT: You are assisting {org.name} (ID: {org.id}). Only provide information relevant to this organization.\n"
+        
+        # Combine the GRC context with the user's prompt
+        enhanced_prompt = grc_context + org_context + "Question: " + prompt
+    else:
+        enhanced_prompt = prompt
     
     # Prepare messages
     messages = [
-        {"role": "system", "content": SAFE_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt_to_use},
         {"role": "user", "content": enhanced_prompt},
     ]
     
@@ -117,6 +143,8 @@ def ask_ollama(prompt: str, user, org, context: str = None) -> str:
             timeout=60
         )
         
+        processing_time = time.time() - start_time
+        
         if response.status_code == 200:
             result = response.json()
             answer = result.get("message", {}).get("content", "").strip()
@@ -126,20 +154,40 @@ def ask_ollama(prompt: str, user, org, context: str = None) -> str:
                 raise Exception("Empty response from Ollama")
             
             log_prompt_response(user, org, prompt, answer)
+            
+            metadata = {
+                'provider': 'ollama',
+                'model': model_to_use,
+                'processing_time': processing_time,
+                'tokens': result.get('eval_count', 0),  # Approximate token count
+                'raw_response': result,
+            }
+            
+            if return_meta:
+                return answer, metadata
             return answer
         else:
             error_msg = f"Ollama API error: {response.status_code} - {response.text}"
             logger.error(error_msg)
+            if return_meta:
+                raise Exception(error_msg)
             raise Exception(error_msg)
     
     except requests.exceptions.Timeout:
         error_msg = "Ollama request timed out"
         logger.error(error_msg)
+        if return_meta:
+            raise Exception(error_msg)
         raise Exception(error_msg)
     except requests.exceptions.ConnectionError:
         error_msg = "Cannot connect to Ollama service"
         logger.error(error_msg)
+        if return_meta:
+            raise Exception(error_msg)
         raise Exception(error_msg)
     except Exception as e:
         logger.error(f"Ollama API error: {e}")
-        raise Exception(f"Ollama service error: {str(e)}")
+        error_msg = f"Ollama service error: {str(e)}"
+        if return_meta:
+            raise Exception(error_msg)
+        raise Exception(error_msg)

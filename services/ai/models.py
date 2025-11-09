@@ -3,29 +3,142 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from apps.core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from django_ckeditor_5.fields import CKEditor5Field
+from organizations.models import Organization  # type: ignore[reportMissingImports]
 import json
 
-class AIInteraction(AuditableModel):
-    """
-    Model to track AI interactions for audit and improvement purposes
-    """
+class ChatLog(models.Model):
+    """Model to store chat conversation history"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name='chat_logs',
+        verbose_name=_('User')
+    )
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='chat_logs',
+        verbose_name=_('Organization')
+    )
+    session_id = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name=_('Session ID'),
+        help_text=_('Session identifier for grouping conversations')
+    )
+    query = models.TextField(
+        verbose_name=_('Query'),
+        help_text=_('User\'s query or question')
+    )
+    response = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('Response'),
+        help_text=_('AI assistant response')
+    )
+    metadata = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_('Metadata'),
+        help_text=_('Additional metadata (e.g., model, tokens, duration)')
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Created At')
+    )
+
+    class Meta:
+        verbose_name = _('Chat Log')
+        verbose_name_plural = _('Chat Logs')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['organization', '-created_at']),
+            models.Index(fields=['session_id', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} @ {self.created_at}: {self.query[:80]}"
+
+
+class AIInteraction(AuditableModel):
+    """
+    Model to track lower-level LLM interactions and prompts for auditability
+    Enhanced version with more detailed tracking
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='ai_interactions',
         verbose_name=_('User')
     )
-    
-    question = models.TextField(
-        verbose_name=_('Question'),
-        help_text=_('The user\'s question')
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ai_interactions',
+        verbose_name=_('Organization')
     )
-    
+    prompt = models.TextField(
+        verbose_name=_('Prompt'),
+        help_text=_('The user prompt sent to LLM')
+    )
+    system_prompt = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('System Prompt'),
+        help_text=_('System prompt used for LLM')
+    )
     response = models.TextField(
-        verbose_name=_('AI Response'),
-        help_text=_('The AI\'s response')
+        blank=True,
+        null=True,
+        verbose_name=_('Response'),
+        help_text=_('LLM response')
+    )
+    model = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        verbose_name=_('Model'),
+        help_text=_('LLM model used (e.g., gemma:2b, gpt-3.5-turbo)')
+    )
+    provider = models.CharField(
+        max_length=64,
+        default='ollama',
+        verbose_name=_('Provider'),
+        help_text=_('LLM provider (ollama, openai)')
+    )
+    tokens_used = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_('Tokens Used'),
+        help_text=_('Number of tokens consumed')
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Created At')
+    )
+    extra = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_('Extra Data'),
+        help_text=_('Additional metadata (e.g., job_id, raw_response)')
     )
     
+    # Legacy fields for backward compatibility
+    question = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('Question'),
+        help_text=_('Legacy: The user\'s question (use prompt instead)')
+    )
     source = models.CharField(
         max_length=20,
         choices=[
@@ -33,29 +146,27 @@ class AIInteraction(AuditableModel):
             ('ollama', 'Ollama'),
             ('openai', 'OpenAI'),
         ],
+        blank=True,
+        null=True,
         verbose_name=_('Response Source'),
-        help_text=_('Which source provided the response')
+        help_text=_('Legacy: Which source provided the response')
     )
-    
     processing_time = models.FloatField(
         null=True,
         blank=True,
         verbose_name=_('Processing Time (seconds)'),
         help_text=_('Time taken to generate response')
     )
-    
     success = models.BooleanField(
         default=True,
         verbose_name=_('Success'),
         help_text=_('Whether the interaction was successful')
     )
-    
     error_message = models.TextField(
         blank=True,
         verbose_name=_('Error Message'),
         help_text=_('Error message if the interaction failed')
     )
-    
     user_feedback = models.CharField(
         max_length=10,
         choices=[
@@ -68,7 +179,6 @@ class AIInteraction(AuditableModel):
         verbose_name=_('User Feedback'),
         help_text=_('User feedback on the response quality')
     )
-    
     metadata = models.JSONField(
         default=dict,
         blank=True,
@@ -82,17 +192,29 @@ class AIInteraction(AuditableModel):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['organization', '-created_at']),
+            models.Index(fields=['provider', '-created_at']),
+            models.Index(fields=['model', '-created_at']),
             models.Index(fields=['source', '-created_at']),
             models.Index(fields=['success', '-created_at']),
         ]
     
     def __str__(self):
-        return f"AI Interaction by {self.user.username} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"AI Interaction by {self.user.username if self.user else 'Unknown'} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
     
     def save(self, *args, **kwargs):
         # Ensure metadata is a dict
         if not isinstance(self.metadata, dict):
             self.metadata = {}
+        # Backward compatibility: set source from provider if not set
+        if not self.source and self.provider:
+            if self.provider == 'ollama':
+                self.source = 'ollama'
+            elif self.provider == 'openai':
+                self.source = 'openai'
+        # Backward compatibility: set question from prompt if not set
+        if not self.question and self.prompt:
+            self.question = self.prompt
         super().save(*args, **kwargs)
 
 class AIKnowledgeBase(AuditableModel):
@@ -193,3 +315,78 @@ class AIConfiguration(AuditableModel):
     
     def __str__(self):
         return f"{self.key}: {str(self.value)[:50]}..."
+
+
+class PromptTemplate(AuditableModel):
+    """Model to store reusable prompt templates"""
+    key = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        verbose_name=_('Key'),
+        help_text=_('Unique identifier for the template')
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name=_('Title'),
+        help_text=_('Human-readable title')
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('Description'),
+        help_text=_('Description of what this template does')
+    )
+    template = models.TextField(
+        verbose_name=_('Template'),
+        help_text=_('Prompt template with placeholders like {{issue_description}}')
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='prompt_templates',
+        verbose_name=_('Owner'),
+        help_text=_('User who created this template')
+    )
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='prompt_templates',
+        verbose_name=_('Organization'),
+        help_text=_('Organization this template belongs to (null for global)')
+    )
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name=_('Is Default'),
+        help_text=_('Whether this is the default template for its key')
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Created At')
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_('Updated At')
+    )
+
+    class Meta:
+        verbose_name = _('Prompt Template')
+        verbose_name_plural = _('Prompt Templates')
+        ordering = ['key']
+        indexes = [
+            models.Index(fields=['key', 'organization']),
+            models.Index(fields=['is_default', 'organization']),
+        ]
+
+    def __str__(self):
+        return f"{self.key} ({self.title})"
+    
+    def render(self, **kwargs):
+        """Render the template with provided context"""
+        result = self.template
+        for key, value in kwargs.items():
+            result = result.replace(f'{{{{{key}}}}}', str(value))
+        return result

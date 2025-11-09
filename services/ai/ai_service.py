@@ -413,40 +413,65 @@ def validate_ai_response(response: str, user_context: Dict[str, Any] = None) -> 
     
     return True
 
-def ai_assistant_answer(question: str, user, org) -> str:
+def ai_assistant_answer(question: str, user, org, system_prompt: str = None, return_meta: bool = False):
     """
     Main AI assistant function that handles user questions.
     Uses FAQ first, then data-aware LLM responses with organization context.
+    
+    Args:
+        question: User's question
+        user: User object
+        org: Organization object
+        system_prompt: Optional custom system prompt
+        return_meta: If True, returns tuple (response, metadata), else just response string
+    
+    Returns:
+        str if return_meta=False, tuple (str, dict) if return_meta=True
     """
     if not question or not question.strip():
-        return "Please provide a question to get help."
+        error_response = "Please provide a question to get help."
+        if return_meta:
+            return error_response, {'error': 'Empty question', 'provider': None}
+        return error_response
     
     question = question.strip()
     logger.info(f"AI Assistant query: {question} | User: {user} | Org: {org}")
     
-    # 1. Check FAQ first for quick answers
-    faq_answer = find_faq_answer(question, get_user_context(user, org))
-    if faq_answer:
-        logger.info("FAQ answer found")
-        return faq_answer
+    # 1. Check FAQ first for quick answers (skip if custom system_prompt provided)
+    if not system_prompt:
+        faq_answer = find_faq_answer(question, get_user_context(user, org))
+        if faq_answer:
+            logger.info("FAQ answer found")
+            if return_meta:
+                return faq_answer, {'provider': 'faq', 'source': 'faq'}
+            return faq_answer
     
     # 2. Get user context and organization data
     user_context = get_user_context(user, org)
     data_provider = OrganizationDataProvider(user, org)
     org_data = data_provider.get_organization_summary()
     
-    # 3. Create data-aware prompt
-    data_aware_prompt = create_data_aware_prompt(question, user_context, org_data)
+    # 3. Create data-aware prompt (unless custom system prompt provided)
+    if system_prompt:
+        data_aware_prompt = question  # Use question as-is with custom system prompt
+    else:
+        data_aware_prompt = create_data_aware_prompt(question, user_context, org_data)
     
     # 4. Use Ollama for AI responses with OpenAI fallback
     try:
         logger.info("Attempting Ollama response with organization data")
-        response = ask_ollama(data_aware_prompt, user, org)
+        if return_meta:
+            response, meta = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=True)
+        else:
+            response = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=False)
+            meta = {'provider': 'ollama'}
         
         if response and response.strip():
             # Validate the response
             if validate_ai_response(response, user_context):
                 logger.info("Ollama response successful and validated")
+                if return_meta:
+                    return response.strip(), meta
                 return response.strip()
             else:
                 logger.warning("Ollama response failed validation")
@@ -458,18 +483,34 @@ def ai_assistant_answer(question: str, user, org) -> str:
     except Exception as e:
         logger.error(f"Ollama error: {e}, falling back to OpenAI")
         try:
-            response = ask_llm(data_aware_prompt, user, org)
+            if return_meta:
+                response, meta = ask_llm(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=True)
+            else:
+                response = ask_llm(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=False)
+                meta = {'provider': 'openai'}
+            
             if response and response.strip():
                 # Validate the response
                 if validate_ai_response(response, user_context):
                     logger.info("OpenAI fallback successful and validated")
+                    if return_meta:
+                        return response.strip(), meta
                     return response.strip()
                 else:
                     logger.warning("OpenAI response failed validation")
-                    return "I'm sorry, I'm having trouble providing a safe response to your question. Please try rephrasing your question."
+                    error_response = "I'm sorry, I'm having trouble providing a safe response to your question. Please try rephrasing your question."
+                    if return_meta:
+                        return error_response, {'error': 'Validation failed', 'provider': 'openai'}
+                    return error_response
             else:
                 logger.error("OpenAI also returned empty response")
-                return "I'm sorry, I'm having trouble processing your request right now. Please try again later."
+                error_response = "I'm sorry, I'm having trouble processing your request right now. Please try again later."
+                if return_meta:
+                    return error_response, {'error': 'Empty response', 'provider': 'openai'}
+                return error_response
         except Exception as fallback_error:
             logger.error(f"OpenAI fallback also failed: {fallback_error}")
-            return "I'm sorry, I'm unable to process your request at the moment. Please try again later or contact support if the problem persists."
+            error_response = "I'm sorry, I'm unable to process your request at the moment. Please try again later or contact support if the problem persists."
+            if return_meta:
+                return error_response, {'error': str(fallback_error), 'provider': None}
+            return error_response

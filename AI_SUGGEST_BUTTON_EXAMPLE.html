@@ -1,0 +1,114 @@
+<!--
+AI Suggest Button Integration Example
+Add this to your form templates (e.g., audit issue form, risk register form)
+
+Example: In an Audit Issue form template
+-->
+
+<!-- Add this button near your issue description or recommendation fields -->
+<button id="ai-suggest" type="button" class="btn btn-outline-primary">
+    <i class="bi bi-magic"></i> AI Suggest
+</button>
+
+<script>
+document.getElementById('ai-suggest').addEventListener('click', async function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    // Disable button during processing
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+    
+    try {
+        // Get the issue description from the form
+        const issueDescription = document.querySelector('#id_description')?.value || 
+                                 document.querySelector('#id_issue_description')?.value || 
+                                 '';
+        
+        if (!issueDescription.trim()) {
+            alert('Please enter an issue description first');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        
+        // Build prompt for AI
+        const prompt = `Given the following audit issue description, suggest a well-structured root cause and recommendation aligned with internal audit best practices:\n\n${issueDescription}`;
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : '';
+        }
+        
+        // Call AI API
+        const resp = await fetch('/api/ai/ask/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                question: prompt,
+                session_id: '{{ request.session.session_key }}'
+            })
+        });
+        
+        const data = await resp.json();
+        
+        if (resp.ok && data.result) {
+            // Try to parse JSON response (if AI returns structured data)
+            try {
+                const parsed = JSON.parse(data.result);
+                
+                // Map to form fields
+                if (parsed.root_cause && document.querySelector('#id_root_cause')) {
+                    document.querySelector('#id_root_cause').value = parsed.root_cause;
+                }
+                if (parsed.recommendation && document.querySelector('#id_recommendation')) {
+                    document.querySelector('#id_recommendation').value = parsed.recommendation;
+                }
+                if (parsed.impact && document.querySelector('#id_impact')) {
+                    document.querySelector('#id_impact').value = parsed.impact;
+                }
+            } catch (e) {
+                // If not JSON, put whole response in recommendation field
+                if (document.querySelector('#id_recommendation')) {
+                    const currentValue = document.querySelector('#id_recommendation').value;
+                    document.querySelector('#id_recommendation').value = 
+                        currentValue ? `${currentValue}\n\n${data.result}` : data.result;
+                } else if (document.querySelector('#id_root_cause')) {
+                    document.querySelector('#id_root_cause').value = data.result;
+                }
+            }
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
+            alertDiv.innerHTML = `
+                <strong>AI Suggestions Added!</strong> Review and adjust as needed.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            btn.parentNode.insertBefore(alertDiv, btn.nextSibling);
+            
+        } else {
+            alert('Failed to get AI suggestions: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('AI Suggest error:', error);
+        alert('Error getting AI suggestions: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+</script>
+
+<!--
+Usage Notes:
+1. Replace field selectors (#id_description, #id_root_cause, etc.) with your actual form field IDs
+2. Customize the prompt to match your needs
+3. You can use PromptTemplate model to store reusable prompts
+4. Add similar buttons to other forms (Risk Register, Compliance, etc.)
+-->
+

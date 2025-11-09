@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
 from django.utils.html import strip_tags
+from django.shortcuts import render
 import logging
 import re
 
@@ -88,8 +89,8 @@ class AIAssistantAPIView(APIView):
             # Log the request for audit purposes
             logger.info(f"AI request from user {user.id} ({user.username}) in org {org.name} (ID: {org.id})")
             
-            # Get AI response
-            ai_response = ai_assistant_answer(question, user, org)
+            # Get AI response with metadata
+            ai_response, llm_meta = ai_assistant_answer(question, user, org, return_meta=True)
             
             if not ai_response:
                 return Response(
@@ -100,21 +101,41 @@ class AIAssistantAPIView(APIView):
             # Log successful response
             logger.info(f"AI response generated successfully for user {user.id} in org {org.name}")
             
-            # TODO: Track AI interaction in database for audit purposes
-            # This would create an AIInteraction record with organization context
-            # from services.ai.models import AIInteraction
-            # AIInteraction.objects.create(
-            #     user=user,
-            #     question=question,
-            #     response=ai_response,
-            #     source='ollama',  # or 'openai' or 'faq'
-            #     success=True,
-            #     metadata={'organization_id': org.id, 'organization_name': org.name}
-            # )
+            # Get session ID from request
+            session_id = request.data.get('session_id') or request.session.session_key
+            
+            # Save ChatLog
+            from services.ai.models import ChatLog, AIInteraction
+            chat = ChatLog.objects.create(
+                user=user,
+                organization=org,
+                session_id=session_id,
+                query=question,
+                response=ai_response,
+                metadata=llm_meta
+            )
+            
+            # Save AIInteraction for detailed audit trail
+            AIInteraction.objects.create(
+                user=user,
+                organization=org,
+                prompt=question,
+                system_prompt=None,  # Using default system prompt
+                response=ai_response,
+                model=llm_meta.get('model'),
+                provider=llm_meta.get('provider', 'ollama'),
+                tokens_used=llm_meta.get('tokens'),
+                extra={'llm_raw': llm_meta.get('raw_response'), 'chat_id': chat.id},
+                source=llm_meta.get('provider', 'ollama'),
+                success=True,
+                processing_time=llm_meta.get('processing_time'),
+                metadata={'organization_id': org.id, 'organization_name': org.name}
+            )
             
             return Response({
-                'response': ai_response,
-                'question': question
+                'result': ai_response,  # Changed from 'response' to 'result' for consistency
+                'question': question,
+                'chat_id': chat.id
             })
             
         except Exception as e:
@@ -122,4 +143,77 @@ class AIAssistantAPIView(APIView):
             return Response(
                 {'error': 'An error occurred while processing your request. Please try again.'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            ) 
+            )
+
+
+class AIAssistantAsyncAPIView(APIView):
+    """
+    Async AI Assistant API endpoint that enqueues AI queries for background processing.
+    Returns job_id immediately, result can be retrieved via job status endpoint.
+    """
+    throttle_classes = [AIRateThrottle]
+    permission_classes = []  # Will use login_required decorator
+    
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        try:
+            # Validate input
+            question = request.data.get('question', '').strip()
+            try:
+                # Reuse validation from AIAssistantAPIView
+                view = AIAssistantAPIView()
+                question = view.validate_question(question)
+            except ValidationError as e:
+                return Response(
+                    {'error': str(e)}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            user = request.user
+            org = getattr(user, 'organization', None)
+            
+            if not org:
+                return Response(
+                    {'error': 'Organization context is required for AI assistance.'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Import task here to avoid circular imports
+            from services.ai.tasks import run_ai_query
+            
+            # Submit to Celery
+            session_id = request.data.get('session_id') or request.session.session_key
+            system_prompt = request.data.get('system_prompt')
+            
+            job = run_ai_query.delay(
+                user.id,
+                org.id,
+                question,
+                system_prompt=system_prompt,
+                session_id=session_id
+            )
+            
+            logger.info(f"AI query enqueued: job_id={job.id}, user={user.id}, org={org.id}")
+            
+            return Response({
+                'job_id': job.id,
+                'status': 'pending',
+                'message': 'Query submitted for processing'
+            }, status=status.HTTP_202_ACCEPTED)
+            
+        except Exception as e:
+            logger.error(f"AI Assistant async error: {e}")
+            return Response(
+                {'error': 'An error occurred while enqueueing your request. Please try again.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+@login_required
+def chat_page(request):
+    """Render the chat UI page"""
+    return render(request, 'ai/chat.html')
+ 

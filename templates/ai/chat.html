@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Assistant Chat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>AI Assistant</h2>
+    <div id="chat-wrapper" data-session="{{ request.session.session_key }}">
+        <div id="messages" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; background: #f9f9f9; border-radius: 5px;"></div>
+        <div class="input-group">
+            <textarea id="message" rows="3" class="form-control" placeholder="Ask me anything about GRC, audits, risks, or compliance..." style="resize: vertical;"></textarea>
+            <button id="send" class="btn btn-primary" type="button">Send</button>
+        </div>
+        <small class="text-muted d-block mt-2">Rate limit: 10 requests per minute</small>
+    </div>
+</div>
+
+<script>
+const sendBtn = document.getElementById('send');
+const messageInput = document.getElementById('message');
+const messages = document.getElementById('messages');
+const chatWrapper = document.getElementById('chat-wrapper');
+const sessionId = chatWrapper.dataset.session;
+
+function getCookie(name) {
+    let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+function appendMessage(who, text, isError = false) {
+    const el = document.createElement('div');
+    el.className = `mb-3 ${isError ? 'text-danger' : ''}`;
+    el.innerHTML = `<strong>${who}:</strong> <span>${text}</span>`;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
+    
+    // Disable input while processing
+    sendBtn.disabled = true;
+    messageInput.disabled = true;
+    
+    appendMessage('You', text);
+    messageInput.value = '';
+    
+    try {
+        const resp = await fetch('/api/ai/ask/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                question: text,
+                session_id: sessionId
+            })
+        });
+        
+        const data = await resp.json();
+        
+        if (resp.ok) {
+            appendMessage('Assistant', data.result || data.response || 'No response');
+        } else {
+            appendMessage('Error', data.error || 'An error occurred', true);
+        }
+    } catch (error) {
+        appendMessage('Error', 'Failed to send message: ' + error.message, true);
+    } finally {
+        // Re-enable input
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+    }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+// Focus input on load
+messageInput.focus();
+</script>
+{% endblock %}
+

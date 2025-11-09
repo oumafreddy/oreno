@@ -32,9 +32,11 @@ services:
       - DB_PASS=oreno_password
       - DB_HOST=db
       - DB_PORT=5432
+      - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       - db
       - redis
+      - ollama
 
   celery:
     build: .
@@ -53,5 +55,22 @@ services:
       - db
       - redis
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Note: Models need to be pulled manually or via init script
+    # Run: docker exec <ollama_container> ollama pull llama3:8b
+    # Or use: docker exec <ollama_container> ollama pull gemma:2b
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
 volumes:
   postgres_data:
+  ollama_data:
