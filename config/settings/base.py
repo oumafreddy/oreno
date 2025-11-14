@@ -139,7 +139,7 @@ AUTH_USER_MODEL = 'users.CustomUser'
 REST_FRAMEWORK = {
     # Authentication classes
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.authentication.BlacklistedJWTAuthentication',  # Custom JWT with blacklist checking
         'rest_framework.authentication.SessionAuthentication',
     ],
     # Default permission classes

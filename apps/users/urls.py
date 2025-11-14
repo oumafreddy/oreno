@@ -28,6 +28,7 @@ from .views import (
     # API Views
     UserRegisterAPIView,
     UserLoginAPIView,
+    UserLogoutAPIView,
     TokenRefreshAPIView,
     OTPVerifyAPIView,
     OTPResendAPIView,
@@ -73,6 +74,7 @@ urlpatterns = [
     # API endpoints
     path('api/register/', UserRegisterAPIView.as_view(), name='api-register'),
     path('api/login/', UserLoginAPIView.as_view(), name='api-login'),
+    path('api/logout/', UserLogoutAPIView.as_view(), name='api-logout'),
     path('api/token/refresh/', TokenRefreshAPIView.as_view(), name='token-refresh'),
     path('api/verify-otp/', OTPVerifyAPIView.as_view(), name='verify-otp'),
     path('api/resend-otp/', OTPResendAPIView.as_view(), name='resend-otp'),

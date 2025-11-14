@@ -1,8 +1,11 @@
 # apps/users/views.py
+import logging
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import login, logout
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth.views import (
     LoginView, LogoutView,
     PasswordChangeView, PasswordChangeDoneView,
@@ -26,10 +29,12 @@ from core.decorators import skip_org_check
 from core.mixins.organization import OrganizationScopedQuerysetMixin
 
 from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from .authentication import blacklist_access_token, blacklist_user_access_tokens
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm, ProfileForm, OrganizationRoleForm, AdminUserCreationForm, CustomSetPasswordForm, PasswordChangeForm
 from .models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, AccountLockout, SecurityAuditLog
@@ -119,6 +124,56 @@ class UserLoginAPIView(TokenObtainPairView):
                 AccountLockout.record_failed_attempt(user, client_ip or '0.0.0.0', user_agent)
         
         return response
+
+
+@method_decorator(skip_org_check, name='dispatch')
+class UserLogoutAPIView(APIView):
+    """
+    API endpoint to logout and blacklist JWT access token.
+    
+    This endpoint:
+    1. Blacklists the current access token from the Authorization header
+    2. Blacklists all refresh tokens for the user
+    3. Returns success response
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """Logout user and blacklist tokens"""
+        client_ip = request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        user = request.user
+        
+        try:
+            # Get the access token from the Authorization header
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            if auth_header.startswith('Bearer '):
+                token_string = auth_header[7:]  # Remove 'Bearer ' prefix
+                # Blacklist the current access token
+                jti = blacklist_access_token(token_string)
+                if jti:
+                    logger.info(f"Access token blacklisted on API logout: jti={jti}, user={user.id}")
+            
+            # Blacklist all refresh tokens for this user
+            for token in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=token)
+            
+            # Blacklist all other access tokens for this user (if any are tracked)
+            blacklist_user_access_tokens(user)
+            
+            # Audit logging
+            SecurityAuditLog.log_event(user, 'logout', client_ip or '0.0.0.0', user_agent)
+            
+            return Response({
+                'detail': 'Successfully logged out. All tokens have been blacklisted.'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error during API logout: {e}")
+            # Still return success to not break client flow
+            return Response({
+                'detail': 'Logged out (some tokens may not have been blacklisted)'
+            }, status=status.HTTP_200_OK)
 
 @method_decorator(skip_org_check, name='dispatch')
 class TokenRefreshAPIView(TokenRefreshView):
@@ -443,15 +498,20 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
 
 @method_decorator(skip_org_check, name='dispatch')
 class UserLogoutView(LogoutView):
-    """Logs out user and blacklists their refresh tokens."""
+    """Logs out user and blacklists their refresh tokens and access tokens."""
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
         if request.user.is_authenticated:
             try:
+                # Blacklist refresh tokens (existing behavior)
                 for token in OutstandingToken.objects.filter(user=request.user):
                     BlacklistedToken.objects.get_or_create(token=token)
-            except Exception:
-                pass  # Don't break logout if blacklist fails
+                
+                # Blacklist all access tokens for this user
+                blacklist_user_access_tokens(request.user)
+            except Exception as e:
+                logger.error(f"Error blacklisting tokens on logout: {e}")
+                # Don't break logout if blacklist fails
         # Audit logout
         try:
             client_ip = request.META.get('REMOTE_ADDR')
