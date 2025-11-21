@@ -143,7 +143,7 @@ oscrypto==1.3.0
 packaging==24.2
 pandas==2.2.3
 parso==0.8.4
-pdfminer.six==20251107
+pdfminer.six
 pdfplumber==0.11.5
 pillow==11.1.0
 pipdeptree==2.26.0
