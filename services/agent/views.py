@@ -100,11 +100,18 @@ class AgentParseView(APIView):
             confidence = validated_intent.get('confidence', 0.0)
             if confidence < 0.3:
                 logger.warning(f"Low confidence intent: {confidence}")
-            
+
+            # Successful parse/validation response
             return Response({
                 'intent': validated_intent,
                 'validation': {'valid': True, 'errors': {}},
-                'preview': {'summary': f"Action: {validated_intent.get('action')}, Model: {validated_intent.get('model')}, Confidence: {confidence}"}
+                'preview': {
+                    'summary': (
+                        f"Action: {validated_intent.get('action')}, "
+                        f"Model: {validated_intent.get('model')}, "
+                        f"Confidence: {confidence}"
+                    )
+                }
             })
             
         except Exception as e:

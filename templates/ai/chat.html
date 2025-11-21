@@ -3,16 +3,508 @@
 
 {% block title %}AI Assistant Chat{% endblock %}
 
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    /* Terminal-inspired color palette */
+    --terminal-bg: #0a0e1a;
+    --terminal-surface: #0f1624;
+    --terminal-border: #1a2332;
+    --terminal-accent: #00ff9f;
+    --terminal-accent-dim: #00cc7f;
+    --terminal-cyan: #00d9ff;
+    --terminal-purple: #b794f6;
+    --terminal-text: #e2e8f0;
+    --terminal-text-dim: #94a3b8;
+    --terminal-error: #ff6b6b;
+    --terminal-warning: #ffd93d;
+    
+    /* Typography */
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+    --font-display: 'Playfair Display', 'Georgia', serif;
+    
+    /* Spacing & Layout */
+    --chat-max-width: 900px;
+    --chat-padding: 2rem;
+    --message-gap: 1.5rem;
+    
+    /* Animations */
+    --anim-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --anim-normal: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --anim-slow: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page-level styling */
+.ai-chat-page {
+    min-height: 100vh;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(0, 255, 159, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 217, 255, 0.03) 0%, transparent 50%),
+        linear-gradient(135deg, #0a0e1a 0%, #0f1624 50%, #0a0e1a 100%);
+    background-attachment: fixed;
+    position: relative;
+    padding: 2rem 1rem;
+}
+
+.ai-chat-page::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 159, 0.02) 2px, rgba(0, 255, 159, 0.02) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 217, 255, 0.02) 2px, rgba(0, 217, 255, 0.02) 4px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ai-chat-container {
+    max-width: var(--chat-max-width);
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+    animation: fadeInUp 0.8s var(--anim-normal);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.chat-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInUp 0.8s var(--anim-normal) 0.2s both;
+}
+
+.chat-header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 600;
+    color: var(--terminal-text);
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--terminal-text) 0%, var(--terminal-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.chat-header .subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--terminal-text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Chat wrapper */
+#chat-wrapper {
+    background: var(--terminal-surface);
+    border: 1px solid var(--terminal-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    animation: fadeInUp 0.8s var(--anim-normal) 0.4s both;
+}
+
+/* Messages container */
+#messages {
+    height: 500px;
+    overflow-y: auto;
+    padding: var(--chat-padding);
+    background: var(--terminal-surface);
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+#messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+#messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#messages::-webkit-scrollbar-thumb {
+    background: var(--terminal-border);
+    border-radius: 4px;
+}
+
+#messages::-webkit-scrollbar-thumb:hover {
+    background: var(--terminal-accent-dim);
+}
+
+/* Message bubbles */
+.message {
+    margin-bottom: var(--message-gap);
+    animation: messageSlideIn 0.5s var(--anim-normal) both;
+    opacity: 0;
+}
+
+.message:nth-child(odd) {
+    animation-delay: 0.1s;
+}
+
+.message:nth-child(even) {
+    animation-delay: 0.2s;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.message-user {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.message-assistant {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--terminal-accent);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+.message-assistant .message-label {
+    color: var(--terminal-cyan);
+}
+
+.message-error .message-label {
+    color: var(--terminal-error);
+}
+
+.message-content {
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--terminal-text);
+    background: rgba(0, 255, 159, 0.05);
+    border: 1px solid rgba(0, 255, 159, 0.15);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    max-width: 85%;
+    word-wrap: break-word;
+    position: relative;
+    transition: all var(--anim-fast);
+}
+
+.message-user .message-content {
+    background: rgba(0, 255, 159, 0.08);
+    border-color: rgba(0, 255, 159, 0.25);
+    color: var(--terminal-text);
+}
+
+.message-assistant .message-content {
+    background: rgba(0, 217, 255, 0.05);
+    border-color: rgba(0, 217, 255, 0.15);
+}
+
+.message-error .message-content {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.3);
+    color: var(--terminal-error);
+}
+
+.message-content:hover {
+    border-color: var(--terminal-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 255, 159, 0.1);
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--terminal-text-dim);
+}
+
+.typing-indicator.active {
+    display: flex;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--terminal-accent);
+    border-radius: 50%;
+    animation: typingDot 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+    0%, 60%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    30% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Input area */
+.chat-input-area {
+    padding: var(--chat-padding);
+    background: var(--terminal-bg);
+    border-top: 1px solid var(--terminal-border);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+}
+
+#message {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--terminal-text);
+    background: var(--terminal-surface);
+    border: 1px solid var(--terminal-border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    resize: none;
+    min-height: 60px;
+    max-height: 150px;
+    transition: all var(--anim-fast);
+    outline: none;
+}
+
+#message::placeholder {
+    color: var(--terminal-text-dim);
+    opacity: 0.5;
+}
+
+#message:focus {
+    border-color: var(--terminal-accent);
+    box-shadow: 0 0 0 3px rgba(0, 255, 159, 0.1);
+    background: rgba(0, 255, 159, 0.02);
+}
+
+#message:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#send {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--terminal-bg);
+    background: var(--terminal-accent);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    transition: all var(--anim-fast);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: relative;
+    overflow: hidden;
+    min-width: 100px;
+}
+
+#send::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+#send:hover::before {
+    left: 100%;
+}
+
+#send:hover {
+    background: var(--terminal-accent-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 159, 0.3);
+}
+
+#send:active {
+    transform: translateY(0);
+}
+
+#send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.chat-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--chat-padding) var(--chat-padding);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--terminal-text-dim);
+}
+
+.rate-limit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-indicator {
+    width: 6px;
+    height: 6px;
+    background: var(--terminal-accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ai-chat-page {
+        padding: 1rem 0.5rem;
+    }
+    
+    .chat-header {
+        margin-bottom: 2rem;
+    }
+    
+    #messages {
+        height: 400px;
+        padding: 1.25rem;
+    }
+    
+    .message-content {
+        max-width: 95%;
+        font-size: 0.875rem;
+    }
+    
+    .chat-input-area {
+        padding: 1.25rem;
+    }
+    
+    .input-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #send {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>AI Assistant</h2>
-    <div id="chat-wrapper" data-session="{{ request.session.session_key }}">
-        <div id="messages" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; background: #f9f9f9; border-radius: 5px;"></div>
-        <div class="input-group">
-            <textarea id="message" rows="3" class="form-control" placeholder="Ask me anything about GRC, audits, risks, or compliance..." style="resize: vertical;"></textarea>
-            <button id="send" class="btn btn-primary" type="button">Send</button>
+<div class="ai-chat-page">
+    <div class="ai-chat-container">
+        <div class="chat-header">
+            <h1>AI Assistant</h1>
+            <div class="subtitle">GRC Intelligence Terminal</div>
         </div>
-        <small class="text-muted d-block mt-2">Rate limit: 10 requests per minute</small>
+        
+        <div id="chat-wrapper" data-session="{{ request.session.session_key }}">
+            <div id="messages"></div>
+            
+            <div class="typing-indicator" id="typing-indicator">
+                <span>Assistant</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="message" 
+                        rows="3" 
+                        placeholder="> Ask about GRC, audits, risks, or compliance..."
+                    ></textarea>
+                    <button id="send" type="button">Send</button>
+                </div>
+                <div class="chat-footer">
+                    <div class="rate-limit">
+                        <span class="status-indicator"></span>
+                        <span>10 requests/minute</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -21,7 +513,10 @@ const sendBtn = document.getElementById('send');
 const messageInput = document.getElementById('message');
 const messages = document.getElementById('messages');
 const chatWrapper = document.getElementById('chat-wrapper');
+const typingIndicator = document.getElementById('typing-indicator');
 const sessionId = chatWrapper.dataset.session;
+
+let messageIndex = 0;
 
 function getCookie(name) {
     let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -29,23 +524,66 @@ function getCookie(name) {
 }
 
 function appendMessage(who, text, isError = false) {
-    const el = document.createElement('div');
-    el.className = `mb-3 ${isError ? 'text-danger' : ''}`;
-    el.innerHTML = `<strong>${who}:</strong> <span>${text}</span>`;
-    messages.appendChild(el);
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${isError ? 'message-error' : who === 'You' ? 'message-user' : 'message-assistant'}`;
+    messageEl.style.animationDelay = `${messageIndex * 0.1}s`;
+    
+    const label = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = who;
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    
+    if (who === 'Assistant' && !isError) {
+        typewriterEffect(content, text);
+    } else {
+        content.textContent = text;
+    }
+    
+    messageEl.appendChild(label);
+    messageEl.appendChild(content);
+    messages.appendChild(messageEl);
+    
+    messageIndex++;
     messages.scrollTop = messages.scrollHeight;
+}
+
+function typewriterEffect(element, text, speed = 20) {
+    let i = 0;
+    element.textContent = '';
+    
+    function type() {
+        if (i < text.length) {
+            element.textContent += text.charAt(i);
+            i++;
+            messages.scrollTop = messages.scrollHeight;
+            setTimeout(type, speed);
+        }
+    }
+    
+    type();
+}
+
+function showTyping() {
+    typingIndicator.classList.add('active');
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function hideTyping() {
+    typingIndicator.classList.remove('active');
 }
 
 async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text) return;
     
-    // Disable input while processing
     sendBtn.disabled = true;
     messageInput.disabled = true;
     
     appendMessage('You', text);
     messageInput.value = '';
+    showTyping();
     
     try {
         const resp = await fetch('/api/ai/ask/', {
@@ -60,6 +598,7 @@ async function sendMessage() {
             })
         });
         
+        hideTyping();
         const data = await resp.json();
         
         if (resp.ok) {
@@ -68,9 +607,9 @@ async function sendMessage() {
             appendMessage('Error', data.error || 'An error occurred', true);
         }
     } catch (error) {
+        hideTyping();
         appendMessage('Error', 'Failed to send message: ' + error.message, true);
     } finally {
-        // Re-enable input
         sendBtn.disabled = false;
         messageInput.disabled = false;
         messageInput.focus();
@@ -85,8 +624,13 @@ messageInput.addEventListener('keydown', (e) => {
     }
 });
 
+messageInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
 // Focus input on load
-messageInput.focus();
+setTimeout(() => messageInput.focus(), 100);
 </script>
 {% endblock %}
 
