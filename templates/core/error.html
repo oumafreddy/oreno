@@ -12,9 +12,10 @@
                 </div>
                 <div class="card-body">
                     <p class="lead">{{ message }}</p>
-                    {% if exception %}
-                    <p class="text-muted">{{ exception }}</p>
-                    {% endif %}
+
+                    {# Do NOT display the exception in production #}
+                    {# You can log it in the view instead #}
+
                     <hr>
                     <a href="/" class="btn btn-primary">Return to Home</a>
                 </div>
@@ -22,4 +23,4 @@
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}
