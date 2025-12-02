@@ -8,9 +8,9 @@ import time
 # ------------------------------------------------------------------------------
 
 # Debug settings
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-DEBUG_TOOLBAR = False
+DEBUG_TOOLBAR = True
 
 # Security settings for development
 # ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS are set in base.py with LOCAL_TENANT_DOMAINS logic

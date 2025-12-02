@@ -1,0 +1,23 @@
+/* Extracted from templates/risk/list.html inline styles */
+.text-purple { color: #6f42c1 !important; }
+.text-indigo { color: #6610f2 !important; }
+.bg-purple { background-color: #6f42c1 !important; }
+.bg-indigo { background-color: #6610f2 !important; }
+.btn-outline-purple {
+    color: #6f42c1;
+    border-color: #6f42c1;
+}
+.btn-outline-purple:hover {
+    color: #fff;
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}
+.btn-outline-indigo {
+    color: #6610f2;
+    border-color: #6610f2;
+}
+.btn-outline-indigo:hover {
+    color: #fff;
+    background-color: #6610f2;
+    border-color: #6610f2;
+}

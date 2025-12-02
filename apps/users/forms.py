@@ -430,22 +430,25 @@ class OrganizationRoleForm(forms.ModelForm):
 class CustomSetPasswordForm(SetPasswordForm):
     """
     Enhanced password reset form that includes comprehensive password validation.
+    Mirrors Django's SetPasswordForm signature: __init__(self, user, *args, **kwargs)
+    so it works seamlessly with PasswordResetConfirmView.
     """
-    
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
+    def __init__(self, user, *args, **kwargs):
+        # Let the parent class handle core initialization and validation wiring
+        super().__init__(user, *args, **kwargs)
+
         # Replace the password field with our enhanced version
         self.fields['new_password1'] = EnhancedPasswordField(
             label=_("New password"),
             strip=False,
             help_text=_("Create a strong password that meets security requirements."),
         )
-        if user:
+
+        # Attach user to the enhanced field and the form for policy-based validation
+        if user is not None:
             self.fields['new_password1'].set_user(user)
             self.user = user
-        
+
         self.fields['new_password2'] = forms.CharField(
             label=_("New password confirmation"),
             strip=False,
@@ -454,8 +457,8 @@ class CustomSetPasswordForm(SetPasswordForm):
                 'autocomplete': 'new-password'
             }),
         )
-        
-        # Add password strength meter
+
+        # Add password strength meter + policy hints
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Fieldset(
