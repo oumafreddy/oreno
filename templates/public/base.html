@@ -384,12 +384,47 @@
         .footer-bottom p {
             color: #999;
             margin: 0;
+            margin-bottom: 12px;
+        }
+        
+        .footer-legal-links {
+            margin-top: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-legal-links a {
+            color: #999;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-legal-links a:hover {
+            color: #00c6ff;
+        }
+        
+        .footer-separator {
+            color: #666;
+            margin: 0 4px;
         }
         
         @media (max-width: 768px) {
             .footer-content {
                 grid-template-columns: 1fr;
                 gap: 30px;
+            }
+            
+            .footer-legal-links {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .footer-separator {
+                display: none;
             }
         }
     </style>
@@ -405,11 +440,10 @@
             </a>
             <div class="nav-center">
             <ul class="navbar-links">
+                <li><a href="/">Home</a></li>
                 <li><a href="/#services">Services</a></li>
-                <li><a href="/#contact">Contact</a></li>
+                <li><a href="/#contact">Contact US</a></li>
                 <li><a href="{% url 'public-docs' %}">Documentation</a></li>
-                <li><a href="{% url 'public-privacy' %}">Privacy</a></li>
-                <li><a href="{% url 'public-cookies' %}">Cookies</a></li>
             </ul>
             </div>
             <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
@@ -460,6 +494,11 @@
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2025 Hashrate Solutions. All rights reserved.</p>
+                <div class="footer-legal-links">
+                    <a href="{% url 'public-privacy' %}">Privacy Policy</a>
+                    <span class="footer-separator">|</span>
+                    <a href="{% url 'public-cookies' %}">Cookie Policy</a>
+                </div>
             </div>
         </div>
     </footer>

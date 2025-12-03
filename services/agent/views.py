@@ -9,7 +9,7 @@ import logging
 from .intent import IntentSerializer
 from .executor import AgentExecutor
 from services.ai.ai_service import ai_assistant_answer
-from services.agent.schema_index import SchemaIndex
+from services.agent.schema_index import get_schema_index
 
 logger = logging.getLogger('services.agent.views')
 
@@ -27,8 +27,8 @@ class AgentParseView(APIView):
             raise ValidationError({'detail': 'Organization context required'})
         
         # Get available models from schema index
-        schema_index = SchemaIndex().build()
-        available_models = list(schema_index.models.keys())
+        schema_index = get_schema_index()
+        available_models = schema_index.list_models()
         model_list = ', '.join([f"'{m}'" for m in available_models])
         
         # Build system prompt for intent parsing
