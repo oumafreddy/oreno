@@ -136,13 +136,21 @@ class AgentExecuteView(APIView):
 
     def post(self, request):
         intent = request.data.get('intent')
-        confirm = request.data.get('confirm', False)
         if not intent:
             raise ValidationError({'intent': 'This field is required.'})
-        if not confirm:
-            raise ValidationError({'confirm': 'Confirmation required to execute.'})
         ser = IntentSerializer(data=intent)
         ser.is_valid(raise_exception=True)
+        validated = ser.validated_data
+
+        # Preview mode: return planned changes without executing
+        preview = validated.get('preview', False)
+        confirm = request.data.get('confirm', False)
+        action = validated.get('action')
+        is_mutation = action in ['create', 'update', 'delete']
+
+        if is_mutation and not (confirm or preview):
+            raise ValidationError({'confirm': 'Confirmation required to execute.'})
+
         executor = AgentExecutor(request)
-        result = executor.execute(ser.validated_data)
-        return Response({'result': result})
+        result = executor.execute(validated, preview=preview)
+        return Response({'result': result, 'preview': preview})
