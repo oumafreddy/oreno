@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import status
 import json
 import logging
+from typing import cast, Dict, Any  # type: ignore[reportMissingImports]
 
 from .intent import IntentSerializer
 from .executor import AgentExecutor
@@ -56,7 +57,7 @@ class AgentParseView(APIView):
         
         try:
             # Call LLM to parse intent
-            llm_response = ai_assistant_answer(
+            llm_response_raw = ai_assistant_answer(
                 user_prompt,
                 request.user,
                 org,
@@ -64,8 +65,11 @@ class AgentParseView(APIView):
                 return_meta=False
             )
             
+            # Type assertion: return_meta=False ensures str return type
+            llm_response_str: str = cast(str, llm_response_raw) if isinstance(llm_response_raw, str) else str(llm_response_raw)
+            
             # Clean response - remove markdown code blocks if present
-            llm_response = llm_response.strip()
+            llm_response = llm_response_str.strip()
             if llm_response.startswith('```json'):
                 llm_response = llm_response[7:]
             if llm_response.startswith('```'):
@@ -94,7 +98,10 @@ class AgentParseView(APIView):
                     'intent': parsed
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            validated_intent = serializer.validated_data
+            validated_intent_raw = serializer.validated_data
+            
+            # Type assertion: validated_data is guaranteed to be a dict after is_valid()
+            validated_intent: Dict[str, Any] = cast(Dict[str, Any], validated_intent_raw)
             
             # Check confidence threshold (optional - you can adjust this)
             confidence = validated_intent.get('confidence', 0.0)
@@ -140,7 +147,10 @@ class AgentExecuteView(APIView):
             raise ValidationError({'intent': 'This field is required.'})
         ser = IntentSerializer(data=intent)
         ser.is_valid(raise_exception=True)
-        validated = ser.validated_data
+        validated_raw = ser.validated_data
+
+        # Type assertion: validated_data is guaranteed to be a dict after is_valid()
+        validated: Dict[str, Any] = cast(Dict[str, Any], validated_raw)
 
         # Preview mode: return planned changes without executing
         preview = validated.get('preview', False)

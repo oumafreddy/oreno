@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from apps.core.models.abstract_models import OrganizationOwnedModel, AuditableModel
+from core.models.abstract_models import OrganizationOwnedModel, AuditableModel
 from django_ckeditor_5.fields import CKEditor5Field
 from organizations.models import Organization  # type: ignore[reportMissingImports]
 import json
@@ -62,7 +62,7 @@ class ChatLog(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user} @ {self.created_at}: {self.query[:80]}"
+        return f"{self.user} @ {self.created_at}: {self.query[:80]}"  # type: ignore[index]
 
 
 class AIInteraction(AuditableModel):
@@ -119,7 +119,7 @@ class AIInteraction(AuditableModel):
         null=True,
         blank=True,
         verbose_name=_('Tokens Used'),
-        help_text=_('Number of tokens consumed')
+        help_text=_('Number of tokens consumed')  # type: ignore[arg-type]
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -155,12 +155,12 @@ class AIInteraction(AuditableModel):
         null=True,
         blank=True,
         verbose_name=_('Processing Time (seconds)'),
-        help_text=_('Time taken to generate response')
+        help_text=_('Time taken to generate response')  # type: ignore[arg-type]
     )
     success = models.BooleanField(
-        default=True,
+        default=True,  # type: ignore[arg-type]
         verbose_name=_('Success'),
-        help_text=_('Whether the interaction was successful')
+        help_text=_('Whether the interaction was successful')  # type: ignore[arg-type]
     )
     error_message = models.TextField(
         blank=True,
@@ -200,7 +200,7 @@ class AIInteraction(AuditableModel):
         ]
     
     def __str__(self):
-        return f"AI Interaction by {self.user.username if self.user else 'Unknown'} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"AI Interaction by {self.user.username if self.user else 'Unknown'} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"  # type: ignore[attr-defined]
     
     def save(self, *args, **kwargs):
         # Ensure metadata is a dict
@@ -245,21 +245,21 @@ class AIKnowledgeBase(AuditableModel):
     )
     
     priority = models.IntegerField(
-        default=1,
+        default=1,  # type: ignore[arg-type]
         verbose_name=_('Priority'),
-        help_text=_('Priority for matching (higher = more important)')
+        help_text=_('Priority for matching (higher = more important)')  # type: ignore[arg-type]
     )
     
     is_active = models.BooleanField(
-        default=True,
+        default=True,  # type: ignore[arg-type]
         verbose_name=_('Active'),
-        help_text=_('Whether this entry is active')
+        help_text=_('Whether this entry is active')  # type: ignore[arg-type]
     )
     
     usage_count = models.IntegerField(
-        default=0,
+        default=0,  # type: ignore[arg-type]
         verbose_name=_('Usage Count'),
-        help_text=_('Number of times this entry has been used')
+        help_text=_('Number of times this entry has been used')  # type: ignore[arg-type]
     )
     
     class Meta:
@@ -272,7 +272,7 @@ class AIKnowledgeBase(AuditableModel):
         ]
     
     def __str__(self):
-        return f"{self.category}: {self.question[:50]}..."
+        return f"{self.category}: {self.question[:50]}..."  # type: ignore[index]
     
     def save(self, *args, **kwargs):
         # Ensure keywords is a list
@@ -303,9 +303,9 @@ class AIConfiguration(AuditableModel):
     )
     
     is_active = models.BooleanField(
-        default=True,
+        default=True,  # type: ignore[arg-type]
         verbose_name=_('Active'),
-        help_text=_('Whether this configuration is active')
+        help_text=_('Whether this configuration is active')  # type: ignore[arg-type]
     )
     
     class Meta:
@@ -359,9 +359,9 @@ class PromptTemplate(AuditableModel):
         help_text=_('Organization this template belongs to (null for global)')
     )
     is_default = models.BooleanField(
-        default=False,
+        default=False,  # type: ignore[arg-type]
         verbose_name=_('Is Default'),
-        help_text=_('Whether this is the default template for its key')
+        help_text=_('Whether this is the default template for its key')  # type: ignore[arg-type]
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -386,7 +386,7 @@ class PromptTemplate(AuditableModel):
     
     def render(self, **kwargs):
         """Render the template with provided context"""
-        result = self.template
+        result = self.template  # type: ignore[assignment]
         for key, value in kwargs.items():
-            result = result.replace(f'{{{{{key}}}}}', str(value))
+            result = result.replace(f'{{{{{key}}}}}', str(value))  # type: ignore[attr-defined]
         return result
