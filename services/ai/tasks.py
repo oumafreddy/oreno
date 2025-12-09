@@ -29,38 +29,42 @@ def run_ai_query(self, user_id, org_id, prompt, system_prompt=None, session_id=N
         from organizations.models import Organization
         
         User = get_user_model()
-        user = User.objects.get(id=user_id)
-        org = Organization.objects.get(id=org_id)
+        user = User.objects.get(id=user_id)  # type: ignore[attr-defined]
+        org = Organization.objects.get(id=org_id)  # type: ignore[attr-defined]
         
         # Call AI service with metadata
         response_text, meta = ai_assistant_answer(
             prompt,
             user,
             org,
-            system_prompt=system_prompt,
+            system_prompt=system_prompt,  # type: ignore[arg-type]
             return_meta=True
         )
         
+        # Type assertion: meta is guaranteed to be a dict when return_meta=True
+        from typing import cast, Dict, Any
+        meta_dict: Dict[str, Any] = cast(Dict[str, Any], meta)
+        
         # Save ChatLog
-        chat = ChatLog.objects.create(
+        chat = ChatLog.objects.create(  # type: ignore[attr-defined]
             user=user,
             organization=org,
             session_id=session_id,
             query=prompt,
             response=response_text,
-            metadata=meta
+            metadata=meta_dict
         )
         
         # Save AIInteraction
-        AIInteraction.objects.create(
+        AIInteraction.objects.create(  # type: ignore[attr-defined]
             user=user,
             organization=org,
             prompt=prompt,
             system_prompt=system_prompt or '',
             response=response_text,
-            model=meta.get('model'),
-            provider=meta.get('provider', 'ollama'),
-            tokens_used=meta.get('tokens'),
+            model=meta_dict.get('model'),
+            provider=meta_dict.get('provider', 'deepseek'),
+            tokens_used=meta_dict.get('tokens'),
             extra={'job_id': self.request.id, 'chat_id': chat.id}
         )
         

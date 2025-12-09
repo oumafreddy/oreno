@@ -1,31 +1,35 @@
 import logging
 import requests
 import json
+from typing import Optional  # type: ignore[reportMissingImports]
 from .ollama_config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_TEMPERATURE
+    DEFAULT_TEMPERATURE,
+    REQUEST_TIMEOUT
 )
 
 logger = logging.getLogger('services.ai.ollama_adapter')
 
-# Force the model to be llama3:8b since that's what the user has installed
-FORCED_MODEL = "llama3:8b"
+# Force the model to be deepseek-r1:8b since that's what the user has installed
+FORCED_MODEL = "deepseek-r1:8b"
 
 SAFE_SYSTEM_PROMPT = (
     "You are Oreno GRC's AI assistant specializing in Governance, Risk, and Compliance (GRC). "
-    "You have access to real organization data and should use it to provide specific, actionable insights. "
-    "GRC refers specifically to an organization's approach to Governance (leadership and organizational structures), "
-    "Risk management (identifying, assessing, and mitigating risks), and Compliance (adhering to laws, regulations, and standards). "
-    "SECURITY GUIDELINES: "
-    "1. Use the provided organization data to give specific, relevant answers. "
-    "2. Reference actual numbers and facts from the data when possible. "
-    "3. Provide actionable insights based on the current state. "
-    "4. Focus on the specific organization's context. "
-    "5. If asked about data, use the provided summary rather than making assumptions. "
-    "6. Always maintain professional and helpful tone. "
-    "7. If unsure about specific data, prefer general guidance over speculation."
+    "You are powered by DeepSeek and provide intelligent, contextual, and dynamic responses. "
+    "IMPORTANT: Provide natural, conversational, and varied responses. Avoid generic or repetitive answers. "
+    "GRC refers to Governance (leadership structures), Risk management (identifying and mitigating risks), "
+    "and Compliance (adhering to laws and regulations). "
+    "GUIDELINES: "
+    "1. Be conversational and natural - vary your response style and structure. "
+    "2. Use the provided organization data to give specific, relevant answers with actual numbers and facts. "
+    "3. Provide actionable insights tailored to the user's specific question and context. "
+    "4. If the question is about creating/updating/deleting items, provide step-by-step guidance. "
+    "5. If asked about data, analyze and present it in a clear, meaningful way. "
+    "6. Adapt your tone and detail level based on the question complexity. "
+    "7. Never repeat the same generic introduction - be specific and helpful. "
+    "8. Think step-by-step and provide thoughtful, detailed responses when appropriate."
 )
 
 SENSITIVE_KEYWORDS = [
@@ -46,15 +50,25 @@ def log_prompt_response(user, org, prompt, response):
     logger.info(f"Ollama AI Query | user={user} | org={org} | prompt={prompt!r} | response={response!r}")
 
 def check_ollama_status():
-    """Check if Ollama is running and accessible"""
+    """Check if Ollama is running and accessible, and verify model is available"""
     try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
-        return response.status_code == 200
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=10)
+        if response.status_code == 200:
+            # Also check if the model is available
+            models = response.json().get('models', [])
+            model_names = [m.get('name', '') for m in models]
+            if FORCED_MODEL not in model_names:
+                logger.warning(f"Model {FORCED_MODEL} not found in Ollama. Available models: {model_names}")
+            return True
+        return False
+    except requests.exceptions.ConnectionError:
+        logger.error(f"Cannot connect to Ollama at {OLLAMA_BASE_URL}. Is Ollama running?")
+        return False
     except Exception as e:
         logger.error(f"Ollama status check failed: {e}")
         return False
 
-def ask_ollama(prompt: str, user, org, context: str = None, system_prompt: str = None, return_meta: bool = False):
+def ask_ollama(prompt: str, user, org, context: Optional[str] = None, system_prompt: Optional[str] = None, return_meta: bool = False):
     """
     Send a query to Ollama's local API
     
@@ -75,13 +89,13 @@ def ask_ollama(prompt: str, user, org, context: str = None, system_prompt: str =
     if not is_safe_prompt(prompt):
         error_response = "Sorry, I can't provide that information."
         if return_meta:
-            return error_response, {'error': 'Unsafe prompt', 'provider': 'ollama', 'model': FORCED_MODEL}
+            return error_response, {'error': 'Unsafe prompt', 'provider': 'deepseek', 'model': FORCED_MODEL}
         return error_response
     
-    # Check if Ollama is running
+    # Check if Ollama is running and model is available
     if not check_ollama_status():
-        logger.error("Ollama is not running or not accessible")
-        error_msg = "Ollama service is not available"
+        logger.error(f"Ollama is not running or model {FORCED_MODEL} is not available")
+        error_msg = f"Ollama service is not available or model '{FORCED_MODEL}' is not installed. Please ensure Ollama is running and the model is pulled."
         if return_meta:
             raise Exception(error_msg)
         raise Exception(error_msg)
@@ -135,12 +149,13 @@ def ask_ollama(prompt: str, user, org, context: str = None, system_prompt: str =
     logger.info(f"Sending request to Ollama: {OLLAMA_BASE_URL}/api/chat with model {model_to_use}")
     
     try:
-        # Call Ollama API
+        # Call Ollama API with configurable timeout
+        # DeepSeek can take longer to generate responses, so we use a longer timeout
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
-            timeout=60
+            timeout=REQUEST_TIMEOUT
         )
         
         processing_time = time.time() - start_time
@@ -156,7 +171,7 @@ def ask_ollama(prompt: str, user, org, context: str = None, system_prompt: str =
             log_prompt_response(user, org, prompt, answer)
             
             metadata = {
-                'provider': 'ollama',
+                'provider': 'deepseek',
                 'model': model_to_use,
                 'processing_time': processing_time,
                 'tokens': result.get('eval_count', 0),  # Approximate token count

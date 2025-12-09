@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, cast
 from django.apps import apps
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -268,7 +268,7 @@ class OrganizationDataProvider:
             'contracts': self.get_contracts_data()
         }
 
-def find_faq_answer(question: str, user_context: Dict[str, Any] = None) -> Optional[str]:
+def find_faq_answer(question: str, user_context: Optional[Dict[str, Any]] = None) -> Optional[str]:
     """Find a matching FAQ answer for the given question using improved matching with organization awareness."""
     if not question:
         return None
@@ -308,12 +308,33 @@ def find_faq_answer(question: str, user_context: Dict[str, Any] = None) -> Optio
             best_score = score
             best_match = entry
     
-    # Return best match if score is reasonable (at least 1 keyword match)
-    if best_match and best_score >= 1:
+    # Return best match only if score is high (at least 3 keyword matches for non-exact matches)
+    # This makes FAQ matching much stricter, allowing DeepSeek to handle most queries dynamically
+    if best_match and best_score >= 3:
         logger.info(f"FAQ keyword match found: {best_match['question']} (score: {best_score})")
         return best_match['answer']
     
     return None
+
+def _is_exact_faq_match(question: str) -> bool:
+    """Check if question is an exact or very close match to FAQ entries"""
+    q = question.lower().strip()
+    
+    # Only return True for exact or very close matches
+    for entry in FAQ_KB:
+        entry_q = entry['question'].lower().strip()
+        # Exact match
+        if entry_q == q:
+            return True
+        # Very close match (question contains FAQ question or vice versa with minimal difference)
+        if entry_q in q or q in entry_q:
+            # Check if it's a close match (not just a partial keyword match)
+            words_match = len(set(q.split()).intersection(set(entry_q.split())))
+            total_words = max(len(q.split()), len(entry_q.split()))
+            if words_match >= total_words * 0.8:  # 80% word overlap
+                return True
+    
+    return False
 
 def get_user_context(user, org) -> Dict[str, Any]:
     """Get user-specific context for AI responses with enhanced organization scoping."""
@@ -366,7 +387,7 @@ INSTRUCTIONS:
 """
     return data_context.strip()
 
-def validate_ai_response(response: str, user_context: Dict[str, Any] = None) -> bool:
+def validate_ai_response(response: str, user_context: Optional[Dict[str, Any]] = None) -> bool:
     """Validate AI response for safety and quality with organization scoping."""
     if not response or not isinstance(response, str):
         return False
@@ -413,7 +434,7 @@ def validate_ai_response(response: str, user_context: Dict[str, Any] = None) -> 
     
     return True
 
-def ai_assistant_answer(question: str, user, org, system_prompt: str = None, return_meta: bool = False):
+def ai_assistant_answer(question: str, user, org, system_prompt: Optional[str] = None, return_meta: bool = False):
     """
     Main AI assistant function that handles user questions.
     Uses FAQ first, then data-aware LLM responses with organization context.
@@ -438,13 +459,17 @@ def ai_assistant_answer(question: str, user, org, system_prompt: str = None, ret
     logger.info(f"AI Assistant query: {question} | User: {user} | Org: {org}")
     
     # 1. Check FAQ first for quick answers (skip if custom system_prompt provided)
+    # Only use FAQ for very specific, exact matches to allow DeepSeek to handle most queries dynamically
     if not system_prompt:
         faq_answer = find_faq_answer(question, get_user_context(user, org))
-        if faq_answer:
-            logger.info("FAQ answer found")
+        # Only use FAQ if it's a very close match (exact or near-exact), otherwise let DeepSeek handle it
+        if faq_answer and _is_exact_faq_match(question):
+            logger.info("FAQ exact match found, using FAQ answer")
             if return_meta:
                 return faq_answer, {'provider': 'faq', 'source': 'faq'}
             return faq_answer
+        # For non-exact matches, let DeepSeek provide dynamic responses
+        logger.info("FAQ not exact match, using DeepSeek for dynamic response")
     
     # 2. Get user context and organization data
     user_context = get_user_context(user, org)
@@ -457,60 +482,62 @@ def ai_assistant_answer(question: str, user, org, system_prompt: str = None, ret
     else:
         data_aware_prompt = create_data_aware_prompt(question, user_context, org_data)
     
-    # 4. Use Ollama for AI responses with OpenAI fallback
+    # 4. Use DeepSeek for AI responses (via Ollama)
     try:
-        logger.info("Attempting Ollama response with organization data")
+        logger.info("Attempting DeepSeek response with organization data")
         if return_meta:
-            response, meta = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=True)
+            response_raw, meta = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=True)
+            response: str = cast(str, response_raw) if isinstance(response_raw, str) else str(response_raw)
         else:
-            response = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=False)
-            meta = {'provider': 'ollama'}
+            response_raw = ask_ollama(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=False)
+            response = cast(str, response_raw) if isinstance(response_raw, str) else str(response_raw)
+            meta = {'provider': 'deepseek'}
         
         if response and response.strip():
             # Validate the response
             if validate_ai_response(response, user_context):
-                logger.info("Ollama response successful and validated")
+                logger.info("DeepSeek response successful and validated")
                 if return_meta:
                     return response.strip(), meta
                 return response.strip()
             else:
-                logger.warning("Ollama response failed validation")
-                raise Exception("Invalid response from Ollama")
+                logger.warning("DeepSeek response failed validation")
+                error_response = "I'm sorry, I'm having trouble providing a safe response to your question. Please try rephrasing your question."
+                if return_meta:
+                    return error_response, {'error': 'Validation failed', 'provider': 'deepseek'}
+                return error_response
         else:
-            logger.warning("Ollama returned empty response")
-            raise Exception("Empty response from Ollama")
+            logger.warning("DeepSeek returned empty response")
+            error_response = "I'm sorry, I'm having trouble processing your request right now. Please try again later."
+            if return_meta:
+                return error_response, {'error': 'Empty response', 'provider': 'deepseek'}
+            return error_response
             
     except Exception as e:
-        logger.error(f"Ollama error: {e}, falling back to OpenAI")
-        try:
-            if return_meta:
-                response, meta = ask_llm(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=True)
-            else:
-                response = ask_llm(data_aware_prompt, user, org, system_prompt=system_prompt, return_meta=False)
-                meta = {'provider': 'openai'}
-            
-            if response and response.strip():
-                # Validate the response
-                if validate_ai_response(response, user_context):
-                    logger.info("OpenAI fallback successful and validated")
-                    if return_meta:
-                        return response.strip(), meta
-                    return response.strip()
-                else:
-                    logger.warning("OpenAI response failed validation")
-                    error_response = "I'm sorry, I'm having trouble providing a safe response to your question. Please try rephrasing your question."
-                    if return_meta:
-                        return error_response, {'error': 'Validation failed', 'provider': 'openai'}
-                    return error_response
-            else:
-                logger.error("OpenAI also returned empty response")
-                error_response = "I'm sorry, I'm having trouble processing your request right now. Please try again later."
-                if return_meta:
-                    return error_response, {'error': 'Empty response', 'provider': 'openai'}
-                return error_response
-        except Exception as fallback_error:
-            logger.error(f"OpenAI fallback also failed: {fallback_error}")
-            error_response = "I'm sorry, I'm unable to process your request at the moment. Please try again later or contact support if the problem persists."
-            if return_meta:
-                return error_response, {'error': str(fallback_error), 'provider': None}
-            return error_response
+        error_msg = str(e)
+        logger.error(f"DeepSeek error: {error_msg}")
+        
+        # Provide more helpful error messages
+        if 'timed out' in error_msg.lower() or 'timeout' in error_msg.lower():
+            error_response = (
+                "The AI response is taking longer than expected. This can happen with complex queries. "
+                "Please try:\n"
+                "1. Simplifying your question\n"
+                "2. Ensuring Ollama is running and responsive\n"
+                "3. Checking if the DeepSeek model is loaded\n"
+                "4. Trying again in a moment"
+            )
+        elif 'not available' in error_msg.lower() or 'not installed' in error_msg.lower():
+            error_response = (
+                "Ollama service or DeepSeek model is not available. "
+                "Please ensure:\n"
+                "1. Ollama is running (check with 'ollama serve')\n"
+                "2. DeepSeek model is installed (check with 'ollama list')\n"
+                "3. The model name matches: deepseek-r1:8b"
+            )
+        else:
+            error_response = f"I'm sorry, I encountered an error: {error_msg}. Please try again or contact support if the problem persists."
+        
+        if return_meta:
+            return error_response, {'error': error_msg, 'provider': 'deepseek'}
+        return error_response

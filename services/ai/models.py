@@ -52,6 +52,8 @@ class ChatLog(models.Model):
     )
 
     class Meta:
+        app_label = 'services_ai'  # Explicit app_label for Django
+        db_table = 'services_ai_chatlog'  # Explicit table name
         verbose_name = _('Chat Log')
         verbose_name_plural = _('Chat Logs')
         ordering = ['-created_at']
@@ -111,9 +113,9 @@ class AIInteraction(AuditableModel):
     )
     provider = models.CharField(
         max_length=64,
-        default='ollama',
+        default='deepseek',
         verbose_name=_('Provider'),
-        help_text=_('LLM provider (ollama, openai)')
+        help_text=_('LLM provider (deepseek, ollama, openai)')
     )
     tokens_used = models.IntegerField(
         null=True,
@@ -143,6 +145,7 @@ class AIInteraction(AuditableModel):
         max_length=20,
         choices=[
             ('faq', 'FAQ'),
+            ('deepseek', 'DeepSeek'),
             ('ollama', 'Ollama'),
             ('openai', 'OpenAI'),
         ],
@@ -187,6 +190,8 @@ class AIInteraction(AuditableModel):
     )
     
     class Meta:
+        app_label = 'services_ai'  # Explicit app_label for Django
+        db_table = 'services_ai_aiinteraction'  # Explicit table name
         verbose_name = _('AI Interaction')
         verbose_name_plural = _('AI Interactions')
         ordering = ['-created_at']
@@ -208,7 +213,9 @@ class AIInteraction(AuditableModel):
             self.metadata = {}
         # Backward compatibility: set source from provider if not set
         if not self.source and self.provider:
-            if self.provider == 'ollama':
+            if self.provider == 'deepseek':
+                self.source = 'deepseek'
+            elif self.provider == 'ollama':
                 self.source = 'ollama'
             elif self.provider == 'openai':
                 self.source = 'openai'
@@ -263,6 +270,8 @@ class AIKnowledgeBase(AuditableModel):
     )
     
     class Meta:
+        app_label = 'services_ai'  # Explicit app_label for Django
+        db_table = 'services_ai_aiknowledgebase'  # Explicit table name
         verbose_name = _('AI Knowledge Base Entry')
         verbose_name_plural = _('AI Knowledge Base Entries')
         ordering = ['-priority', '-usage_count']
@@ -309,6 +318,8 @@ class AIConfiguration(AuditableModel):
     )
     
     class Meta:
+        app_label = 'services_ai'  # Explicit app_label for Django
+        db_table = 'services_ai_aiconfiguration'  # Explicit table name
         verbose_name = _('AI Configuration')
         verbose_name_plural = _('AI Configurations')
         ordering = ['key']
@@ -373,6 +384,8 @@ class PromptTemplate(AuditableModel):
     )
 
     class Meta:
+        app_label = 'services_ai'  # Explicit app_label for Django
+        db_table = 'services_ai_prompttemplate'  # Explicit table name
         verbose_name = _('Prompt Template')
         verbose_name_plural = _('Prompt Templates')
         ordering = ['key']

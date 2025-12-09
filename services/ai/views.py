@@ -22,7 +22,7 @@ class AIRateThrottle(UserRateThrottle):
 class AIAssistantAPIView(APIView):
     """
     AI Assistant API endpoint that handles user questions and returns AI responses.
-    Uses Ollama as the primary LLM with OpenAI fallback.
+    Uses DeepSeek (via Ollama) as the primary LLM.
     """
     throttle_classes = [AIRateThrottle]
     
@@ -106,34 +106,39 @@ class AIAssistantAPIView(APIView):
             
             # Save ChatLog
             from services.ai.models import ChatLog, AIInteraction
-            chat = ChatLog.objects.create(
+            from typing import cast, Dict, Any
+            
+            # Type assertion: llm_meta is guaranteed to be a dict when return_meta=True
+            llm_meta_dict: Dict[str, Any] = cast(Dict[str, Any], llm_meta)
+            
+            chat = ChatLog.objects.create(  # type: ignore[attr-defined]
                 user=user,
                 organization=org,
                 session_id=session_id,
                 query=question,
                 response=ai_response,
-                metadata=llm_meta
+                metadata=llm_meta_dict
             )
             
             # Save AIInteraction for detailed audit trail
-            AIInteraction.objects.create(
+            AIInteraction.objects.create(  # type: ignore[attr-defined]
                 user=user,
                 organization=org,
                 prompt=question,
                 system_prompt=None,  # Using default system prompt
                 response=ai_response,
-                model=llm_meta.get('model'),
-                provider=llm_meta.get('provider', 'ollama'),
-                tokens_used=llm_meta.get('tokens'),
-                extra={'llm_raw': llm_meta.get('raw_response'), 'chat_id': chat.id},
-                source=llm_meta.get('provider', 'ollama'),
+                model=llm_meta_dict.get('model'),
+                provider=llm_meta_dict.get('provider', 'deepseek'),
+                tokens_used=llm_meta_dict.get('tokens'),
+                extra={'llm_raw': llm_meta_dict.get('raw_response'), 'chat_id': chat.id},
+                source=llm_meta_dict.get('provider', 'deepseek'),
                 success=True,
-                processing_time=llm_meta.get('processing_time'),
+                processing_time=llm_meta_dict.get('processing_time'),
                 metadata={'organization_id': org.id, 'organization_name': org.name}
             )
             
             return Response({
-                'result': ai_response,  # Changed from 'response' to 'result' for consistency
+                'response': ai_response,  # Frontend expects 'response' key
                 'question': question,
                 'chat_id': chat.id
             })
@@ -183,12 +188,15 @@ class AIAssistantAsyncAPIView(APIView):
             
             # Import task here to avoid circular imports
             from services.ai.tasks import run_ai_query
+            from typing import cast, Any
             
             # Submit to Celery
             session_id = request.data.get('session_id') or request.session.session_key
             system_prompt = request.data.get('system_prompt')
             
-            job = run_ai_query.delay(
+            # Celery task delay method is dynamically added, need to cast for type checker
+            task_func = cast(Any, run_ai_query)
+            job = task_func.delay(  # type: ignore[attr-defined]
                 user.id,
                 org.id,
                 question,

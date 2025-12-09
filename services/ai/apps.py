@@ -2,8 +2,9 @@ from django.apps import AppConfig
 
 
 class AIServiceConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
+    default_auto_field = 'django.db.models.BigAutoField'  # type: ignore[assignment]
     name = 'services.ai'
+    label = 'services_ai'  # Explicit label for Django (no dots)
     verbose_name = 'AI Service'
     
     def ready(self):

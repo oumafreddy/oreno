@@ -12,7 +12,7 @@ class AIInteractionAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'source', 'success', 'user_feedback', 'created_at',
-        ('user', admin.RelatedOnlyFieldFilter)
+        ('user', admin.RelatedOnlyFieldListFilter)
     ]
     search_fields = ['question', 'response', 'user__username', 'user__email']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
