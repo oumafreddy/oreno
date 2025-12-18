@@ -4,7 +4,10 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.http import JsonResponse
+from django.core.cache import cache
 import secrets
+import re
+import logging
 
 class LoginRequiredMiddleware:
     """
@@ -103,3 +106,139 @@ class CSPNonceMiddleware:
             )
         response['Content-Security-Policy'] = csp
         return response
+
+
+class SecurityMiddleware:
+    """
+    Middleware to detect and block automated attack attempts.
+    Can be disabled via SECURITY_MIDDLEWARE_ENABLED setting for testing.
+    """
+    logger = logging.getLogger('security.middleware')
+    
+    # SQL injection patterns
+    SQL_INJECTION_PATTERNS = [
+        r'(?i)(union.*select|select.*from|insert.*into|delete.*from|update.*set|drop.*table)',
+        r'(?i)(or\s+\d+\s*=\s*\d+|and\s+\d+\s*=\s*\d+)',
+        r'(?i)(sleep\s*\(|waitfor\s+delay|pg_sleep|benchmark\s*\()',
+        r'(?i)(exec\s*\(|execute\s*\(|sp_executesql)',
+        r'(?i)(xp_cmdshell|xp_regread|xp_dirtree)',
+        r'(?i)(extractvalue|updatexml|exp\s*\(|gtid_subset)',
+        r'(?i)(information_schema|sys\.|pg_catalog)',
+        r'(?i)(char\s*\(|chr\s*\(|concat|cast\s*\()',
+        r'(?i)(--\s*$|/\*|\*/|#\s*$)',
+        r'(?i)(\'\s*(or|and)\s*\'|\"\s*(or|and)\s*\")',
+    ]
+    
+    # XSS patterns
+    XSS_PATTERNS = [
+        r'(?i)(<script|javascript:|onerror=|onload=|onclick=)',
+        r'(?i)(alert\s*\(|prompt\s*\(|confirm\s*\()',
+        r'(?i)(eval\s*\(|expression\s*\()',
+    ]
+    
+    # Path traversal patterns
+    PATH_TRAVERSAL_PATTERNS = [
+        r'(\.\./|\.\.\\|\.\.%2f|\.\.%5c)',
+        r'(?i)(etc/passwd|boot\.ini|win\.ini)',
+    ]
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Check if security middleware is enabled (can be disabled for testing)
+        from django.conf import settings
+        if not getattr(settings, 'SECURITY_MIDDLEWARE_ENABLED', True):
+            return self.get_response(request)
+        
+        # Get client IP
+        client_ip = self._get_client_ip(request)
+        
+        # Check rate limiting
+        if self._is_rate_limited(client_ip):
+            self.logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+            return JsonResponse(
+                {'error': 'Rate limit exceeded. Please try again later.'},
+                status=429
+            )
+        
+        # Check for attack patterns in query parameters
+        if self._contains_attack_patterns(request):
+            # Increment attack counter
+            cache_key = f'attack_count_{client_ip}'
+            attack_count = cache.get(cache_key, 0) + 1
+            cache.set(cache_key, attack_count, timeout=3600)  # 1 hour
+            
+            self.logger.warning(
+                f"Attack pattern detected from IP {client_ip}: "
+                f"{request.path}?{request.GET.urlencode()[:200]}"
+            )
+            
+            # Block after 3 attempts
+            if attack_count >= 3:
+                cache.set(f'blocked_ip_{client_ip}', True, timeout=3600)  # Block for 1 hour
+                self.logger.error(f"IP {client_ip} blocked due to repeated attack attempts")
+                return JsonResponse(
+                    {'error': 'Access denied'},
+                    status=403
+                )
+            
+            return JsonResponse(
+                {'error': 'Invalid request'},
+                status=400
+            )
+        
+        # Check if IP is blocked
+        if cache.get(f'blocked_ip_{client_ip}', False):
+            return JsonResponse(
+                {'error': 'Access denied'},
+                status=403
+            )
+        
+        return self.get_response(request)
+    
+    def _get_client_ip(self, request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR', 'unknown')
+        return ip
+    
+    def _is_rate_limited(self, client_ip):
+        """Check if IP has exceeded rate limit"""
+        cache_key = f'rate_limit_{client_ip}'
+        request_count = cache.get(cache_key, 0)
+        
+        # Allow 100 requests per minute
+        if request_count >= 100:
+            return True
+        
+        # Increment counter
+        cache.set(cache_key, request_count + 1, timeout=60)
+        return False
+    
+    def _contains_attack_patterns(self, request):
+        """Check if request contains attack patterns"""
+        # Check query parameters
+        query_string = request.GET.urlencode().lower()
+        if query_string:
+            for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS + self.PATH_TRAVERSAL_PATTERNS:
+                if re.search(pattern, query_string):
+                    return True
+        
+        # Check path
+        path = request.path.lower()
+        for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS + self.PATH_TRAVERSAL_PATTERNS:
+            if re.search(pattern, path):
+                return True
+        
+        # Check POST data (if any)
+        if request.method == 'POST' and request.POST:
+            post_data = str(request.POST).lower()
+            for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS:
+                if re.search(pattern, post_data):
+                    return True
+        
+        return False

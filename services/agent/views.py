@@ -37,8 +37,8 @@ class AgentParseView(APIView):
             "You are an intent parser for a GRC (Governance, Risk, Compliance) system. "
             "Your task is to parse user requests and return a JSON object matching this exact schema:\n"
             "{\n"
-            "  'action': 'create' | 'update' | 'delete' | 'read' | 'generate_report',\n"
-            "  'model': one of the available models: " + model_list + ",\n"
+            "  'action': 'create' | 'update' | 'delete' | 'read' | 'generate_report' | 'unknown',\n"
+            "  'model': one of the available models: " + model_list + " (or null if action is 'unknown'),\n"
             "  'fields': { 'field_name': 'value', ... } (only include fields mentioned in the request),\n"
             "  'confidence': float between 0.0 and 1.0\n"
             "}\n\n"
@@ -49,8 +49,9 @@ class AgentParseView(APIView):
             "- If the user wants to view/query something, use action='read'\n"
             "- Extract field values from the user's request\n"
             "- Set confidence based on how certain you are (0.0 = uncertain, 1.0 = very certain)\n"
-            "- If you cannot parse the request, return: {'action': 'unknown', 'confidence': 0.0}\n"
+            "- If you cannot parse the request or it's not an action request, return: {'action': 'unknown', 'model': null, 'confidence': 0.0}\n"
             "- Return ONLY valid JSON, no other text\n"
+            "- Be concise and accurate in your parsing\n"
         )
         
         user_prompt = f"{prompt}\n\nRespond with a single JSON object only, no explanations."

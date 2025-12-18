@@ -9,11 +9,15 @@ from django.conf import settings
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 # Model configuration - use deepseek-r1:8b as the primary model
+# Note: If you encounter memory issues, try quantized versions:
+# - deepseek-r1:8b-q4_0 (quantized, lower memory)
+# - llama3:8b (alternative if DeepSeek unavailable)
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'deepseek-r1:8b')
 
 # Available models (only include what the user actually has installed)
 AVAILABLE_MODELS = [
     'deepseek-r1:8b',
+    'llama3:8b',  # Fallback option
 ]
 
 # Generation parameters

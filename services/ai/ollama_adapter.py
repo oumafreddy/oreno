@@ -12,8 +12,9 @@ from .ollama_config import (
 
 logger = logging.getLogger('services.ai.ollama_adapter')
 
-# Force the model to be deepseek-r1:8b since that's what the user has installed
-FORCED_MODEL = "deepseek-r1:8b"
+# Use model from config, with fallback to deepseek-r1:8b
+# If memory issues occur, set OLLAMA_MODEL=deepseek-r1:8b-q4_0 in environment
+FORCED_MODEL = OLLAMA_MODEL
 
 SAFE_SYSTEM_PROMPT = (
     "You are Oreno GRC's AI assistant specializing in Governance, Risk, and Compliance (GRC). "

@@ -198,6 +198,7 @@ MIDDLEWARE = [
     'django_tenants.middleware.TenantMainMiddleware',  # Must be first
     'apps.common.admin_middleware.AdminTenantMiddleware',  # Handle admin tenant issues
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.SecurityMiddleware',  # Block automated attacks (can be disabled for testing)
     'common.middleware.CSPNonceMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

@@ -169,6 +169,10 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
 
+# Disable security middleware for testing (e.g., Ghauri security testing)
+# Set to False to allow security testing tools
+SECURITY_MIDDLEWARE_ENABLED = False
+
 # Development-specific tenant settings
 TENANT_CREATE_SCHEMA_AUTOMATICALLY = True
 TENANT_SYNC_SCHEMA_AUTOMATICALLY = True
