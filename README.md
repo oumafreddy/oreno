@@ -17,6 +17,11 @@
 
 Oreno GRC is a modern, multi-tenant Governance, Risk, and Compliance platform built with Django. Designed for organizations of all sizes, it provides comprehensive tools for audit management, risk assessment, compliance tracking, and AI governance - all within a secure, scalable architecture.
 
+<div align="center">
+  <img src="media/git_images/homepageoreno.png" alt="Oreno GRC Homepage" width="800"/>
+  <p><em>Oreno GRC Homepage</em></p>
+</div>
+
 ## ✨ Key Features
 
 - 🏢 **Multi-Tenant Architecture** - Isolated data per organization using `django-tenants`
@@ -105,6 +110,23 @@ Oreno GRC follows a modular, multi-tenant architecture designed for scalability 
 | 🤖 **AI Governance** | AI compliance & governance | EU AI Act, NIST RSF, OECD guidelines, model registration |
 | ⚖️ **Legal** | Legal document management | Legal frameworks, compliance tracking, document management |
 | 📊 **Reports** | Analytics & reporting | Dashboard, custom reports, data visualization |
+
+### Visual Showcase
+
+<div align="center">
+  <img src="media/git_images/Audit dashboard.png" alt="Audit Dashboard" width="800"/>
+  <p><em>Audit Dashboard - Comprehensive audit lifecycle management with GIAS 2024 compliance</em></p>
+</div>
+
+<div align="center">
+  <img src="media/git_images/RiskApp.png" alt="Risk Management Application" width="800"/>
+  <p><em>Risk Management - Risk registers, matrices, KRIs, and assessment workflows</em></p>
+</div>
+
+<div align="center">
+  <img src="media/git_images/Reports.png" alt="Reports and Analytics" width="800"/>
+  <p><em>Reports and Analytics - Advanced reporting and dashboard capabilities</em></p>
+</div>
 
 ## 📁 Project Structure
 
