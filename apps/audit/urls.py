@@ -24,6 +24,7 @@ from .views import (
     RecommendationListView, RecommendationCreateView, RecommendationUpdateView, RecommendationDetailView,
     IssueWorkingPaperListView, IssueWorkingPaperCreateView, IssueWorkingPaperUpdateView, IssueWorkingPaperDeleteView, IssueWorkingPaperDetailView,
     IssueWorkingPaperViewSet,
+    EngagementDocumentListView, EngagementDocumentCreateView, EngagementDocumentDeleteView,
 )
 
 # ─── REST API ROUTERS ────────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ urlpatterns = [
     path('engagements/<int:pk>/submit/', views.submit_engagement, name='engagement-submit'),
     path('engagements/<int:pk>/approve/', views.approve_engagement, name='engagement-approve'),
     path('engagements/<int:pk>/reject/', views.reject_engagement, name='engagement-reject'),
+    path('engagements/<int:engagement_pk>/documents/', EngagementDocumentListView.as_view(), name='engagement-document-list'),
+    path('engagements/<int:engagement_pk>/documents/add/', EngagementDocumentCreateView.as_view(), name='engagement-document-add'),
+    path('engagements/<int:engagement_pk>/documents/<int:pk>/delete/', EngagementDocumentDeleteView.as_view(), name='engagement-document-delete'),
     
     # ─── ISSUE URLS ─────────────────────────────────────────────────────────
     path('issues/', IssueListView.as_view(), name='issue-list'),

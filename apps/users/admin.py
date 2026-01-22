@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.shortcuts import redirect
 from django.db import IntegrityError
+from django.db.utils import OperationalError
 
 from users.models import CustomUser, Profile, OTP, OrganizationRole, PasswordHistory, PasswordPolicy, AccountLockout, SecurityAuditLog
 
@@ -127,8 +128,8 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
 
     def delete_view(self, request, object_id, extra_context=None):
         """
-        Override delete view to gracefully handle FK protection/constraints
-        and provide a clear admin message instead of a 500 error.
+        Override delete view to gracefully handle FK protection/constraints and database errors.
+        Handles both IntegrityError (FK constraints) and OperationalError (PostgreSQL lock limits).
         """
         try:
             return super().delete_view(request, object_id, extra_context)
@@ -140,6 +141,33 @@ class CustomUserAdmin(UserAdmin, VersionAdmin):
                     "Please reassign or clean up related references, or use the supported data cleanup command/view."
                 ),
             )
+            # Redirect back to the change page for the user
+            try:
+                url = reverse('admin:users_customuser_change', args=[object_id])
+            except Exception:
+                url = reverse('admin:users_customuser_changelist')
+            return redirect(url)
+        except OperationalError as e:
+            # Handle PostgreSQL shared memory / lock limit errors
+            error_msg = str(e)
+            if 'out of shared memory' in error_msg.lower() or 'max_locks_per_transaction' in error_msg.lower():
+                messages.error(
+                    request,
+                    _(
+                        "User deletion failed due to PostgreSQL lock limits. This occurs when deleting users with many "
+                        "related records across multiple tenant schemas. "
+                        "Please use the management command 'cleanup_tenant_data' for safe deletion, or contact your "
+                        "database administrator to increase PostgreSQL's 'max_locks_per_transaction' setting."
+                    ),
+                )
+            else:
+                messages.error(
+                    request,
+                    _(
+                        "Database error occurred during user deletion. Please try using the management command "
+                        "'cleanup_tenant_data' for safe deletion, or contact your database administrator."
+                    ),
+                )
             # Redirect back to the change page for the user
             try:
                 url = reverse('admin:users_customuser_change', args=[object_id])

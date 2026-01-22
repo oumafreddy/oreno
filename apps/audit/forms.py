@@ -21,6 +21,7 @@ from .models.note import Note, Notification
 from .models.procedure import Procedure
 from .models.recommendation import Recommendation
 from .models.issue_working_paper import IssueWorkingPaper
+from .models.engagement_document import EngagementDocument
 from .models.engagement import Engagement
 from .models.risk import Risk
 
@@ -1164,6 +1165,46 @@ class IssueWorkingPaperForm(BaseAuditForm):
             ),
             ButtonHolder(
                 Submit('submit', _('Save'), css_class='btn-primary'),
+                css_class='mt-3'
+            )
+        )
+
+
+class EngagementDocumentForm(BaseAuditForm):
+    class Meta:
+        model = EngagementDocument
+        fields = ['engagement', 'file', 'description', 'document_type']
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Entry Meeting Minutes, Audit Notification')}),
+            'document_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Entry Meeting Minutes, Requirements List')}),
+            'file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx,.xlsx,.pptx'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        engagement_pk = kwargs.pop('engagement_pk', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.organization:
+            # Filter engagement field to only show engagements from this organization
+            self.fields['engagement'].queryset = Engagement.objects.filter(
+                organization=self.organization
+            )
+            
+            # If engagement_pk is provided, set it as the initial value
+            if engagement_pk:
+                self.fields['engagement'].initial = engagement_pk
+                self.fields['engagement'].widget.attrs['readonly'] = True
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                _('Engagement Document Information'),
+                'engagement',
+                'file',
+                'document_type',
+                'description',
+            ),
+            ButtonHolder(
+                Submit('submit', _('Upload Document'), css_class='btn-primary'),
                 css_class='mt-3'
             )
         )

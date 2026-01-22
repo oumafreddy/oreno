@@ -136,6 +136,39 @@
           <a href="{% url 'audit:engagement-list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to List</a>
         </div>
       </div>
+      
+      <!-- Engagement Documents -->
+      <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Engagement Documents</strong>
+          <button type="button" class="btn btn-sm btn-outline-primary" 
+                  hx-get="{% url 'audit:engagement-document-add' engagement_pk=engagement.pk %}"
+                  hx-target="#engagementDocumentModal"
+                  hx-swap="innerHTML"
+                  data-bs-toggle="modal"
+                  data-bs-target="#engagementDocumentModal">
+            <i class="bi bi-upload"></i> Upload
+          </button>
+        </div>
+        <div class="card-body" id="engagementDocumentsList">
+          {% include 'audit/_engagementdocument_list_partial.html' with documents=documents engagement=engagement %}
+        </div>
+      </div>
+      
+      <!-- Modal for Document Upload -->
+      <div class="modal fade" id="engagementDocumentModal" tabindex="-1" aria-labelledby="engagementDocumentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="engagementDocumentModalLabel">Upload Engagement Document</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="engagementDocumentModal">
+              <!-- Form will be loaded here via HTMX -->
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -71,6 +71,7 @@ SHARED_APPS = [
     'django_ckeditor_5',  # Rich text editor
 
     # Tenant definition + public models
+    'common.apps.CommonConfig',  # Common utilities, middleware, and template tags
     'organizations.apps.OrganizationsConfig',  # Tenant and Domain models
     'users.apps.UsersConfig',  
     'core.apps.CoreConfig',    # Core functionality including audit logging

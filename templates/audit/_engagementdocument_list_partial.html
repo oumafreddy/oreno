@@ -1,0 +1,44 @@
+{% load static %}
+
+{% if documents %}
+  <div class="list-group list-group-flush" id="engagementDocumentsList">
+    {% for document in documents %}
+      <div class="list-group-item d-flex justify-content-between align-items-start px-0">
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-file-earmark me-2"></i>
+            <div>
+              <a href="{{ document.file.url }}" target="_blank" class="text-decoration-none">
+                <strong>{{ document.file.name|slice:"30:" }}</strong>
+              </a>
+              {% if document.document_type %}
+                <small class="text-muted d-block">{{ document.document_type }}</small>
+              {% endif %}
+              {% if document.description %}
+                <small class="text-muted d-block">{{ document.description }}</small>
+              {% endif %}
+              <small class="text-muted d-block">
+                <i class="bi bi-clock"></i> {{ document.uploaded_at|date:"M d, Y H:i" }}
+                {% if document.created_by %}
+                  · {{ document.created_by.get_full_name|default:document.created_by.username }}
+                {% endif %}
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="ms-2">
+          <button type="button" 
+                  class="btn btn-sm btn-outline-danger"
+                  hx-delete="{% url 'audit:engagement-document-delete' engagement_pk=engagement.pk pk=document.pk %}"
+                  hx-target="#engagementDocumentsList"
+                  hx-swap="innerHTML"
+                  hx-confirm="Are you sure you want to delete this document?">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-muted mb-0">No documents uploaded yet.</p>
+{% endif %}

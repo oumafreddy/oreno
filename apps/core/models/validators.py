@@ -79,3 +79,14 @@ def validate_file_virus(value):
 
     # Optional: Final reset of the file pointer, if needed by later processing.
     value.seek(0)
+
+def validate_engagement_document_extension(value):
+    """Validate file extensions for engagement documents. Only allows PDF, DOC, DOCX, XLSX, PPTX."""
+    valid_extensions = {'pdf', 'doc', 'docx', 'xlsx', 'pptx'}
+    ext = os.path.splitext(value.name)[1][1:].lower()
+    if ext not in valid_extensions:
+        allowed = ", ".join(sorted(valid_extensions))
+        raise ValidationError(
+            _('Unsupported file extension ".%(ext)s". Allowed extensions for engagement documents: %(allowed)s.'),
+            params={'ext': ext, 'allowed': allowed},
+        )

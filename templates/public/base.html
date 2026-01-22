@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load url_utils %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -443,7 +444,10 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/#services">Services</a></li>
                 <li><a href="/#contact">Contact US</a></li>
-                <li><a href="{% url 'public-docs' %}">Documentation</a></li>
+                {% safe_url 'public-docs' as docs_url %}
+                {% if docs_url %}
+                <li><a href="{{ docs_url }}">Documentation</a></li>
+                {% endif %}
             </ul>
             </div>
             <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
@@ -495,9 +499,17 @@
             <div class="footer-bottom">
                 <p>&copy; 2025 Hashrate Solutions. All rights reserved.</p>
                 <div class="footer-legal-links">
-                    <a href="{% url 'public-privacy' %}">Privacy Policy</a>
+                    {% safe_url 'public-privacy' as privacy_url %}
+                    {% safe_url 'public-cookies' as cookies_url %}
+                    {% if privacy_url %}
+                    <a href="{{ privacy_url }}">Privacy Policy</a>
+                    {% endif %}
+                    {% if privacy_url and cookies_url %}
                     <span class="footer-separator">|</span>
-                    <a href="{% url 'public-cookies' %}">Cookie Policy</a>
+                    {% endif %}
+                    {% if cookies_url %}
+                    <a href="{{ cookies_url }}">Cookie Policy</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -517,7 +529,14 @@
     <!-- Cookie Consent Banner -->
     <div id="cookieConsent" class="cookie-consent">
         <div class="cookie-content">
-            <p>We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies. <a href="{% url 'public-cookies' %}">Learn more</a></p>
+            <p>We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies. 
+            {% safe_url 'public-cookies' as cookies_url %}
+            {% if cookies_url %}
+            <a href="{{ cookies_url }}">Learn more</a>
+            {% else %}
+            <a href="/cookie-policy/">Learn more</a>
+            {% endif %}
+            </p>
         </div>
         <button id="acceptCookies" class="btn">Accept</button>
     </div>

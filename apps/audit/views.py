@@ -111,12 +111,12 @@ from core.mixins import OrganizationMixin, OrganizationPermissionMixin
 from core.decorators import skip_org_check
 from organizations.models import Organization
 
-from .models import AuditWorkplan, Engagement, Issue, Approval, Notification, IssueWorkingPaper, Note, FollowUpAction, IssueRetest, Objective, Procedure
+from .models import AuditWorkplan, Engagement, Issue, Approval, Notification, IssueWorkingPaper, EngagementDocument, Note, FollowUpAction, IssueRetest, Objective, Procedure
 from .forms import (
     AuditWorkplanForm, EngagementForm, IssueForm,
     ApprovalForm, WorkplanFilterForm, EngagementFilterForm, IssueFilterForm,
     ProcedureForm, FollowUpActionForm, IssueRetestForm, NoteForm,
-    RecommendationForm, IssueWorkingPaperForm, ObjectiveForm, RiskForm
+    RecommendationForm, IssueWorkingPaperForm, EngagementDocumentForm, ObjectiveForm, RiskForm
 )
 
 from rest_framework import generics, permissions, viewsets
@@ -395,7 +395,8 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
         return reverse_lazy('audit:risk-list')
 
 from .models.issue_working_paper import IssueWorkingPaper
-from .forms import IssueWorkingPaperForm
+from .models.engagement_document import EngagementDocument
+from .forms import IssueWorkingPaperForm, EngagementDocumentForm
 from .serializers import IssueWorkingPaperSerializer
 
 # ─── MIXINS ──────────────────────────────────────────────────────────────────
@@ -585,6 +586,7 @@ class EngagementDetailView(AuditPermissionMixin, DetailView):
             'approvals': engagement.approvals.all().select_related(
                 'requester', 'approver'
             ),
+            'documents': EngagementDocument.objects.filter(engagement=engagement).select_related('created_by'),
             'can_submit': can_proceed(engagement.submit_for_approval),
             'can_approve': can_proceed(engagement.approve),
             'can_reject': can_proceed(engagement.reject),
@@ -3815,6 +3817,94 @@ class IssueWorkingPaperDetailView(AuditPermissionMixin, DetailView):
     model = IssueWorkingPaper
     template_name = 'audit/issueworkingpaper_detail.html'
     context_object_name = 'working_paper'
+
+# ─── ENGAGEMENT DOCUMENT VIEWS ────────────────────────────────────────────────
+class EngagementDocumentListView(AuditPermissionMixin, ListView):
+    model = EngagementDocument
+    template_name = 'audit/engagementdocument_list.html'
+    context_object_name = 'documents'
+
+    def get_queryset(self):
+        engagement_pk = self.kwargs.get('engagement_pk')
+        organization = self.request.organization
+        return EngagementDocument.objects.filter(engagement_id=engagement_pk, organization=organization)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['engagement'] = get_object_or_404(Engagement, pk=self.kwargs.get('engagement_pk'))
+        context['engagement_pk'] = self.kwargs.get('engagement_pk')
+        return context
+
+class EngagementDocumentCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
+    model = EngagementDocument
+    form_class = EngagementDocumentForm
+    template_name = 'audit/engagementdocument_form.html'
+    success_message = _('Engagement document uploaded successfully')
+
+    def get_template_names(self):
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            return ['audit/engagementdocument_modal_form.html']
+        return [self.template_name]
+
+    def form_valid(self, form):
+        form.instance.organization = self.request.organization  # Multi-tenancy compliance
+        response = super().form_valid(form)
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            documents = EngagementDocument.objects.filter(engagement=self.object.engagement)
+            html_list = render_to_string('audit/_engagementdocument_list_partial.html', {
+                'documents': documents,
+                'engagement': self.object.engagement,
+            }, request=self.request)
+            return JsonResponse({'form_is_valid': True, 'html_list': html_list})
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not hasattr(self, 'object') or not self.object:
+            context['engagement'] = get_object_or_404(Engagement, pk=self.kwargs.get('engagement_pk'))
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['engagement_pk'] = self.kwargs.get('engagement_pk')
+        return kwargs
+
+    def form_invalid(self, form):
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            html_form = render_to_string('audit/engagementdocument_modal_form.html', 
+                self.get_context_data(form=form, object=None),
+                request=self.request
+            )
+            return JsonResponse({'form_is_valid': False, 'html_form': html_form})
+        return super().form_invalid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
+
+class EngagementDocumentDeleteView(AuditPermissionMixin, DeleteView):
+    model = EngagementDocument
+    template_name = 'audit/engagementdocument_confirm_delete.html'
+
+    def get_template_names(self):
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            return ['audit/engagementdocument_confirm_delete.html']
+        return [self.template_name]
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        engagement = self.object.engagement
+        self.object.delete()
+        if self.request.htmx or self.request.headers.get('HX-Request'):
+            documents = EngagementDocument.objects.filter(engagement=engagement)
+            html_list = render_to_string('audit/_engagementdocument_list_partial.html', {
+                'documents': documents,
+                'engagement': engagement,
+            }, request=self.request)
+            return JsonResponse({'form_is_valid': True, 'html_list': html_list})
+        return super().delete(request, *args, **kwargs)
+
+    def get_success_url(self):
+        return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
 
 # ─── API VIEWSET ─────────────────────────────────────────────────────────────
 from rest_framework import mixins, viewsets

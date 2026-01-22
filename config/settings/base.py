@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     # Note: django-tenants is loaded in tenants.py
 
     # Local apps
+    'common.apps.CommonConfig',  # Common utilities, middleware, and template tags
     'organizations.apps.OrganizationsConfig',
     'users.apps.UsersConfig',
     'core.apps.CoreConfig',

@@ -9,6 +9,7 @@ from .followupaction import FollowUpAction
 from .issueretest import IssueRetest
 from .recommendation import Recommendation
 from .issue_working_paper import IssueWorkingPaper
+from .engagement_document import EngagementDocument
 from .risk import Risk
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     'IssueRetest',
     'Recommendation',
     'IssueWorkingPaper',
+    'EngagementDocument',
     'Risk',
 ]
