@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hashrate Solutions | Enterprise IT & GRC SaaS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #020812;
+    --bg2: #050f1e;
+    --bg3: #0a1628;
+    --cyan: #00f5ff;
+    --cyan2: #00b8d4;
+    --green: #00ff88;
+    --orange: #ff6b35;
+    --text: #c8dff0;
+    --muted: #4a6580;
+    --border: rgba(0,245,255,0.15);
+    --card: rgba(5,20,40,0.8);
+    --glow: 0 0 30px rgba(0,245,255,0.3);
+    --glow2: 0 0 60px rgba(0,245,255,0.15);
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 400;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── CUSTOM CURSOR ── */
+  .cursor {
+    position: fixed; width:12px; height:12px;
+    background: var(--cyan); border-radius:50%;
+    pointer-events:none; z-index:9999;
+    transform: translate(-50%,-50%);
+    transition: width .2s, height .2s, background .2s;
+    box-shadow: 0 0 15px var(--cyan), 0 0 30px rgba(0,245,255,0.5);
+  }
+  .cursor-ring {
+    position:fixed; width:36px; height:36px;
+    border:1px solid rgba(0,245,255,0.5); border-radius:50%;
+    pointer-events:none; z-index:9998;
+    transform: translate(-50%,-50%);
+    transition: transform .08s ease, width .3s, height .3s;
+  }
+  body:has(a:hover) .cursor { width:20px; height:20px; background: var(--green); }
+  body:has(a:hover) .cursor-ring { width:50px; height:50px; border-color: var(--green); }
+
+  /* ── CANVAS BG ── */
+  #particle-canvas {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    z-index:0; pointer-events:none; opacity:0.6;
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::after {
+    content:''; position:fixed; inset:0; z-index:1; pointer-events:none;
+    background: repeating-linear-gradient(0deg,
+      transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    padding:0 5%;
+    display:flex; align-items:center; justify-content:space-between;
+    height:70px;
+    background: rgba(2,8,18,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:700;
+    color: var(--cyan); text-decoration:none; letter-spacing:3px;
+    text-transform:uppercase;
+  }
+  .nav-logo span { color: var(--green); }
+  .nav-links { display:flex; gap:2.5rem; list-style:none; }
+  .nav-links a {
+    color: var(--muted); text-decoration:none; font-size:.85rem;
+    letter-spacing:2px; text-transform:uppercase; font-weight:600;
+    transition: color .3s;
+    font-family:'Orbitron',sans-serif; font-size:.7rem;
+  }
+  .nav-links a:hover { color:var(--cyan); }
+  .nav-cta {
+    background:transparent; border:1px solid var(--cyan);
+    color:var(--cyan); padding:.45rem 1.2rem;
+    font-family:'Orbitron',sans-serif; font-size:.65rem; letter-spacing:2px;
+    text-transform:uppercase; cursor:pointer;
+    transition: all .3s; text-decoration:none;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .nav-cta:hover {
+    background:var(--cyan); color:var(--bg);
+    box-shadow: var(--glow);
+  }
+
+  /* ── HERO ── */
+  #hero {
+    position:relative; z-index:2;
+    min-height:100vh; display:flex; align-items:center;
+    padding:0 5%; padding-top:70px;
+    overflow:hidden;
+  }
+  .hero-grid-overlay {
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+  }
+  .hero-content { max-width:800px; position:relative; z-index:2; }
+  .hero-eyebrow {
+    font-family:'Share Tech Mono',monospace; color:var(--green);
+    font-size:.75rem; letter-spacing:4px; margin-bottom:1.5rem;
+    opacity:0; animation: fadeUp .8s ease .3s forwards;
+  }
+  .hero-eyebrow::before { content:'> '; color:var(--cyan); }
+  .hero-title {
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(2.8rem, 7vw, 5.5rem);
+    font-weight:900; line-height:1.05;
+    letter-spacing:-1px;
+    color:#fff;
+    opacity:0; animation: fadeUp .8s ease .5s forwards;
+  }
+  .hero-title .accent { color:var(--cyan); position:relative; }
+  .hero-title .accent::after {
+    content:attr(data-text);
+    position:absolute; top:0; left:0;
+    color:var(--cyan); filter:blur(8px); opacity:0.5;
+  }
+  .hero-title .line2 { color:var(--green); display:block; }
+  .hero-sub {
+    margin-top:1.5rem; font-size:1.15rem; color:var(--muted);
+    line-height:1.7; max-width:560px; font-weight:500;
+    opacity:0; animation: fadeUp .8s ease .7s forwards;
+  }
+  .hero-btns {
+    display:flex; gap:1rem; margin-top:2.5rem; flex-wrap:wrap;
+    opacity:0; animation: fadeUp .8s ease .9s forwards;
+  }
+  .btn-primary {
+    background:var(--cyan); color:var(--bg);
+    padding:.8rem 2rem; font-family:'Orbitron',sans-serif;
+    font-size:.7rem; letter-spacing:2px; text-transform:uppercase;
+    font-weight:700; text-decoration:none; border:none; cursor:pointer;
+    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+    transition: all .3s; display:inline-flex; align-items:center; gap:.6rem;
+  }
+  .btn-primary:hover {
+    background: var(--green); box-shadow: 0 0 40px rgba(0,255,136,0.4);
+    transform: translateY(-2px);
+  }
+  .btn-secondary {
+    background:transparent; border:1px solid var(--border);
+    color:var(--text); padding:.8rem 2rem;
+    font-family:'Orbitron',sans-serif; font-size:.7rem;
+    letter-spacing:2px; text-transform:uppercase;
+    text-decoration:none; cursor:pointer;
+    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+    transition: all .3s; display:inline-flex; align-items:center; gap:.6rem;
+  }
+  .btn-secondary:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:var(--glow); }
+
+  .hero-stats {
+    display:flex; gap:3rem; margin-top:4rem;
+    opacity:0; animation: fadeUp .8s ease 1.1s forwards;
+  }
+  .stat-item { display:flex; flex-direction:column; gap:.3rem; }
+  .stat-num {
+    font-family:'Orbitron',sans-serif; font-size:2rem; font-weight:900;
+    color:var(--cyan); line-height:1;
+  }
+  .stat-label { font-size:.75rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+
+  .hero-visual {
+    position:absolute; right:-5%; top:50%; transform:translateY(-50%);
+    width:50%; max-width:650px; pointer-events:none;
+    opacity:0; animation: slideLeft .8s ease .6s forwards;
+  }
+  .hex-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; opacity:.25; }
+  .hex {
+    aspect-ratio:1; border:1px solid var(--cyan);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: var(--bg3); transition:all .3s;
+  }
+  .hex.active { background:rgba(0,245,255,0.2); opacity:1; animation: hexPulse 2s ease-in-out infinite; }
+  @keyframes hexPulse { 0%,100%{opacity:0.6;} 50%{opacity:1;box-shadow:var(--glow);} }
+
+  /* ── SECTIONS COMMON ── */
+  section { position:relative; z-index:2; padding:6rem 5%; }
+  .section-header { text-align:center; margin-bottom:4rem; }
+  .section-tag {
+    display:inline-block; font-family:'Share Tech Mono',monospace;
+    font-size:.7rem; color:var(--green); letter-spacing:4px;
+    text-transform:uppercase; margin-bottom:1rem;
+  }
+  .section-tag::before { content:'// '; color:var(--muted); }
+  .section-title {
+    font-family:'Orbitron',sans-serif; font-size:clamp(1.8rem, 4vw, 2.8rem);
+    font-weight:700; color:#fff; letter-spacing:2px;
+  }
+  .section-title span { color:var(--cyan); }
+  .section-line {
+    width:80px; height:2px; background:linear-gradient(90deg,var(--cyan),transparent);
+    margin:1.2rem auto 0;
+  }
+
+  /* ── SERVICES ── */
+  #services { background:var(--bg2); }
+  .services-grid {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr));
+    gap:1.5px; position:relative;
+  }
+  .service-card {
+    background:var(--card); padding:2.5rem 2rem;
+    border:1px solid var(--border);
+    position:relative; overflow:hidden;
+    transition:all .4s; cursor:pointer;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  }
+  .service-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+    transform:translateX(-100%); transition:transform .6s;
+  }
+  .service-card:hover::before { transform:translateX(100%); }
+  .service-card:hover {
+    background: rgba(0,245,255,0.05);
+    border-color: rgba(0,245,255,0.4);
+    box-shadow: var(--glow2), inset 0 0 30px rgba(0,245,255,0.03);
+    transform:translateY(-4px);
+  }
+  .card-icon {
+    width:50px; height:50px; margin-bottom:1.5rem;
+    background:rgba(0,245,255,0.1); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5rem;
+    clip-path: polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%);
+    transition: all .3s;
+  }
+  .service-card:hover .card-icon {
+    background:rgba(0,245,255,0.2); border-color:var(--cyan);
+    box-shadow:var(--glow);
+  }
+  .card-num {
+    position:absolute; top:1.5rem; right:1.5rem;
+    font-family:'Orbitron',sans-serif; font-size:3rem; font-weight:900;
+    color:rgba(0,245,255,0.05); line-height:1;
+    transition:color .3s;
+  }
+  .service-card:hover .card-num { color:rgba(0,245,255,0.1); }
+  .card-title {
+    font-family:'Orbitron',sans-serif; font-size:.85rem; font-weight:700;
+    color:#fff; letter-spacing:1px; margin-bottom:.8rem;
+    text-transform:uppercase;
+  }
+  .card-desc { font-size:.95rem; color:var(--muted); line-height:1.7; font-weight:400; }
+  .card-link {
+    display:inline-flex; align-items:center; gap:.5rem;
+    margin-top:1.5rem; font-family:'Orbitron',sans-serif;
+    font-size:.65rem; letter-spacing:2px; color:var(--cyan);
+    text-decoration:none; text-transform:uppercase; opacity:0;
+    transition: opacity .3s, gap .3s;
+  }
+  .service-card:hover .card-link { opacity:1; gap:.8rem; }
+
+  /* ── PRODUCT SHOWCASE ── */
+  #product {
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg3) 50%, var(--bg) 100%);
+  }
+  .product-wrap {
+    display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center;
+  }
+  .product-text {}
+  .product-badge {
+    display:inline-flex; align-items:center; gap:.5rem;
+    background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.2);
+    padding:.4rem .8rem; font-family:'Share Tech Mono',monospace;
+    font-size:.7rem; color:var(--green); letter-spacing:2px; margin-bottom:1.5rem;
+  }
+  .product-badge::before { content:'●'; animation:blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .product-title {
+    font-family:'Orbitron',sans-serif; font-size:clamp(1.5rem,3vw,2.2rem);
+    font-weight:700; color:#fff; margin-bottom:1rem; line-height:1.2;
+  }
+  .product-title span { color:var(--cyan); }
+  .product-desc { font-size:1rem; color:var(--muted); line-height:1.8; margin-bottom:2rem; }
+  .feature-list { list-style:none; display:flex; flex-direction:column; gap:.8rem; margin-bottom:2rem; }
+  .feature-list li {
+    display:flex; align-items:center; gap:.8rem;
+    font-size:.95rem; color:var(--text); font-weight:500;
+  }
+  .feature-list li::before {
+    content:'›'; color:var(--cyan); font-size:1.3rem; font-weight:900;
+    flex-shrink:0;
+  }
+  .product-screens {
+    position:relative; display:flex; flex-direction:column; gap:1rem;
+  }
+  .screen-mock {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:2px; overflow:hidden; position:relative;
+    clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
+    transition:all .4s;
+  }
+  .screen-mock:hover {
+    border-color:rgba(0,245,255,0.4);
+    box-shadow:var(--glow2);
+    transform:scale(1.02);
+  }
+  .screen-bar {
+    background:rgba(0,245,255,0.05); padding:.5rem 1rem;
+    display:flex; align-items:center; gap:.4rem; border-bottom:1px solid var(--border);
+  }
+  .dot { width:8px; height:8px; border-radius:50%; }
+  .dot-r { background:#ff5f57; } .dot-y { background:#febc2e; } .dot-g { background:#28c840; }
+  .screen-title {
+    font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--muted);
+    margin-left:.5rem; letter-spacing:1px;
+  }
+  .screen-body { padding:1.2rem; }
+  .screen-row {
+    display:flex; gap:.8rem; align-items:center; margin-bottom:.6rem;
+    font-family:'Share Tech Mono',monospace; font-size:.7rem; color:var(--muted);
+  }
+  .screen-label { color:var(--cyan); min-width:80px; }
+  .screen-val { color:var(--text); }
+  .screen-tag {
+    display:inline-block; padding:.15rem .5rem; font-family:'Share Tech Mono',monospace;
+    font-size:.6rem; border-radius:2px;
+  }
+  .tag-red { background:rgba(255,107,53,0.2); color:var(--orange); border:1px solid rgba(255,107,53,0.3); }
+  .tag-green { background:rgba(0,255,136,0.1); color:var(--green); border:1px solid rgba(0,255,136,0.2); }
+  .tag-yellow { background:rgba(255,200,0,0.1); color:#ffc800; border:1px solid rgba(255,200,0,0.2); }
+
+  /* ── COURSES ── */
+  #courses { background:var(--bg2); }
+  .courses-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+  .course-card {
+    background:var(--card); border:1px solid var(--border); overflow:hidden;
+    clip-path: polygon(0 0, calc(100% - 25px) 0, 100% 25px, 100% 100%, 25px 100%, 0 calc(100% - 25px));
+    transition:all .4s; position:relative;
+  }
+  .course-card:hover {
+    border-color:rgba(0,245,255,0.4); transform:translateY(-6px);
+    box-shadow:var(--glow2);
+  }
+  .course-banner {
+    height:6px;
+    background:linear-gradient(90deg, var(--cyan), var(--green));
+  }
+  .course-inner { padding:2rem; }
+  .course-meta {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem;
+  }
+  .course-platform {
+    font-family:'Share Tech Mono',monospace; font-size:.65rem; color:var(--green);
+    letter-spacing:2px; text-transform:uppercase;
+  }
+  .course-badge {
+    background:rgba(0,245,255,0.1); border:1px solid rgba(0,245,255,0.2);
+    padding:.2rem .6rem; font-family:'Share Tech Mono',monospace;
+    font-size:.6rem; color:var(--cyan);
+  }
+  .course-title {
+    font-family:'Orbitron',sans-serif; font-size:.9rem; font-weight:700;
+    color:#fff; margin-bottom:.8rem; line-height:1.4;
+  }
+  .course-desc { font-size:.9rem; color:var(--muted); line-height:1.7; margin-bottom:1.5rem; }
+  .course-link {
+    display:inline-flex; align-items:center; gap:.5rem;
+    font-family:'Orbitron',sans-serif; font-size:.65rem; letter-spacing:2px;
+    color:var(--cyan); text-decoration:none; text-transform:uppercase;
+    border:1px solid rgba(0,245,255,0.3); padding:.5rem 1rem;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition:all .3s;
+  }
+  .course-link:hover {
+    background:var(--cyan); color:var(--bg); box-shadow:var(--glow);
+  }
+
+  /* ── CONTACT ── */
+  #contact { background:var(--bg); }
+  .contact-wrap { display:grid; grid-template-columns:1fr 1.5fr; gap:5rem; align-items:start; }
+  .contact-info h3 {
+    font-family:'Orbitron',sans-serif; font-size:1.4rem; color:#fff;
+    margin-bottom:2rem; font-weight:700;
+  }
+  .contact-item {
+    display:flex; gap:1rem; margin-bottom:1.5rem; align-items:flex-start;
+  }
+  .contact-icon {
+    width:40px; height:40px; flex-shrink:0;
+    background:rgba(0,245,255,0.05); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1rem; clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  }
+  .contact-detail { font-size:.9rem; color:var(--muted); }
+  .contact-detail a { color:var(--text); text-decoration:none; transition:color .3s; }
+  .contact-detail a:hover { color:var(--cyan); }
+  .contact-form { display:flex; flex-direction:column; gap:1rem; }
+  .form-group { position:relative; }
+  .form-label {
+    display:block; font-family:'Share Tech Mono',monospace;
+    font-size:.65rem; color:var(--muted); letter-spacing:2px;
+    text-transform:uppercase; margin-bottom:.4rem;
+  }
+  .form-input {
+    width:100%; background:rgba(0,245,255,0.03); border:1px solid var(--border);
+    color:var(--text); padding:.9rem 1rem; font-family:'Rajdhani',sans-serif;
+    font-size:1rem; font-weight:500; outline:none;
+    transition:all .3s;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  }
+  .form-input:focus {
+    border-color:var(--cyan); background:rgba(0,245,255,0.06);
+    box-shadow:var(--glow);
+  }
+  textarea.form-input { min-height:130px; resize:vertical; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .btn-submit {
+    background:var(--cyan); color:var(--bg); border:none;
+    padding:1rem 2.5rem; font-family:'Orbitron',sans-serif;
+    font-size:.7rem; letter-spacing:3px; text-transform:uppercase;
+    font-weight:700; cursor:pointer; width:100%;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    transition:all .3s;
+  }
+  .btn-submit:hover {
+    background:var(--green); box-shadow:0 0 40px rgba(0,255,136,0.4);
+    transform:translateY(-2px);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    position:relative; z-index:2; background:var(--bg2);
+    border-top:1px solid var(--border); padding:3rem 5% 1.5rem;
+  }
+  .footer-grid {
+    display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem;
+    margin-bottom:2.5rem;
+  }
+  .footer-brand .logo {
+    font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:700;
+    color:var(--cyan); letter-spacing:3px; margin-bottom:1rem; display:block;
+  }
+  .footer-brand .logo span { color:var(--green); }
+  .footer-brand p { font-size:.9rem; color:var(--muted); line-height:1.7; }
+  .footer-col h4 {
+    font-family:'Orbitron',sans-serif; font-size:.7rem; font-weight:700;
+    color:var(--text); letter-spacing:3px; text-transform:uppercase;
+    margin-bottom:1.2rem;
+  }
+  .footer-col ul { list-style:none; display:flex; flex-direction:column; gap:.6rem; }
+  .footer-col ul li a {
+    font-size:.9rem; color:var(--muted); text-decoration:none;
+    transition:color .3s; display:flex; align-items:center; gap:.4rem;
+  }
+  .footer-col ul li a::before { content:'›'; color:var(--cyan); }
+  .footer-col ul li a:hover { color:var(--cyan); }
+  .footer-bottom {
+    border-top:1px solid var(--border); padding-top:1.5rem;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:.8rem; color:var(--muted); font-family:'Share Tech Mono',monospace;
+  }
+  .footer-bottom-links { display:flex; gap:2rem; }
+  .footer-bottom-links a { color:var(--muted); text-decoration:none; transition:color .3s; }
+  .footer-bottom-links a:hover { color:var(--cyan); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width:100%; height:1px; position:relative;
+    background:linear-gradient(90deg, transparent, var(--border), transparent);
+    margin:0 auto;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(30px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes slideLeft {
+    from { opacity:0; transform:translateX(60px) translateY(-50%); }
+    to { opacity:1; transform:translateX(0) translateY(-50%); }
+  }
+  .reveal {
+    opacity:0; transform:translateY(30px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+  .reveal-delay-1 { transition-delay:.1s; }
+  .reveal-delay-2 { transition-delay:.2s; }
+  .reveal-delay-3 { transition-delay:.3s; }
+  .reveal-delay-4 { transition-delay:.4s; }
+  .reveal-delay-5 { transition-delay:.5s; }
+  .reveal-delay-6 { transition-delay:.6s; }
+
+  /* ── GLITCH TEXT ── */
+  .glitch { position:relative; }
+  .glitch::before,.glitch::after {
+    content:attr(data-text); position:absolute; top:0; left:0;
+    width:100%; height:100%;
+  }
+  .glitch::before {
+    left:2px; text-shadow:-2px 0 var(--orange);
+    animation:glitch1 3s infinite linear alternate-reverse;
+    clip-path:polygon(0 0,100% 0,100% 45%,0 45%);
+  }
+  .glitch::after {
+    left:-2px; text-shadow:2px 0 var(--green);
+    animation:glitch2 3s infinite linear alternate-reverse;
+    clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%);
+  }
+  @keyframes glitch1 {
+    0%{transform:none;opacity:0}
+    8%{transform:skew(-1deg,-1deg);opacity:.75}
+    10%{transform:none;opacity:0}
+    40%{transform:none;opacity:0}
+    42%{transform:skew(1deg);opacity:.75}
+    44%{transform:none;opacity:0}
+    100%{transform:none;opacity:0}
+  }
+  @keyframes glitch2 {
+    0%{transform:none;opacity:0}
+    20%{transform:none;opacity:0}
+    22%{transform:skew(1deg);opacity:.75}
+    24%{transform:none;opacity:0}
+    60%{transform:none;opacity:0}
+    62%{transform:skew(-1deg,-1deg);opacity:.75}
+    64%{transform:none;opacity:0}
+    100%{transform:none;opacity:0}
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--cyan); border-radius:2px; }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:900px){
+    .product-wrap,.contact-wrap,.courses-grid { grid-template-columns:1fr; }
+    .footer-grid { grid-template-columns:1fr 1fr; }
+    .hero-visual { display:none; }
+    .form-row { grid-template-columns:1fr; }
+    .nav-links { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+<canvas id="particle-canvas"></canvas>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <a href="#" class="nav-logo">HASH<span>RATE</span></a>
+  <ul class="nav-links">
+    <li><a href="#services">Services</a></li>
+    <li><a href="#product">Product</a></li>
+    <li><a href="#courses">Courses</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="#contact" class="nav-cta">Get Started →</a>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div class="hero-grid-overlay"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">HASHRATE SOLUTIONS // NAIROBI, KE</p>
+    <h1 class="hero-title glitch" data-text="ENTERPRISE GRC">
+      ENTERPRISE <span class="accent" data-text="GRC">GRC</span>
+      <span class="line2">REDEFINED.</span>
+    </h1>
+    <p class="hero-sub">
+      Empowering organizations with enterprise-grade SaaS solutions for Governance, Risk &amp; Compliance, Digital Learning, and end-to-end Digital Transformation.
+    </p>
+    <div class="hero-btns">
+      <a href="#services" class="btn-primary">Explore Services ›</a>
+      <a href="#contact" class="btn-secondary">Get in Touch</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num">8+</span>
+        <span class="stat-label">Years Experience</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">6</span>
+        <span class="stat-label">Service Lines</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">ISO</span>
+        <span class="stat-label">27001 Certified</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abstract hex visual -->
+  <div class="hero-visual">
+    <div style="position:relative;width:100%;aspect-ratio:1;opacity:0.35;">
+      <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+        <defs>
+          <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#00f5ff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="250" cy="250" r="240" stroke="#00f5ff" stroke-width="0.5" stroke-dasharray="4 8"/>
+        <circle cx="250" cy="250" r="180" stroke="#00f5ff" stroke-width="0.5" stroke-dasharray="2 12"/>
+        <circle cx="250" cy="250" r="120" stroke="#00ff88" stroke-width="0.5" stroke-dasharray="6 6"/>
+        <circle cx="250" cy="250" r="60" fill="url(#rg)"/>
+        <polygon points="250,20 480,140 480,360 250,480 20,360 20,140" stroke="#00f5ff" stroke-width="0.8" fill="none" opacity="0.4"/>
+        <polygon points="250,80 420,170 420,330 250,420 80,330 80,170" stroke="#00ff88" stroke-width="0.5" fill="none" opacity="0.3"/>
+        <line x1="250" y1="20" x2="250" y2="480" stroke="#00f5ff" stroke-width="0.3" opacity="0.2"/>
+        <line x1="20" y1="140" x2="480" y2="360" stroke="#00f5ff" stroke-width="0.3" opacity="0.2"/>
+        <line x1="480" y1="140" x2="20" y2="360" stroke="#00f5ff" stroke-width="0.3" opacity="0.2"/>
+        <!-- Cross hairs -->
+        <line x1="240" y1="250" x2="260" y2="250" stroke="#00f5ff" stroke-width="2"/>
+        <line x1="250" y1="240" x2="250" y2="260" stroke="#00f5ff" stroke-width="2"/>
+        <circle cx="250" cy="250" r="8" stroke="#00f5ff" stroke-width="1.5" fill="rgba(0,245,255,0.2)"/>
+        <!-- Data nodes -->
+        <circle cx="250" cy="20" r="4" fill="#00f5ff"/>
+        <circle cx="480" cy="140" r="4" fill="#00ff88"/>
+        <circle cx="480" cy="360" r="4" fill="#00f5ff"/>
+        <circle cx="250" cy="480" r="4" fill="#00ff88"/>
+        <circle cx="20" cy="360" r="4" fill="#00f5ff"/>
+        <circle cx="20" cy="140" r="4" fill="#00ff88"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ SERVICES ═══ -->
+<section id="services">
+  <div class="section-header reveal">
+    <span class="section-tag">Core Capabilities</span>
+    <h2 class="section-title">Our <span>Services</span></h2>
+    <p style="color:var(--muted);margin-top:1rem;font-size:1rem;max-width:500px;margin-left:auto;margin-right:auto;">
+      Comprehensive solutions engineered for the complexity of modern enterprise environments.
+    </p>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="services-grid">
+    <div class="service-card reveal reveal-delay-1">
+      <span class="card-num">01</span>
+      <div class="card-icon">📊</div>
+      <h3 class="card-title">Data Analysis &amp; Visualization</h3>
+      <p class="card-desc">Transform raw data into strategic intelligence. Power BI dashboards, Tableau visualizations, and IDEA/ACL analytics that drive real decisions.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+    <div class="service-card reveal reveal-delay-2">
+      <span class="card-num">02</span>
+      <div class="card-icon">⚙️</div>
+      <h3 class="card-title">Techno-functional Consultancy</h3>
+      <p class="card-desc">Expert consultancy for Microsoft Dynamics NAV &amp; BC. Bridging the gap between technical implementation and real-world business requirements.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+    <div class="service-card reveal reveal-delay-3">
+      <span class="card-num">03</span>
+      <div class="card-icon">🔍</div>
+      <h3 class="card-title">IT Systems Audits &amp; Reviews</h3>
+      <p class="card-desc">End-to-end IT systems acquisition, ITGC audits, and infrastructure reviews. Aligning technology investments with organizational objectives.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+    <div class="service-card reveal reveal-delay-4">
+      <span class="card-num">04</span>
+      <div class="card-icon">🛡️</div>
+      <h3 class="card-title">Information Security Programs</h3>
+      <p class="card-desc">ISO 27001-aligned security programs, CISM-certified expertise. Protecting data integrity and maintaining compliance across all standards.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+    <div class="service-card reveal reveal-delay-5">
+      <span class="card-num">05</span>
+      <div class="card-icon">⚡</div>
+      <h3 class="card-title">Process Digitization &amp; Automation</h3>
+      <p class="card-desc">Streamline operations with Python, Power Automate, and Power Apps. Converting manual audit workflows into scalable, repeatable processes.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+    <div class="service-card reveal reveal-delay-6">
+      <span class="card-num">06</span>
+      <div class="card-icon">🌐</div>
+      <h3 class="card-title">Web Applications Development</h3>
+      <p class="card-desc">Custom Django-based solutions, Power Platform apps, and scalable SaaS platforms — built for enterprise-grade performance and reliability.</p>
+      <a href="#contact" class="card-link">Engage ›</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ PRODUCT ═══ -->
+<section id="product">
+  <div class="product-wrap">
+    <div class="product-text reveal">
+      <div class="product-badge">Live Product</div>
+      <h2 class="product-title">Oreno <span>GRC Platform</span></h2>
+      <p class="product-desc">
+        A purpose-built Governance, Risk &amp; Compliance platform designed for humanitarian, public sector, and donor-funded organisations — with the depth that enterprise demands.
+      </p>
+      <ul class="feature-list">
+        <li>Risk register with real-time scoring and heat maps</li>
+        <li>Objectives tracking with performance dashboards</li>
+        <li>Issue log with workflow-driven resolution</li>
+        <li>Audit trail and donor accountability reporting</li>
+        <li>Role-based access aligned to ISO 27001 controls</li>
+      </ul>
+      <a href="#contact" class="btn-primary" style="display:inline-flex;">Request a Demo ›</a>
+    </div>
+
+    <div class="product-screens reveal reveal-delay-2">
+      <!-- Mock screen 1 -->
+      <div class="screen-mock">
+        <div class="screen-bar">
+          <span class="dot dot-r"></span>
+          <span class="dot dot-y"></span>
+          <span class="dot dot-g"></span>
+          <span class="screen-title">oreno-grc / risk-register / ADD_RISK</span>
+        </div>
+        <div class="screen-body">
+          <div class="screen-row"><span class="screen-label">RISK_ID</span><span class="screen-val">RSK-2025-047</span></div>
+          <div class="screen-row"><span class="screen-label">CATEGORY</span><span class="screen-val">IT / Cybersecurity</span></div>
+          <div class="screen-row"><span class="screen-label">LIKELIHOOD</span><span class="screen-val">High (4)</span></div>
+          <div class="screen-row"><span class="screen-label">IMPACT</span><span class="screen-val">Critical (5)</span></div>
+          <div class="screen-row"><span class="screen-label">STATUS</span><span class="screen-val"><span class="screen-tag tag-red">OPEN</span></span></div>
+          <div style="margin-top:.8rem;height:2px;background:linear-gradient(90deg,#ff6b35,transparent);opacity:0.6"></div>
+        </div>
+      </div>
+      <!-- Mock screen 2 -->
+      <div class="screen-mock">
+        <div class="screen-bar">
+          <span class="dot dot-r"></span>
+          <span class="dot dot-y"></span>
+          <span class="dot dot-g"></span>
+          <span class="screen-title">oreno-grc / issues / ADD_ISSUE</span>
+        </div>
+        <div class="screen-body">
+          <div class="screen-row"><span class="screen-label">ISSUE_ID</span><span class="screen-val">ISS-2025-012</span></div>
+          <div class="screen-row"><span class="screen-label">SOURCE</span><span class="screen-val">Q1 Internal Audit</span></div>
+          <div class="screen-row"><span class="screen-label">PRIORITY</span><span class="screen-val"><span class="screen-tag tag-yellow">MEDIUM</span></span></div>
+          <div class="screen-row"><span class="screen-label">OWNER</span><span class="screen-val">IT Dept.</span></div>
+          <div class="screen-row"><span class="screen-label">STATUS</span><span class="screen-val"><span class="screen-tag tag-green">IN PROGRESS</span></span></div>
+          <div style="margin-top:.8rem;height:2px;background:linear-gradient(90deg,#00ff88,transparent);opacity:0.6"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ COURSES ═══ -->
+<section id="courses">
+  <div class="section-header reveal">
+    <span class="section-tag">Professional Development</span>
+    <h2 class="section-title">Udemy <span>Courses</span></h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="courses-grid">
+    <div class="course-card reveal reveal-delay-1">
+      <div class="course-banner"></div>
+      <div class="course-inner">
+        <div class="course-meta">
+          <span class="course-platform">Udemy</span>
+          <span class="course-badge">EXAM PREP</span>
+        </div>
+        <h3 class="course-title">CISA Exam Preparation</h3>
+        <p class="course-desc">Comprehensive preparation for the Certified Information Systems Auditor examination. Model tests, study guides, and expert walkthroughs aligned to the ISACA framework.</p>
+        <a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank" class="course-link">View Course ›</a>
+      </div>
+    </div>
+    <div class="course-card reveal reveal-delay-2">
+      <div class="course-banner" style="background:linear-gradient(90deg,var(--green),var(--cyan))"></div>
+      <div class="course-inner">
+        <div class="course-meta">
+          <span class="course-platform">Udemy</span>
+          <span class="course-badge">GRC MASTERY</span>
+        </div>
+        <h3 class="course-title">Mastering GRC with Oreno</h3>
+        <p class="course-desc">Deep-dive into Governance, Risk &amp; Compliance using the Oreno platform. Practical, real-world scenarios for practitioners in audit, compliance, and risk management.</p>
+        <a href="https://www.udemy.com/course/mastering-grc-with-oreno-governance-risk-compliance/?couponCode=KEEPLEARNING" target="_blank" class="course-link">View Course ›</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ CONTACT ═══ -->
+<section id="contact">
+  <div class="section-header reveal">
+    <span class="section-tag">Engage</span>
+    <h2 class="section-title">Get in <span>Touch</span></h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="contact-wrap">
+    <div class="contact-info reveal">
+      <h3>Let's build something great.</h3>
+      <div class="contact-item">
+        <div class="contact-icon">📍</div>
+        <div class="contact-detail">Nairobi, Kenya</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">📞</div>
+        <div class="contact-detail"><a href="tel:+254711219536">+254 711 219 536</a></div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">✉️</div>
+        <div class="contact-detail"><a href="mailto:info@oreno.tech">info@oreno.tech</a></div>
+      </div>
+      <!-- Terminal block -->
+      <div style="margin-top:2rem;background:var(--bg3);border:1px solid var(--border);padding:1.2rem;font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--muted);line-height:1.8;">
+        <span style="color:var(--green)">$</span> ping hashrate.solutions<br/>
+        <span style="color:var(--cyan)">PONG</span> — 3ms TTL=128<br/>
+        <span style="color:var(--green)">$</span> curl https://oreno.tech/status<br/>
+        <span style="color:var(--text)">{</span> "status": <span style="color:var(--green)">"operational"</span>,<br/>
+        &nbsp;&nbsp;"services": <span style="color:var(--cyan)">6</span>, "uptime": <span style="color:var(--green)">"99.9%"</span> <span style="color:var(--text)">}</span>
+      </div>
+    </div>
+    <form class="contact-form reveal reveal-delay-2" onsubmit="return false">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input type="text" class="form-input" placeholder="John Doe"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" placeholder="john@company.com"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input type="text" class="form-input" placeholder="Project inquiry"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-input" placeholder="Tell us about your challenge..."></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Transmit Message ›</button>
+    </form>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <span class="logo">HASH<span>RATE</span> SOLUTIONS</span>
+      <p>Empowering organizations with enterprise-grade SaaS solutions for GRC, Learning, and Digital Transformation. Built in Nairobi. Deployed globally.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Services</h4>
+      <ul>
+        <li><a href="#services">Data Analytics</a></li>
+        <li><a href="#services">IT Audits</a></li>
+        <li><a href="#services">Info Security</a></li>
+        <li><a href="#services">Automation</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Courses</h4>
+      <ul>
+        <li><a href="https://www.udemy.com/course/information-system-audit-examination-preparation-model-tests/?referralCode=BF0F89DD7B9998773E8F" target="_blank">CISA Prep</a></li>
+        <li><a href="https://www.udemy.com/course/mastering-grc-with-oreno-governance-risk-compliance/" target="_blank">Mastering GRC</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="mailto:info@oreno.tech">info@oreno.tech</a></li>
+        <li><a href="tel:+254711219536">+254 711 219 536</a></li>
+        <li><a href="#contact">Nairobi, Kenya</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2025 Hashrate Solutions. All rights reserved.</span>
+    <div class="footer-bottom-links">
+      <a href="https://oreno.tech/privacy-policy/">Privacy Policy</a>
+      <a href="https://oreno.tech/cookie-policy/">Cookie Policy</a>
+      <a href="https://oreno.tech/docs/">Docs</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── CUSTOM CURSOR
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+(function animate(){
+  rx += (mx-rx)*.15; ry += (my-ry)*.15;
+  cursor.style.left = mx+'px'; cursor.style.top = my+'px';
+  ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  requestAnimationFrame(animate);
+})();
+
+// ── PARTICLE CANVAS
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles=[], mouse={x:null,y:null};
+
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+document.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+
+class Particle {
+  constructor(){
+    this.x = Math.random()*W;
+    this.y = Math.random()*H;
+    this.vx = (Math.random()-.5)*.4;
+    this.vy = (Math.random()-.5)*.4;
+    this.r = Math.random()*1.5+.5;
+    this.alpha = Math.random()*.5+.2;
+    this.color = Math.random()>.6 ? '#00ff88' : '#00f5ff';
+  }
+  update(){
+    this.x+=this.vx; this.y+=this.vy;
+    if(this.x<0||this.x>W) this.vx*=-1;
+    if(this.y<0||this.y>H) this.vy*=-1;
+  }
+  draw(){
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.alpha;
+    ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+for(let i=0;i<120;i++) particles.push(new Particle());
+
+function drawLines(){
+  const maxDist=120;
+  for(let i=0;i<particles.length;i++){
+    // mouse proximity line
+    if(mouse.x){
+      const dx=particles[i].x-mouse.x, dy=particles[i].y-mouse.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<180){
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(mouse.x,mouse.y);
+        ctx.strokeStyle=`rgba(0,245,255,${.4*(1-d/180)})`;
+        ctx.lineWidth=.5;
+        ctx.stroke();
+      }
+    }
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x;
+      const dy=particles[i].y-particles[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<maxDist){
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(0,245,255,${.15*(1-d/maxDist)})`;
+        ctx.lineWidth=.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p=>{ p.update(); p.draw(); });
+  drawLines();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ── SCROLL REVEAL
+const reveals = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e => {
+    if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); }
+  });
+},{ threshold:.12 });
+reveals.forEach(r => io.observe(r));
+
+// ── NAV ACTIVE HIGHLIGHT
+window.addEventListener('scroll', ()=>{
+  const nav = document.querySelector('nav');
+  nav.style.background = window.scrollY > 50
+    ? 'rgba(2,8,18,0.97)'
+    : 'rgba(2,8,18,0.85)';
+});
+</script>
+</body>
+</html>
