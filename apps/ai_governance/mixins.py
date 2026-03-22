@@ -1,8 +1,12 @@
+import logging
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 
 from users.permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, IsOrgStaffOrReadOnly
+
+logger = logging.getLogger(__name__)
 
 
 class OrganizationPermissionMixin(LoginRequiredMixin):
@@ -150,7 +154,7 @@ class AuditLogMixin:
                             'method': request.method
                         }
                     )
-            except:
-                pass  # Ignore errors in audit logging
+            except Exception as exc:
+                logger.debug("AI governance view audit logging skipped: %s", exc, exc_info=True)
         
         return response

@@ -1696,74 +1696,8 @@ def engagement_with_issues_pdf(request):
         response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
         return response
 
-def legal_case_summary_pdf(request):
-    org = request.tenant
-    status = request.GET.get('status')
-    case_type = request.GET.get('case_type')
-    priority = request.GET.get('priority')
-    lead_attorney = request.GET.get('lead_attorney')
-    case_name = request.GET.get('case_name')
-    cases = LegalCase.objects.filter(organization=org)
-    if status:
-        cases = cases.filter(status=status)
-    if case_type:
-        cases = cases.filter(case_type__name__icontains=case_type)
-    if priority:
-        cases = cases.filter(priority=priority)
-    if lead_attorney:
-        cases = cases.filter(lead_attorney__email__icontains=lead_attorney)
-    if case_name:
-        cases = cases.filter(title__icontains=case_name)
-    html_string = render_to_string('reports/legal_case_summary.html', {
-        'organization': org,
-        'cases': cases,
-        'filters': {'status': status, 'case_type': case_type, 'priority': priority, 'lead_attorney': lead_attorney, 'case_name': case_name},
-    })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_case_summary.pdf"'
-    return response
-
-def legal_case_details_pdf(request):
-    org = request.tenant
-    case_name = request.GET.get('case_name')
-    case = None
-    parties = []
-    tasks = []
-    documents = []
-    
-    # Calculate summary statistics for all cases
-    all_cases = LegalCase.objects.filter(organization=org)
-    total_cases = all_cases.count()
-    active_cases = all_cases.filter(status__in=['intake', 'investigation', 'litigation', 'settlement_negotiation']).count()
-    closed_cases = all_cases.filter(status='closed').count()
-    high_priority_cases = all_cases.filter(priority__gte=4).count()
-    total_tasks = LegalTask.objects.filter(organization=org).count()
-    
-    if case_name:
-        case = LegalCase.objects.filter(organization=org, title__icontains=case_name).first()
-        if case:
-            parties = case.parties.all()
-            tasks = case.tasks.all()
-            documents = case.documents.all()
-    
-    html_string = render_to_string('reports/legal_case_details.html', {
-        'organization': org,
-        'case': case,
-        'parties': parties,
-        'tasks': tasks,
-        'documents': documents,
-        'total_cases': total_cases,
-        'active_cases': active_cases,
-        'closed_cases': closed_cases,
-        'high_priority_cases': high_priority_cases,
-        'total_tasks': total_tasks,
-        'generation_timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-    })
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{org.code}_legal_case_details.pdf"'
-    return response
+# NOTE: Earlier duplicate definitions of legal_case_summary_pdf / legal_case_details_pdf were removed.
+# Canonical implementations live in the LEGAL REPORTS section (full PDF reports with analytics).
 
 def compliance_requirement_summary_pdf(request):
     org = request.tenant
@@ -2358,117 +2292,8 @@ def compliance_obligation_details_pdf(request):
     response['Content-Disposition'] = f'attachment; filename="{org.code}_compliance_obligation_details.pdf"'
     return response
 
-def contract_register_summary_pdf(request):
-    org = request.tenant
-    contracts = Contract.objects.filter(organization=org)
-    status = request.GET.get('status')
-    type_ = request.GET.get('type')
-    party = request.GET.get('party')
-    title = request.GET.get('title')
-    if status:
-        contracts = contracts.filter(status=status)
-    if type_:
-        contracts = contracts.filter(contract_type__name__icontains=type_)
-    if party:
-        contracts = contracts.filter(parties__name__icontains=party)
-    if title:
-        contracts = contracts.filter(title__icontains=title)
-    filters = {'status': status, 'type': type_, 'party': party, 'title': title}
-    return render(request, 'reports/contract_register_summary.html', {
-        'contracts': contracts,
-        'organization': org,
-        'filters': filters,
-    })
-
-def contract_register_detailed_pdf(request):
-    org = request.tenant
-    contracts = Contract.objects.filter(organization=org)
-    status = request.GET.get('status')
-    type_ = request.GET.get('type')
-    party = request.GET.get('party')
-    title = request.GET.get('title')
-    if status:
-        contracts = contracts.filter(status=status)
-    if type_:
-        contracts = contracts.filter(contract_type__name__icontains=type_)
-    if party:
-        contracts = contracts.filter(parties__name__icontains=party)
-    if title:
-        contracts = contracts.filter(title__icontains=title)
-    filters = {'status': status, 'type': type_, 'party': party, 'title': title}
-    return render(request, 'reports/contract_register_detailed.html', {
-        'contracts': contracts,
-        'organization': org,
-        'filters': filters,
-    })
-
-def milestone_register_pdf(request):
-    org = request.tenant
-    milestones = ContractMilestone.objects.filter(organization=org)
-    type_ = request.GET.get('type')
-    due_date = request.GET.get('due_date')
-    status = request.GET.get('status')
-    if type_:
-        milestones = milestones.filter(milestone_type__icontains=type_)
-    if due_date:
-        milestones = milestones.filter(due_date=due_date)
-    if status:
-        milestones = milestones.filter(status=status)
-    filters = {'type': type_, 'due_date': due_date, 'status': status}
-    return render(request, 'reports/milestone_register.html', {
-        'milestones': milestones,
-        'organization': org,
-        'filters': filters,
-    })
-
-def party_register_pdf(request):
-    org = request.tenant
-    parties = Party.objects.filter(organization=org)
-    party_name = request.GET.get('party_name')
-    role = request.GET.get('role')
-    if party_name:
-        parties = parties.filter(name__icontains=party_name)
-    if role:
-        parties = parties.filter(role__icontains=role)
-    filters = {'party_name': party_name, 'role': role}
-    return render(request, 'reports/party_register.html', {
-        'parties': parties,
-        'organization': org,
-        'filters': filters,
-    })
-
-def contract_expiry_pdf(request):
-    org = request.tenant
-    contracts = Contract.objects.filter(organization=org)
-    # Optionally filter by expiry date range
-    expiry_start = request.GET.get('expiry_start')
-    expiry_end = request.GET.get('expiry_end')
-    if expiry_start:
-        contracts = contracts.filter(expiry_date__gte=expiry_start)
-    if expiry_end:
-        contracts = contracts.filter(expiry_date__lte=expiry_end)
-    filters = {'expiry_start': expiry_start, 'expiry_end': expiry_end}
-    return render(request, 'reports/contract_expiry.html', {
-        'contracts': contracts,
-        'organization': org,
-        'filters': filters,
-    })
-
-def contract_details_pdf(request):
-    org = request.tenant
-    contracts = Contract.objects.filter(organization=org)
-    return render(request, 'reports/contract_details.html', {
-        'contracts': contracts,
-        'organization': org
-    })
-
-def milestone_details_pdf(request):
-    org = request.tenant
-    milestones = ContractMilestone.objects.filter(organization=org)
-    return render(request, 'reports/milestone_details.html', {
-        'milestones': milestones,
-        'organization': org
-    })
+# NOTE: Removed duplicate stub implementations of contract/milestone PDF views that only called render()
+# (they were shadowed by the full PDF implementations in the CONTRACT REPORTS section below).
 
 def party_details_pdf(request):
     """Generate party details report with optional filtering by party_id"""
@@ -3587,7 +3412,7 @@ def nist_threat_analysis_pdf(request):
 
 # ─── OBJECTIVE REPORTS (RISK APP) ─────────────────────────────────────────────
 def objective_list_pdf(request):
-    org = request.organization
+    org = request.tenant
     q = request.GET.get('q')
     status = request.GET.get('status')
     objectives = Objective.objects.filter(organization=org)
@@ -3624,7 +3449,7 @@ def objective_list_pdf(request):
     return response
 
 def objective_detailed_pdf(request):
-    org = request.organization
+    org = request.tenant
     # Filters: objective status and search
     q = request.GET.get('q')
     status = request.GET.get('status')

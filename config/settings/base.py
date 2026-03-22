@@ -252,7 +252,9 @@ CSP_FONT_SRC = (
     "https://cdn.ckeditor.com",
     "https://unpkg.com"
 )
-CSP_CONNECT_SRC = ("'self'", "https://api.example.com")
+# Connect-src: extend via env if you add APIs that use fetch/XHR (comma-separated origins, no spaces).
+_CSP_EXTRA_CONNECT = [o.strip() for o in os.getenv("CSP_CONNECT_SRC_EXTRA", "").split(",") if o.strip()]
+CSP_CONNECT_SRC = ("'self'",) + tuple(_CSP_EXTRA_CONNECT)
 CSP_MEDIA_SRC = ("'self'",)
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_SRC = ("'self'",)
@@ -298,10 +300,16 @@ TEMPLATES = [
 # -------------------------------------------------------------------
 # Database (defaults to SQLite, override via environment for Postgres)
 # -------------------------------------------------------------------
+_DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
+_DB_OPTIONS = {}
+# connect_timeout is PostgreSQL-specific; SQLite rejects unknown OPTIONS keys.
+if 'postgresql' in _DB_ENGINE:
+    _DB_OPTIONS['connect_timeout'] = int(os.getenv('DB_CONNECT_TIMEOUT', '10'))
+
 DATABASES = {
     'default': {
         # use DB_ENGINE for all backends (Postgres, SQLite, etc.)
-        'ENGINE':   os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'ENGINE':   _DB_ENGINE,
         # fall back to sqlite3 file if DB_NAME isn't set
         'NAME':     os.getenv('DB_NAME',   BASE_DIR / 'db.sqlite3'),
         # use the same vars you put in .env
@@ -310,9 +318,7 @@ DATABASES = {
         'HOST':     os.getenv('DB_HOST',   ''),
         'PORT':     os.getenv('DB_PORT',   '5432'),
         'CONN_MAX_AGE': 60 if not DEBUG else 0,
-        'OPTIONS': {
-            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
-        },
+        'OPTIONS': _DB_OPTIONS,
     }
 }
 
@@ -584,7 +590,8 @@ elif EMAIL_USE_TLS:
 # ------------------------------------------------------------------------------
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
-LOGOUT_REDIRECT_URL = '/accounts/logout/'
+# After logout, send users to a neutral page (not the logout URL again — that causes a redirect loop).
+LOGOUT_REDIRECT_URL = '/'
 LOGIN_REQUIRED_EXEMPT_URLS = [
     # Public site pages (accessible without login)
     '/',                        # public home page
@@ -723,8 +730,8 @@ CKEDITOR_5_CONFIGS = {
 # CKEditor 5 file storage
 CKEDITOR_5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
-# Absolute site URL for building links in emails, etc.
-SITE_URL = "http://org001.localhost:8000"
+# Absolute site URL for building links in emails, etc. (override per environment)
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 
 # Django Sites framework configuration
 SITE_ID = 1  # Default site ID

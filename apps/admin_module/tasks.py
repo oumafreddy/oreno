@@ -516,7 +516,7 @@ def add_data_to_sheet(worksheet, sheet_data):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except Exception:
                 pass
         adjusted_width = min(max_length + 2, 50)
         worksheet.column_dimensions[column_letter].width = adjusted_width
@@ -547,7 +547,8 @@ def get_file_size(file_path):
     """Get file size in bytes."""
     try:
         return default_storage.size(file_path)
-    except:
+    except Exception as exc:
+        logger.debug("get_file_size failed for %s: %s", file_path, exc)
         return 0
 
 def get_sheet_name_for_type(data_type):

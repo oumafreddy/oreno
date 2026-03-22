@@ -61,10 +61,10 @@ def test_agent_parse(prompt: str, user, org):
 
 def test_agent_execute(intent: dict, user, org, preview=True):
     """Test intent execution"""
-        if not intent or intent.get('action') == 'unknown':
-            print("\n[WARNING] Skipping execution - invalid intent")
-            return None
-    
+    if not intent or intent.get('action') == 'unknown':
+        print("\n[WARNING] Skipping execution - invalid intent")
+        return None
+
     print(f"\n{'='*60}")
     print(f"Testing Intent Execution (Preview Mode)")
     print(f"{'='*60}")
