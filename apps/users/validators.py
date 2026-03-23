@@ -92,10 +92,10 @@ class EnhancedPasswordStrengthValidator:
         # Check for user-specific information
         if user:
             user_info = [
-                user.username.lower(),
-                user.email.lower().split('@')[0],
-                user.first_name.lower(),
-                user.last_name.lower()
+                (getattr(user, 'username', None) or '').lower(),
+                (getattr(user, 'email', None) or '').lower().split('@')[0],
+                (getattr(user, 'first_name', None) or '').lower(),
+                (getattr(user, 'last_name', None) or '').lower(),
             ]
             
             for info in user_info:
