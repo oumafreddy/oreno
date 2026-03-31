@@ -114,7 +114,7 @@ This review analyzed the Oreno repository by attack surface: **Web application**
 
 - Server-side session and CSRF controls are mostly good in production (`Secure`, `HttpOnly` for session, `SameSite=Lax`), but CSRF is intentionally not `HttpOnly` in active settings paths.
 - The frontend consent cookie (`cookies_accepted=true`) is set via JavaScript without `Secure`, `SameSite`, or explicit domain constraints.
-- Cookie policy page embeds TikTok identify logic hashing user identifiers client-side; this can still be personal data processing and should be consent-gated.
+- Cookie policy page includes third-party tracking identify logic with hashed user identifiers; this can still be personal data processing and should be consent-gated.
 
 **Evidence:** `config/settings/base.py`, `config/settings/production.py`, `config/settings/development.py`, `static/js/cookies.js`, `templates/public/cookies.html`.
 
@@ -125,7 +125,7 @@ This review analyzed the Oreno repository by attack surface: **Web application**
 
 **Recommendation:**  
 - Set consent cookie with `Secure; SameSite=Lax` (or `Strict` where possible) and consider server-set cookie flags.  
-- Implement explicit consent categories and gate analytics/ads scripts (including TikTok identify) behind opt-in state.  
+- Implement explicit consent categories and gate analytics/ads scripts behind opt-in state.  
 - Keep a consent event log/versioning approach to prove policy acceptance state over time.  
 - Re-evaluate `CSRF_COOKIE_HTTPONLY=False` tradeoff and retain only if frontend architecture requires script access.
 
