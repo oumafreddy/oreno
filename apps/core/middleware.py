@@ -85,11 +85,15 @@ class OrganizationMiddleware:
 
         # 3) Get current tenant from request
         current_tenant = getattr(request, 'tenant', None)
-        
-        # 4) Enforce tenant access control for authenticated users
+
+        # 4) Enforce authentication only on tenant domains
         user = getattr(request, 'user', None)
+        if current_tenant and (not user or not user.is_authenticated):
+            return redirect('users:login')
+
+        # 5) Enforce tenant access control for authenticated users
         organization = None
-        
+
         if user and user.is_authenticated:
             # Get user's assigned organization
             user_organization = getattr(user, 'organization', None)
