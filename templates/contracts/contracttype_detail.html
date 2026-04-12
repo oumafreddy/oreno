@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Contract Type Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -20,7 +21,7 @@
                 <div class="card-body">
                     <table class="table table-sm mb-0">
                         <tr><th class="w-25">Name</th><td>{{ contracttype.name }}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ contracttype.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ contracttype.description|safe_html }}</div></td></tr>
                         <tr><th>Standard Template</th><td>{% if contracttype.is_standard_template %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td></tr>
                         <tr><th>Template File</th><td>{% if contracttype.template_file %}<a href="{{ contracttype.template_file.url }}" target="_blank">Download</a>{% else %}<span class="text-muted">None</span>{% endif %}</td></tr>
                     </table>

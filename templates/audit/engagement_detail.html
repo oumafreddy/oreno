@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 {% load static %}
 
@@ -49,16 +50,16 @@
         <div class="card-body">
           <div class="content-wrapper">
             <h6>Executive Summary</h6>
-            <div>{{ engagement.executive_summary|safe }}</div>
+            <div>{{ engagement.executive_summary|safe_html }}</div>
             <h6 class="mt-3">Purpose</h6>
-            <div>{{ engagement.purpose|safe }}</div>
+            <div>{{ engagement.purpose|safe_html }}</div>
             <h6 class="mt-3">Background</h6>
-            <div>{{ engagement.background|safe }}</div>
+            <div>{{ engagement.background|safe_html }}</div>
             <h6 class="mt-3">Scope</h6>
-            <div>{{ engagement.scope|safe }}</div>
+            <div>{{ engagement.scope|safe_html }}</div>
             {% if engagement.criteria %}
               <h6 class="mt-3">Criteria</h6>
-              <div>{{ engagement.criteria|safe }}</div>
+              <div>{{ engagement.criteria|safe_html }}</div>
             {% endif %}
           </div>
         </div>

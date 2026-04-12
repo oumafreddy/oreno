@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Issue Retest: {{ issueretest }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
@@ -79,17 +80,17 @@
                 
                 {% if issueretest.test_approach %}
                 <dt class="col-sm-3">Test Approach</dt>
-                <dd class="col-sm-9">{{ issueretest.test_approach|safe }}</dd>
+                <dd class="col-sm-9">{{ issueretest.test_approach|safe_html }}</dd>
                 {% endif %}
                 
                 {% if issueretest.test_evidence %}
                 <dt class="col-sm-3">Test Evidence</dt>
-                <dd class="col-sm-9">{{ issueretest.test_evidence|safe }}</dd>
+                <dd class="col-sm-9">{{ issueretest.test_evidence|safe_html }}</dd>
                 {% endif %}
                 
                 {% if issueretest.notes %}
                 <dt class="col-sm-3">Notes</dt>
-                <dd class="col-sm-9">{{ issueretest.notes|safe }}</dd>
+                <dd class="col-sm-9">{{ issueretest.notes|safe_html }}</dd>
                 {% endif %}
               </dl>
             </div>

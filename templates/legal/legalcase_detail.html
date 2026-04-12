@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Legal Case: {{ object.title }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -29,8 +30,8 @@
             <tr><th>Closed Date</th><td>{{ object.closed_date|default:'-' }}</td></tr>
             <tr><th>Estimated Resolution</th><td>{{ object.estimated_resolution_date|default:'-' }}</td></tr>
             <tr><th>Parties</th><td>{% for p in object.parties.all %}{{ p }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</td></tr>
-            <tr><th>Risk Description</th><td><div class="content-wrapper">{{ object.risk_description|safe }}</div></td></tr>
-            <tr><th>Compliance Description</th><td><div class="content-wrapper">{{ object.compliance_description|safe }}</div></td></tr>
+            <tr><th>Risk Description</th><td><div class="content-wrapper">{{ object.risk_description|safe_html }}</div></td></tr>
+            <tr><th>Compliance Description</th><td><div class="content-wrapper">{{ object.compliance_description|safe_html }}</div></td></tr>
             <tr><th>Internal Notes</th><td>{{ object.internal_notes|linebreaks }}</td></tr>
             <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
           </table>

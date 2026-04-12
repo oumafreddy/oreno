@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 
 {% block title %}{{ object.subcategory.subcategory_name }} - Implementation{% endblock %}
@@ -107,7 +108,7 @@
                     <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Assessment Notes</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.assessment_notes|safe }}
+                    {{ object.assessment_notes|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -119,7 +120,7 @@
                     <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Implementation Plan</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.implementation_plan|safe }}
+                    {{ object.implementation_plan|safe_html }}
                 </div>
             </div>
             {% endif %}

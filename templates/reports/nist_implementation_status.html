@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -172,21 +173,21 @@
   {% if implementation.assessment_notes %}
   <div class="field-group">
     <div class="field-label">Assessment Notes</div>
-    <div class="field-value">{{ implementation.assessment_notes|safe }}</div>
+    <div class="field-value">{{ implementation.assessment_notes|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if implementation.implementation_plan %}
   <div class="field-group">
     <div class="field-label">Implementation Plan</div>
-    <div class="field-value">{{ implementation.implementation_plan|safe }}</div>
+    <div class="field-value">{{ implementation.implementation_plan|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if implementation.implementation_notes %}
   <div class="field-group">
     <div class="field-label">Implementation Notes</div>
-    <div class="field-value">{{ implementation.implementation_notes|safe }}</div>
+    <div class="field-value">{{ implementation.implementation_notes|safe_html }}</div>
   </div>
   {% endif %}
 

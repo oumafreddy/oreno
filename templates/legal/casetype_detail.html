@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Case Type: {{ object.name }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -20,7 +21,7 @@
         <div class="card-body">
           <table class="table table-sm mb-0">
             <tr><th class="w-25">Name</th><td>{{ object.name }}</td></tr>
-            <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+            <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe_html }}</div></td></tr>
             <tr><th>Default Priority</th><td>{{ object.default_priority }}</td></tr>
             <tr><th>Organization</th><td>{{ object.organization }}</td></tr>
           </table>

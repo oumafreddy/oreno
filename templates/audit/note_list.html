@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 {% load limited_html %}
 {% load tenant_utils %}
@@ -62,7 +63,7 @@
             {% for note in notes %}
             <tr>
               <td>
-                <div class="fw-medium">{{ note.content|limited_html|truncatechars:60|safe }}</div>
+                <div class="fw-medium">{{ note.content|limited_html|truncatechars:60|safe_html }}</div>
                 {% if note.assigned_to %}
                   <small class="text-muted">Assigned to: {{ note.assigned_to.get_full_name|default:note.assigned_to.email }}</small>
                 {% endif %}

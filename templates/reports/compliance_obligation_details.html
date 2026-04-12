@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -120,7 +121,7 @@
   {% if obligation.description %}
   <div class="field-group">
     <div class="field-label">Description</div>
-    <div class="field-value">{{ obligation.description|safe }}</div>
+    <div class="field-value">{{ obligation.description|safe_html }}</div>
   </div>
   {% endif %}
 
@@ -193,7 +194,7 @@
   {% if obligation.requirement.description %}
   <div class="field-group">
     <div class="field-label">Requirement Description</div>
-    <div class="field-value">{{ obligation.requirement.description|safe }}</div>
+    <div class="field-value">{{ obligation.requirement.description|safe_html }}</div>
   </div>
   {% endif %}
 
@@ -238,7 +239,7 @@
             <span class="status-badge status-active">Valid</span>
           {% endif %}
         </td>
-        <td>{{ evidence.notes|safe|truncatechars:50|default:"-" }}</td>
+        <td>{{ evidence.notes|safe_html|truncatechars:50|default:"-" }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -331,7 +332,7 @@
   {% if evidence.notes %}
   <div class="field-group">
     <div class="field-label">Evidence Notes</div>
-    <div class="field-value">{{ evidence.notes|safe }}</div>
+    <div class="field-value">{{ evidence.notes|safe_html }}</div>
   </div>
   {% endif %}
 

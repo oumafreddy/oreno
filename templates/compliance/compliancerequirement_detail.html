@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Requirement: {{ object.requirement_id }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -21,7 +22,7 @@
                     <table class="table table-sm mb-0">
                         <tr><th class="w-25">Requirement ID</th><td>{{ object.requirement_id }}</td></tr>
                         <tr><th>Title</th><td>{{ object.title }}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe_html }}</div></td></tr>
                         <tr><th>Regulatory Framework</th><td>{{ object.regulatory_framework }}</td></tr>
                         <tr><th>Policy Document</th><td>{{ object.policy_document }}</td></tr>
                         <tr><th>Policy Section</th><td>{{ object.policy_section }}</td></tr>

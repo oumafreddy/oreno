@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Obligation: {{ object.obligation_id }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -21,7 +22,7 @@
                     <table class="table table-sm mb-0">
                         <tr><th class="w-25">Obligation ID</th><td>{{ object.obligation_id }}</td></tr>
                         <tr><th>Requirement</th><td>{{ object.requirement }}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe_html }}</div></td></tr>
                         <tr><th>Due Period</th><td>{{ object.due_period }}</td></tr>
                         <tr><th>Evidence Required</th><td>{{ object.evidence_required|yesno:"Yes,No" }}</td></tr>
                         <tr><th>Owner</th><td>{{ object.owner|default:object.owner_email }}</td></tr>

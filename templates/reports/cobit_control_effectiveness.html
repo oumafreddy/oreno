@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -164,28 +165,28 @@
   {% if control.control_description %}
   <div class="field-group">
     <div class="field-label">Control Description</div>
-    <div class="field-value">{{ control.control_description|safe }}</div>
+    <div class="field-value">{{ control.control_description|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if control.control_objectives %}
   <div class="field-group">
     <div class="field-label">Control Objectives</div>
-    <div class="field-value">{{ control.control_objectives|safe }}</div>
+    <div class="field-value">{{ control.control_objectives|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if control.implementation_notes %}
   <div class="field-group">
     <div class="field-label">Implementation Notes</div>
-    <div class="field-value">{{ control.implementation_notes|safe }}</div>
+    <div class="field-value">{{ control.implementation_notes|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if control.effectiveness_notes %}
   <div class="field-group">
     <div class="field-label">Effectiveness Notes</div>
-    <div class="field-value">{{ control.effectiveness_notes|safe }}</div>
+    <div class="field-value">{{ control.effectiveness_notes|safe_html }}</div>
   </div>
   {% endif %}
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Risk Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -25,9 +26,9 @@
                         <tr><th>Owner</th><td>{{ risk.risk_owner }}</td></tr>
                         <tr><th>Department</th><td>{{ risk.department }}</td></tr>
                         <tr><th>Date Identified</th><td>{{ risk.date_identified }}</td></tr>
-                        <tr><th>External Context</th><td><div class="content-wrapper">{{ risk.external_context|safe }}</div></td></tr>
-                        <tr><th>Internal Context</th><td><div class="content-wrapper">{{ risk.internal_context|safe }}</div></td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ risk.risk_description|safe }}</div></td></tr>
+                        <tr><th>External Context</th><td><div class="content-wrapper">{{ risk.external_context|safe_html }}</div></td></tr>
+                        <tr><th>Internal Context</th><td><div class="content-wrapper">{{ risk.internal_context|safe_html }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ risk.risk_description|safe_html }}</div></td></tr>
                         <tr><th>Inherent Impact</th><td>{{ risk.inherent_impact_score }}</td></tr>
                         <tr><th>Inherent Likelihood</th><td>{{ risk.inherent_likelihood_score }}</td></tr>
                         <tr><th>Inherent Risk Score</th><td>{{ risk.inherent_risk_score }}</td></tr>
@@ -35,21 +36,21 @@
                         <tr><th>Residual Likelihood</th><td>{{ risk.residual_likelihood_score }}</td></tr>
                         <tr><th>Residual Risk Score</th><td>{{ risk.residual_risk_score }}</td></tr>
                         <tr><th>Risk Appetite</th><td>{{ risk.risk_appetite }}</td></tr>
-                        <tr><th>Controls Description</th><td><div class="content-wrapper">{{ risk.controls_description|safe }}</div></td></tr>
+                        <tr><th>Controls Description</th><td><div class="content-wrapper">{{ risk.controls_description|safe_html }}</div></td></tr>
                         <tr><th>Control Status</th><td>{{ risk.get_control_status_display }}</td></tr>
                         <tr><th>Control Rating</th><td>{{ risk.get_control_rating_display }}</td></tr>
-                        <tr><th>Action Plan</th><td><div class="content-wrapper">{{ risk.action_plan|safe }}</div></td></tr>
+                        <tr><th>Action Plan</th><td><div class="content-wrapper">{{ risk.action_plan|safe_html }}</div></td></tr>
                         <tr><th>Action Plan Status</th><td>{{ risk.get_action_plan_status_display }}</td></tr>
                         <tr><th>Action Owner</th><td>{{ risk.action_owner }}</td></tr>
                         <tr><th>Action Due Date</th><td>{{ risk.action_due_date }}</td></tr>
-                        <tr><th>KRI Description</th><td><div class="content-wrapper">{{ risk.kri_description|safe }}</div></td></tr>
+                        <tr><th>KRI Description</th><td><div class="content-wrapper">{{ risk.kri_description|safe_html }}</div></td></tr>
                         <tr><th>KRI Threshold</th><td>{{ risk.kri_threshold }}</td></tr>
                         <tr><th>Next Review Date</th><td>{{ risk.next_review_date }}</td></tr>
                         <tr><th>Last Reviewed Date</th><td>{{ risk.last_reviewed_date }}</td></tr>
                         <tr><th>Last Reviewed By</th><td>{{ risk.last_reviewed_by }}</td></tr>
                         <tr><th>Closure Date</th><td>{{ risk.closure_date }}</td></tr>
-                        <tr><th>Closure Justification</th><td><div class="content-wrapper">{{ risk.closure_justification|safe }}</div></td></tr>
-                        <tr><th>Additional Notes</th><td><div class="content-wrapper">{{ risk.additional_notes|safe }}</div></td></tr>
+                        <tr><th>Closure Justification</th><td><div class="content-wrapper">{{ risk.closure_justification|safe_html }}</div></td></tr>
+                        <tr><th>Additional Notes</th><td><div class="content-wrapper">{{ risk.additional_notes|safe_html }}</div></td></tr>
                     </table>
                 </div>
             </div>

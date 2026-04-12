@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -158,42 +159,42 @@
   {% if incident.description %}
   <div class="field-group">
     <div class="field-label">Incident Description</div>
-    <div class="field-value">{{ incident.description|safe }}</div>
+    <div class="field-value">{{ incident.description|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if incident.affected_systems %}
   <div class="field-group">
     <div class="field-label">Affected Systems</div>
-    <div class="field-value">{{ incident.affected_systems|safe }}</div>
+    <div class="field-value">{{ incident.affected_systems|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if incident.containment_actions %}
   <div class="field-group">
     <div class="field-label">Containment Actions</div>
-    <div class="field-value">{{ incident.containment_actions|safe }}</div>
+    <div class="field-value">{{ incident.containment_actions|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if incident.eradication_actions %}
   <div class="field-group">
     <div class="field-label">Eradication Actions</div>
-    <div class="field-value">{{ incident.eradication_actions|safe }}</div>
+    <div class="field-value">{{ incident.eradication_actions|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if incident.recovery_actions %}
   <div class="field-group">
     <div class="field-label">Recovery Actions</div>
-    <div class="field-value">{{ incident.recovery_actions|safe }}</div>
+    <div class="field-value">{{ incident.recovery_actions|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if incident.lessons_learned %}
   <div class="field-group">
     <div class="field-label">Lessons Learned</div>
-    <div class="field-value">{{ incident.lessons_learned|safe }}</div>
+    <div class="field-value">{{ incident.lessons_learned|safe_html }}</div>
   </div>
   {% endif %}
 

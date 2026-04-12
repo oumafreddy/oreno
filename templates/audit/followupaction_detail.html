@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Follow-up Action: {{ followupaction.title }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
@@ -55,7 +56,7 @@
                 <dd class="col-sm-9">{{ followupaction.title }}</dd>
                 
                 <dt class="col-sm-3">Description</dt>
-                <dd class="col-sm-9">{{ followupaction.description|safe }}</dd>
+                <dd class="col-sm-9">{{ followupaction.description|safe_html }}</dd>
                 
                 <dt class="col-sm-3">Status</dt>
                 <dd class="col-sm-9">{{ followupaction.get_status_display }}</dd>

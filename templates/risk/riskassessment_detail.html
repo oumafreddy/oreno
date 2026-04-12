@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Risk Assessment Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -27,7 +28,7 @@
                         <tr><th>Impact Score</th><td>{{ assessment.impact_score }}</td></tr>
                         <tr><th>Likelihood Score</th><td>{{ assessment.likelihood_score }}</td></tr>
                         <tr><th>Risk Score</th><td>{{ assessment.risk_score }}</td></tr>
-                        <tr><th>Notes</th><td><div class="content-wrapper">{{ assessment.notes|safe }}</div></td></tr>
+                        <tr><th>Notes</th><td><div class="content-wrapper">{{ assessment.notes|safe_html }}</div></td></tr>
                     </table>
                 </div>
             </div>

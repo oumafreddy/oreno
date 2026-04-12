@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 {% load static %}
 
@@ -52,12 +53,12 @@
             <div class="card-header"><strong>Issue Details</strong></div>
             <div class="card-body">
               <h6>Description</h6>
-              <div class="content-wrapper">{{ issue.issue_description|safe }}</div>
+              <div class="content-wrapper">{{ issue.issue_description|safe_html }}</div>
               <h6 class="mt-3">Root Cause</h6>
-              <div class="content-wrapper">{{ issue.root_cause|safe }}</div>
+              <div class="content-wrapper">{{ issue.root_cause|safe_html }}</div>
               {% if issue.management_action_plan %}
               <h6 class="mt-3">Management Action Plan</h6>
-              <div class="content-wrapper">{{ issue.management_action_plan|safe }}</div>
+              <div class="content-wrapper">{{ issue.management_action_plan|safe_html }}</div>
               {% endif %}
             </div>
           </div>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 
 {% block title %}{{ object.subcategory_name }} - NIST Subcategory{% endblock %}
@@ -94,7 +95,7 @@
                     <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.description|safe }}
+                    {{ object.description|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -106,7 +107,7 @@
                     <h5 class="mb-0"><i class="bi bi-target me-2"></i>Outcomes</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.outcomes|safe }}
+                    {{ object.outcomes|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -118,7 +119,7 @@
                     <h5 class="mb-0"><i class="bi bi-book me-2"></i>Informative References</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.informative_references|safe }}
+                    {{ object.informative_references|safe_html }}
                 </div>
             </div>
             {% endif %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Framework: {{ object.name }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -22,7 +23,7 @@
                         <tr><th class="w-25">Name</th><td>{{ object.name }}</td></tr>
                         <tr><th>Version</th><td>{{ object.version }}</td></tr>
                         <tr><th>Regulatory Body</th><td>{{ object.regulatory_body }}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ object.description|safe_html }}</div></td></tr>
                     </table>
                 </div>
             </div>

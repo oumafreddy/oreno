@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -162,14 +163,14 @@
   {% if capability.assessment_notes %}
   <div class="field-group">
     <div class="field-label">Assessment Notes</div>
-    <div class="field-value">{{ capability.assessment_notes|safe }}</div>
+    <div class="field-value">{{ capability.assessment_notes|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if capability.improvement_plan %}
   <div class="field-group">
     <div class="field-label">Improvement Plan</div>
-    <div class="field-value">{{ capability.improvement_plan|safe }}</div>
+    <div class="field-value">{{ capability.improvement_plan|safe_html }}</div>
   </div>
   {% endif %}
 

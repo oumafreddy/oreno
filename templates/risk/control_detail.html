@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Control Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -30,7 +31,7 @@
                         <tr><th>Last Review Date</th><td>{{ control.last_review_date }}</td></tr>
                         <tr><th>Next Review Date</th><td>{{ control.next_review_date }}</td></tr>
                         <tr><th>Documentation</th><td>{% if control.documentation %}<a href="{{ control.documentation.url }}">Download</a>{% else %}<span class="text-muted">None</span>{% endif %}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ control.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ control.description|safe_html }}</div></td></tr>
                     </table>
                 </div>
             </div>

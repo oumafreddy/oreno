@@ -1,3 +1,4 @@
+{% load safe_filters %}
 {% load limited_html %}
 {% load static %}
 
@@ -16,7 +17,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h6 class="mb-1">{{ note.get_note_type_display }}</h6>
-                            <p class="mb-1">{{ note.content|truncatewords:50|safe }}</p>
+                            <p class="mb-1">{{ note.content|truncatewords:50|safe_html }}</p>
                             <small class="text-muted">
                                 {% if note.created_by %}
                                   By {{ note.created_by.get_full_name|default:note.created_by.username }} 

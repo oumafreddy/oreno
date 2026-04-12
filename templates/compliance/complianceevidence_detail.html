@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Evidence for Obligation: {{ object.obligation }}{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -23,7 +24,7 @@
                         <tr><th>Document</th><td>{{ object.document }}</td></tr>
                         <tr><th>Validity Start</th><td>{{ object.validity_start }}</td></tr>
                         <tr><th>Validity End</th><td>{{ object.validity_end }}</td></tr>
-                        <tr><th>Notes</th><td><div class="content-wrapper">{{ object.notes|safe }}</div></td></tr>
+                        <tr><th>Notes</th><td><div class="content-wrapper">{{ object.notes|safe_html }}</div></td></tr>
                     </table>
                 </div>
             </div>

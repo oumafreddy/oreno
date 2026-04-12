@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}KRI Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -20,7 +21,7 @@
                 <div class="card-body">
                     <table class="table table-sm mb-0">
                         <tr><th class="w-25">Name</th><td>{{ kri.name }}</td></tr>
-                        <tr><th>Description</th><td><div class="content-wrapper">{{ kri.description|safe }}</div></td></tr>
+                        <tr><th>Description</th><td><div class="content-wrapper">{{ kri.description|safe_html }}</div></td></tr>
                         <tr><th>Value</th><td>{{ kri.value }}</td></tr>
                         <tr><th>Unit</th><td>{{ kri.unit }}</td></tr>
                         <tr><th>Timestamp</th><td>{{ kri.timestamp|date:'Y-m-d H:i' }}</td></tr>

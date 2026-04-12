@@ -14,28 +14,15 @@ from .mixins import OrganizationScopedApiMixin, IsInOrganizationPermission
 logger = logging.getLogger(__name__)
 
 class NotificationsAPIView(APIView):
-    """
-    API view for notifications that gracefully handles unauthenticated requests
-    by returning an empty array instead of redirecting to the login page.
-    """
-    permission_classes = []  # No permissions required - we'll handle authentication manually
+    """Returns notifications for the authenticated user's active organisation."""
+    permission_classes = [IsAuthenticated, IsInOrganizationPermission]
 
     def get(self, request, *args, **kwargs):
-        # If user is not authenticated, return an empty array
-        if not request.user.is_authenticated:
-            logger.debug("NotificationsAPIView: Returning empty array for unauthenticated user")
-            return Response([], status=status.HTTP_200_OK)
-        
-        # For authenticated users, get organization-scoped notifications
         active_organization = getattr(request.user, 'active_organization', None)
         if not active_organization:
-            # No active organization, return empty array
             return Response([], status=status.HTTP_200_OK)
-            
-        # This is a placeholder that will be replaced with actual notification fetching logic
-        # In a real implementation, filter notifications by organization
-        notifications = []  # In a real implementation, this would be fetched from the database
-        
+        # TODO: replace with real DB fetch when notification model is implemented
+        notifications = []
         return Response(notifications, status=status.HTTP_200_OK)
 
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 
 {% block title %}{{ object.threat_name }} - NIST Threat{% endblock %}
@@ -89,7 +90,7 @@
                     <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.description|safe }}
+                    {{ object.description|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -101,7 +102,7 @@
                     <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Impact Analysis</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.impact_analysis|safe }}
+                    {{ object.impact_analysis|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -113,7 +114,7 @@
                     <h5 class="mb-0"><i class="bi bi-cpu me-2"></i>Affected Assets</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.affected_assets|safe }}
+                    {{ object.affected_assets|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -125,7 +126,7 @@
                     <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Mitigation Strategies</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.mitigation_strategies|safe }}
+                    {{ object.mitigation_strategies|safe_html }}
                 </div>
             </div>
             {% endif %}

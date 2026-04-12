@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 {% load crispy_forms_tags %}
 
@@ -49,7 +50,7 @@
                                 </a>
                             </td>
                             <td>{{ function.function_name }}</td>
-                            <td>{{ function.description|safe|truncatewords:20 }}</td>
+                            <td>{{ function.description|safe_html|truncatewords:20 }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <a href="{% url 'risk:nistfunction_detail' function.pk %}" class="btn btn-outline-primary">

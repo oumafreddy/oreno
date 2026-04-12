@@ -1,3 +1,4 @@
+{% load safe_filters %}
 <div id="risks-list-container">
   <div class="card shadow-sm mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -16,7 +17,7 @@
               <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                   <h6 class="mb-1">{{ risk.code }}: {{ risk.risk_name }}</h6>
-                  <p class="mb-1 text-muted">{{ risk.risk_description|truncatewords:30|safe }}</p>
+                  <p class="mb-1 text-muted">{{ risk.risk_description|truncatewords:30|safe_html }}</p>
                   <div class="d-flex gap-2">
                     <span class="badge bg-primary">{{ risk.risk_register.register_name }}</span>
                     <span class="badge bg-{% if risk.residual_risk_score >= 20 %}danger{% elif risk.residual_risk_score >= 10 %}warning{% else %}success{% endif %}">

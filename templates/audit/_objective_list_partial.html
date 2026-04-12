@@ -1,3 +1,4 @@
+{% load safe_filters %}
 <div id="objective-list-container">
   {% if objectives %}
   <div class="list-group">
@@ -5,7 +6,7 @@
       <div class="list-group-item d-flex justify-content-between align-items-center">
         <div>
           <h6 class="mb-1">{{ objective.title }}</h6>
-          <small class="text-muted">{{ objective.description|truncatewords:20|safe }}</small>
+          <small class="text-muted">{{ objective.description|truncatewords:20|safe_html }}</small>
         </div>
         <div class="btn-group" role="group">
           <a href="{% url 'audit:objective-detail' objective.pk %}" class="btn btn-sm btn-outline-primary">View</a>

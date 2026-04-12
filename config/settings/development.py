@@ -231,3 +231,26 @@ LOGGING['loggers']['django.db.backends'] = {
 # Remove deprecated setting in newer Django versions
 if hasattr(globals(), 'USE_L10N'):
     del USE_L10N
+
+# ------------------------------------------------------------------------------
+# Development CSP — relaxed for local multi-tenant testing
+# These override the strict production values from base.py
+# ------------------------------------------------------------------------------
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-eval'",        # browser devtools / hot-reload convenience
+    "'unsafe-inline'",      # inline scripts not yet migrated to nonce
+    "https://cdn.plot.ly",  # Plotly charts (host locally to remove)
+    "http://org001.localhost:8000",
+    "http://org001.localhost",
+    "http://org002.localhost:8000",
+    "http://org002.localhost",
+    "http://krcs.localhost:8000",
+    "http://krcs.localhost",
+)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",      # CKEditor 5 injects inline styles
+    "http://org001.localhost:8000",
+    "http://org001.localhost",
+)

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Case Types{% endblock %}
 {% block content %}
 <div class="container py-4">
@@ -23,7 +24,7 @@
       {% for casetype in object_list %}
       <tr>
         <td><a href="{% url 'legal:casetype_detail' casetype.pk %}">{{ casetype.name }}</a></td>
-        <td>{{ casetype.description|truncatewords:12|safe }}</td>
+        <td>{{ casetype.description|truncatewords:12|safe_html }}</td>
         <td>{{ casetype.default_priority }}</td>
         <td>{{ casetype.organization }}</td>
         <td>

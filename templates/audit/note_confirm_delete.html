@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load safe_filters %}
 {% load i18n %}
 
 {% block title %}{% trans "Delete Note" %}{% endblock %}
@@ -18,7 +19,7 @@
                     
                     <div class="alert alert-info">
                         <strong>{% trans "Note Content:" %}</strong><br>
-                        {{ object.content|safe }}
+                        {{ object.content|safe_html }}
                     </div>
                     
                     <div class="mb-3">

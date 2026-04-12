@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 
 {% block title %}COBIT Domain - {{ cobitdomain.domain_name }}{% endblock %}
@@ -57,7 +58,7 @@
       <div class="card mt-3">
         <div class="card-header"><strong>Description</strong></div>
         <div class="card-body">
-          <div class="content-wrapper">{{ cobitdomain.description|safe|default:"No description provided." }}</div>
+          <div class="content-wrapper">{{ cobitdomain.description|safe_html|default:"No description provided." }}</div>
         </div>
       </div>
 
@@ -66,7 +67,7 @@
       <div class="card mt-3">
         <div class="card-header"><strong>Objectives</strong></div>
         <div class="card-body">
-          <div class="content-wrapper">{{ cobitdomain.objectives|safe }}</div>
+          <div class="content-wrapper">{{ cobitdomain.objectives|safe_html }}</div>
         </div>
       </div>
       {% endif %}

@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -52,7 +53,7 @@
     {% if engagement.executive_summary %}
     <div style="margin-top: 0.5cm;">
       <div class="field-label">Executive Summary</div>
-      <div class="field-value">{{ engagement.executive_summary|safe }}</div>
+      <div class="field-value">{{ engagement.executive_summary|safe_html }}</div>
     </div>
     {% endif %}
   </div>
@@ -62,13 +63,13 @@
     {% if engagement.purpose %}
     <div class="field-group">
       <div class="field-label">Purpose</div>
-      <div class="field-value">{{ engagement.purpose|safe }}</div>
+      <div class="field-value">{{ engagement.purpose|safe_html }}</div>
     </div>
     {% endif %}
     {% if engagement.background %}
     <div class="field-group">
       <div class="field-label">Background</div>
-      <div class="field-value">{{ engagement.background|safe }}</div>
+      <div class="field-value">{{ engagement.background|safe_html }}</div>
     </div>
     {% endif %}
   </div>
@@ -93,7 +94,7 @@
     <h3>Audit Conclusion</h3>
     <table class="report-table" style="font-size: 10pt;">
       <tr><th style="width:20%">Conclusion</th><td><span class="status-badge status-{{ engagement.conclusion|lower }}">{{ engagement.get_conclusion_display }}</span></td></tr>
-      {% if engagement.conclusion_description %}<tr><th>Conclusion Description</th><td>{{ engagement.conclusion_description|safe }}</td></tr>{% endif %}
+      {% if engagement.conclusion_description %}<tr><th>Conclusion Description</th><td>{{ engagement.conclusion_description|safe_html }}</td></tr>{% endif %}
     </table>
   </div>
 
@@ -109,12 +110,12 @@
 
     {% if issue.issue_description %}
     <div class="field-label">Issue Description</div>
-    <div class="field-value">{{ issue.issue_description|safe }}</div>
+    <div class="field-value">{{ issue.issue_description|safe_html }}</div>
     {% endif %}
 
     {% if issue.root_cause %}
     <div class="field-label">Root Cause</div>
-    <div class="field-value">{{ issue.root_cause|safe }}</div>
+    <div class="field-value">{{ issue.root_cause|safe_html }}</div>
     {% endif %}
 
     {% with recs=issue.recommendations.all %}
@@ -125,7 +126,7 @@
           {% for rec in recs %}
             <li>
               <div><strong>{{ rec.title }}</strong></div>
-              {% if rec.description %}<div>{{ rec.description|safe }}</div>{% endif %}
+              {% if rec.description %}<div>{{ rec.description|safe_html }}</div>{% endif %}
             </li>
           {% endfor %}
         </ol>
@@ -137,7 +138,7 @@
     <div class="field-label">Risks</div>
     <div class="field-value">
       {% if issue.risks %}
-        {{ issue.risks|safe }}
+        {{ issue.risks|safe_html }}
       {% endif %}
       
       {% if issue.linked_risks.all %}
@@ -147,7 +148,7 @@
           <div style="margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #007bff;">
             <div style="font-weight: bold;">{{ risk.risk_name }}</div>
             {% if risk.risk_description %}
-              <div style="margin: 4px 0; font-size: 0.9em;">{{ risk.risk_description|safe }}</div>
+              <div style="margin: 4px 0; font-size: 0.9em;">{{ risk.risk_description|safe_html }}</div>
             {% endif %}
             <div style="font-size: 0.8em; color: #666; font-style: italic;">
               Register: {{ risk.risk_register.register_name|default:"Not specified" }}
@@ -160,7 +161,7 @@
 
     {% if issue.management_action_plan %}
     <div class="field-label">Management Action Plan</div>
-    <div class="field-value">{{ issue.management_action_plan|safe }}</div>
+    <div class="field-value">{{ issue.management_action_plan|safe_html }}</div>
     {% endif %}
   </div>
   {% endfor %}

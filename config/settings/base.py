@@ -23,30 +23,11 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     raise Exception("DJANGO_SECRET_KEY not set in environment")
 
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://krcs',
-    'http://oreno',
-    'https://krcs',
-    'https://oreno',
-    'https://localhost:8000',
-    'https://127.0.0.1:8000',
-]
-# Add any additional domains from ALLOWED_HOSTS with proper schemes
-for host in ALLOWED_HOSTS:
-    if host != '*':
-        CSRF_TRUSTED_ORIGINS.extend([
-            f'http://{host}',
-            f'https://{host}'
-        ])
-
-# Add custom local domains for multi-tenant local development
+# Local multi-tenant domains — added to ALLOWED_HOSTS for dev; production sets ALLOWED_HOSTS via env
 LOCAL_TENANT_DOMAINS = [
     'org001.localhost',
     'org002.localhost',
@@ -55,18 +36,29 @@ LOCAL_TENANT_DOMAINS = [
     'krcs.localhost',
     'oreno.localhost',
 ]
-
-# Ensure these are in ALLOWED_HOSTS
 for domain in LOCAL_TENANT_DOMAINS:
     if domain not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(domain)
 
-# Ensure these are in CSRF_TRUSTED_ORIGINS with both http and https
+# CSRF trusted origins — explicit list; do NOT auto-expand from ALLOWED_HOSTS
+# (that would silently inherit production IPs from the .env DJANGO_ALLOWED_HOSTS value)
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://localhost:8000',
+    'https://127.0.0.1:8000',
+    'http://krcs',
+    'https://krcs',
+    'http://oreno',
+    'https://oreno',
+]
 for domain in LOCAL_TENANT_DOMAINS:
-    CSRF_TRUSTED_ORIGINS.extend([
-        f'http://{domain}',
-        f'https://{domain}',
-    ])
+    CSRF_TRUSTED_ORIGINS.extend([f'http://{domain}', f'https://{domain}'])
+
+# Allow extra origins via env (comma-separated, used in staging/CI where base.py is loaded)
+_extra_csrf = os.getenv('CSRF_TRUSTED_ORIGINS_EXTRA', '')
+if _extra_csrf:
+    CSRF_TRUSTED_ORIGINS += [o.strip() for o in _extra_csrf.split(',') if o.strip()]
 
 # ------------------------------------------------------------------------------
 # Installed Applications
@@ -84,9 +76,8 @@ INSTALLED_APPS = [
     'django.contrib.sites',  # Required for email absolute URLs
 
     # Third-party
-    'django_tenants', 
-    # 'debug_toolbar',  # Temporarily disabled due to missing templates
-    'django_ckeditor_5', 
+    'django_tenants',
+    'django_ckeditor_5',
     'widget_tweaks',
     'reversion',
     'crispy_forms',
@@ -159,7 +150,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day'
     },
-    # Renderer settings
+    # Renderer settings — BrowsableAPIRenderer only in DEBUG; never exposed in production
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
@@ -215,52 +206,30 @@ MIDDLEWARE = [
     'common.middleware.LoginRequiredMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
-    'audit.middleware.NotificationAPIMiddleware',  # Handle notifications API gracefully
 ]
 
-# Content Security Policy
+# ------------------------------------------------------------------------------
+# Content Security Policy — nonce-based, no unsafe-eval, no unsafe-inline
+# All JS/CSS is served via {% static %}. External CDN overrides belong in development.py.
+# To allow additional fetch/XHR origins set CSP_CONNECT_SRC_EXTRA env var (comma-separated).
+# ------------------------------------------------------------------------------
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC = (
+CSP_STYLE_SRC   = ("'self'",)   # nonce injected per-request by CSPNonceMiddleware
+CSP_SCRIPT_SRC  = (
     "'self'",
-    "'unsafe-inline'",
-    "https://cdn.jsdelivr.net",
-    "https://cdnjs.cloudflare.com",
-    "https://cdn.ckeditor.com",
-    "https://unpkg.com"
-)
-CSP_SCRIPT_SRC = (
-    "'self'",
-    "'unsafe-inline'",
-    "'unsafe-eval'",
-    "https://cdn.jsdelivr.net",
-    "https://code.jquery.com",
-    "https://unpkg.com",
+    # Plotly is loaded from CDN in dashboard_charts.js until hosted locally (see Step 2b)
     "https://cdn.plot.ly",
-    "https://www.googletagmanager.com",
-    "https://cdnjs.cloudflare.com",
-    "https://cdn.ckeditor.com",
-    "https://org001.localhost:8000",
-    "https://org001.localhost",
-    "http://org001.localhost:8000",
-    "http://org001.localhost"
 )
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_FONT_SRC = (
-    "'self'",
-    "https://cdn.jsdelivr.net",
-    "https://cdnjs.cloudflare.com",
-    "https://cdn.ckeditor.com",
-    "https://unpkg.com"
-)
-# Connect-src: extend via env if you add APIs that use fetch/XHR (comma-separated origins, no spaces).
+CSP_IMG_SRC     = ("'self'", "data:", "https:")
+CSP_FONT_SRC    = ("'self'",)
 _CSP_EXTRA_CONNECT = [o.strip() for o in os.getenv("CSP_CONNECT_SRC_EXTRA", "").split(",") if o.strip()]
 CSP_CONNECT_SRC = ("'self'",) + tuple(_CSP_EXTRA_CONNECT)
-CSP_MEDIA_SRC = ("'self'",)
-CSP_OBJECT_SRC = ("'none'",)
-CSP_FRAME_SRC = ("'self'",)
-CSP_BASE_URI = ("'self'",)
-CSP_FORM_ACTION = ("'self'",)
-CSP_FRAME_ANCESTORS = ("'self'",)
+CSP_MEDIA_SRC       = ("'self'",)
+CSP_OBJECT_SRC      = ("'none'",)
+CSP_FRAME_SRC       = ("'self'",)
+CSP_BASE_URI        = ("'self'",)
+CSP_FORM_ACTION     = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'none'",)   # prevents clickjacking from any origin
 CSP_BLOCK_ALL_MIXED_CONTENT = True
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
 
@@ -486,18 +455,18 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 3600))
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', 86400))  # 1 day minimum; production.py overrides to 1 year
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true','1','yes')
 
 # Session settings
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Strict'  # Strict: GRC app — no cross-site navigation expected
 
-# CSRF settings
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
+# CSRF settings — cookie is HttpOnly; JS reads token from <meta name="csrf-token"> in base.html
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Strict'
 
 # ------------------------------------------------------------------------------
 # Debug toolbar

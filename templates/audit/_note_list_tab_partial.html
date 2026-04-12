@@ -1,3 +1,4 @@
+{% load safe_filters %}
 {% load static %}
 {% load limited_html %}
 
@@ -39,7 +40,7 @@
       {% for note in notes %}
       <tr>
         <td>
-          <div class="note-content mb-1">{{ note.content|safe }}</div>
+          <div class="note-content mb-1">{{ note.content|safe_html }}</div>
           <small class="text-muted">Created: {{ note.created_at|date:'M d, Y' }} by {% if note.created_by %}{{ note.created_by.get_full_name }}{% else %}-{% endif %}</small>
         </td>
         <td>

@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -162,7 +163,7 @@
   {% if risk.risk_description %}
   <div class="field-group">
     <div class="field-label">Risk Description</div>
-    <div class="field-value">{{ risk.risk_description|safe }}</div>
+    <div class="field-value">{{ risk.risk_description|safe_html }}</div>
   </div>
   {% endif %}
 
@@ -172,11 +173,11 @@
     <div class="field-value">
       {% if risk.external_context %}
         <strong>External Context:</strong><br>
-        {{ risk.external_context|safe }}<br><br>
+        {{ risk.external_context|safe_html }}<br><br>
       {% endif %}
       {% if risk.internal_context %}
         <strong>Internal Context:</strong><br>
-        {{ risk.internal_context|safe }}
+        {{ risk.internal_context|safe_html }}
       {% endif %}
     </div>
   </div>
@@ -185,14 +186,14 @@
   {% if risk.controls_description %}
   <div class="field-group">
     <div class="field-label">Controls Description</div>
-    <div class="field-value">{{ risk.controls_description|safe }}</div>
+    <div class="field-value">{{ risk.controls_description|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if risk.action_plan %}
   <div class="field-group">
     <div class="field-label">Action Plan</div>
-    <div class="field-value">{{ risk.action_plan|safe }}</div>
+    <div class="field-value">{{ risk.action_plan|safe_html }}</div>
   </div>
   {% endif %}
 
@@ -200,7 +201,7 @@
   <div class="field-group">
     <div class="field-label">Key Risk Indicators</div>
     <div class="field-value">
-      {{ risk.kri_description|safe }}
+      {{ risk.kri_description|safe_html }}
       {% if risk.kri_threshold %}
         <br><strong>Threshold:</strong> {{ risk.kri_threshold }}%
       {% endif %}
@@ -211,7 +212,7 @@
   {% if risk.additional_notes %}
   <div class="field-group">
     <div class="field-label">Additional Notes</div>
-    <div class="field-value">{{ risk.additional_notes|safe }}</div>
+    <div class="field-value">{{ risk.additional_notes|safe_html }}</div>
   </div>
   {% endif %}
 </div>

@@ -140,17 +140,33 @@
         toast.setAttribute('role', 'alert');
         toast.setAttribute('aria-live', 'assertive');
         toast.setAttribute('aria-atomic', 'true');
-        
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    <strong>${title}</strong><br>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        `;
-        
+
+        // Build DOM tree without innerHTML to avoid XSS via title/message values
+        const flex = document.createElement('div');
+        flex.className = 'd-flex';
+
+        const body = document.createElement('div');
+        body.className = 'toast-body';
+
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = title;
+        body.appendChild(titleEl);
+        body.appendChild(document.createElement('br'));
+
+        const msgEl = document.createElement('span');
+        msgEl.textContent = message;
+        body.appendChild(msgEl);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+        closeBtn.setAttribute('data-bs-dismiss', 'toast');
+        closeBtn.setAttribute('aria-label', 'Close');
+
+        flex.appendChild(body);
+        flex.appendChild(closeBtn);
+        toast.appendChild(flex);
+
         return toast;
     }
 
@@ -172,7 +188,11 @@
         })
         .then(response => response.text())
         .then(html => {
-            target.innerHTML = html;
+            // Parse into a sandboxed document and strip any injected scripts before adopting
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            doc.querySelectorAll('script').forEach(s => s.remove());
+            target.replaceChildren(...doc.body.childNodes);
             if (options.callback) {
                 options.callback(target);
             }

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 {% block title %}Risk Registers{% endblock %}
 {% block content %}
@@ -37,7 +38,7 @@
                         <td><a href="{% url 'risk:riskregister_detail' register.pk %}">{{ register.register_name }}</a></td>
                         <td>{{ register.register_period }}</td>
                         <td>{{ register.register_creation_date }}</td>
-                        <td>{{ register.register_description|truncatechars:40|safe }}</td>
+                        <td>{{ register.register_description|truncatechars:40|safe_html }}</td>
                         <td>{{ register.get_risk_count }}</td>
                         <td>
                             <a href="{% url 'risk:riskregister_detail' register.pk %}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Risk Register Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
@@ -18,7 +19,7 @@
                 <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ riskregister.register_name }}</dd>
                 <dt class="col-sm-4">Period</dt><dd class="col-sm-8">{{ riskregister.register_period }}</dd>
                 <dt class="col-sm-4">Created</dt><dd class="col-sm-8">{{ riskregister.register_creation_date }}</dd>
-                <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ riskregister.register_description|safe }}</dd>
+                <dt class="col-sm-4">Description</dt><dd class="col-sm-8">{{ riskregister.register_description|safe_html }}</dd>
                 <dt class="col-sm-4">Risks</dt><dd class="col-sm-8">
                     {% if riskregister.risks.all %}
                         <ul class="list-group list-group-flush">

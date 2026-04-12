@@ -1,4 +1,5 @@
 {% extends "reports/base_report.html" %}
+{% load safe_filters %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -180,35 +181,35 @@
   {% if threat.threat_description %}
   <div class="field-group">
     <div class="field-label">Threat Description</div>
-    <div class="field-value">{{ threat.threat_description|safe }}</div>
+    <div class="field-value">{{ threat.threat_description|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if threat.attack_vectors %}
   <div class="field-group">
     <div class="field-label">Attack Vectors</div>
-    <div class="field-value">{{ threat.attack_vectors|safe }}</div>
+    <div class="field-value">{{ threat.attack_vectors|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if threat.impact_analysis %}
   <div class="field-group">
     <div class="field-label">Impact Analysis</div>
-    <div class="field-value">{{ threat.impact_analysis|safe }}</div>
+    <div class="field-value">{{ threat.impact_analysis|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if threat.mitigation_strategies %}
   <div class="field-group">
     <div class="field-label">Mitigation Strategies</div>
-    <div class="field-value">{{ threat.mitigation_strategies|safe }}</div>
+    <div class="field-value">{{ threat.mitigation_strategies|safe_html }}</div>
   </div>
   {% endif %}
 
   {% if threat.threat_indicators %}
   <div class="field-group">
     <div class="field-label">Threat Indicators</div>
-    <div class="field-value">{{ threat.threat_indicators|safe }}</div>
+    <div class="field-value">{{ threat.threat_indicators|safe_html }}</div>
   </div>
   {% endif %}
 

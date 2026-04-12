@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% block title %}Party Detail{% endblock %}
 {% block content %}
 <div class="container-fluid mt-3">
@@ -22,7 +23,7 @@
                         <tr><th class="w-25">Type</th><td>{{ party.get_party_type_display }}</td></tr>
                         <tr><th>Legal Entity</th><td>{{ party.legal_entity_name|default:'-' }}</td></tr>
                         <tr><th>Registration Number</th><td>{{ party.registration_number|default:'-' }}</td></tr>
-                        <tr><th>Address</th><td><div class="content-wrapper">{{ party.address|safe }}</div></td></tr>
+                        <tr><th>Address</th><td><div class="content-wrapper">{{ party.address|safe_html }}</div></td></tr>
                         <tr><th>Contact Person</th><td>{{ party.contact_person|default:'-' }}</td></tr>
                         <tr><th>Email</th><td>{{ party.contact_email|default:'-' }}</td></tr>
                         <tr><th>Phone</th><td>{{ party.contact_phone|default:'-' }}</td></tr>

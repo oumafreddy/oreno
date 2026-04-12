@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 {% load crispy_forms_tags %}
 
@@ -51,7 +52,7 @@
                             </td>
                             <td>{{ process.process_name }}</td>
                             <td>{{ process.domain.domain_name }}</td>
-                            <td>{{ process.description|safe|truncatewords:15 }}</td>
+                            <td>{{ process.description|safe_html|truncatewords:15 }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <a href="{% url 'risk:cobitprocess_detail' process.pk %}" class="btn btn-outline-primary">

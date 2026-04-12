@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load safe_filters %}
 {% load i18n %}
 {% load crispy_forms_tags %}
 
@@ -56,7 +57,7 @@
               </table>
             </div>
           </div>
-          <div class="mt-3"><div class="content-wrapper">{{ risk.description|safe }}</div></div>
+          <div class="mt-3"><div class="content-wrapper">{{ risk.description|safe_html }}</div></div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load safe_filters %}
 {% load static %}
 
 {% block title %}{{ object.process_name }} - COBIT Process{% endblock %}
@@ -79,7 +80,7 @@
                     <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Description</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.description|safe }}
+                    {{ object.description|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -91,7 +92,7 @@
                     <h5 class="mb-0"><i class="bi bi-target me-2"></i>Purpose</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.purpose|safe }}
+                    {{ object.purpose|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -103,7 +104,7 @@
                     <h5 class="mb-0"><i class="bi bi-flag me-2"></i>Goals</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.goals|safe }}
+                    {{ object.goals|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -115,7 +116,7 @@
                     <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Practices</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.practices|safe }}
+                    {{ object.practices|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -127,7 +128,7 @@
                     <h5 class="mb-0"><i class="bi bi-arrow-down-circle me-2"></i>Inputs</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.inputs|safe }}
+                    {{ object.inputs|safe_html }}
                 </div>
             </div>
             {% endif %}
@@ -139,7 +140,7 @@
                     <h5 class="mb-0"><i class="bi bi-arrow-up-circle me-2"></i>Outputs</h5>
                 </div>
                 <div class="card-body">
-                    {{ object.outputs|safe }}
+                    {{ object.outputs|safe_html }}
                 </div>
             </div>
             {% endif %}

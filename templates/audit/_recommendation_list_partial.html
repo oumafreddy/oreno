@@ -1,3 +1,4 @@
+{% load safe_filters %}
 <div id="recommendation-list-container">
   <div class="card shadow-sm mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -11,7 +12,7 @@
               <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                   <h6 class="mb-1">{{ recommendation.title }}</h6>
-                  <p class="mb-1 text-muted">{{ recommendation.description|truncatewords:30|safe }}</p>
+                  <p class="mb-1 text-muted">{{ recommendation.description|truncatewords:30|safe_html }}</p>
                   <div class="d-flex gap-2">
                     <span class="badge bg-{% if recommendation.priority == 'high' %}danger{% elif recommendation.priority == 'medium' %}warning{% else %}success{% endif %}">
                       {{ recommendation.get_priority_display }}
