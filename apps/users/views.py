@@ -842,79 +842,36 @@ class UserPasswordResetView(PasswordResetView):
     
     def form_valid(self, form):
         """
-        Override to add additional security checks and send marketing emails to non-existent accounts
+        Override to add additional security checks for password reset requests.
+        Always returns the same generic response regardless of whether the email exists.
         """
         email = form.cleaned_data['email']
-        
-        # Check if the email belongs to a user in the current organization
+
         current_organization = getattr(self.request, 'organization', None)
-        
+
         if current_organization:
             try:
-                user = CustomUser.objects.get(
+                CustomUser.objects.get(
                     email=email,
                     organization=current_organization,
-                    is_admin_created=False,  # Only allow resets for properly set up accounts
-                    is_active=True  # Only allow resets for active accounts
+                    is_admin_created=False,
+                    is_active=True
                 )
-                # User exists and is valid for password reset
                 return super().form_valid(form)
             except CustomUser.DoesNotExist:
-                # User doesn't exist in this organization - send marketing email
-                self.send_marketing_email(email)
-                # Show generic success message for security
                 messages.success(self.request, _("If an account with that email exists, you will receive password reset instructions."))
-                return super().form_valid(form)
+                return redirect(self.get_success_url())
         else:
-            # No organization context - check if email exists anywhere in the system
             try:
-                user = CustomUser.objects.get(
+                CustomUser.objects.get(
                     email=email,
-                    is_admin_created=False,  # Only allow resets for properly set up accounts
-                    is_active=True  # Only allow resets for active accounts
+                    is_admin_created=False,
+                    is_active=True
                 )
-                # User exists somewhere - send normal password reset
                 return super().form_valid(form)
             except CustomUser.DoesNotExist:
-                # User doesn't exist anywhere - send marketing email
-                self.send_marketing_email(email)
-                # Show generic success message for security
                 messages.success(self.request, _("If an account with that email exists, you will receive password reset instructions."))
-                return super().form_valid(form)
-    
-    def send_marketing_email(self, email):
-        """
-        Send a high-quality marketing flyer to non-existent email addresses
-        """
-        try:
-            from django.template.loader import render_to_string
-            from django.core.mail import send_mail
-            from django.conf import settings
-            
-            # Render the marketing email templates
-            html_message = render_to_string('users/email/marketing_flyer.html')
-            text_message = render_to_string('users/email/marketing_flyer.txt')
-            
-            # Send the marketing email
-            send_mail(
-                subject='Welcome to Oreno GRC - Enterprise Governance, Risk & Compliance Platform',
-                message=text_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                html_message=html_message,
-                fail_silently=True,  # Don't raise errors for marketing emails
-            )
-            
-            # Log the marketing email for analytics
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"Marketing email sent to non-existent account: {email}")
-            
-        except Exception as e:
-            # Log any errors but don't break the password reset flow
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send marketing email to {email}: {e}")
+                return redirect(self.get_success_url())
 
 class UserPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'users/password_reset_done.html'
