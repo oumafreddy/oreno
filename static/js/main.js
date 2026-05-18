@@ -13,7 +13,7 @@
     });
 
     function initCSRFHandling() {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const csrfToken = getCookie('csrftoken');
         if (csrfToken) {
             // Set up CSRF token for all AJAX requests
             document.addEventListener('htmx:configRequest', function(evt) {
@@ -22,6 +22,15 @@
         } else {
             console.warn('CSRF token not found');
         }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return null;
     }
 
     function initUIComponents() {

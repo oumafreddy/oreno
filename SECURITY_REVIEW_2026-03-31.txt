@@ -1,0 +1,327 @@
+# Oreno Security Review (Attack-Surface Oriented)
+
+**Date:** 2026-03-31  
+**Reviewer:** GPT-5.3-Codex  
+**Method:** Static code/config review of repository contents (no deployed environment validation)
+
+---
+
+## 1) Executive Summary
+
+This review analyzed the Oreno repository by attack surface: **Web application**, **APIs**, **Cloud/infrastructure**, and **CI/CD pipelines**, plus explicit notes for **mobile** and **gRPC/WebSocket/GraphQL** scope.
+
+### Overall risk posture
+
+- The project shows strong baseline controls in multiple areas: role-aware permissions, tenant-aware middleware, CSRF usage in templates, and existing security tests.  
+- However, there are several **high-impact design gaps** that can expose sensitive functions or weaken tenant isolation assumptions when specific endpoints are hit.
+
+### Highest-priority findings
+
+1. **Public AI assistant API endpoint with `permission_classes = []` in core** (unauthenticated access).  
+2. **Agent executor update/delete paths do not apply explicit org-level object scoping before mutation** (depends on schema/tenant assumptions).  
+3. **Webhook egress can call arbitrary URLs without anti-SSRF allowlist/blocklist controls.**  
+4. **Organization middleware broadly exempts `/api/` paths from org-context enforcement**, creating inconsistent trust boundaries for API code paths.  
+5. **CSP/script policy remains permissive (`unsafe-inline`, `unsafe-eval`) and duplicates CSP logic in middleware/settings**, making hardening brittle.
+
+---
+
+## 2) Scope and Method
+
+## In-scope surfaces reviewed
+
+- **Web application** (authn/authz, input handling, business logic, client-side/security headers)
+- **APIs** (REST and internal agent execution endpoints)
+- **Cloud/infrastructure config signals** (Django/ASGI/security settings)
+- **CI/CD pipeline** (GitHub Actions workflow)
+
+## Out of practical scope (repo evidence only)
+
+- Live cloud account posture (IAM, buckets, metadata exposure) not directly testable from repo alone.
+- Mobile client binaries/source were not found in repo.
+- No active GraphQL/gRPC endpoint definitions found.
+
+---
+
+## 3) Findings by Attack Surface
+
+## A) Web Application Attack Surface
+
+### A1. Unauthenticated AI endpoint in `apps/core/views.py` (High)
+
+- `AIAssistantAPIView` sets `permission_classes = []`, and accepts POST data directly.  
+- This endpoint is separate from the authenticated AI service endpoints and can be reached without login depending on routing and middleware behavior.
+
+**Evidence:** `apps/core/views.py`.
+
+**Risk:** Unauthenticated abuse (prompt abuse, resource burn, data leakage if model backend uses sensitive context defaults).
+
+**Recommendation:** Require `IsAuthenticated` (or signed anonymous session with strict rate limits + CAPTCHA + no sensitive context).
+
+---
+
+### A2. Organization middleware API exemption widens trust boundary (High)
+
+- `OrganizationMiddleware.EXEMPT_PATH_PREFIXES` includes `/api/` and then explicitly clears org context (`request.organization = None`).
+- This means API handlers cannot rely on this middleware for uniform org binding and must each re-implement tenant/org checks correctly.
+
+**Evidence:** `apps/core/middleware.py`.
+
+**Risk:** Inconsistent authorization controls and accidental cross-org data access in endpoints that assume middleware-scoped org context.
+
+**Recommendation:** Remove blanket `/api/` exemption and use explicit endpoint-level exemptions only where needed.
+
+---
+
+### A3. Notification APIs intentionally allow unauthenticated access (Medium)
+
+- Notification list API classes use `permission_classes = []` and return empty arrays for anonymous callers.
+
+**Evidence:** `apps/audit/api_views.py`, `apps/audit/views.py`.
+
+**Risk:** Low direct data exposure now, but creates a pattern that can regress into leakage if future code adds data before auth checks.
+
+**Recommendation:** Use explicit `IsAuthenticated`; return empty arrays only after auth in business logic if required by frontend UX.
+
+---
+
+### A4. CSP hardening incomplete + duplicate CSP providers (Medium)
+
+- CSP in settings allows `'unsafe-inline'` and `'unsafe-eval'` in places.
+- Separate CSP header logic is also injected in `common.middleware.CSPNonceMiddleware`, potentially conflicting with `django-csp` configuration.
+
+**Evidence:** `config/settings/base.py`, `common/middleware.py`.
+
+**Risk:** XSS impact amplification, policy drift, and unclear source of truth for header behavior.
+
+**Recommendation:** Consolidate CSP generation to one mechanism (prefer framework config), remove unsafe directives where feasible, and deploy with nonce/hash-only scripts progressively.
+
+---
+
+### A5. File upload controls rely on extension/size but virus scanning validator is not enforced here (Medium)
+
+- Document uploads validate extension and size.
+- A virus-scanning validator exists but is not attached to Document model fields in reviewed paths.
+
+**Evidence:** `apps/document_management/models.py`, `apps/core/models/validators.py`.
+
+**Risk:** Malicious file upload acceptance where downstream consumers may execute/open risky content.
+
+**Recommendation:** Attach `validate_file_virus` to upload fields or enforce async scanning + quarantine before availability.
+
+---
+
+### A6. Cookie security and privacy posture is partially hardened, but consent/state cookies are weak and tracking consent flow is unclear (High)
+
+- Server-side session and CSRF controls are mostly good in production (`Secure`, `HttpOnly` for session, `SameSite=Lax`), but CSRF is intentionally not `HttpOnly` in active settings paths.
+- The frontend consent cookie (`cookies_accepted=true`) is set via JavaScript without `Secure`, `SameSite`, or explicit domain constraints.
+- Cookie policy page includes third-party tracking identify logic with hashed user identifiers; this can still be personal data processing and should be consent-gated.
+
+**Evidence:** `config/settings/base.py`, `config/settings/production.py`, `config/settings/development.py`, `static/js/cookies.js`, `templates/public/cookies.html`.
+
+**Risk:**  
+1) Consent cookie can be manipulated/cross-context leaked more easily without explicit attributes.  
+2) Inconsistent consent enforcement may trigger privacy non-compliance risk if tracking calls execute before valid consent.  
+3) CSRF cookie script-access is common but increases exposure impact if XSS exists.
+
+**Recommendation:**  
+- Set consent cookie with `Secure; SameSite=Lax` (or `Strict` where possible) and consider server-set cookie flags.  
+- Implement explicit consent categories and gate analytics/ads scripts behind opt-in state.  
+- Keep a consent event log/versioning approach to prove policy acceptance state over time.  
+- Re-evaluate `CSRF_COOKIE_HTTPONLY=False` tradeoff and retain only if frontend architecture requires script access.
+
+---
+
+## B) API Attack Surface (REST / Agent)
+
+### B1. Agent executor mutation paths are not object-scoped by organization before update/delete (High)
+
+- In `AgentExecutor`, `_update` and `_delete` fetch by `id` without additional org filter in those methods.
+- `_read` has explicit organization filtering, but mutation paths rely on tenant context and serializer behavior.
+
+**Evidence:** `services/agent/executor.py`.
+
+**Risk:** If tenant schema assumptions are bypassed/misconfigured or shared schema objects exist, this becomes IDOR-style mutation risk.
+
+**Recommendation:** Enforce org filter in all object lookups for update/delete (`.get(id=obj_id, organization_id=request.user.organization_id)` where applicable) and reject if model has organization and org is missing.
+
+---
+
+### B2. AI async API uses `permission_classes = []` with decorator protection (Low/Medium)
+
+- `AIAssistantAsyncAPIView` has empty DRF permissions but relies on `@login_required` dispatch override.
+
+**Evidence:** `services/ai/views.py`.
+
+**Risk:** Mixed auth paradigms increase maintenance risk; future refactors may break decorator coverage.
+
+**Recommendation:** Add DRF-native `permission_classes = [IsAuthenticated]` and keep decorators only for HTML views.
+
+---
+
+### B3. Registration serializer includes sensitive fields via inherited user serializer (Medium)
+
+- `UserRegisterSerializer` extends `UserSerializer` field set including `role`, `is_staff`, `organization`, etc.; no explicit write restriction besides model defaults/permissions.
+
+**Evidence:** `apps/users/serializers.py`, `apps/users/views.py`.
+
+**Risk:** Privilege/tenant assignment abuse if endpoint protections are changed or misapplied.
+
+**Recommendation:** Define a minimal explicit registration serializer field list and hardcode server-side defaults for role/staff/org assignment.
+
+---
+
+## C) SSRF / Egress Attack Surface
+
+### C1. Webhook service can POST to arbitrary URLs without private-network protections (High)
+
+- Webhook URLs are stored and posted to directly with `requests.post(...)`.
+- No hostname allowlist, IP resolution checks, protocol restrictions beyond URLField format, or metadata IP deny rules are visible.
+
+**Evidence:** `apps/ai_governance/models.py`, `apps/ai_governance/webhook_service.py`, `apps/ai_governance/serializers.py`, `apps/ai_governance/forms.py`.
+
+**Risk:** SSRF toward internal services/cloud metadata; pivot to internal network reconnaissance/exfiltration.
+
+**Recommendation:** Implement strict webhook URL validation:
+- enforce `https` only,
+- block localhost/private/link-local/metadata ranges,
+- optional org-level allowlist,
+- DNS rebinding defenses (resolve + verify each request),
+- egress proxy/policy with deny-by-default.
+
+---
+
+## D) Client-Side Attack Surface
+
+### D1. CSP currently permits script execution patterns commonly abused by XSS (Medium)
+
+- `'unsafe-inline'` and `'unsafe-eval'` are still present in script policies (at least in some code paths).
+
+**Evidence:** `config/settings/base.py`, `common/middleware.py`.
+
+**Risk:** Any HTML/DOM injection vulnerability becomes easier to weaponize.
+
+**Recommendation:** remove unsafe directives incrementally, especially in production.
+
+---
+
+## E) Business Logic / Multi-Tenant Isolation
+
+### E1. Multi-layer tenant/org enforcement is present but inconsistent across API and middleware paths (Medium/High)
+
+- There are strong controls (`OrganizationScopedQuerysetMixin`, role permissions, tenant middleware), but blanket API exemptions in org middleware force endpoint-by-endpoint correctness.
+
+**Evidence:** `apps/core/middleware.py`, `apps/core/mixins/organization.py`, multiple viewsets in apps.
+
+**Risk:** Future endpoint additions may omit org filtering and become cross-tenant leaks.
+
+**Recommendation:** centralize and require one enforcement primitive for all APIs; add regression tests for every new ViewSet action.
+
+---
+
+## F) Infrastructure / Cloud Signals
+
+### F1. Production settings generally hardened, but cookie/CSRF and proxy trust should be reviewed in deployment context (Low/Medium)
+
+- Positive controls: secure cookies, HSTS, SSL redirect, nosniff, XFO, Redis/cache usage.
+- `CSRF_COOKIE_HTTPONLY=False` (often acceptable for JS patterns, but broadens token exposure to XSS).
+
+**Evidence:** `config/settings/production.py`.
+
+**Recommendation:** Keep as-is if required by frontend architecture, otherwise consider HTTPOnly CSRF pattern alternatives and stricter same-site/token handling.
+
+---
+
+## G) CI/CD Pipeline Attack Surface
+
+### G1. Action pinning is not commit-SHA strict; some actions are version tags or `@master` (Medium)
+
+- Workflow uses tags (`@v4`, `@v3`) and one floating branch (`aquasecurity/trivy-action@master`).
+
+**Evidence:** `.github/workflows/ci.yml`.
+
+**Risk:** Supply-chain compromise through action hijack/tag move.
+
+**Recommendation:** pin all third-party actions to immutable commit SHAs and enable Dependabot updates.
+
+---
+
+### G2. Security scanners run with `|| true` (Low/Medium)
+
+- `bandit` and `safety` do not fail pipeline on findings.
+
+**Evidence:** `.github/workflows/ci.yml`.
+
+**Risk:** Known vulnerabilities do not block merges.
+
+**Recommendation:** fail on thresholded severity; keep artifact upload for triage.
+
+---
+
+## 4) API Modality Coverage Notes
+
+- **REST APIs:** Extensive and reviewed.
+- **WebSockets:** Channels scaffold exists but no active ws routes configured (`websocket_urlpatterns` empty).
+- **GraphQL:** Not found.
+- **gRPC:** Not found.
+
+**Evidence:** `config/asgi.py`.
+
+---
+
+## 5) Mobile Application Surface
+
+No Android/iOS app code was found in this repository. Mobile-specific risks (local storage, reverse engineering, cert pinning) are therefore **not assessed here**.
+
+---
+
+## 6) Prioritized Remediation Plan (30/60/90)
+
+## First 30 days (blockers)
+
+1. Lock down unauthenticated AI endpoint in `apps/core/views.py`.
+2. Add explicit org filters for agent update/delete/read/create operations where model contains organization.
+3. Deploy SSRF-safe webhook URL validation + private-network block + HTTPS-only egress.
+4. Remove `/api/` blanket org-check exemption in middleware; replace with precise exemptions.
+5. Harden cookie handling: secure consent cookie attributes and enforce explicit opt-in gating for analytics/ads identifiers.
+
+## Next 60 days
+
+6. Consolidate CSP handling and remove unsafe directives in production.
+7. Enforce malware scanning/quarantine for all file uploads.
+8. Pin GitHub Actions to immutable SHAs and make security scans enforceable.
+
+## Next 90 days
+
+9. Add automated “authz matrix” tests for every API route (anonymous/user/manager/admin/cross-org).
+10. Add threat-model docs for tenant boundary assumptions (schema-per-tenant and org object ownership).
+11. Add central secure egress service for all outbound HTTP integrations.
+
+---
+
+## 7) Suggested Verification Tests
+
+1. Anonymous POST to `/api/ai/ask/` and any core AI endpoint; confirm 401/403 where intended.
+2. Agent execute update/delete using object IDs from other org contexts; confirm hard deny.
+3. Webhook registration attempts with `http://127.0.0.1`, `http://169.254.169.254`, private RFC1918 IPs; confirm validation failure.
+4. CSP header snapshot tests (single authoritative header, no unsafe directives in production).
+5. CI policy test that fails if an action is unpinned or a scanner step is non-blocking for high severity.
+6. Consent/cookie test: verify non-essential trackers do not run until consent is explicitly granted, and consent cookie carries `Secure` + `SameSite`.
+
+---
+
+## 8) Security Strengths Observed
+
+- Good use of role-based permission classes and tenant-aware mixins in many API modules.
+- Presence of dedicated security tests (`tests/security/*`).
+- Production settings include core hardening controls (HSTS, secure cookies, SSL redirect).
+- JWT blacklist and OTP/first-time setup controls are present.
+
+---
+
+## 9) Final Notes
+
+This review is repository-static and should be paired with:
+- dynamic testing in a staging deployment,
+- authenticated attack-path testing per role,
+- cloud account posture review (IAM, buckets, metadata controls),
+- and CI/CD runner hardening review.

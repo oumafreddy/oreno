@@ -115,7 +115,7 @@ class SecurityMiddleware:
     """
     logger = logging.getLogger('security.middleware')
     
-    # SQL injection patterns
+    # SQL injection patterns (keep high-signal only to reduce false positives)
     SQL_INJECTION_PATTERNS = [
         r'(?i)(union.*select|select.*from|insert.*into|delete.*from|update.*set|drop.*table)',
         r'(?i)(or\s+\d+\s*=\s*\d+|and\s+\d+\s*=\s*\d+)',
@@ -126,7 +126,6 @@ class SecurityMiddleware:
         r'(?i)(information_schema|sys\.|pg_catalog)',
         r'(?i)(char\s*\(|chr\s*\(|concat|cast\s*\()',
         r'(?i)(--\s*$|/\*|\*/|#\s*$)',
-        r'(?i)(\'\s*(or|and)\s*\'|\"\s*(or|and)\s*\")',
     ]
     
     # XSS patterns
@@ -235,10 +234,26 @@ class SecurityMiddleware:
                 return True
         
         # Check POST data (if any)
+        # NOTE:
+        # We intentionally use a stricter subset for POST body inspection to avoid
+        # false positives on normal business text fields (e.g., action plans with
+        # natural language like "and", "or", hyphens, etc.).
         if request.method == 'POST' and request.POST:
             post_data = str(request.POST).lower()
-            for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS:
+            post_patterns = [
+                # SQLi high confidence
+                r'(?i)(union.*select|select.*from|insert.*into|delete.*from|update.*set|drop.*table)',
+                r'(?i)(sleep\s*\(|waitfor\s+delay|pg_sleep|benchmark\s*\()',
+                r'(?i)(exec\s*\(|execute\s*\(|sp_executesql)',
+                r'(?i)(xp_cmdshell|xp_regread|xp_dirtree)',
+                r'(?i)(information_schema|sys\.|pg_catalog)',
+                # XSS high confidence
+                r'(?i)(<script|javascript:|onerror=|onload=|onclick=)',
+                # Traversal high confidence
+                r'(\.\./|\.\.\\|\.\.%2f|\.\.%5c)',
+            ]
+            for pattern in post_patterns:
                 if re.search(pattern, post_data):
                     return True
-        
+
         return False
