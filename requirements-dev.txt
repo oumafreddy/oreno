@@ -1,3 +1,4 @@
+pip-audit>=2.7.0
 absl-py==2.2.2
 amqp==5.3.1
 annotated-types==0.7.0

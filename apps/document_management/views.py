@@ -17,6 +17,10 @@ from users.permissions import IsOrgManagerOrReadOnly
 from core.mixins.organization import OrganizationScopedQuerysetMixin
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+
+_PUBLIC_UPLOAD_RATE = 10  # max POSTs per hour per token+IP
+
 
 class PublicDocumentUploadView(View):
     template_name = 'document_management/public_upload.html'
@@ -32,6 +36,15 @@ class PublicDocumentUploadView(View):
         doc_request = self.get_valid_request(token)
         if not doc_request:
             return render(request, 'document_management/public_upload_invalid.html')
+
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+        if ip and ',' in ip:
+            ip = ip.split(',')[0].strip()
+        rate_key = f'public_upload_{token}_{ip}'
+        if cache.get(rate_key, 0) >= _PUBLIC_UPLOAD_RATE:
+            messages.error(request, 'Too many upload attempts. Please try again later.')
+            return render(request, self.template_name, {'form': DocumentForm(), 'doc_request': doc_request})
+
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
             document = form.save(commit=False)
@@ -42,6 +55,7 @@ class PublicDocumentUploadView(View):
             doc_request.status = 'submitted'
             doc_request.upload_token = None  # Invalidate token after use
             doc_request.save()
+            cache.set(rate_key, cache.get(rate_key, 0) + 1, timeout=3600)
             messages.success(request, 'Document uploaded successfully!')
             return render(request, 'document_management/public_upload_success.html', {'doc_request': doc_request})
         return render(request, self.template_name, {'form': form, 'doc_request': doc_request})

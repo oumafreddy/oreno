@@ -23,6 +23,7 @@ from datetime import timedelta
 from contracts.models import Contract, Party, ContractMilestone, ContractType
 from django.utils import timezone
 from risk.models import Objective
+from .utils import parse_report_date_filters, apply_date_filter
 
 def _docx_start_document(org, title, generation_timestamp):
     """Create a python-docx Document with standard header and metadata."""
@@ -103,16 +104,13 @@ def _docx_add_html_block(doc, html_string: str):
 def risk_report_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
-    # Apply filters
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    status = request.GET.get('status')
-    if start_date:
-        risks = risks.filter(date_identified__gte=start_date)
-    if end_date:
-        risks = risks.filter(date_identified__lte=end_date)
+    filters = parse_report_date_filters(request)
+    risks = apply_date_filter(risks, 'date_identified', filters)
+    status = (request.GET.get('status') or '')[:64]
     if status:
         risks = risks.filter(status=status)
+    start_date = filters.get('start_date')
+    end_date = filters.get('end_date')
     html_string = render_to_string('reports/risk_report.html', {
         'organization': org,
         'risks': risks,

@@ -59,6 +59,7 @@ SHARED_APPS = [
     'django_tenants',
 
     # Django framework dependencies
+    'axes',
     'django.contrib.contenttypes',
     'django.contrib.auth',
     'django.contrib.sessions',
@@ -92,6 +93,7 @@ TENANT_APPS = [
     'document_management.apps.DocumentManagementConfig',
     'legal.apps.LegalConfig',
     'risk.apps.RiskConfig',
+    'reports.apps.ReportsConfig',
     'ai_governance.apps.AIGovernanceConfig',
     'services.ai.apps.AIServiceConfig',  # AI Service for tenant context
     'services.agent.apps.AgentConfig',

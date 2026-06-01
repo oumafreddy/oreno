@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 {# Keep base styling; add page-scoped enhancements #}
-<style>
+<style nonce="{{ request.csp_nonce }}">
   /* Scope everything to avoid impacting other public pages */
   .neo-home {
     --neo-bg: #020812;

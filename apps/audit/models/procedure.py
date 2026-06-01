@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
-from core.models.validators import validate_file_extension, validate_file_size
+from core.models.validators import file_upload_validators
 from .risk import Risk
 from django_ckeditor_5.fields import CKEditor5Field
 from simple_history.models import HistoricalRecords
@@ -220,7 +220,7 @@ class Procedure(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     )
     evidence = models.FileField(
         upload_to='audit/procedure_evidence/%Y/%m/',
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         blank=True,
         null=True,
         verbose_name=_('Primary Evidence'),
@@ -228,7 +228,7 @@ class Procedure(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     )
     additional_evidence = models.FileField(
         upload_to='audit/procedure_evidence/%Y/%m/',
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         blank=True,
         null=True,
         verbose_name=_('Additional Evidence'),

@@ -200,7 +200,7 @@ ruamel.std.argparse==0.8.3
 scikit-learn==1.6.1
 scipy==1.15.2
 sentry-sdk==2.26.1
-serializers==0.2.4
+# serializers==0.2.4  # removed — conflicts with DRF; unused in codebase
 setuptools==78.1.1
 shellingham==1.5.4
 six==1.17.0

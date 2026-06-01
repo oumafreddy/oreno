@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Audit Report – Payroll Management Review | February 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:      #0D1B2A;
+    --navy-mid:  #162840;
+    --blue:      #1A5276;
+    --blue-mid:  #2471A3;
+    --accent:    #D4AC0D;
+    --red:       #C0392B;
+    --amber:     #CA6F1E;
+    --green:     #1E8449;
+    --bg:        #F7F5F0;
+    --white:     #FFFFFF;
+    --grey-lt:   #EFF2F5;
+    --grey-mid:  #D0D6DD;
+    --text:      #1A1A2E;
+    --text-muted:#5D6D7E;
+    --rule:      #C9AD5A;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  /* ── PRINT BUTTON ─────────────────────────── */
+  .print-btn {
+    position: fixed;
+    top: 20px; right: 24px;
+    background: var(--navy);
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    padding: 8px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .08em;
+    cursor: pointer;
+    z-index: 999;
+    transition: background .2s;
+  }
+  .print-btn:hover { background: var(--accent); color: var(--navy); }
+
+  /* ── COVER ────────────────────────────────── */
+  .cover {
+    background: var(--navy);
+    color: var(--white);
+    padding: 72px 80px 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,172,13,.12) 0%, transparent 70%);
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent) 0%, #2471A3 60%, transparent 100%);
+  }
+
+  .cover-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cover-kicker::after {
+    content: '';
+    flex: 0 0 48px;
+    height: 1px;
+    background: var(--accent);
+    opacity: .6;
+  }
+
+  .cover h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .cover-sub {
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px;
+    color: rgba(255,255,255,.65);
+    font-style: italic;
+    margin-bottom: 48px;
+  }
+
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0;
+    border: 1px solid rgba(255,255,255,.12);
+    max-width: 680px;
+  }
+  .meta-item {
+    padding: 14px 20px;
+    border-right: 1px solid rgba(255,255,255,.12);
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  .meta-item:nth-child(even) { border-right: none; }
+  .meta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .meta-value {
+    font-size: 13px;
+    color: rgba(255,255,255,.9);
+    font-weight: 300;
+  }
+  .status-badge {
+    display: inline-block;
+    background: rgba(212,172,13,.2);
+    color: var(--accent);
+    border: 1px solid rgba(212,172,13,.4);
+    padding: 2px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .1em;
+  }
+
+  /* ── MAIN LAYOUT ─────────────────────────── */
+  .report-body {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+  }
+
+  /* ── SECTION HEADING ─────────────────────── */
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 56px 0 24px;
+  }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .15em;
+    color: var(--accent);
+    background: var(--navy);
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+    border-bottom: 2.5px solid var(--navy);
+    flex: 1;
+    padding-bottom: 4px;
+  }
+
+  /* ── PROSE ───────────────────────────────── */
+  p { margin-bottom: 14px; }
+
+  /* ── OVERALL CONCLUSION BOX ──────────────── */
+  .conclusion-box {
+    border-left: 5px solid var(--red);
+    background: #FDF3F0;
+    padding: 20px 24px;
+    margin: 24px 0;
+    position: relative;
+  }
+  .conclusion-box .rating-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rating-pill {
+    background: var(--red);
+    color: #fff;
+    padding: 3px 10px;
+    font-size: 9px;
+    letter-spacing: .15em;
+  }
+
+  /* ── FINDING CARD ────────────────────────── */
+  .finding-card {
+    border: 1px solid var(--grey-mid);
+    margin: 32px 0;
+    box-shadow: 0 2px 16px rgba(13,27,42,.07);
+    page-break-inside: avoid;
+  }
+
+  .finding-header {
+    background: var(--navy);
+    padding: 18px 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .finding-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+  .finding-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--white);
+    flex: 1;
+    line-height: 1.35;
+  }
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .risk-badge.high   { background: var(--red);   color: #fff; }
+  .risk-badge.medium { background: var(--amber);  color: #fff; }
+  .risk-badge::before { content: '●'; font-size: 8px; }
+
+  .finding-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--grey-mid);
+  }
+  .finding-meta-item {
+    padding: 10px 20px;
+    border-right: 1px solid var(--grey-mid);
+    background: var(--grey-lt);
+  }
+  .finding-meta-item:last-child { border-right: none; }
+  .fmi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .fmi-value { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .urgent { color: var(--red) !important; }
+
+  .finding-body { padding: 24px; background: var(--white); }
+
+  /* ── CRIA labels ─────────────────────────── */
+  .cria-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--blue-mid);
+    background: #EAF2FA;
+    display: inline-block;
+    padding: 3px 10px;
+    margin-bottom: 8px;
+    margin-top: 18px;
+  }
+  .cria-section:first-of-type .cria-label { margin-top: 0; }
+
+  /* ── BULLET LIST ─────────────────────────── */
+  ul.audit-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 12px;
+  }
+  ul.audit-list li {
+    padding: 6px 0 6px 22px;
+    position: relative;
+    border-bottom: 1px dashed var(--grey-mid);
+    font-size: 14px;
+  }
+  ul.audit-list li:last-child { border-bottom: none; }
+  ul.audit-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--blue-mid);
+    font-size: 12px;
+  }
+
+  /* ── VARIANCE TABLE ──────────────────────── */
+  .table-wrap { overflow-x: auto; margin: 20px 0; }
+
+  table.variance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .variance-table thead tr {
+    background: var(--navy);
+    color: var(--white);
+  }
+  .variance-table thead th {
+    padding: 11px 14px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    border: none;
+  }
+  .variance-table thead th.num { text-align: right; }
+  .variance-table tbody tr:nth-child(odd)  { background: var(--white); }
+  .variance-table tbody tr:nth-child(even) { background: var(--grey-lt); }
+  .variance-table tbody tr.total-row {
+    background: #E8F4FD;
+    border-top: 2px solid var(--blue-mid);
+  }
+  .variance-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--grey-mid);
+    vertical-align: middle;
+  }
+  .variance-table tbody td.num {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .variance-table tbody td.emp-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .total-row td { font-weight: 700; color: var(--navy); }
+  .total-row td.num { color: var(--red); }
+
+  /* ── SCOPE TABLE ─────────────────────────── */
+  table.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0;
+  }
+  .info-table td {
+    padding: 11px 16px;
+    border: 1px solid var(--grey-mid);
+    vertical-align: top;
+  }
+  .info-table tr:nth-child(odd) td { background: var(--grey-lt); }
+  .info-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+    width: 36%;
+  }
+
+  /* ── MGMT ACTION ─────────────────────────── */
+  .mgmt-box {
+    background: #EAF2FA;
+    border-left: 4px solid var(--blue-mid);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .mgmt-box p { margin-bottom: 10px; font-size: 14px; }
+  .mgmt-box p:last-child { margin-bottom: 0; }
+
+  /* ── APPENDIX ────────────────────────────── */
+  .appendix-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--grey-mid);
+    font-size: 14px;
+  }
+  .appendix-item:last-child { border-bottom: none; }
+  .app-letter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .1em;
+    background: var(--navy);
+    color: var(--accent);
+    padding: 4px 10px;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+
+  /* ── DISCLAIMER ──────────────────────────── */
+  .disclaimer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--grey-mid);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* ── PRINT ───────────────────────────────── */
+  @media print {
+    .print-btn { display: none; }
+    body { background: #fff; font-size: 12px; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .finding-card { page-break-inside: avoid; }
+    .report-body { max-width: 100%; padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">⎙ Print / Export PDF</button>
+
+<!-- ══ COVER ══════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-kicker">Internal Audit Report &nbsp;·&nbsp; Ref: IA/2026/Q1/PAY-001</div>
+  <h1>Payroll Management Review<br>February 2026</h1>
+  <p class="cover-sub">Business Central Post-Migration Payroll Compliance</p>
+
+  <div class="cover-meta">
+    <div class="meta-item">
+      <div class="meta-label">Report Ref</div>
+      <div class="meta-value">IA/2026/Q1/PAY-001</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Review Period</div>
+      <div class="meta-value">February 2026</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date Issued</div>
+      <div class="meta-value">March 2026</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Prepared By</div>
+      <div class="meta-value">Internal Audit</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Distribution</div>
+      <div class="meta-value">Head of Finance · HR Manager</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Status</div>
+      <div class="meta-value"><span class="status-badge">DRAFT – FOR MANAGEMENT RESPONSE</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REPORT BODY ════════════════════════════════════════════ -->
+<div class="report-body">
+
+  <!-- §1 Background -->
+  <div class="section-heading">
+    <span class="section-num">§ 01</span>
+    <span class="section-title">Background &amp; Objective</span>
+  </div>
+  <p>The organisation migrated its payroll processing to <strong>Microsoft Dynamics 365 Business Central</strong> during Q4 2025. Internal Audit initiated a focused post-migration review of the February 2026 payroll run to assess whether the system configuration produces accurate statutory deductions and net pay outcomes.</p>
+  <p>The review covered a judgement sample of <strong>15 employees</strong>, selected to include staff on basic-only pay structures and staff with material allowances (fuel, house, acting). Recomputation was performed independently using the applicable Kenyan statutory rules for Pension, SHIF, NSSF, AHL and PAYE.</p>
+
+  <!-- §2 Scope -->
+  <div class="section-heading">
+    <span class="section-num">§ 02</span>
+    <span class="section-title">Scope &amp; Methodology</span>
+  </div>
+
+  <table class="info-table">
+    <tr><td>Sample Size</td><td>15 employees</td></tr>
+    <tr><td>Review Period</td><td>February 2026</td></tr>
+    <tr><td>System Reviewed</td><td>Microsoft Dynamics 365 Business Central</td></tr>
+    <tr><td>Statutory Frameworks</td><td>Pension (5% employee / 10% employer), SHIF (2.75% of gross), NSSF Tier 1 &amp; 2, AHL (1.5%), PAYE – Kenya graduated scale</td></tr>
+  </table>
+
+  <p><strong>Work performed:</strong></p>
+  <ul class="audit-list">
+    <li>Independent recomputation of gross pay, statutory deductions, excess pension, PAYE and net pay for all 15 sampled employees.</li>
+    <li>Agreement of system-generated payslip values to audit recomputation to identify variances.</li>
+    <li>Review of Business Central earning-code configurations for pension and SHIF calculation bases.</li>
+    <li>Review of sample payslips for reporting field accuracy.</li>
+  </ul>
+
+  <!-- §3 Overall Conclusion -->
+  <div class="section-heading">
+    <span class="section-num">§ 03</span>
+    <span class="section-title">Overall Conclusion</span>
+  </div>
+
+  <div class="conclusion-box">
+    <div class="rating-line">
+      <span class="rating-pill">HIGH RISK</span>
+      Overall Control Opinion — Systemic Configuration Defects Identified
+    </div>
+    <p style="margin:0; font-size:14px;">The review identified systematic payroll calculation errors affecting all employees whose compensation includes allowances. The defects originate from configuration errors in Business Central and produce incorrect results for any employee with fuel, house, or acting allowances. Two concurrent statutory compliance deficiencies were identified (pension base and SHIF base); the pension error cascades into incorrect excess pension, tax on excess pension, and net pay. A reporting field defect was also identified on one payslip, indicating that generated reports cannot be fully relied upon without independent recomputation.</p>
+  </div>
+
+  <p>Management is required to correct the underlying configuration, validate the fix through a parallel run, and perform a retrospective quantification of payroll errors since migration.</p>
+
+  <!-- §4 Audit Findings -->
+  <div class="section-heading">
+    <span class="section-num">§ 04</span>
+    <span class="section-title">Audit Findings</span>
+  </div>
+
+  <!-- ─── FINDING 1 ─── -->
+  <div class="finding-card">
+    <div class="finding-header">
+      <div>
+        <div class="finding-id">Finding 01</div>
+        <div class="finding-title">Employee Pension Contribution Calculated on Basic Pay Instead of Gross Pay</div>
+      </div>
+      <span class="risk-badge high">High</span>
+    </div>
+    <div class="finding-meta">
+      <div class="finding-meta-item">
+        <div class="fmi-label">Process Owner</div>
+        <div class="fmi-value">HR Manager</div>
+      </div>
+      <div class="finding-meta-item">
+        <div class="fmi-label">Target Resolution</div>
+        <div class="fmi-value urgent">Immediate — before March 2026 payroll run</div>
+      </div>
+    </div>
+    <div class="finding-body">
+
+      <div class="cria-section">
+        <div class="cria-label">Condition</div>
+        <p>For 9 of the 15 sampled employees, Business Central applied the 5% employee pension contribution to <strong>basic pay only</strong>. Audit recomputation applied 5% to <strong>gross pay</strong> (inclusive of all recurring allowances), consistent with the approved payroll rule. The total understatement of employee pension across the sample is <strong>KES 46,065.70</strong>.</p>
+
+        <div class="table-wrap">
+          <table class="variance-table">
+            <thead>
+              <tr>
+                <th style="width:40px">No.</th>
+                <th>Employee No.</th>
+                <th class="num">Variance — Employee Pension (KES)</th>
+                <th>Basis of Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td class="emp-id">EMP0158</td><td class="num">2,416.20</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>2</td><td class="emp-id">EMP0303</td><td class="num">12,839.75</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>3</td><td class="emp-id">EMP0495</td><td class="num">3,900.00</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>4</td><td class="emp-id">EMP0500</td><td class="num">2,028.75</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>5</td><td class="emp-id">EMP0525</td><td class="num">3,131.25</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>6</td><td class="emp-id">EMP0547</td><td class="num">2,500.00</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>7</td><td class="emp-id">EMP1829</td><td class="num">8,643.20</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>8</td><td class="emp-id">EMP1836</td><td class="num">6,138.75</td><td>5% applied to basic instead of gross</td></tr>
+              <tr><td>9</td><td class="emp-id">EMP0673</td><td class="num">4,467.80</td><td>5% applied to basic instead of gross</td></tr>
+              <tr class="total-row"><td colspan="2"><strong>Total Variance</strong></td><td class="num">46,065.70</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Criteria</div>
+        <p>The approved payroll policy and contracts requires employee pension contributions at 5% of <em>gross pay</em>, inclusive of all recurring allowances. Employees whose gross pay equals basic pay were processed correctly; the error is specific to employees with allowance components.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Cause</div>
+        <p>Business Central is configured to apply the pension calculation to the basic pay earning code only. Allowance earning codes were not mapped into the pension calculation base during system setup or migration.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Effect</div>
+        <ul class="audit-list">
+          <li>Employee pension contributions are understated for all employees with allowances — both within and beyond the sample.</li>
+          <li>Excess pension (portion exceeding the KES 30,000 monthly limit) is understated by KES 46,065.70 across the sample, directly reducing tax on excess pension deducted.</li>
+          <li>Net pay for affected employees is overstated, as allowable pension deductions are under-applied.</li>
+          <li>Retrospective corrections will require adjustments to multiple months of payroll since migration, with associated statutory remittance implications.</li>
+        </ul>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Recommendation</div>
+        <ul class="audit-list">
+          <li>Immediately correct the pension calculation base in Business Central to include all recurring allowance earning codes.</li>
+          <li>Validate the fix end-to-end through a parallel recomputation before the March 2026 live payroll run.</li>
+          <li>Quantify total pension understatement across the full payroll population for all post-migration periods and make the necessary corrections to employee records and statutory remittances.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── FINDING 2 ─── -->
+  <div class="finding-card">
+    <div class="finding-header">
+      <div>
+        <div class="finding-id">Finding 02</div>
+        <div class="finding-title">SHIF Deduction Not Applied Consistently Across All Relevant Earnings</div>
+      </div>
+      <span class="risk-badge high">High</span>
+    </div>
+    <div class="finding-meta">
+      <div class="finding-meta-item">
+        <div class="fmi-label">Process Owner</div>
+        <div class="fmi-value">HR Manager</div>
+      </div>
+      <div class="finding-meta-item">
+        <div class="fmi-label">Target Resolution</div>
+        <div class="fmi-value urgent">Immediate — before March 2026 payroll run</div>
+      </div>
+    </div>
+    <div class="finding-body">
+
+      <div class="cria-section">
+        <div class="cria-label">Condition</div>
+        <p>For three sampled employees, Business Central did not apply the 2.75% SHIF deduction to the full gross pay base:</p>
+        <ul class="audit-list">
+          <li><strong>EMP0303 &amp; EMP1829</strong> — acting allowance was excluded from the SHIF calculation base.</li>
+          <li><strong>EMP0673</strong> — SHIF was incorrectly calculated for the February 2026 period.</li>
+        </ul>
+        <p>The remaining 12 sampled employees had SHIF correctly computed on gross pay.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Criteria</div>
+        <p>Under current Kenyan legislation, SHIF is chargeable at <strong>2.75% of gross salary or wages</strong>, subject to the applicable monthly minimum. All recurring earnings forming part of gross pay must be included in the SHIF base.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Cause</div>
+        <p>Certain earning codes — notably acting allowance — were not mapped to the SHIF calculation base in Business Central. This is a configuration oversight during migration, consistent with the pension earning-code mapping defect in Finding 1.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Effect</div>
+        <ul class="audit-list">
+          <li>Affected employees are under-deducted for SHIF, exposing the organisation to statutory compliance risk and potential penalties.</li>
+          <li>SHIF remittances to the regulator may be understated.</li>
+          <li>Because the issue is driven by earning-code mapping, the error likely extends to all employees with acting allowances beyond the three identified in the sample.</li>
+        </ul>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Recommendation</div>
+        <ul class="audit-list">
+          <li>Review all earning codes in Business Central and confirm which should be included in the SHIF calculation base.</li>
+          <li>Correct the SHIF setup and validate through end-to-end recomputation for employees with acting, house, fuel and other recurring allowances.</li>
+          <li>Quantify and correct SHIF under-deductions since migration and ensure accurate remittance to the regulator.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── FINDING 3 ─── -->
+  <div class="finding-card">
+    <div class="finding-header">
+      <div>
+        <div class="finding-id">Finding 03</div>
+        <div class="finding-title">Cascading Calculation Errors — Excess Pension Taxation, Net Pay &amp; Payslip Reporting Integrity</div>
+      </div>
+      <span class="risk-badge medium">medium</span>
+    </div>
+    <div class="finding-meta">
+      <div class="finding-meta-item">
+        <div class="fmi-label">Process Owner</div>
+        <div class="fmi-value">HR Manager</div>
+      </div>
+      <div class="finding-meta-item">
+        <div class="fmi-label">Target Resolution</div>
+        <div class="fmi-value urgent">Before next payroll — parallel run required</div>
+      </div>
+    </div>
+    <div class="finding-body">
+
+      <div class="cria-section">
+        <div class="cria-label">Condition</div>
+        <p>Because employee pension was understated (Finding 1), all downstream values dependent on pension were also misstated:</p>
+        <ul class="audit-list">
+          <li>Excess pension was understated by a cumulative <strong>KES 46,065.70</strong> across affected sample employees.</li>
+          <li>Tax on excess pension — derived from the excess pension amount and marginal tax treatment — was consequently understated, further overstating net pay.</li>
+        </ul>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Criteria</div>
+        <p>Payroll outputs must accurately compute and present taxable pay, excess pension, PAYE and net pay. Reports generated from Business Central should be complete, accurate and reliable for employee communication, management oversight and audit trail purposes.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Cause</div>
+        <p>The primary cause is the pension base configuration error in Finding 1.</p>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Effect</div>
+        <ul class="audit-list">
+          <li>Payroll outputs cannot be fully relied upon without independent recomputation, undermining confidence in the post-migration environment.</li>
+          <li>Employees are receiving inaccurate net pay and may raise disputes once corrections are processed.</li>
+          <li>Management and Finance are exposed to rework, restatement of statutory deductions and potential regulatory scrutiny.</li>
+          <li>Payslips presented to employees or third parties contain materially inaccurate information.</li>
+        </ul>
+      </div>
+
+      <div class="cria-section">
+        <div class="cria-label">Recommendation</div>
+        <ul class="audit-list">
+          <li>Perform a full logic walkthrough of the payroll formula chain in Business Central, from earnings through statutory deductions, excess pension, PAYE and net pay.</li>
+          <li>Conduct a post-fix parallel run to confirm all outputs are accurate before the next live payroll.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- §5 Management Actions -->
+  <div class="section-heading">
+    <span class="section-num">§ 05</span>
+    <span class="section-title">Required Management Actions</span>
+  </div>
+
+  <div class="mgmt-box">
+    <p>Management is requested to provide a <strong>formal response</strong> against each finding, confirming the agreed corrective action, the responsible owner, and the target completion date.</p>
+    <p>Responses should be returned to Internal Audit within <strong>10 working days</strong> of this report.</p>
+    <p>Internal Audit will perform a follow-up review of payroll outputs after the corrective configuration changes have been implemented and the parallel run completed.</p>
+  </div>
+
+  <!-- §6 Appendices -->
+  <div class="section-heading">
+    <span class="section-num">§ 06</span>
+    <span class="section-title">Appendices</span>
+  </div>
+
+  <div class="appendix-item">
+    <span class="app-letter">APPX A</span>
+    <span>Independent Payroll Recomputation Workbook — <em>Payroll_Recomputation-Feb_2026.xlsx</em></span>
+  </div>
+  <div class="appendix-item">
+    <span class="app-letter">APPX B</span>
+    <span>Pension Computation Tables A, B and C (included in recomputation workbook)</span>
+  </div>
+
+  <!-- Disclaimer -->
+  <p class="disclaimer">This report has been prepared solely for the information and use by management. It should not be distributed to third parties without the prior written consent of the Head of Internal Audit.</p>
+
+</div><!-- /report-body -->
+</body>
+</html>

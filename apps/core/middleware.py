@@ -64,6 +64,7 @@ class OrganizationMiddleware:
         '/users/logout/',
         '/service_paused/',
         '/service_info/',
+        '/document_management/upload/',  # token-based external uploads (no login)
     )
 
     def __init__(self, get_response):

@@ -172,6 +172,8 @@ SECURE_SSL_REDIRECT = False
 # Disable security middleware for testing (e.g., Ghauri security testing)
 # Set to False to allow security testing tools
 SECURITY_MIDDLEWARE_ENABLED = False
+# Allow security scanners to probe template syntax in dev without 400 responses
+TEMPLATE_INJECTION_GUARD_ENABLED = os.getenv('TEMPLATE_INJECTION_GUARD_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
 # Development-specific tenant settings
 TENANT_CREATE_SCHEMA_AUTOMATICALLY = True

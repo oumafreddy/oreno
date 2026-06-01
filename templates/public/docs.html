@@ -46,7 +46,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ request.csp_nonce }}">
 /* Documentation-specific styles (aligned with public home editorial aesthetic) */
 .docs-hero {
     background: #f5f1e8;

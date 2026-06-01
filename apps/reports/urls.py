@@ -61,16 +61,7 @@ urlpatterns = [
     path('contracts/details/', views.contract_details_pdf, name='contract_details_pdf'),
     path('contracts/milestone/details/', views.milestone_details_pdf, name='milestone_details_pdf'),
     path('contracts/party/details/', views.party_details_pdf, name='party_details_pdf'),
-    # Contract reports
-    path('contracts/register/summary/', views.contract_register_summary_pdf, name='contract_register_summary_pdf'),
-    path('contracts/register/detailed/', views.contract_register_detailed_pdf, name='contract_register_detailed_pdf'),
-    path('contracts/milestone/register/', views.milestone_register_pdf, name='milestone_register_pdf'),
-    path('contracts/party/register/', views.party_register_pdf, name='party_register_pdf'),
-    path('contracts/expiry/', views.contract_expiry_pdf, name='contract_expiry_pdf'),
-    path('contracts/details/', views.contract_details_pdf, name='contract_details_pdf'),
-    path('contracts/milestone/details/', views.milestone_details_pdf, name='milestone_details_pdf'),
-    path('contracts/party/details/', views.party_details_pdf, name='party_details_pdf'),
-    
+
     # AI Governance Reports
     path('ai-governance/dashboard/', views.ai_governance_dashboard_pdf, name='ai_governance_dashboard_pdf'),
     path('ai-governance/test-run/', views.ai_governance_test_run_details_pdf, name='ai_governance_test_run_details_pdf'),

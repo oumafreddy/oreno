@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebSecScan Report — https://example.com</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #0f0f11; color: #e2e8f0; font-size: 14px; }
+  a { color: #60a5fa; }
+  .header { background: #18181b; border-bottom: 1px solid #27272a; padding: 24px 40px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #f8fafc; }
+  .header .meta { color: #71717a; font-size: 13px; margin-top: 6px; }
+  .header .meta span { margin-right: 20px; }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  .score-bar { display:flex; align-items:center; gap:24px; background:#18181b;
+                border:1px solid #27272a; border-radius:12px; padding:24px 32px; margin-bottom:28px; }
+  .score-circle { width:80px; height:80px; border-radius:50%; display:flex; align-items:center;
+                   justify-content:center; font-size:26px; font-weight:700; flex-shrink:0;
+                   border:4px solid #eab308; color:#eab308; }
+  .score-info h2 { font-size:18px; color:#f8fafc; }
+  .score-info p { color:#71717a; font-size:13px; margin-top:4px; }
+  .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:32px; }
+  .summary-card { background:#18181b; border:1px solid #27272a; border-radius:10px;
+                   padding:16px 20px; flex:1; min-width:100px; text-align:center; }
+  .card-count { font-size:28px; font-weight:700; }
+  .card-label { font-size:11px; color:#71717a; margin-top:4px; letter-spacing:.5px; }
+  .category { background:#18181b; border:1px solid #27272a; border-radius:10px;
+               margin-bottom:20px; overflow:hidden; }
+  .cat-header { display:flex; justify-content:space-between; align-items:center;
+                 padding:14px 20px; background:#1c1c1f; border-bottom:1px solid #27272a; }
+  .cat-header h3 { font-size:14px; font-weight:600; color:#f8fafc; }
+  .finding { padding:14px 20px; border-bottom:1px solid #27272a; }
+  .finding:last-child { border-bottom:none; }
+  .finding-header { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .finding-title { font-weight:600; color:#f1f5f9; font-size:13px; }
+  .finding-desc { color:#94a3b8; font-size:13px; line-height:1.5; }
+  .detail { background:#0f0f11; border-radius:6px; padding:8px 12px; margin-top:8px;
+             font-family:monospace; font-size:12px; color:#a5f3fc; white-space:pre-wrap; }
+  .fix { margin-top:10px; background:#0a1628; border-left:3px solid #3b82f6;
+          border-radius:4px; padding:10px 14px; }
+  .fix strong { color:#93c5fd; font-size:12px; display:block; margin-bottom:4px; }
+  .fix pre { font-size:12px; color:#bfdbfe; white-space:pre-wrap; font-family:monospace; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px;
+            font-weight:700; color:#fff; letter-spacing:.3px; flex-shrink:0; }
+  .errors { background:#1c1c1f; border:1px solid #ef444440; border-radius:8px;
+             padding:16px; margin-bottom:24px; color:#fca5a5; }
+  .footer { text-align:center; color:#3f3f46; font-size:12px; padding:32px 0; }
+  h2 { font-size:16px; color:#f8fafc; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>WebSecScan — Security Report</h1>
+  <div class="meta">
+    <span>URL: <strong style="color:#e2e8f0">https://example.com</strong></span>
+    <span>Scanned: 2026-05-04 12:54:03 UTC</span>
+    <span>Duration: 12.4s</span>
+    <span>Issues found: <strong style="color:#f97316">7</strong></span>
+  </div>
+</div>
+<div class="container">
+  <div class="score-bar">
+    <div class="score-circle">52</div>
+    <div class="score-info">
+      <h2>Security Score: 52/100</h2>
+      <p>Some issues need attention</p>
+      <p style="margin-top:6px">0 critical &bull; 1 high &bull; 3 medium &bull; 3 low</p>
+    </div>
+  </div>
+  
+  <h2>Check Summary</h2>
+  <div class="summary"><div class="summary-card" style="border-top:3px solid #ef4444"><div class="card-count" style="color:#ef4444">0</div><div class="card-label">CRITICAL</div></div><div class="summary-card" style="border-top:3px solid #f97316"><div class="card-count" style="color:#f97316">1</div><div class="card-label">HIGH</div></div><div class="summary-card" style="border-top:3px solid #eab308"><div class="card-count" style="color:#eab308">3</div><div class="card-label">MEDIUM</div></div><div class="summary-card" style="border-top:3px solid #3b82f6"><div class="card-count" style="color:#3b82f6">3</div><div class="card-label">LOW</div></div><div class="summary-card" style="border-top:3px solid #8b5cf6"><div class="card-count" style="color:#8b5cf6">2</div><div class="card-label">INFO</div></div><div class="summary-card" style="border-top:3px solid #22c55e"><div class="card-count" style="color:#22c55e">10</div><div class="card-label">PASS</div></div></div>
+  <h2>Detailed Findings</h2>
+  
+        <div class="category">
+          <div class="cat-header">
+            <h3>CORS</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding info">
+          <div class="finding-header">
+            <span class="badge" style="background:#8b5cf6">INFO</span>
+            <span class="finding-title">No CORS policy set</span>
+          </div>
+          <div class="finding-desc">No Access-Control-Allow-Origin header. Cross-origin requests will be blocked by default.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Exposed Paths</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No critical sensitive paths exposed</span>
+          </div>
+          <div class="finding-desc">Common sensitive paths (.git, .env, wp-config, db dumps) are not publicly accessible.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Information Disclosure</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding info">
+          <div class="finding-header">
+            <span class="badge" style="background:#8b5cf6">INFO</span>
+            <span class="finding-title">Server header present (version not disclosed)</span>
+          </div>
+          <div class="finding-desc">Server header value: 'cloudflare'. Consider removing entirely.</div>
+          
+          
+        </div>
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">X-Powered-By header not present</span>
+          </div>
+          <div class="finding-desc">Technology stack is not disclosed via X-Powered-By.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Injection</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No SQL error disclosure detected</span>
+          </div>
+          <div class="finding-desc">Basic SQL injection probes did not trigger visible database errors.</div>
+          
+          
+        </div>
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No reflected XSS detected (basic probe)</span>
+          </div>
+          <div class="finding-desc">Basic XSS payload was not reflected unescaped.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Input Validation</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No open redirect detected</span>
+          </div>
+          <div class="finding-desc">Common open redirect payloads did not trigger external redirects.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>SSL / TLS</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">SSL certificate valid (58 days remaining)</span>
+          </div>
+          <div class="finding-desc">Certificate expires on Jul  1 21:24:46 2026 GMT.</div>
+          
+          
+        </div>
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">TLS version acceptable: TLSv1.3</span>
+          </div>
+          <div class="finding-desc">Server negotiated TLSv1.3.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Secrets & Credentials</h3>
+            <span><span style="color:#22c55e">✓ Clean</span></span>
+          </div>
+          
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No obvious secrets detected in page source</span>
+          </div>
+          <div class="finding-desc">Common secret patterns (API keys, tokens, passwords) not found in HTML source.</div>
+          
+          
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Security Headers</h3>
+            <span><span style="color:#ef4444;font-weight:600">6 issue(s)</span></span>
+          </div>
+          
+        <div class="finding high">
+          <div class="finding-header">
+            <span class="badge" style="background:#f97316">HIGH</span>
+            <span class="finding-title">Missing Content-Security-Policy (CSP)</span>
+          </div>
+          <div class="finding-desc">No CSP header. XSS attacks have no browser-level mitigation.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Define a CSP that restricts script sources. Start with:
+Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'
+Django: use django-csp package.</pre></div>
+        </div>
+        <div class="finding medium">
+          <div class="finding-header">
+            <span class="badge" style="background:#eab308">MEDIUM</span>
+            <span class="finding-title">Missing Strict-Transport-Security (HSTS)</span>
+          </div>
+          <div class="finding-desc">HSTS is not set. Browsers won't enforce HTTPS on repeat visits.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Add header: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Django: SECURE_HSTS_SECONDS = 31536000</pre></div>
+        </div>
+        <div class="finding medium">
+          <div class="finding-header">
+            <span class="badge" style="background:#eab308">MEDIUM</span>
+            <span class="finding-title">Missing X-Frame-Options (clickjacking protection)</span>
+          </div>
+          <div class="finding-desc">The site can be embedded in iframes, enabling clickjacking attacks.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Add header: X-Frame-Options: DENY
+Django: X_FRAME_OPTIONS = "DENY"</pre></div>
+        </div>
+        <div class="finding low">
+          <div class="finding-header">
+            <span class="badge" style="background:#3b82f6">LOW</span>
+            <span class="finding-title">Missing X-Content-Type-Options: nosniff</span>
+          </div>
+          <div class="finding-desc">Browsers may MIME-sniff responses, enabling content injection attacks.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Add header: X-Content-Type-Options: nosniff
+Django: SECURE_CONTENT_TYPE_NOSNIFF = True</pre></div>
+        </div>
+        <div class="finding low">
+          <div class="finding-header">
+            <span class="badge" style="background:#3b82f6">LOW</span>
+            <span class="finding-title">Missing or weak Referrer-Policy</span>
+          </div>
+          <div class="finding-desc">Full URLs (including paths and query strings) may be leaked to third parties via the Referer header.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Add header: Referrer-Policy: strict-origin-when-cross-origin</pre></div>
+        </div>
+        <div class="finding low">
+          <div class="finding-header">
+            <span class="badge" style="background:#3b82f6">LOW</span>
+            <span class="finding-title">Missing Permissions-Policy header</span>
+          </div>
+          <div class="finding-desc">No restrictions on browser features (camera, microphone, geolocation). Malicious scripts could abuse them.</div>
+          
+          <div class="fix"><strong>Fix:</strong><pre>Add header: Permissions-Policy: geolocation=(), microphone=(), camera=()</pre></div>
+        </div>
+        </div>
+        <div class="category">
+          <div class="cat-header">
+            <h3>Transport Security</h3>
+            <span><span style="color:#ef4444;font-weight:600">1 issue(s)</span></span>
+          </div>
+          
+        <div class="finding medium">
+          <div class="finding-header">
+            <span class="badge" style="background:#eab308">MEDIUM</span>
+            <span class="finding-title">HTTP does not redirect to HTTPS</span>
+          </div>
+          <div class="finding-desc">Requests to the HTTP version of the site are not automatically redirected to HTTPS.</div>
+          <div class="detail">HTTP http://example.com returned status 200 without an HTTPS redirect.</div>
+          <div class="fix"><strong>Fix:</strong><pre>Configure your web server to issue a 301 redirect from HTTP to HTTPS for all requests.</pre></div>
+        </div>
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">HTTPS in use</span>
+          </div>
+          <div class="finding-desc">Site is served over HTTPS.</div>
+          
+          
+        </div>
+        <div class="finding pass">
+          <div class="finding-header">
+            <span class="badge" style="background:#22c55e">PASS</span>
+            <span class="finding-title">No mixed content detected</span>
+          </div>
+          <div class="finding-desc">All resources appear to be loaded over HTTPS.</div>
+          
+          
+        </div>
+        </div>
+</div>
+<div class="footer">WebSecScan &bull; Generated 2026-05-04 12:54:03 UTC &bull; Not a substitute for a full penetration test</div>
+</body>
+</html>

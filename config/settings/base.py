@@ -65,6 +65,7 @@ if _extra_csrf:
 # ------------------------------------------------------------------------------
 INSTALLED_APPS = [
     # Django core
+    'axes',  # Login attempt monitoring — must be before django.contrib.admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -190,6 +191,7 @@ MIDDLEWARE = [
     'django_tenants.middleware.TenantMainMiddleware',  # Must be first
     'apps.common.admin_middleware.AdminTenantMiddleware',  # Handle admin tenant issues
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.TemplateInjectionGuardMiddleware',
     'common.middleware.SecurityMiddleware',  # Block automated attacks (can be disabled for testing)
     'common.middleware.CSPNonceMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -206,6 +208,13 @@ MIDDLEWARE = [
     'common.middleware.LoginRequiredMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'audit.middleware.OrganizationContextMiddleware',  # Enhanced org context enforcement
+    'reports.middleware.TenantReportSecurityMiddleware',
+    'axes.middleware.AxesMiddleware',  # Must be last
+]
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # ------------------------------------------------------------------------------
@@ -570,7 +579,8 @@ LOGIN_REQUIRED_EXEMPT_URLS = [
     '/sitemap.xml',             # sitemap
     '/robots.txt',              # robots file
     '/health/',                 # health check
-    
+    '/document_management/upload/',  # token-based external document upload
+
     # Static files and assets
     '/static/', '/media/', '/favicon.ico',
     
@@ -593,6 +603,10 @@ ADMIN_URL = os.getenv('ADMIN_URL', 'super-admin-portal/')
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+MAX_UPLOAD_SIZE_MB = 15
+ENABLE_VIRUS_SCANNING = os.getenv('ENABLE_VIRUS_SCANNING', 'False').lower() in ('true', '1', 'yes')
+FAIL_IF_SCANNER_UNAVAILABLE = False
+FAIL_ON_SCAN_ERROR = True
 
 # ------------------------------------------------------------------------------
 # Custom Settings
@@ -601,6 +615,19 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 MAX_LOGIN_ATTEMPTS = 5
 # Time in minutes to lock account after max attempts
 LOGIN_LOCKOUT_TIME = 15
+
+# django-axes — aligned with org password policy / AccountLockout
+AXES_FAILURE_LIMIT = MAX_LOGIN_ATTEMPTS
+AXES_COOLOFF_TIME = timedelta(minutes=LOGIN_LOCKOUT_TIME)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
+AXES_HTTP_RESPONSE_CODE = 429
+
+# Block {{ }}, ${}, etc. in query/body (SSTI hardening; see TemplateInjectionGuardMiddleware)
+TEMPLATE_INJECTION_GUARD_ENABLED = True
+REFERRER_POLICY = 'strict-origin-when-cross-origin'
+PERMISSIONS_POLICY = 'geolocation=(), microphone=(), camera=(), payment=(), usb=()'
 
 # OTP settings
 OTP_EXPIRY_MINUTES = 5

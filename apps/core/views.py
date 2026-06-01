@@ -1,9 +1,5 @@
 from django.shortcuts import render
 from django.utils.translation import gettext as _
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from services.ai.ai_service import ai_assistant_answer
 
 def bad_request(request, exception=None):
     """400 error handler"""
@@ -40,23 +36,5 @@ def server_error(request):
     }
     return render(request, 'core/error.html', context, status=500)
 
-class AIAssistantAPIView(APIView):
-    # Allow both authenticated and unauthenticated users
-    permission_classes = []
-    
-    def post(self, request, *args, **kwargs):
-        question = request.data.get('question', '').strip()
-        if not question:
-            return Response({'answer': 'Please enter a question.'}, status=200)
-        
-        user = request.user if request.user.is_authenticated else None
-        org = getattr(request, 'tenant', None) or getattr(request, 'organization', None)
-        try:
-            answer = ai_assistant_answer(question, user, org)
-            if not answer:
-                answer = 'Sorry, I could not find an answer to your question.'
-            return Response({'answer': answer})
-        except Exception as e:
-            import logging
-            logging.getLogger('services.ai.ai_service').error(f"AI Assistant error: {e}")
-            return Response({'answer': 'Sorry, there was a problem processing your request. Please try again later.'}, status=200)
+# AI assistant API lives in services.ai.views (login_required, rate-limited, org-scoped).
+# See config/urls.py → path('api/ai/', include('services.ai.urls')).

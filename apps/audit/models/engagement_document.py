@@ -4,7 +4,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from simple_history.models import HistoricalRecords
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
-from core.models.validators import validate_engagement_document_extension, validate_file_size, validate_file_virus
+from core.models.validators import (
+    validate_safe_filename,
+    validate_engagement_document_extension,
+    validate_file_size,
+    validate_file_virus,
+)
 from .engagement import Engagement
 
 
@@ -23,7 +28,12 @@ class EngagementDocument(OrganizationOwnedModel, AuditableModel, SoftDeletionMod
     )
     file = models.FileField(
         upload_to='audit/engagement_documents/%Y/%m/',
-        validators=[validate_engagement_document_extension, validate_file_size, validate_file_virus],
+        validators=[
+            validate_safe_filename,
+            validate_engagement_document_extension,
+            validate_file_size,
+            validate_file_virus,
+        ],
         verbose_name=_('Document File'),
         help_text=_('Upload a document file (PDF, DOC, DOCX, XLSX, or PPTX only)'),
     )

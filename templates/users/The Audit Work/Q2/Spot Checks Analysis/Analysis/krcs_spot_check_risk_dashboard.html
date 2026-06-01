@@ -1,0 +1,316 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.dash { padding: 1rem 0; }
+.tab-bar { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.tab { padding: 6px 14px; border-radius: 6px; border: 0.5px solid var(--color-border-secondary); font-size: 13px; cursor: pointer; background: transparent; color: var(--color-text-secondary); }
+.tab.active { background: #1A2E44; color: #fff; border-color: #1A2E44; }
+.panel { display: none; }
+.panel.active { display: block; }
+.metric-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1.25rem; }
+.metric { background: var(--color-background-secondary); border-radius: 8px; padding: 12px 14px; }
+.metric .label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.metric .val { font-size: 22px; font-weight: 500; }
+.val.red { color: #C8102E; }
+.val.amber { color: #E07B00; }
+.val.green { color: #2E7D32; }
+.val.navy { color: #1A2E44; }
+.chart-wrap { position: relative; width: 100%; }
+.sec-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; font-weight: 500; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+.leg { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; color: var(--color-text-secondary); }
+.leg span { display: flex; align-items: center; gap: 4px; }
+.leg .sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.risk-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.risk-table th { text-align: left; padding: 6px 10px; font-weight: 500; font-size: 12px; color: var(--color-text-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+.risk-table td { padding: 7px 10px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); }
+.risk-table tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge.crit { background: #FDECEA; color: #C8102E; }
+.badge.high { background: #FFF4E5; color: #E07B00; }
+.badge.med { background: #EAF7EC; color: #2E7D32; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.bar-label { width: 140px; flex-shrink: 0; color: var(--color-text-primary); }
+.bar-track { flex: 1; background: var(--color-background-secondary); border-radius: 3px; height: 18px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 500; color: #fff; }
+.follow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.follow-card { background: var(--color-background-secondary); border-radius: 8px; padding: 12px; border-left: 3px solid; }
+.follow-card.fc-med { border-left-color: #E07B00; }
+.follow-card.fc-low { border-left-color: #2E7D32; }
+.follow-card .fc-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.follow-card .fc-body { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+</style>
+
+<div class="dash">
+<div class="tab-bar">
+  <button class="tab active" onclick="showTab('overview')">Overview</button>
+  <button class="tab" onclick="showTab('regions')">Regional risk</button>
+  <button class="tab" onclick="showTab('branches')">Branch rankings</button>
+  <button class="tab" onclick="showTab('crosscut')">Repeat findings</button>
+  <button class="tab" onclick="showTab('fraud')">Fraud indicators</button>
+  <button class="tab" onclick="showTab('followup')">Follow-up plan</button>
+</div>
+
+<div id="tab-overview" class="panel active">
+  <div class="metric-row">
+    <div class="metric"><div class="label">Reports analysed</div><div class="val navy">21</div></div>
+    <div class="metric"><div class="label">Branches covered</div><div class="val navy">47</div></div>
+    <div class="metric"><div class="label">Rated "Needs Improvement"</div><div class="val red">21 / 21</div></div>
+    <div class="metric"><div class="label">Open HIGH findings</div><div class="val red">57+</div></div>
+  </div>
+  <div class="metric-row">
+    <div class="metric"><div class="label">Open MEDIUM findings</div><div class="val amber">75+</div></div>
+    <div class="metric"><div class="label">Cross-cutting issues</div><div class="val navy">12</div></div>
+    <div class="metric"><div class="label">Regions with active fraud risk</div><div class="val red">7 of 8</div></div>
+    <div class="metric"><div class="label">Reports with 0% assurance</div><div class="val red">11</div></div>
+  </div>
+  <div class="sec-label">Assurance score distribution across all 21 reports</div>
+  <div class="chart-wrap" style="height:220px">
+    <canvas id="assuranceChart"></canvas>
+  </div>
+</div>
+
+<div id="tab-regions" class="panel">
+  <div class="sec-label">Composite risk score by region (higher = riskier)</div>
+  <div class="leg">
+    <span><span class="sq" style="background:#C8102E"></span>Critical</span>
+    <span><span class="sq" style="background:#E07B00"></span>High</span>
+    <span><span class="sq" style="background:#2E7D32"></span>Medium</span>
+  </div>
+  <div class="chart-wrap" style="height:280px; margin-bottom:16px;">
+    <canvas id="regionChart"></canvas>
+  </div>
+  <div class="sec-label">Open HIGH vs MEDIUM findings by region</div>
+  <div class="chart-wrap" style="height:240px">
+    <canvas id="regionStackChart"></canvas>
+  </div>
+</div>
+
+<div id="tab-branches" class="panel">
+  <div class="sec-label">Top 15 highest-risk branches</div>
+  <table class="risk-table">
+    <thead><tr><th>#</th><th>Branch</th><th>Region</th><th>Risk tier</th><th>Open H</th><th>Open M</th><th>Primary fraud indicator</th></tr></thead>
+    <tbody id="branchTableBody"></tbody>
+  </table>
+</div>
+
+<div id="tab-crosscut" class="panel">
+  <div class="sec-label">Repeat findings — occurrence count across all reports</div>
+  <div class="chart-wrap" style="height:340px; margin-bottom:16px">
+    <canvas id="crossCutChart"></canvas>
+  </div>
+  <div class="sec-label">Trend status of cross-cutting issues</div>
+  <div style="margin-top:8px">
+    <div class="bar-row"><div class="bar-label">Bank reconciliation failures</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#C8102E">13 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">25% surplus non-compliance</div><div class="bar-track"><div class="bar-fill" style="width:85%;background:#C8102E">9 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Long outstanding receivables</div><div class="bar-track"><div class="bar-fill" style="width:92%;background:#E07B00">12 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Long outstanding payables</div><div class="bar-track"><div class="bar-fill" style="width:77%;background:#E07B00">10 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Asset management gaps</div><div class="bar-track"><div class="bar-fill" style="width:70%;background:#E07B00">9 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Procurement irregularities</div><div class="bar-track"><div class="bar-fill" style="width:62%;background:#C8102E">8 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Volunteer management gaps</div><div class="bar-track"><div class="bar-fill" style="width:54%;background:#C8102E">7 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Lack of title deeds</div><div class="bar-track"><div class="bar-fill" style="width:31%;background:#E07B00">4 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Prior findings not implemented</div><div class="bar-track"><div class="bar-fill" style="width:23%;background:#C8102E">3 reports</div></div></div>
+    <div class="bar-row"><div class="bar-label">Navision underutilization</div><div class="bar-track"><div class="bar-fill" style="width:38%;background:#2E7D32">5 reports</div></div></div>
+  </div>
+</div>
+
+<div id="tab-fraud" class="panel">
+  <div class="sec-label">Fraud risk category assessment</div>
+  <div class="chart-wrap" style="height:260px; margin-bottom:16px">
+    <canvas id="fraudChart"></canvas>
+  </div>
+  <div class="sec-label">Branches flagged for investigation-grade review</div>
+  <table class="risk-table">
+    <thead><tr><th>Branch</th><th>Issue type</th><th>Status</th><th>Key evidence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Wajir</strong></td><td>SoD breach + unauthorized receipts</td><td><span class="badge crit">Immediate action</span></td><td>Same officer prepares and approves bank recs. Local receipt books without serial numbers in use. All 6 findings open.</td></tr>
+      <tr><td><strong>Kilifi (BNK010)</strong></td><td>6-year bank rec gap</td><td><span class="badge crit">Forensic review</span></td><td>No reconciliation since August 2019. IT issue cited but unresolved. Full opacity over 6 years of transactions.</td></tr>
+      <tr><td><strong>Busia</strong></td><td>Conference brokerage / conflict of interest</td><td><span class="badge high">Verify closure</span></td><td>Ksh 862K in transactions procured at cost and resold to donor projects at markup. Marked closed Oct 2025 — verify.</td></tr>
+      <tr><td><strong>Kirinyaga</strong></td><td>Retrospective procurement + quotation manipulation</td><td><span class="badge high">Deep dive</span></td><td>LPO dated Sep 2025 for goods delivered Apr 2025. Quotation errors corrected post-award in invoice at higher prices.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="tab-followup" class="panel">
+  <div class="sec-label">Medium and low finding follow-up framework</div>
+  <div class="follow-grid">
+    <div class="follow-card fc-med">
+      <div class="fc-title">Cash and bank (MEDIUM)</div>
+      <div class="fc-body">Monthly desk review. Submit bank rec samples + signed approvals via MAT. Deadline: 30 days from report. Escalation at 60 days.</div>
+    </div>
+    <div class="follow-card fc-med">
+      <div class="fc-title">Procurement (MEDIUM)</div>
+      <div class="fc-body">Quarterly desk review. Pull LPO and CBA records from Navision. Flag off-system procurements. Deadline: 45 days. Escalation at 60 days.</div>
+    </div>
+    <div class="follow-card fc-med">
+      <div class="fc-title">Receivables and payables (MEDIUM)</div>
+      <div class="fc-body">Quarterly aging schedule from Navision. Write-off proposals approved at ARC. Deadline: 60 days. Escalation at 90 days.</div>
+    </div>
+    <div class="follow-card fc-med">
+      <div class="fc-title">Volunteer management (MEDIUM)</div>
+      <div class="fc-body">Bi-annual document review. Request VMMS utilization report + signed CoC sample (10 volunteers). Deadline: 60 days.</div>
+    </div>
+    <div class="follow-card fc-med">
+      <div class="fc-title">Asset management (MEDIUM)</div>
+      <div class="fc-body">Quarterly. Updated FAR extract from Navision + timestamped photos of asset tagging. Deadline: 60 days. Escalation at 90 days.</div>
+    </div>
+    <div class="follow-card fc-med">
+      <div class="fc-title">Governance and risk (MEDIUM)</div>
+      <div class="fc-body">Bi-annual. Confirm via board minutes + signed committee ToRs. No field visit required. Deadline: 90 days.</div>
+    </div>
+    <div class="follow-card fc-low">
+      <div class="fc-title">Idle assets / IGA (LOW)</div>
+      <div class="fc-body">Annual management representation letter. Confirm utilization status in writing. Include in annual BDP review. Deadline: 120 days.</div>
+    </div>
+    <div class="follow-card fc-low">
+      <div class="fc-title">Office / operations (LOW)</div>
+      <div class="fc-body">Annual. Request signed/renewed lease agreements as evidence. Management representation sufficient. Deadline: 120 days.</div>
+    </div>
+  </div>
+  <div style="margin-top:16px; font-size:12px; color:var(--color-text-secondary); padding:10px; background:var(--color-background-secondary); border-radius:8px; line-height:1.7;">
+    <strong style="color:var(--color-text-primary)">Escalation path:</strong> No evidence submitted by deadline → 14-day cure notice to HOR → Still unresolved → Flagged in next ARC board pack as "Not Resolved" → Enhanced scrutiny in next field review regardless of severity.
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+const branches = [
+  {r:1, b:'Nyeri', reg:'Central', tier:'CRITICAL', h:5, m:3, fi:'Procurement investigation, -90.75% surplus, 136-day late bank recs'},
+  {r:2, b:'Bungoma', reg:'North Rift', tier:'CRITICAL', h:4, m:2, fi:'Cash via M-Pesa to accountant, volunteers in finance, persistent non-implementation'},
+  {r:3, b:'Wajir', reg:'North Eastern', tier:'CRITICAL', h:0, m:5, fi:'SoD breach: preparer = approver. Unauthorized receipt books. All findings open.'},
+  {r:4, b:'Marsabit', reg:'Upper Eastern', tier:'CRITICAL', h:4, m:1, fi:'Ksh 7.7M payables, conference brokerage, security liability gap'},
+  {r:5, b:'Turkana', reg:'North Rift', tier:'HIGH', h:3, m:2, fi:'Unrecorded M-Pesa income, bid-splitting, deeply negative surplus'},
+  {r:6, b:'Kilifi', reg:'Coast', tier:'HIGH', h:1, m:5, fi:'Bank recs missing since 2019 (6 yrs), Ksh 5.7M receivables >180 days'},
+  {r:7, b:'Machakos', reg:'Lower Eastern', tier:'HIGH', h:3, m:2, fi:'Unbanked PHW cash, inaccurate receipt references, missing bank recs'},
+  {r:8, b:'Bomet', reg:'South Rift', tier:'HIGH', h:2, m:1, fi:'Weekend cash payments, land leveling pay to staff, unaccounted advance'},
+  {r:9, b:'Samburu', reg:'Upper Eastern', tier:'HIGH', h:2, m:0, fi:'Ksh 3.9M construction payable, HR gaps, 9-month delay on certificates'},
+  {r:10, b:'Kisumu', reg:'West Kenya', tier:'HIGH', h:1, m:3, fi:'Off-system procurement approvals (Ksh 526K), bank rec errors'},
+  {r:11, b:'Tana River', reg:'Coast', tier:'MEDIUM-HIGH', h:1, m:3, fi:'Unprequalified fuel vendor, vehicle at 353K km, 2017 entries in recs'},
+  {r:12, b:'Mombasa', reg:'Coast', tier:'MEDIUM-HIGH', h:0, m:3, fi:'SHIF tax relief applied after Dec 2024 law change, Ksh 12.5M debtors >360d'},
+  {r:13, b:'Busia', reg:'West Kenya', tier:'MEDIUM-HIGH', h:0, m:3, fi:'Conference brokerage Ksh 862K (marked closed — verify), bid-splitting'},
+  {r:14, b:'Narok', reg:'South Rift', tier:'MEDIUM', h:0, m:2, fi:'2024 income/expenditure in 2025 records (Ksh 688K), volunteer in staff account'},
+  {r:15, b:'Makueni', reg:'Lower Eastern', tier:'MEDIUM', h:1, m:2, fi:'PHW cash unbanked, OSH brokerage, Ksh 3M payables, idle greenhouses'},
+];
+
+const tbody = document.getElementById('branchTableBody');
+branches.forEach(b => {
+  const tierCls = b.tier === 'CRITICAL' ? 'crit' : b.tier === 'HIGH' ? 'high' : 'med';
+  tbody.innerHTML += `<tr>
+    <td>${b.r}</td><td><strong>${b.b}</strong></td><td>${b.reg}</td>
+    <td><span class="badge ${tierCls}">${b.tier}</span></td>
+    <td style="color:#C8102E;font-weight:500">${b.h}</td>
+    <td style="color:#E07B00;font-weight:500">${b.m}</td>
+    <td style="font-size:12px">${b.fi}</td>
+  </tr>`;
+});
+
+new Chart(document.getElementById('assuranceChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0%','0%','0%','0%','0%','0%','0%','0%','0%','0%','0%','6%','17%','17%','31%','33%','40%','54%','57%','',''],
+    datasets: [{
+      label: 'Assurance %',
+      data: [0,0,0,0,0,0,0,0,0,0,0,6,17,17,31,33,40,54,57,null,null],
+      backgroundColor: '#C8102E', borderRadius: 3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Assurance: ${c.raw}%` } } },
+    scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%', font: { size: 11 } } }, x: { display: false } }
+  }
+});
+
+const regionLabels = ['North Rift','Lower Eastern','Central','Upper Eastern','Coast','West Kenya','North Eastern','South Rift'];
+const regionScores = [87, 73, 63, 48, 46, 45, 43, 31];
+const regionColors = ['#C8102E','#C8102E','#E07B00','#E07B00','#E07B00','#E07B00','#E07B00','#2E7D32'];
+
+new Chart(document.getElementById('regionChart'), {
+  type: 'bar',
+  data: {
+    labels: regionLabels,
+    datasets: [{ label: 'Risk score', data: regionScores, backgroundColor: regionColors, borderRadius: 4 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 11 } } } }
+  }
+});
+
+new Chart(document.getElementById('regionStackChart'), {
+  type: 'bar',
+  data: {
+    labels: regionLabels,
+    datasets: [
+      { label: 'Open HIGH', data: [9,5,8,8,2,4,0,2], backgroundColor: '#C8102E', borderRadius: 2 },
+      { label: 'Open MEDIUM', data: [3,9,7,2,13,6,6,2], backgroundColor: '#E07B00', borderRadius: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index' }
+    },
+    scales: { x: { stacked: true, ticks: { font: { size: 11 } } }, y: { stacked: true, ticks: { font: { size: 11 } } } }
+  }
+});
+document.getElementById('tab-regions').insertAdjacentHTML('afterbegin', `
+<div class="leg" style="margin-bottom:10px">
+  <span><span class="sq" style="background:#C8102E"></span>Open HIGH</span>
+  <span><span class="sq" style="background:#E07B00"></span>Open MEDIUM</span>
+</div>`);
+
+new Chart(document.getElementById('crossCutChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Bank recs','Receivables','Payables','Asset mgmt','Procurement','Volunteer mgmt','25% surplus','SoD breaches','Income recognition','Prior findings','Title deeds','ERP/Navision'],
+    datasets: [
+      { label: 'HIGH', data: [4,5,4,5,7,6,18,2,3,4,3,0], backgroundColor: '#C8102E', borderRadius: 2 },
+      { label: 'MEDIUM', data: [9,10,9,7,4,4,4,3,4,0,5,6], backgroundColor: '#E07B00', borderRadius: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
+    scales: {
+      x: { stacked: true, ticks: { font: { size: 10 }, maxRotation: 35 } },
+      y: { stacked: true, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+new Chart(document.getElementById('fraudChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Revenue diversion','Procurement manipulation','Bank rec fraud','Brokerage/CoI','Payroll irregularity','Receivables misstatement','Asset misappropriation'],
+    datasets: [
+      { label: 'North Rift', data: [7,9,5,4,6,4,7], borderColor: '#C8102E', backgroundColor: 'rgba(200,16,46,0.1)', pointRadius: 3 },
+      { label: 'Lower Eastern', data: [9,7,6,8,4,5,5], borderColor: '#E07B00', backgroundColor: 'rgba(224,123,0,0.1)', pointRadius: 3 },
+      { label: 'North Eastern', data: [3,4,9,2,7,3,3], borderColor: '#1A2E44', backgroundColor: 'rgba(26,46,68,0.1)', pointRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { r: { min: 0, max: 10, ticks: { font: { size: 10 }, stepSize: 2 }, pointLabels: { font: { size: 11 } } } }
+  }
+});
+document.getElementById('tab-fraud').insertAdjacentHTML('afterbegin', `
+<div class="leg" style="margin-bottom:8px">
+  <span><span class="sq" style="background:#C8102E"></span>North Rift</span>
+  <span><span class="sq" style="background:#E07B00"></span>Lower Eastern</span>
+  <span><span class="sq" style="background:#1A2E44"></span>North Eastern</span>
+  <span style="font-size:11px; color:var(--color-text-secondary)">(Radar shows relative fraud risk intensity per category, 0–10)</span>
+</div>`);
+</script>

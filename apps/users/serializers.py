@@ -126,15 +126,32 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        # Check if user requires first-time setup
-        user = User.objects.filter(email=attrs.get('email')).first()
+        from users.auth_lockout import is_login_locked, record_login_failure, reset_login_lockout
+
+        request = self.context.get('request')
+        email = attrs.get('email') or attrs.get('username')
+        user = User.objects.filter(email=email).first() if email else None
+
+        if user and is_login_locked(user, request=request):
+            raise serializers.ValidationError({
+                'detail': _('Account temporarily locked due to too many failed login attempts. Please try again later.'),
+            })
+
         if user and user.requires_first_time_setup():
             raise serializers.ValidationError({
-                'first_time_setup_required': True, 
-                'detail': 'First-time setup required. Please complete OTP verification and password reset.'
+                'first_time_setup_required': True,
+                'detail': 'First-time setup required. Please complete OTP verification and password reset.',
             })
-        
-        data = super().validate(attrs)
+
+        try:
+            data = super().validate(attrs)
+        except serializers.ValidationError:
+            if user:
+                ua = request.META.get('HTTP_USER_AGENT', '') if request else ''
+                record_login_failure(user, request=request, user_agent=ua)
+            raise
+
+        reset_login_lockout(self.user, request=request)
         # Include extra user info
         data['user'] = {
             'id': self.user.id,

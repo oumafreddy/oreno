@@ -9,6 +9,8 @@ import secrets
 import re
 import logging
 
+logger = logging.getLogger('security.middleware')
+
 class LoginRequiredMiddleware:
     """
     Middleware that forces a user to be logged in to view any page except a defined whitelist.
@@ -73,38 +75,105 @@ class AjaxLoginRequiredMiddleware:
         return self.get_response(request)
 
 
-class CSPNonceMiddleware:
-    """Attach a CSP nonce to the request and response. Allows external scripts in development, strict in production."""
+# Template-engine probe patterns (SSTI scanners / attacks) — reject early in query/body.
+_TEMPLATE_PROBE_RE = re.compile(
+    r'\{\{|\}\}|\{%|\%\}|\$\{|<\%|#\{|<%\s*[^%]+\s*%>',
+    re.IGNORECASE,
+)
+
+
+class TemplateInjectionGuardMiddleware:
+    """
+    Reject requests whose query/body values contain server-side template syntax.
+    Prevents accidental reflection and hardens against SSTI even if a view mis-handles input.
+    """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        import os
+        if not getattr(settings, 'TEMPLATE_INJECTION_GUARD_ENABLED', True):
+            return self.get_response(request)
+
+        for key, value in request.GET.items():
+            if _TEMPLATE_PROBE_RE.search(value):
+                logger.warning(
+                    'Blocked template probe in GET param %r from %s',
+                    key,
+                    request.META.get('REMOTE_ADDR'),
+                )
+                return JsonResponse({'error': 'Invalid request parameters.'}, status=400)
+
+        if request.method in ('POST', 'PUT', 'PATCH'):
+            for key, value in request.POST.items():
+                if isinstance(value, str) and _TEMPLATE_PROBE_RE.search(value):
+                    logger.warning(
+                        'Blocked template probe in POST param %r from %s',
+                        key,
+                        request.META.get('REMOTE_ADDR'),
+                    )
+                    return JsonResponse({'error': 'Invalid request parameters.'}, status=400)
+
+        return self.get_response(request)
+
+
+class CSPNonceMiddleware:
+    """Attach a CSP nonce; strict policy in production (no unsafe-inline / unsafe-eval)."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         nonce = secrets.token_hex(16)
         request.csp_nonce = nonce
         response = self.get_response(request)
+
+        extra_connect = [
+            o.strip()
+            for o in getattr(settings, 'CSP_CONNECT_SRC_EXTRA', '').split(',')
+            if o.strip()
+        ]
+        connect_src = "'self' https://cdn.plot.ly" + (
+            ''.join(f' {o}' for o in extra_connect)
+        )
+
         if getattr(settings, 'DEBUG', False):
-            # Development: allow trusted CDNs for JS/CSS
             csp = (
+                f"default-src 'self'; "
                 f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval' "
                 "https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com "
-                "https://cdn.plot.ly https://www.googletagmanager.com; "
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-                "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
-                "img-src 'self' data: https://www.googletagmanager.com; "
-                "connect-src 'self' https://cdn.plot.ly https://www.google-analytics.com; "
+                "https://cdn.plot.ly; "
+                f"style-src 'self' 'nonce-{nonce}' 'unsafe-inline' "
+                "https://cdn.jsdelivr.net https://fonts.googleapis.com "
+                "https://cdnjs.cloudflare.com; "
+                "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com "
+                "https://cdnjs.cloudflare.com; "
+                "img-src 'self' data:; "
+                f"connect-src {connect_src}; "
+                "object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
             )
         else:
-            # Production: allow self, nonce, and necessary Plotly.js requirements
             csp = (
-                f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval'; "
-                "style-src 'self' 'unsafe-inline'; "
+                "default-src 'self'; "
+                f"script-src 'self' 'nonce-{nonce}' https://cdn.plot.ly; "
+                f"style-src 'self' 'nonce-{nonce}'; "
                 "font-src 'self'; "
                 "img-src 'self' data:; "
-                "connect-src 'self' https://cdn.plot.ly https://www.google-analytics.com;"
+                f"connect-src {connect_src}; "
+                "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; "
+                "form-action 'self'; upgrade-insecure-requests;"
             )
+
         response['Content-Security-Policy'] = csp
+        response['Permissions-Policy'] = getattr(
+            settings,
+            'PERMISSIONS_POLICY',
+            'geolocation=(), microphone=(), camera=(), payment=(), usb=()',
+        )
+        if not response.get('Referrer-Policy'):
+            response['Referrer-Policy'] = getattr(
+                settings, 'REFERRER_POLICY', 'strict-origin-when-cross-origin'
+            )
         return response
 
 
@@ -113,8 +182,6 @@ class SecurityMiddleware:
     Middleware to detect and block automated attack attempts.
     Can be disabled via SECURITY_MIDDLEWARE_ENABLED setting for testing.
     """
-    logger = logging.getLogger('security.middleware')
-    
     # SQL injection patterns
     SQL_INJECTION_PATTERNS = [
         r'(?i)(union.*select|select.*from|insert.*into|delete.*from|update.*set|drop.*table)',

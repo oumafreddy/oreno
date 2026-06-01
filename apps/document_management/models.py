@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from organizations.models import Organization
 from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel, AuditableModel
-from core.models.validators import validate_file_extension, validate_file_size
+from core.models.validators import file_upload_validators
 import secrets
 from datetime import timedelta
 import uuid
@@ -34,7 +34,7 @@ class DocumentRequest(OrganizationOwnedModel, AuditableModel):
         upload_to='media/', 
         null=True, 
         blank=True,
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         verbose_name="File"
     )
     due_date = models.DateField(verbose_name="Due Date")
@@ -148,14 +148,16 @@ class Document(OrganizationOwnedModel, AuditableModel):
     )
     file = models.FileField(
         upload_to='media/', 
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         verbose_name="File"
     )
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Upload Time")
     uploaded_by = models.ForeignKey(
-        get_user_model(), 
-        related_name='documents_uploaded', 
-        on_delete=models.CASCADE,
+        get_user_model(),
+        related_name='documents_uploaded',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name="Uploaded By"
     )
     

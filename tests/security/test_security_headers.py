@@ -14,6 +14,14 @@ class TestSecurityHeaders:
         response = client_public.get("/public/")
         csp_header = response.get("Content-Security-Policy")
         assert csp_header is not None, "CSP header should be present"
+        if not settings.DEBUG:
+            assert "unsafe-eval" not in csp_header, "Production CSP must not allow unsafe-eval"
+            assert "unsafe-inline" not in csp_header, "Production CSP must not allow unsafe-inline"
+
+    def test_permissions_policy_header(self, client_public):
+        """Test Permissions-Policy header."""
+        response = client_public.get("/public/")
+        assert response.get("Permissions-Policy") is not None
     
     def test_x_frame_options(self, client_public):
         """Test X-Frame-Options header."""

@@ -4,7 +4,7 @@ from django.conf import settings
 from simple_history.models import HistoricalRecords
 from core.models.abstract_models import OrganizationOwnedModel, AuditableModel, SoftDeletionModel
 from .issue import Issue
-from core.models.validators import validate_file_extension, validate_file_size
+from core.models.validators import file_upload_validators
 
 class IssueWorkingPaper(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """
@@ -18,7 +18,7 @@ class IssueWorkingPaper(OrganizationOwnedModel, AuditableModel, SoftDeletionMode
     )
     file = models.FileField(
         upload_to='working_papers/',
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         verbose_name=_('Working Paper File'),
     )
     description = models.CharField(

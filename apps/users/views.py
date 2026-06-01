@@ -51,6 +51,7 @@ from .validators import FirstTimeSetupPasswordValidator, validate_password_stren
 from organizations.mixins import OrganizationContextMixin, OrganizationPermissionMixin
 from organizations.models import Organization
 from .permissions import IsOrgAdmin, IsOrgManagerOrReadOnly, HasOrgAdminAccess
+from .auth_lockout import is_login_locked, record_login_failure, reset_login_lockout, get_client_ip
 
 # ─── MIXINS ──────────────────────────────────────────────────────────────────
 class UserPermissionMixin(OrganizationPermissionMixin):
@@ -76,7 +77,7 @@ class UserPermissionMixin(OrganizationPermissionMixin):
 @method_decorator(skip_org_check, name='dispatch')
 class UserRegisterAPIView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
-    permission_classes = [permissions.AllowAny, HasOrgAdminAccess]
+    permission_classes = [permissions.IsAuthenticated, HasOrgAdminAccess]
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -90,9 +91,20 @@ class UserLoginAPIView(TokenObtainPairView):
     
     def post(self, request, *args, **kwargs):
         """Override to add tenant access validation after successful authentication."""
-        client_ip = request.META.get('REMOTE_ADDR')
+        client_ip = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
-        
+
+        email = request.data.get('email')
+        precheck_user = CustomUser.objects.filter(email=email).first() if email else None
+        if precheck_user and is_login_locked(precheck_user, request=request, ip_address=client_ip):
+            SecurityAuditLog.log_event(
+                precheck_user, 'login_failed', client_ip, user_agent,
+                {'reason': 'account_locked'},
+            )
+            return Response({
+                'detail': _("Account temporarily locked due to too many failed login attempts."),
+            }, status=429)
+
         response = super().post(request, *args, **kwargs)
         
         # Only check if authentication was successful
@@ -101,6 +113,7 @@ class UserLoginAPIView(TokenObtainPairView):
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
                 user = serializer.user
+                reset_login_lockout(user, request=request)
                 # Audit logging
                 SecurityAuditLog.log_event(user, 'login_success', client_ip or '0.0.0.0', user_agent)
                 
@@ -120,8 +133,7 @@ class UserLoginAPIView(TokenObtainPairView):
             user = CustomUser.objects.filter(email=email).first()
             if user:
                 SecurityAuditLog.log_event(user, 'login_failed', client_ip or '0.0.0.0', user_agent)
-                # Record failed attempt and possibly lock out
-                AccountLockout.record_failed_attempt(user, client_ip or '0.0.0.0', user_agent)
+                record_login_failure(user, request=request, ip_address=client_ip, user_agent=user_agent)
         
         return response
 

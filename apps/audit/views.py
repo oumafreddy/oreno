@@ -3182,7 +3182,7 @@ class NoteDeleteView(AuditPermissionMixin, DeleteView):
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = []  # Allow unauthenticated access
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         # Return empty queryset for unauthenticated users

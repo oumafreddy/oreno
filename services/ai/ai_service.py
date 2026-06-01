@@ -85,6 +85,8 @@ class OrganizationDataProvider:
     """Provides organization-specific data for AI context"""
     
     def __init__(self, user, org):
+        if org is None:
+            raise ValueError("Organization is required for OrganizationDataProvider")
         self.user = user
         self.org = org
         self.cache = {}
@@ -457,7 +459,13 @@ def ai_assistant_answer(question: str, user, org, system_prompt: Optional[str] =
     
     question = question.strip()
     logger.info(f"AI Assistant query: {question} | User: {user} | Org: {org}")
-    
+
+    if org is None:
+        error_response = "Organization context is required for AI assistance."
+        if return_meta:
+            return error_response, {'error': 'missing_organization', 'provider': None}
+        return error_response
+
     # 1. Check FAQ first for quick answers (skip if custom system_prompt provided)
     # Only use FAQ for very specific, exact matches to allow DeepSeek to handle most queries dynamically
     if not system_prompt:

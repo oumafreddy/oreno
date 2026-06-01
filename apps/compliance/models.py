@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django_ckeditor_5.fields import CKEditor5Field
 from django.utils import timezone
-from core.models.validators import validate_file_extension, validate_file_size
+from core.models.validators import file_upload_validators
 from organizations.models import Organization
 from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel, AuditableModel
 from django.contrib.auth import get_user_model
@@ -39,7 +39,7 @@ class PolicyDocument(OrganizationOwnedModel, AuditableModel):
     title = models.CharField(max_length=512, db_index=True)
     file = models.FileField(
         upload_to='policy_documents/',
-        validators=[validate_file_extension, validate_file_size]
+        validators=file_upload_validators()
     )
     version = models.CharField(max_length=50, default='1.0')
     effective_date = models.DateField()

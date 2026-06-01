@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 import json
 from datetime import timedelta
-from core.models.validators import validate_file_extension, validate_file_size
+from core.models.validators import file_upload_validators
 from django.conf import settings
 from organizations.models import Organization
 from core.models.abstract_models import TimeStampedModel, OrganizationOwnedModel, AuditableModel
@@ -25,7 +25,7 @@ class ContractType(OrganizationOwnedModel):
     description = CKEditor5Field('Description', config_name='extends', blank=True, null=True)
     template_file = models.FileField(
         upload_to='contract_templates/', 
-        validators=[validate_file_extension, validate_file_size],
+        validators=file_upload_validators(),
         null=True, blank=True
     )
     is_standard_template = models.BooleanField(default=False)

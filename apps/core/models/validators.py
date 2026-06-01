@@ -1,11 +1,36 @@
 import os
+import re
 import logging
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from django_ckeditor_5.fields import CKEditor5Field
 
 logger = logging.getLogger(__name__)
+
+_UNSAFE_FILENAME = re.compile(r'[\\/<>:"|?*\x00]|\.\.')
+
+# Extension → allowed leading magic bytes (partial signatures)
+_MIME_SIGNATURES = {
+    'pdf': (b'%PDF',),
+    'doc': (b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1',),
+    'docx': (b'PK\x03\x04',),
+    'xls': (b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1',),
+    'xlsx': (b'PK\x03\x04',),
+    'pptx': (b'PK\x03\x04',),
+    'txt': None,  # text has no reliable magic; extension check only
+    'jpg': (b'\xFF\xD8\xFF',),
+    'jpeg': (b'\xFF\xD8\xFF',),
+    'png': (b'\x89PNG\r\n\x1a\n',),
+    'gif': (b'GIF87a', b'GIF89a',),
+}
+
+
+def validate_safe_filename(value):
+    """Reject path traversal and unsafe characters in uploaded filenames."""
+    name = os.path.basename(getattr(value, 'name', '') or '')
+    if not name or _UNSAFE_FILENAME.search(name):
+        raise ValidationError(_('Invalid file name.'))
+
 
 def validate_file_extension(value):
     """Validate file extensions against a whitelist."""
@@ -17,6 +42,22 @@ def validate_file_extension(value):
             _('Unsupported file extension ".%(ext)s". Allowed extensions: %(allowed)s.'),
             params={'ext': ext, 'allowed': allowed},
         )
+
+def validate_file_content_signature(value):
+    """Verify file content matches extension using magic-byte sniffing."""
+    validate_safe_filename(value)
+    ext = os.path.splitext(value.name)[1][1:].lower()
+    signatures = _MIME_SIGNATURES.get(ext)
+    if signatures is None:
+        return
+    head = value.read(16)
+    value.seek(0)
+    if not any(head.startswith(sig) for sig in signatures):
+        raise ValidationError(
+            _('File content does not match the ".%(ext)s" extension.'),
+            params={'ext': ext},
+        )
+
 
 def validate_file_size(value):
     """Ensure file size does not exceed MAX_UPLOAD_SIZE_MB from settings."""
@@ -77,8 +118,21 @@ def validate_file_virus(value):
             if getattr(settings, 'FAIL_ON_SCAN_ERROR', True):
                 raise ValidationError(_('Virus scan failed during processing'))
 
-    # Optional: Final reset of the file pointer, if needed by later processing.
     value.seek(0)
+
+
+def file_upload_validators(*, virus_scan: bool = False):
+    """Standard validator chain for user-uploaded documents."""
+    validators = [
+        validate_safe_filename,
+        validate_file_extension,
+        validate_file_content_signature,
+        validate_file_size,
+    ]
+    if virus_scan:
+        validators.append(validate_file_virus)
+    return validators
+
 
 def validate_engagement_document_extension(value):
     """Validate file extensions for engagement documents. Only allows PDF, DOC, DOCX, XLSX, PPTX."""

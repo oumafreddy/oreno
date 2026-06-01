@@ -15,6 +15,7 @@ from django.db.models import F
 from django.utils.crypto import get_random_string
 from core.utils import send_tenant_email as send_mail
 from django.template.loader import render_to_string
+from core.models.validators import file_upload_validators
 
 
 logger = logging.getLogger(__name__)
@@ -206,7 +207,8 @@ class Profile(models.Model):
         upload_to='avatars/',
         default='default-avatar.png',
         verbose_name=_("Profile Picture"),
-        help_text=_("User's avatar image.")
+        help_text=_("User's avatar image."),
+        validators=file_upload_validators(),
     )
 
     class Meta:

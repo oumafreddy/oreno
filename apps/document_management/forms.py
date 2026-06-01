@@ -59,6 +59,15 @@ class DocumentForm(OrganizationScopedModelForm):
     def __init__(self, *args, organization=None, request=None, **kwargs):
         super().__init__(*args, organization=organization, request=request, **kwargs)
 
+    def clean_file(self):
+        uploaded = self.cleaned_data.get('file')
+        if not uploaded:
+            return uploaded
+        from core.models.validators import file_upload_validators
+        for validator in file_upload_validators():
+            validator(uploaded)
+        return uploaded
+
 class DocumentRequestFilterForm(forms.Form):
     q = forms.CharField(label='Search', required=False, widget=forms.TextInput(attrs={'placeholder': 'Request Name or Requestee', 'class': 'form-control'}))
     status = forms.ChoiceField(label='Status', required=False, choices=[('', 'All'), ('pending', 'Pending'), ('submitted', 'Submitted'), ('accepted', 'Accepted'), ('rejected', 'Rejected')], widget=forms.Select(attrs={'class': 'form-select'}))
