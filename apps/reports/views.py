@@ -61,6 +61,70 @@ def _docx_http_response(doc, filename_prefix, org):
     doc.save(response)
     return response
 
+def _pdf_to_word_response(pdf_bytes, org, filename_prefix):
+    """Render each PDF page as a full-page image embedded in a Word document."""
+    import io
+    import pypdfium2 as pdfium
+    from docx import Document
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    PAGE_W = 8.27     # A4 width in inches
+    PAGE_H = 11.69    # A4 height in inches
+    MARGIN = 0.1      # each side in inches
+    usable_w = PAGE_W - 2 * MARGIN         # 8.07 in
+    usable_h = PAGE_H - 2 * MARGIN - 0.3  # 11.19 in (safety buffer prevents overflow)
+
+    doc = Document()
+    section = doc.sections[0]
+    section.page_width = Inches(PAGE_W)
+    section.page_height = Inches(PAGE_H)
+    section.left_margin = Inches(MARGIN)
+    section.right_margin = Inches(MARGIN)
+    section.top_margin = Inches(MARGIN)
+    section.bottom_margin = Inches(MARGIN)
+
+    pdf = pdfium.PdfDocument(pdf_bytes)
+
+    for i, page in enumerate(pdf):
+        bitmap = page.render(scale=2)  # 144 DPI
+        pil_image = bitmap.to_pil()
+        img_buf = io.BytesIO()
+        pil_image.save(img_buf, format='PNG')
+        img_buf.seek(0)
+
+        # Use page_break_before on the paragraph itself (not doc.add_page_break())
+        # so no separate paragraph with default space_after bleeds onto the next
+        # page and pushes the image over the usable height limit.
+        para = doc.add_paragraph()
+        if i > 0:
+            para.paragraph_format.page_break_before = True
+
+        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        para.paragraph_format.space_before = Pt(0)
+        para.paragraph_format.space_after = Pt(0)
+
+        # Fit image within usable page area (preserve aspect ratio)
+        pdf_aspect = page.get_width() / page.get_height()
+        w = usable_w
+        h = w / pdf_aspect
+        if h > usable_h:
+            h = usable_h
+            w = h * pdf_aspect
+
+        para.add_run().add_picture(img_buf, width=Inches(w), height=Inches(h))
+
+    output = io.BytesIO()
+    doc.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_{filename_prefix}.docx"'
+    return response
+
 def _html_to_text(html_string: str) -> str:
     """Convert rich HTML from editors into readable plain text for DOCX."""
     if not html_string:
@@ -1528,73 +1592,12 @@ def engagement_details_pdf(request):
         'annex_issue_risk_levels': list(getattr(Issue, 'RISK_LEVEL_CHOICES', [])),
     }
 
+    html_string = render_to_string('reports/audit_engagement_details.html', context)
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')]
+    )
     if request.GET.get('format') == 'docx':
-        ctx = context
-        doc = _docx_start_document(org, ctx['title'], ctx['generation_timestamp'])
-        if engagement:
-            # Basic Information table (mirrors PDF)
-            tbl = doc.add_table(rows=5, cols=2)
-            tbl.style = 'Table Grid'
-            tbl.cell(0,0).text = 'Engagement Title'; tbl.cell(0,1).text = engagement.title
-            tbl.cell(1,0).text = 'Status'; tbl.cell(1,1).text = getattr(engagement, 'get_project_status_display', lambda: getattr(engagement, 'project_status',''))()
-            tbl.cell(2,0).text = 'Workplan'; tbl.cell(2,1).text = (getattr(getattr(engagement,'annual_workplan',None),'name',None) or 'Not specified')
-            tbl.cell(3,0).text = 'Start Date'; tbl.cell(3,1).text = str(getattr(engagement, 'project_start_date', ''))
-            tbl.cell(4,0).text = 'Report Issued Date'; tbl.cell(4,1).text = str(getattr(engagement, 'report_issued_date', ''))
-
-            # Executive Summary
-            if getattr(engagement, 'executive_summary', None):
-                _docx_add_heading(doc, 'Executive Summary')
-                _docx_add_html_block(doc, getattr(engagement, 'executive_summary', ''))
-
-            # Purpose and Background
-            if getattr(engagement, 'purpose', None):
-                _docx_add_heading(doc, 'Purpose')
-                _docx_add_html_block(doc, getattr(engagement, 'purpose', ''))
-            if getattr(engagement, 'background', None):
-                _docx_add_heading(doc, 'Background')
-                _docx_add_html_block(doc, getattr(engagement, 'background', ''))
-
-            # Objectives list
-            objectives = getattr(engagement, 'objectives', None)
-            if objectives and hasattr(objectives, 'all'):
-                _docx_add_heading(doc, 'Audit Objectives')
-                for obj in objectives.all():
-                    doc.add_paragraph(f"- {getattr(obj,'title','')}")
-
-            # Conclusion
-            _docx_add_heading(doc, 'Conclusion')
-            conclusion_text = getattr(engagement, 'get_conclusion_display', lambda: getattr(engagement, 'conclusion',''))()
-            doc.add_paragraph(str(conclusion_text))
-            if getattr(engagement, 'conclusion_description', None):
-                _docx_add_html_block(doc, getattr(engagement, 'conclusion_description', ''))
-
-            # Issues and Findings
-            issues = getattr(engagement, 'all_issues', []) or []
-            if issues:
-                _docx_add_heading(doc, 'Issues and Findings')
-                for idx, issue in enumerate(issues, start=1):
-                    doc.add_paragraph(f"Issue {idx}: {getattr(issue,'issue_title','')}")
-                    if getattr(issue, 'issue_description', None):
-                        _docx_add_html_block(doc, f"Description: {getattr(issue,'issue_description','')}")
-                    if getattr(issue, 'root_cause', None):
-                        _docx_add_html_block(doc, f"Root Cause: {getattr(issue,'root_cause','')}")
-                    recs = getattr(issue, 'recommendations', None)
-                    if recs and hasattr(recs, 'all'):
-                        _docx_add_heading(doc, 'Recommendations:')
-                        for rec in recs.all():
-                            doc.add_paragraph(f"• {getattr(rec,'title','')}")
-                            if getattr(rec, 'description', None):
-                                _docx_add_html_block(doc, f"{getattr(rec,'description','')}")
-                    if getattr(issue, 'risks', None):
-                        _docx_add_html_block(doc, f"Risks: {getattr(issue,'risks','')}")
-                    if getattr(issue, 'management_action_plan', None):
-                        _docx_add_html_block(doc, f"Management Action Plan: {getattr(issue,'management_action_plan','')}")
-        else:
-            doc.add_paragraph('No engagement found for the provided filter.')
-        return _docx_http_response(doc, 'audit_engagement_details', org)
-    else:
-        html_string = render_to_string('reports/audit_engagement_details.html', context)
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')])
+        return _pdf_to_word_response(pdf_file, org, 'audit_engagement_details')
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_details.pdf"'
     return response
@@ -1664,35 +1667,15 @@ def engagement_with_issues_pdf(request):
         'filters_summary': f"Engagement: {engagement.title if engagement else 'Not specified'}"
     }
     
+    html_string = render_to_string('reports/audit_engagement_with_issues.html', context)
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
+        stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
+    )
     if request.GET.get('format') == 'docx':
-        doc = _docx_start_document(org, 'Audit Engagement With Issues Report', timezone.now().strftime('%Y-%m-%d %H:%M:%S'))
-        if engagement:
-            _docx_add_heading(doc, f"Engagement: {engagement.title}")
-        _docx_add_heading(doc, 'Issues')
-        tbl = doc.add_table(rows=1, cols=5)
-        tbl.style = 'Table Grid'
-        hdr = tbl.rows[0].cells
-        hdr[0].text = 'Issue ID'
-        hdr[1].text = 'Title'
-        hdr[2].text = 'Status'
-        hdr[3].text = 'Risk Level'
-        hdr[4].text = 'Target Date'
-        for issue in issues:
-            r = tbl.add_row().cells
-            r[0].text = str(getattr(issue, 'code', getattr(issue, 'id', '')))
-            r[1].text = str(getattr(issue, 'issue_title', ''))
-            r[2].text = str(getattr(issue, 'issue_status', ''))
-            r[3].text = str(getattr(issue, 'risk_level', ''))
-            r[4].text = str(getattr(issue, 'target_date', ''))
-        return _docx_http_response(doc, 'audit_engagement_with_issues', org)
-    else:
-        html_string = render_to_string('reports/audit_engagement_with_issues.html', context)
-        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(
-            stylesheets=[CSS(string='@page { size: A4; margin: 1.5cm }')]
-        )
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
-        return response
+        return _pdf_to_word_response(pdf_file, org, 'audit_engagement_with_issues')
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_with_issues.pdf"'
+    return response
 
 # NOTE: Earlier duplicate definitions of legal_case_summary_pdf / legal_case_details_pdf were removed.
 # Canonical implementations live in the LEGAL REPORTS section (full PDF reports with analytics).
