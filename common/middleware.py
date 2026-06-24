@@ -217,51 +217,45 @@ class SecurityMiddleware:
         from django.conf import settings
         if not getattr(settings, 'SECURITY_MIDDLEWARE_ENABLED', True):
             return self.get_response(request)
-        
+
         # Get client IP
         client_ip = self._get_client_ip(request)
-        
+
+        # Check if IP is already blocked before doing anything else
+        if cache.get(f'blocked_ip_{client_ip}', False):
+            return JsonResponse({'error': 'Access denied'}, status=403)
+
         # Check rate limiting
         if self._is_rate_limited(client_ip):
-            self.logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+            logger.warning(f"Rate limit exceeded for IP: {client_ip}")
             return JsonResponse(
                 {'error': 'Rate limit exceeded. Please try again later.'},
                 status=429
             )
-        
-        # Check for attack patterns in query parameters
+
+        # Check for attack patterns in query parameters and path only.
+        # POST body is intentionally excluded: Django's ORM uses parameterized
+        # queries so SQL injection via form data is already prevented, and
+        # scanning free-text fields causes false positives for legitimate users.
         if self._contains_attack_patterns(request):
             # Increment attack counter
             cache_key = f'attack_count_{client_ip}'
             attack_count = cache.get(cache_key, 0) + 1
             cache.set(cache_key, attack_count, timeout=3600)  # 1 hour
-            
-            self.logger.warning(
+
+            logger.warning(
                 f"Attack pattern detected from IP {client_ip}: "
                 f"{request.path}?{request.GET.urlencode()[:200]}"
             )
-            
+
             # Block after 3 attempts
             if attack_count >= 3:
                 cache.set(f'blocked_ip_{client_ip}', True, timeout=3600)  # Block for 1 hour
-                self.logger.error(f"IP {client_ip} blocked due to repeated attack attempts")
-                return JsonResponse(
-                    {'error': 'Access denied'},
-                    status=403
-                )
-            
-            return JsonResponse(
-                {'error': 'Invalid request'},
-                status=400
-            )
-        
-        # Check if IP is blocked
-        if cache.get(f'blocked_ip_{client_ip}', False):
-            return JsonResponse(
-                {'error': 'Access denied'},
-                status=403
-            )
-        
+                logger.error(f"IP {client_ip} blocked due to repeated attack attempts")
+                return JsonResponse({'error': 'Access denied'}, status=403)
+
+            return JsonResponse({'error': 'Invalid request'}, status=400)
+
         return self.get_response(request)
     
     def _get_client_ip(self, request):
@@ -287,25 +281,25 @@ class SecurityMiddleware:
         return False
     
     def _contains_attack_patterns(self, request):
-        """Check if request contains attack patterns"""
-        # Check query parameters
-        query_string = request.GET.urlencode().lower()
-        if query_string:
-            for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS + self.PATH_TRAVERSAL_PATTERNS:
-                if re.search(pattern, query_string):
-                    return True
-        
-        # Check path
+        """Check if request URL or query string contains attack patterns.
+
+        POST body is not scanned here — Django's ORM prevents SQL injection
+        via parameterized queries, and scanning free-text form fields causes
+        false positives for legitimate GRC users writing issue descriptions.
+        """
+        all_patterns = self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS + self.PATH_TRAVERSAL_PATTERNS
+
+        # Check URL path
         path = request.path.lower()
-        for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS + self.PATH_TRAVERSAL_PATTERNS:
+        for pattern in all_patterns:
             if re.search(pattern, path):
                 return True
-        
-        # Check POST data (if any)
-        if request.method == 'POST' and request.POST:
-            post_data = str(request.POST).lower()
-            for pattern in self.SQL_INJECTION_PATTERNS + self.XSS_PATTERNS:
-                if re.search(pattern, post_data):
+
+        # Check query string parameters
+        query_string = request.GET.urlencode().lower()
+        if query_string:
+            for pattern in all_patterns:
+                if re.search(pattern, query_string):
                     return True
-        
+
         return False
