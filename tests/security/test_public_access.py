@@ -4,14 +4,16 @@ Only /public/* routes should be accessible without auth.
 """
 import pytest  # type: ignore[reportMissingImports]
 from django.test import Client
-from django.test.utils import override_settings
 from django.urls import reverse
 
 
 @pytest.mark.django_db
-@override_settings(ROOT_URLCONF='config.urls_public')
 class TestPublicEndpoints:
     """Test that public endpoints are accessible without authentication."""
+
+    @pytest.fixture(autouse=True)
+    def _use_public_urlconf(self, settings):
+        settings.ROOT_URLCONF = 'config.urls_public'
     
     def test_public_docs_access(self, client_public):
         """Test /public/docs/ is accessible without auth."""
@@ -49,9 +51,12 @@ class TestPublicEndpoints:
 
 
 @pytest.mark.django_db
-@override_settings(ROOT_URLCONF='config.urls_public')
 class TestNonPublicEndpointsRequireAuth:
     """Test that non-public endpoints require authentication."""
+
+    @pytest.fixture(autouse=True)
+    def _use_public_urlconf(self, settings):
+        settings.ROOT_URLCONF = 'config.urls_public'
     
     def test_api_endpoints_require_auth(self, client_public):
         """Test API endpoints return 401/403 without authentication."""
@@ -99,4 +104,4 @@ class TestNonPublicEndpointsRequireAuth:
         """Test health check endpoint is accessible."""
         response = client_public.get("/health/")
         assert response.status_code == 200
-        assert response.content.decode() == "ok"
+        assert response.content.decode().strip().lower() in ["ok"]

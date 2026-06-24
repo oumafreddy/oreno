@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Engagement Deleted</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Audit Engagement Deleted</h2>
+    </div>
+
+    <div class="content">
+        <p>Hello,</p>
+
+        <p>This is to inform you that the following audit engagement has been permanently deleted from the <strong>{{ organization.name }}</strong> GRC system, along with all its associated objectives, risks, procedures, and issues.</p>
+
+        <table class="info-table">
+            <tr>
+                <td><strong>Engagement Title:</strong></td>
+                <td>{{ engagement_title }}</td>
+            </tr>
+            <tr>
+                <td><strong>Engagement Code:</strong></td>
+                <td>{{ engagement_code }}</td>
+            </tr>
+            <tr>
+                <td><strong>Deleted By:</strong></td>
+                <td>{{ deleter_name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Organization:</strong></td>
+                <td>{{ organization.name }}</td>
+            </tr>
+        </table>
+
+        <div class="alert-box">
+            <p>All data associated with this engagement (objectives, risks, procedures, and issues) has also been permanently removed.</p>
+        </div>
+
+        <p>If you believe this was done in error, please contact your system administrator immediately.</p>
+
+        <p>Thank you,<br>
+        {{ organization.name }} GRC Team</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message from the Oreno GRC system. Please do not reply to this email.</p>
+        <p>{{ organization.name }} &copy; {% now "Y" %}</p>
+    </div>
+</body>
+</html>

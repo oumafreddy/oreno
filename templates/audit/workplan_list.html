@@ -57,6 +57,7 @@
                     {% if workplan.can_submit %}
                       <a href="{% url 'audit:workplan-submit' workplan.pk %}" class="btn btn-sm btn-warning">Submit</a>
                     {% endif %}
+                    <a href="{% url 'audit:workplan-delete' workplan.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                   </td>
                 </tr>
                 {% empty %}

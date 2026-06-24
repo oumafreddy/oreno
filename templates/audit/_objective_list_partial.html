@@ -11,6 +11,7 @@
         <div class="btn-group" role="group">
           <a href="{% url 'audit:objective-detail' objective.pk %}" class="btn btn-sm btn-outline-primary">View</a>
           <a href="{% url 'audit:objective-edit' objective.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <a href="{% url 'audit:objective-delete' objective.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
         </div>
       </div>
     {% endfor %}

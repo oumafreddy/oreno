@@ -95,18 +95,17 @@ def validate_file_virus(value):
     # 4. Perform scan if available
     if clamd_available:
         try:
-            # Stream file in chunks to avoid memory issues
-            def file_chunks():
-                value.seek(0)
-                while chunk := value.read(1024 * 1024):  # 1MB chunks
-                    yield chunk
+            # Avoid buffering whole uploads in memory: write to a temp file and scan by path.
+            import tempfile
+            value.seek(0)
+            with tempfile.NamedTemporaryFile(prefix="oreno-upload-", suffix=".bin", delete=True) as tmp:
+                for chunk in iter(lambda: value.read(1024 * 1024), b""):
+                    tmp.write(chunk)
+                tmp.flush()
+                result = cd.scan_file(tmp.name)
 
-            # Build complete content from the chunks for scanning
-            scanned_content = b"".join(file_chunks())
             # Reset the file pointer for further processing
             value.seek(0)
-            
-            result = cd.scan_stream(scanned_content)
             if result:
                 raise ValidationError(
                     _('The uploaded file appears to be infected: %(result)s'),

@@ -25,6 +25,14 @@ from users.models import Profile, OTP  # type: ignore[reportMissingImports]
 
 User = get_user_model()
 
+# Security test suite runs in a lightweight DB context. Creating tenants via
+# django-tenants normally triggers schema creation + full migrations, which is
+# slow and can fail if migrations are not idempotent across repeated runs.
+# For these tests we focus on request-layer isolation and middleware behavior,
+# so we disable auto schema create/drop.
+Organization.auto_create_schema = False
+Organization.auto_drop_schema = False
+
 
 @pytest.fixture
 def client():
@@ -41,7 +49,7 @@ def client_public():
 
 # Tenant fixtures (matching test expectations)
 @pytest.fixture
-def tenant_a():
+def tenant_a(db):
     """Create tenant A for testing."""
     unique = uuid.uuid4().hex[:8]
     org = Organization.objects.create(
@@ -54,14 +62,14 @@ def tenant_a():
 
 
 @pytest.fixture
-def domain_a(tenant_a):
+def domain_a(db, tenant_a):
     """Primary domain for tenant A used by middleware resolution."""
     host = f"org-{tenant_a.code.lower()}.localhost"
     return Domain.objects.create(domain=host, tenant=tenant_a, is_primary=True)
 
 
 @pytest.fixture
-def tenant_b():
+def tenant_b(db):
     """Create tenant B for testing."""
     unique = uuid.uuid4().hex[:8]
     org = Organization.objects.create(
@@ -74,7 +82,7 @@ def tenant_b():
 
 
 @pytest.fixture
-def domain_b(tenant_b):
+def domain_b(db, tenant_b):
     """Primary domain for tenant B used by middleware resolution."""
     host = f"org-{tenant_b.code.lower()}.localhost"
     return Domain.objects.create(domain=host, tenant=tenant_b, is_primary=True)
@@ -92,7 +100,7 @@ def host_b(domain_b):
 
 # User fixtures (matching test expectations)
 @pytest.fixture
-def user_admin_a(tenant_a):
+def user_admin_a(db, tenant_a):
     """Create admin user for tenant A."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -109,7 +117,7 @@ def user_admin_a(tenant_a):
 
 
 @pytest.fixture
-def user_staff_a(tenant_a):
+def user_staff_a(db, tenant_a):
     """Create staff user for tenant A."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -125,7 +133,7 @@ def user_staff_a(tenant_a):
 
 
 @pytest.fixture
-def user_manager_a(tenant_a):
+def user_manager_a(db, tenant_a):
     """Create manager user for tenant A."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -140,7 +148,7 @@ def user_manager_a(tenant_a):
 
 
 @pytest.fixture
-def user_admin_b(tenant_b):
+def user_admin_b(db, tenant_b):
     """Create admin user for tenant B."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -192,7 +200,7 @@ def auth_headers_staff_a(user_staff_a):
 
 # Legacy fixtures (for backward compatibility)
 @pytest.fixture
-def test_organization():
+def test_organization(db):
     """Create a test organization."""
     org = Organization.objects.create(
         name="Test Organization",
@@ -204,7 +212,7 @@ def test_organization():
 
 
 @pytest.fixture
-def test_domain(test_organization):
+def test_domain(db, test_organization):
     """Create a test domain for the organization."""
     domain = Domain.objects.create(
         domain="test.localhost",
@@ -215,7 +223,7 @@ def test_domain(test_organization):
 
 
 @pytest.fixture
-def test_user(test_organization):
+def test_user(db, test_organization):
     """Create a test user."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -230,7 +238,7 @@ def test_user(test_organization):
 
 
 @pytest.fixture
-def test_admin_user(test_organization):
+def test_admin_user(db, test_organization):
     """Create a test admin user."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(
@@ -247,7 +255,7 @@ def test_admin_user(test_organization):
 
 
 @pytest.fixture
-def test_user_profile(test_user):
+def test_user_profile(db, test_user):
     """Create a test user profile."""
     profile = Profile.objects.create(
         user=test_user,
@@ -259,7 +267,7 @@ def test_user_profile(test_user):
 
 
 @pytest.fixture
-def test_otp(test_user):
+def test_otp(db, test_user):
     """Create a test OTP."""
     otp = OTP.objects.create(
         user=test_user,
@@ -284,7 +292,7 @@ def admin_client(client, test_admin_user):
 
 
 @pytest.fixture
-def second_organization():
+def second_organization(db):
     """Create a second test organization for isolation tests."""
     org = Organization.objects.create(
         name="Second Organization",
@@ -296,7 +304,7 @@ def second_organization():
 
 
 @pytest.fixture
-def second_user(second_organization):
+def second_user(db, second_organization):
     """Create a user in the second organization."""
     unique = uuid.uuid4().hex[:8]
     user = User.objects.create_user(

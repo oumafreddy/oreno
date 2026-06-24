@@ -154,7 +154,8 @@ class WebhookService:
                 webhook.url,
                 json=payload,
                 headers=headers,
-                timeout=self.timeout
+                timeout=self.timeout,
+                allow_redirects=False,
             )
             
             # Consider 2xx status codes as success

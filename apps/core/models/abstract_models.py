@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
 from core.middleware import get_current_user
@@ -134,7 +135,7 @@ class SoftDeletionModel(models.Model):
         Override delete to perform soft deletion.
         Use force_delete() for physical deletion.
         """
-        self.deleted_at = models.DateTimeField(auto_now_add=True)
+        self.deleted_at = timezone.now()
         self.save()
 
     def force_delete(self, *args, **kwargs):

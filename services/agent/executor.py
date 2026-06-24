@@ -2,6 +2,7 @@ import importlib
 from typing import Dict, Any
 
 from django.apps import apps
+from django.core.exceptions import FieldDoesNotExist
 from django_tenants.utils import tenant_context
 from rest_framework.exceptions import ValidationError
 
@@ -91,7 +92,7 @@ class AgentExecutor:
         mapped = self._resolve_relationships(mapped, schema)
         mapped = self._inject_org_if_needed(mapped, schema)
         try:
-            obj = model_cls.objects.get(id=obj_id)
+            obj = self._scoped_queryset(model_cls, schema).get(id=obj_id)
         except model_cls.DoesNotExist:
             raise ValidationError({'detail': f'Object not found: {model_path} id={obj_id}'})
 
@@ -121,23 +122,20 @@ class AgentExecutor:
         if not obj_id:
             raise ValidationError({'detail': 'id is required for delete'})
         model_cls = self._get_model_class(model_path)
-        exists = model_cls.objects.filter(id=obj_id).exists()
+        qs = self._scoped_queryset(model_cls, schema).filter(id=obj_id)
+        exists = qs.exists()
         if not exists:
             raise ValidationError({'detail': f'Object not found: {model_path} id={obj_id}'})
         if preview:
             return {'model': model_path, 'action': 'delete', 'id': obj_id, 'preview': True, 'exists': True}
-        deleted, _ = model_cls.objects.filter(id=obj_id).delete()
+        deleted, _ = qs.delete()
         if deleted:
             self._audit('agent_delete', model_path, obj_id, {})
         return {'model': model_path, 'id': obj_id, 'deleted': True}
 
     def _read(self, model_path: str, schema: Dict[str, Any], filters: Dict[str, Any]) -> dict:
         model_cls = self._get_model_class(model_path)
-        qs = model_cls.objects.all()
-
-        # Organization scoping when applicable
-        if 'organization' in schema.get('fields', {}) and hasattr(self.user, 'organization') and self.user.organization_id:
-            qs = qs.filter(organization_id=self.user.organization_id)
+        qs = self._scoped_queryset(model_cls, schema)
 
         # Apply simple filters
         safe_filters = {}
@@ -160,6 +158,27 @@ class AgentExecutor:
             return apps.get_model(app_label, model_name)
         except Exception:
             raise ValidationError({'detail': f'Invalid model path: {model_path}'})
+
+    def _model_has_field(self, model_cls, field_name: str) -> bool:
+        try:
+            model_cls._meta.get_field(field_name)
+            return True
+        except FieldDoesNotExist:
+            return False
+
+    def _scoped_queryset(self, model_cls, schema: Dict[str, Any]):
+        """
+        Apply organization scoping when the model has an organization field.
+
+        Important: we scope based on the actual Django model field, not on schema metadata,
+        because schemas can be incomplete or misindexed.
+        """
+        qs = model_cls.objects.all()
+        if self.user and getattr(self.user, 'is_authenticated', False):
+            org_id = getattr(self.user, 'organization_id', None)
+            if org_id and self._model_has_field(model_cls, 'organization'):
+                qs = qs.filter(organization_id=org_id)
+        return qs
 
     def _get_serializer_class(self, schema: Dict[str, Any]):
         serializer_path = schema.get('serializer')
@@ -216,10 +235,7 @@ class AgentExecutor:
         if isinstance(value, int):
             return value
         if isinstance(value, str):
-            qs = model_cls.objects.all()
-            # org scoping if present
-            if hasattr(model_cls, 'organization_id') and getattr(self.user, 'organization_id', None):
-                qs = qs.filter(organization_id=self.user.organization_id)
+            qs = self._scoped_queryset(model_cls, self.schema_index.get_model_schema(related_model_path) or {})
             # heuristics for user-like models
             if model_cls._meta.model_name in ['user', 'customuser']:
                 for field in ['email', 'username']:
@@ -244,9 +260,7 @@ class AgentExecutor:
                 resolved_ids.append(item)
                 continue
             if isinstance(item, str):
-                qs = model_cls.objects.all()
-                if hasattr(model_cls, 'organization_id') and getattr(self.user, 'organization_id', None):
-                    qs = qs.filter(organization_id=self.user.organization_id)
+                qs = self._scoped_queryset(model_cls, self.schema_index.get_model_schema(related_model_path) or {})
                 if model_cls._meta.model_name in ['user', 'customuser']:
                     for field in ['email', 'username']:
                         if field in [f.name for f in model_cls._meta.fields]:

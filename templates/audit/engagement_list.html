@@ -70,6 +70,7 @@
                         </button>
                       </form>
                     {% endif %}
+                    <a href="{% url 'audit:engagement-delete' engagement.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                   </td>
                 </tr>
                 {% empty %}

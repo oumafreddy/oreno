@@ -380,7 +380,10 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
     model = Risk
     template_name = 'audit/risk_confirm_delete.html'
 
-
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
 
     def get_queryset(self):
         # Ensure user can only delete risks in their organization
@@ -393,6 +396,13 @@ class RiskDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
         elif self.object.objective and self.object.objective.engagement_id:
             return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.objective.engagement_id})
         return reverse_lazy('audit:risk-list')
+
+    def form_valid(self, form):
+        risk_title = self.object.title
+        success_url = self.get_success_url()
+        self.object.force_delete()
+        messages.success(self.request, f'Risk "{risk_title}" has been deleted.')
+        return HttpResponseRedirect(success_url)
 
 from .models.issue_working_paper import IssueWorkingPaper
 from .models.engagement_document import EngagementDocument
@@ -538,6 +548,48 @@ class WorkplanUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
     def get_success_url(self):
         return reverse_lazy('audit:workplan-detail', kwargs={'pk': self.object.pk})
 
+class WorkplanDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = AuditWorkplan
+    template_name = 'audit/workplan_confirm_delete.html'
+    success_url = reverse_lazy('audit:workplan-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['engagements'] = self.object.engagements.all()
+        return context
+
+    def form_valid(self, form):
+        workplan = self.object
+        workplan_name = workplan.name
+        workplan_code = workplan.code
+        organization = workplan.organization
+        deleted_engagement_names = list(workplan.engagements.values_list('title', flat=True))
+        deleter_name = self.request.user.get_full_name() or self.request.user.username
+
+        success_url = self.get_success_url()
+        self.object.force_delete()
+
+        from .email_utils import send_workplan_deletion_notification
+        send_workplan_deletion_notification(
+            workplan_name=workplan_name,
+            workplan_code=workplan_code,
+            organization=organization,
+            deleted_engagement_names=deleted_engagement_names,
+            deleter_name=deleter_name,
+        )
+
+        messages.success(self.request, f'Workplan "{workplan_name}" has been permanently deleted.')
+        return HttpResponseRedirect(success_url)
+
+
 # ─── ENGAGEMENT VIEWS ────────────────────────────────────────────────────────
 class EngagementListView(AuditPermissionMixin, ListView):
     model = Engagement
@@ -669,6 +721,41 @@ class EngagementUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView
     
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.pk})
+
+class EngagementDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Engagement
+    template_name = 'audit/engagement_confirm_delete.html'
+    success_url = reverse_lazy('audit:engagement-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def form_valid(self, form):
+        engagement = self.object
+        engagement_title = engagement.title
+        engagement_code = engagement.code
+        organization = engagement.organization
+        deleter_name = self.request.user.get_full_name() or self.request.user.username
+
+        success_url = self.get_success_url()
+        self.object.force_delete()
+
+        from .email_utils import send_engagement_deletion_notification
+        send_engagement_deletion_notification(
+            engagement_title=engagement_title,
+            engagement_code=engagement_code,
+            organization=organization,
+            deleter_name=deleter_name,
+        )
+
+        messages.success(self.request, f'Engagement "{engagement_title}" has been permanently deleted.')
+        return HttpResponseRedirect(success_url)
+
 
 # ─── APPROVAL WORKFLOW VIEWS ────────────────────────────────────────────────
 @login_required
@@ -2227,6 +2314,29 @@ class ObjectiveUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView)
     def get_success_url(self):
         return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement.pk})
 
+class ObjectiveDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Objective
+    template_name = 'audit/objective_confirm_delete.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_success_url(self):
+        return reverse_lazy('audit:engagement-detail', kwargs={'pk': self.object.engagement_id})
+
+    def form_valid(self, form):
+        objective_title = self.object.title
+        success_url = self.get_success_url()
+        self.object.force_delete()
+        messages.success(self.request, f'Objective "{objective_title}" has been deleted.')
+        return HttpResponseRedirect(success_url)
+
+
 class ObjectiveModalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Objective
     form_class = ObjectiveForm
@@ -2480,6 +2590,31 @@ class ProcedureModalDeleteView(AuditPermissionMixin, DeleteView):
         
         messages.success(request, self.success_message)
         return HttpResponseRedirect(success_url)
+
+class ProcedureDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Procedure
+    template_name = 'audit/procedure_confirm_delete.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_success_url(self):
+        if self.object.risk_id:
+            return reverse_lazy('audit:risk-detail', kwargs={'pk': self.object.risk_id})
+        return reverse_lazy('audit:engagement-list')
+
+    def form_valid(self, form):
+        procedure_title = self.object.title
+        success_url = self.get_success_url()
+        self.object.force_delete()
+        messages.success(self.request, f'Procedure "{procedure_title}" has been deleted.')
+        return HttpResponseRedirect(success_url)
+
 
 # FOLLOWUP ACTION VIEWS
 class FollowUpActionListView(AuditPermissionMixin, ListView):

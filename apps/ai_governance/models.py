@@ -552,6 +552,16 @@ class WebhookSubscription(OrganizationOwnedModel, AuditableModel, SoftDeletionMo
     def __str__(self):
         return self.url
 
+    def clean(self):
+        super().clean()
+        # SSRF hardening: ensure URL is safe to call from server-side.
+        from .security import validate_outbound_webhook_url
+        validate_outbound_webhook_url(self.url)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 
 class ModelRiskAssessment(OrganizationOwnedModel, AuditableModel, SoftDeletionModel):
     """

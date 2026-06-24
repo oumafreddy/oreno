@@ -5,6 +5,9 @@ import hmac
 import json
 import logging
 import re
+import ipaddress
+import socket
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from cryptography.fernet import Fernet
@@ -19,6 +22,76 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
 logger = logging.getLogger(__name__)
+
+
+def validate_outbound_webhook_url(url: str) -> None:
+    """
+    Validate a webhook destination URL to reduce SSRF risk.
+
+    Policy:
+    - https:// only by default (http allowed only if DEBUG or ALLOW_INSECURE_WEBHOOK_URLS)
+    - No credentials in URL
+    - No localhost / link-local / private / loopback / multicast / reserved IPs
+    - For hostnames, resolve and block any private/loopback/etc A/AAAA results
+    """
+    if not url or not isinstance(url, str):
+        raise ValidationError(_("Webhook URL is required"))
+
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValidationError(_("Webhook URL must be an absolute URL"))
+
+    allow_insecure = bool(getattr(settings, "DEBUG", False) or getattr(settings, "ALLOW_INSECURE_WEBHOOK_URLS", False))
+    if parsed.scheme not in ("https",) and not (allow_insecure and parsed.scheme == "http"):
+        raise ValidationError(_("Webhook URL must use https"))
+
+    if parsed.username or parsed.password:
+        raise ValidationError(_("Webhook URL must not include credentials"))
+
+    host = parsed.hostname
+    if not host:
+        raise ValidationError(_("Webhook URL hostname is invalid"))
+
+    # Quick hostname blocks
+    lowered = host.lower().strip(".")
+    if lowered in ("localhost",) or lowered.endswith(".localhost") or lowered.endswith(".local"):
+        raise ValidationError(_("Webhook URL must not target localhost"))
+
+    def _is_bad_ip(ip: ipaddress._BaseAddress) -> bool:
+        return (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        )
+
+    # If it's already an IP literal, validate directly.
+    try:
+        ip_obj = ipaddress.ip_address(host)
+        if _is_bad_ip(ip_obj):
+            raise ValidationError(_("Webhook URL must not target private or local network addresses"))
+        return
+    except ValueError:
+        pass
+
+    # Resolve hostname and validate all results.
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80), type=socket.SOCK_STREAM)
+    except socket.gaierror:
+        raise ValidationError(_("Webhook URL hostname could not be resolved"))
+
+    for info in infos:
+        sockaddr = info[4]
+        ip_str = sockaddr[0]
+        try:
+            ip_obj = ipaddress.ip_address(ip_str)
+            if _is_bad_ip(ip_obj):
+                raise ValidationError(_("Webhook URL resolves to a private or local network address"))
+        except ValueError:
+            # If parsing fails, be conservative.
+            raise ValidationError(_("Webhook URL resolved to an invalid address"))
 
 
 class DataEncryptionService:

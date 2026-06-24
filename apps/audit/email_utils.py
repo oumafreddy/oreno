@@ -242,6 +242,99 @@ def send_risk_approval_notification(risk, status, request=None):
         logger.error(f"Failed to send risk approval notification: {e}")
 
 
+def send_workplan_deletion_notification(workplan_name, workplan_code, organization, deleted_engagement_names, deleter_name):
+    """
+    Send email to all users in the tenant when an annual workplan is deleted.
+    Only notifies users within the same organization (tenant).
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    site_name = getattr(settings, 'SITE_NAME', "Audit Management System")
+
+    recipients = list(
+        User.objects.filter(organization=organization, is_active=True)
+        .exclude(email='')
+        .values_list('email', flat=True)
+    )
+
+    if not recipients:
+        return
+
+    subject = f'Audit Workplan Deleted: {workplan_name} ({workplan_code})'
+    template_name = 'audit/emails/workplan_deleted.html'
+
+    context = {
+        'workplan_name': workplan_name,
+        'workplan_code': workplan_code,
+        'deleted_engagement_names': deleted_engagement_names,
+        'deleter_name': deleter_name,
+        'organization': organization,
+        'site_name': site_name,
+        'site_domain': settings.SITE_DOMAIN,
+    }
+
+    try:
+        html_message = render_to_string(template_name, context)
+        send_mail(
+            subject=subject,
+            message="",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipients,
+            fail_silently=True,
+            html_message=html_message
+        )
+        logger.info(f"Workplan deletion notification sent for '{workplan_name}' to {len(recipients)} recipients")
+    except Exception as e:
+        logger.error(f"Failed to send workplan deletion notification: {e}")
+
+
+def send_engagement_deletion_notification(engagement_title, engagement_code, organization, deleter_name):
+    """
+    Send email to all users in the tenant when an engagement is deleted.
+    Only notifies users within the same organization (tenant).
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    site_name = getattr(settings, 'SITE_NAME', "Audit Management System")
+
+    recipients = list(
+        User.objects.filter(organization=organization, is_active=True)
+        .exclude(email='')
+        .values_list('email', flat=True)
+    )
+
+    if not recipients:
+        return
+
+    subject = f'Audit Engagement Deleted: {engagement_title} ({engagement_code})'
+    template_name = 'audit/emails/engagement_deleted.html'
+
+    context = {
+        'engagement_title': engagement_title,
+        'engagement_code': engagement_code,
+        'deleter_name': deleter_name,
+        'organization': organization,
+        'site_name': site_name,
+        'site_domain': settings.SITE_DOMAIN,
+    }
+
+    try:
+        html_message = render_to_string(template_name, context)
+        send_mail(
+            subject=subject,
+            message="",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipients,
+            fail_silently=True,
+            html_message=html_message
+        )
+        logger.info(f"Engagement deletion notification sent for '{engagement_title}' to {len(recipients)} recipients")
+    except Exception as e:
+        logger.error(f"Failed to send engagement deletion notification: {e}")
+
+
 def send_risk_assignment_notification(risk, request=None):
     """
     Send notification when a risk is assigned to someone.

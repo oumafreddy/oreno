@@ -382,3 +382,8 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
         if obj.events:
             return ', '.join(obj.events)
         return '-'
+
+    def validate_url(self, value: str) -> str:
+        from .security import validate_outbound_webhook_url
+        validate_outbound_webhook_url(value)
+        return value

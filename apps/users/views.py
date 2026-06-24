@@ -23,7 +23,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q, Prefetch
 from django.utils.translation import gettext_lazy as _
-from django.db import IntegrityError
+from django.db import IntegrityError, OperationalError
 
 from core.decorators import skip_org_check
 from core.mixins.organization import OrganizationScopedQuerysetMixin
@@ -337,41 +337,37 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
-        # Deterministically reuse latest active OTP, otherwise create a new one
+
         otp = OTP.get_latest_active(user)
-        created = False
         if not otp:
             otp = OTP.generate_or_reuse(user)
-            created = True
-        
-        if created:
-            # Send OTP via email
+
+        # Send the OTP email exactly once per session — the moment the user
+        # arrives on this page, not at account-creation time. Using a session
+        # flag prevents a re-send on every page refresh or failed submission.
+        session_key = 'otp_sent_first_time_setup'
+        if not self.request.session.get(session_key):
             try:
                 otp.send_via_email()
+                self.request.session[session_key] = True
                 messages.success(
                     self.request,
-                    _("OTP code has been sent to your email address.")
+                    _("A verification code has been sent to %(email)s.") % {'email': user.email}
                 )
-            except Exception as e:
+            except Exception:
                 messages.error(
                     self.request,
                     _("Failed to send OTP. Please contact support.")
                 )
-        
-        # Get password policy hints
+
         from .forms import get_password_policy_hints
         policy_hints = get_password_policy_hints(user=user)
-        
+
         context.update({
             'user': user,
             'otp': otp,
             'is_admin_created': user.is_admin_created,
             'policy_hints': policy_hints,
-            # Prevent duplicate message rendering: base.html shows messages
-            # unless a specific context is set. By scoping messages to this
-            # page, the global renderer is suppressed and only the in-card
-            # alerts in this template are shown.
             'message_context': 'first_time_setup',
         })
         return context
@@ -464,6 +460,7 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
                     # Clear session data
                     request.session.pop('first_time_setup_user_id', None)
                     request.session.pop('first_time_setup_required', None)
+                    request.session.pop('otp_sent_first_time_setup', None)
                     
                     messages.success(
                         request,
@@ -489,23 +486,23 @@ class FirstTimeSetupView(LoginRequiredMixin, TemplateView):
     def resend_otp(self, request, *args, **kwargs):
         """Handle OTP resend request."""
         user = request.user
-        
-        # Generate or reuse OTP with throttling
+
         new_otp = OTP.generate_or_reuse(user)
-        
+
         try:
             new_otp.send_via_email()
+            # Mark email as sent so get_context_data doesn't send again on redirect
+            request.session['otp_sent_first_time_setup'] = True
             messages.success(
                 request,
-                _("New OTP code has been sent to your email address.")
+                _("A new verification code has been sent to your email address.")
             )
-        except Exception as e:
+        except Exception:
             messages.error(
                 request,
                 _("Failed to send OTP. Please contact support.")
             )
-        
-        # Redirect back to the setup page
+
         return redirect('users:first-time-setup')
 
 @method_decorator(skip_org_check, name='dispatch')
@@ -662,35 +659,31 @@ class UserDeleteView(UserPermissionMixin, SuccessMessageMixin, DeleteView):
         return self.get_object().organization
 
     def delete(self, request, *args, **kwargs):
-        if self.get_object() == request.user:
+        user = self.get_object()
+
+        if user == request.user:
             raise PermissionDenied(_("You cannot delete your own account"))
-        
-        # Check if user has permission to delete users
+
         if not request.user.can_delete_users():
             raise PermissionDenied(_("You do not have permission to delete users. Only superusers can delete users."))
-            
-        user = self.get_object()
-        
+
         try:
             with transaction.atomic():
-                # First, delete any tenant-specific data in the user's organization schema
                 if user.organization:
                     from django_tenants.utils import tenant_context
                     with tenant_context(user.organization):
-                        # Delete audit-related records first
                         from audit.models import Approval
                         Approval.objects.filter(
                             Q(requester=user) | Q(approver=user)
                         ).delete()
-                
-                # Now delete the user from the public schema
+
                 return super().delete(request, *args, **kwargs)
-        except IntegrityError:
+        except (IntegrityError, OperationalError):
             messages.error(
                 request,
                 _(
-                    "This user cannot be deleted because it is referenced by other records (e.g., audit logs, risk controls). "
-                    "Please reassign or clean up related references, or use the supported data cleanup command/view."
+                    "This user cannot be deleted because it is still referenced by other records "
+                    "(e.g., audit logs, risk controls). Please reassign those records first."
                 ),
             )
             return redirect('users:user-detail', pk=user.pk)

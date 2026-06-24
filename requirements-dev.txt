@@ -246,3 +246,5 @@ zope.interface==7.2
 zope.lifecycleevent==5.0
 zope.proxy==6.1
 zopfli==0.2.3.post1
+pytest==9.0.3
+pytest-django==4.11.1

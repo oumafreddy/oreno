@@ -9,14 +9,15 @@ from django.conf import settings
 
 from . import views
 from .views import (
-    WorkplanListView, WorkplanDetailView, WorkplanCreateView, WorkplanUpdateView,
-    EngagementListView, EngagementDetailView, EngagementCreateView, EngagementUpdateView,
+    WorkplanListView, WorkplanDetailView, WorkplanCreateView, WorkplanUpdateView, WorkplanDeleteView,
+    EngagementListView, EngagementDetailView, EngagementCreateView, EngagementUpdateView, EngagementDeleteView,
     IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
     ApprovalCreateView, ApprovalDetailView, AuditDashboardView, AuditReportsView,
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
-    ObjectiveModalCreateView, RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
+    ObjectiveModalCreateView, ObjectiveDeleteView,
+    RiskListView, RiskDetailView, RiskCreateView, RiskUpdateView, RiskDeleteView,
     ProcedureListView, ProcedureDetailView, ProcedureCreateView,
-    ProcedureUpdateView, ProcedureModalCreateView,
+    ProcedureUpdateView, ProcedureModalCreateView, ProcedureDeleteView,
     FollowUpActionListView, FollowUpActionDetailView, FollowUpActionCreateView, FollowUpActionUpdateView,
     FollowUpActionModalCreateView, IssueRetestListView, IssueRetestDetailView, IssueRetestCreateView,
     IssueRetestUpdateView, IssueRetestModalCreateView, NoteCreateView,
@@ -77,6 +78,7 @@ urlpatterns = [
     path('workplans/create/', WorkplanCreateView.as_view(), name='workplan-create'),
     path('workplans/<int:pk>/', WorkplanDetailView.as_view(), name='workplan-detail'),
     path('workplans/<int:pk>/update/', WorkplanUpdateView.as_view(), name='workplan-update'),
+    path('workplans/<int:pk>/delete/', WorkplanDeleteView.as_view(), name='workplan-delete'),
     path('workplans/<int:pk>/submit/', views.submit_workplan, name='workplan-submit'),
     path('workplans/<int:pk>/approve/', views.approve_workplan, name='workplan-approve'),
     path('workplans/<int:pk>/reject/', views.reject_workplan, name='workplan-reject'),
@@ -87,6 +89,7 @@ urlpatterns = [
     path('engagements/create/', EngagementCreateView.as_view(), name='engagement-create'),
     path('engagements/<int:pk>/', EngagementDetailView.as_view(), name='engagement-detail'),
     path('engagements/<int:pk>/update/', EngagementUpdateView.as_view(), name='engagement-update'),
+    path('engagements/<int:pk>/delete/', EngagementDeleteView.as_view(), name='engagement-delete'),
     path('engagements/<int:pk>/submit/', views.submit_engagement, name='engagement-submit'),
     path('engagements/<int:pk>/approve/', views.approve_engagement, name='engagement-approve'),
     path('engagements/<int:pk>/reject/', views.reject_engagement, name='engagement-reject'),
@@ -148,6 +151,7 @@ urlpatterns = [
     path('engagements/<int:engagement_pk>/objectives/add/', views.ObjectiveCreateView.as_view(), name='objective-add'),
     path('objectives/<int:pk>/edit/', views.ObjectiveUpdateView.as_view(), name='objective-edit'),
     path('objectives/<int:pk>/update/', views.ObjectiveUpdateView.as_view(), name='objective-update'),
+    path('objectives/<int:pk>/delete/', ObjectiveDeleteView.as_view(), name='objective-delete'),
     path('engagements/<int:engagement_pk>/objectives/modal/add/', views.ObjectiveModalCreateView.as_view(), name='objective-modal-add'),
     path('objectives/create/', views.ObjectiveModalCreateView.as_view(), name='objective-create'),
 
@@ -164,6 +168,7 @@ urlpatterns = [
     path('procedures/<int:pk>/', views.ProcedureDetailView.as_view(), name='procedure-detail'),
     path('risks/<int:risk_id>/procedures/add/', views.ProcedureCreateView.as_view(), name='procedure-add'),
     path('procedures/<int:pk>/edit/', views.ProcedureUpdateView.as_view(), name='procedure-edit'),
+    path('procedures/<int:pk>/delete/', ProcedureDeleteView.as_view(), name='procedure-delete'),
     path('risks/<int:risk_id>/procedures/modal/add/', views.ProcedureModalCreateView.as_view(), name='procedure-modal-add'),
     # FollowUpAction URLs
     path('issues/<int:issue_pk>/followups/', views.FollowUpActionListView.as_view(), name='followupaction-list'),

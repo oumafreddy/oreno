@@ -25,6 +25,12 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
+# Proxy / client IP handling
+# Only enable X-Forwarded-For parsing when you are behind a trusted reverse proxy
+# that strips/sets these headers (e.g., nginx, ALB). Otherwise clients can spoof
+# their IP and poison rate limiting / block lists.
+USE_X_FORWARDED_FOR = os.getenv('USE_X_FORWARDED_FOR', 'False').lower() in ('true', '1', 'yes')
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 # Local multi-tenant domains — added to ALLOWED_HOSTS for dev; production sets ALLOWED_HOSTS via env

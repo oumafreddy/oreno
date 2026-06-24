@@ -58,7 +58,6 @@ class OrganizationMiddleware:
         '/organizations/create/',
         '/api/users/profile/',
         '/api/users/logout/',
-        '/api/',  # Exempt all API endpoints
         '/users/login/',
         '/users/register/',
         '/users/logout/',
