@@ -165,6 +165,222 @@ def _docx_add_html_block(doc, html_string: str):
         if line.strip():
             doc.add_paragraph(line)
 
+
+def _render_html_to_doc(container, html_string, font_size=10):
+    """
+    Convert CKEditor5 HTML to properly structured python-docx content.
+    Handles: paragraphs, bold/italic/underline, tables (including nested),
+    ordered/unordered lists, headings.  Works for both Document and Cell containers.
+    """
+    if not html_string:
+        return
+    try:
+        from bs4 import BeautifulSoup, NavigableString, Tag
+        from docx.shared import Pt, RGBColor
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+    except ImportError:
+        p = container.add_paragraph(_html_to_text(html_string))
+        p.paragraph_format.space_after = Pt(4)
+        return
+
+    soup = BeautifulSoup(str(html_string), 'html.parser')
+
+    def _shade(cell, hex_fill):
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_fill)
+        tcPr.append(shd)
+
+    def inline(para, node, bold=False, italic=False, ul=False, fs=None):
+        """Recursively add inline content to an existing paragraph."""
+        _fs = fs or font_size
+        if isinstance(node, NavigableString):
+            text = str(node)
+            if text:
+                r = para.add_run(text)
+                r.bold = bold
+                r.italic = italic
+                r.underline = ul
+                r.font.size = Pt(_fs)
+        elif isinstance(node, Tag):
+            tag = (node.name or '').lower()
+            if tag in ('strong', 'b'):
+                for c in node.children:
+                    inline(para, c, bold=True, italic=italic, ul=ul, fs=_fs)
+            elif tag in ('em', 'i'):
+                for c in node.children:
+                    inline(para, c, bold=bold, italic=True, ul=ul, fs=_fs)
+            elif tag == 'u':
+                for c in node.children:
+                    inline(para, c, bold=bold, italic=italic, ul=True, fs=_fs)
+            elif tag == 'br':
+                para.add_run('\n').font.size = Pt(_fs)
+            elif tag in ('span', 'a', 'code', 'mark', 'sub', 'sup', 'small'):
+                for c in node.children:
+                    inline(para, c, bold=bold, italic=italic, ul=ul, fs=_fs)
+            else:
+                for c in node.children:
+                    inline(para, c, bold=bold, italic=italic, ul=ul, fs=_fs)
+
+    def html_table(node):
+        """Convert an HTML <table> node to a Word table on `container`."""
+        all_rows = node.find_all('tr')
+        if not all_rows:
+            return
+        max_cols = max(len(r.find_all(['td', 'th'])) for r in all_rows)
+        if max_cols == 0:
+            return
+        tbl = container.add_table(rows=len(all_rows), cols=max_cols)
+        tbl.style = 'Table Grid'
+        for ri, tr in enumerate(all_rows):
+            cells = tr.find_all(['td', 'th'])
+            for ci, cell_node in enumerate(cells):
+                if ci >= max_cols:
+                    break
+                is_th = cell_node.name == 'th'
+                wcell = tbl.cell(ri, ci)
+                wcell.text = ''
+                p = wcell.paragraphs[0]
+                p.clear()
+                p.paragraph_format.space_before = Pt(2)
+                p.paragraph_format.space_after = Pt(2)
+                for child in cell_node.children:
+                    if isinstance(child, Tag) and child.name == 'table':
+                        # Nested table: flatten to text to avoid corruption
+                        r = p.add_run(child.get_text(' ', strip=True))
+                        r.font.size = Pt(font_size - 1)
+                    else:
+                        inline(p, child, bold=is_th, fs=font_size - 1)
+                if not p.runs:
+                    p.add_run('')
+                if is_th:
+                    _shade(wcell, 'E8EEF4')
+                    for run in p.runs:
+                        run.bold = True
+        # spacing after table
+        sp = container.add_paragraph()
+        sp.paragraph_format.space_after = Pt(4)
+
+    def block(node):
+        """Process one block-level node and add output to `container`."""
+        if isinstance(node, NavigableString):
+            text = str(node).strip()
+            if text:
+                p = container.add_paragraph(text)
+                p.paragraph_format.space_after = Pt(3)
+            return
+        if not isinstance(node, Tag):
+            return
+        tag = (node.name or '').lower()
+
+        if tag in ('html', 'body'):
+            for c in node.children:
+                block(c)
+
+        elif tag == 'p':
+            if not node.get_text().strip():
+                return
+            p = container.add_paragraph()
+            p.paragraph_format.space_after = Pt(4)
+            for c in node.children:
+                inline(p, c)
+
+        elif tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+            level = int(tag[1])
+            p = container.add_paragraph()
+            run = p.add_run(node.get_text().strip())
+            run.bold = True
+            sizes = {1: 14, 2: 13, 3: 12, 4: 11, 5: 10, 6: 10}
+            run.font.size = Pt(sizes.get(level, font_size))
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(3)
+
+        elif tag == 'ul':
+            for li in node.find_all('li', recursive=False):
+                try:
+                    p = container.add_paragraph(style='List Bullet')
+                except Exception:
+                    p = container.add_paragraph()
+                p.paragraph_format.space_after = Pt(2)
+                for c in li.children:
+                    if isinstance(c, Tag) and c.name in ('ul', 'ol'):
+                        for nested in c.find_all('li'):
+                            try:
+                                np = container.add_paragraph(style='List Bullet 2')
+                            except Exception:
+                                np = container.add_paragraph()
+                            np.add_run(nested.get_text().strip()).font.size = Pt(font_size)
+                            np.paragraph_format.space_after = Pt(2)
+                    else:
+                        inline(p, c)
+
+        elif tag == 'ol':
+            for li in node.find_all('li', recursive=False):
+                try:
+                    p = container.add_paragraph(style='List Number')
+                except Exception:
+                    p = container.add_paragraph()
+                p.paragraph_format.space_after = Pt(2)
+                for c in li.children:
+                    if isinstance(c, Tag) and c.name in ('ul', 'ol'):
+                        for nested in c.find_all('li'):
+                            try:
+                                np = container.add_paragraph(style='List Number 2')
+                            except Exception:
+                                np = container.add_paragraph()
+                            np.add_run(nested.get_text().strip()).font.size = Pt(font_size)
+                            np.paragraph_format.space_after = Pt(2)
+                    else:
+                        inline(p, c)
+
+        elif tag == 'table':
+            html_table(node)
+
+        elif tag == 'figure':
+            inner = node.find('table')
+            if inner:
+                html_table(inner)
+            else:
+                for c in node.children:
+                    block(c)
+
+        elif tag in ('div', 'section', 'blockquote', 'article', 'main', 'aside'):
+            for c in node.children:
+                block(c)
+
+        elif tag == 'br':
+            p = container.add_paragraph()
+            p.paragraph_format.space_after = Pt(2)
+
+        elif tag == 'hr':
+            p = container.add_paragraph()
+            p.add_run('─' * 60).font.size = Pt(8)
+            p.paragraph_format.space_before = Pt(4)
+            p.paragraph_format.space_after = Pt(4)
+
+        elif tag not in ('script', 'style', 'meta', 'link', 'head', 'title'):
+            # Unknown tag: check if it contains block children
+            has_blocks = any(
+                isinstance(c, Tag) and (c.name or '').lower() in
+                ('p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'table', 'figure')
+                for c in node.children
+            )
+            if has_blocks:
+                for c in node.children:
+                    block(c)
+            else:
+                text = node.get_text().strip()
+                if text:
+                    p = container.add_paragraph(text)
+                    p.paragraph_format.space_after = Pt(3)
+
+    for child in soup.children:
+        block(child)
+
 def risk_report_pdf(request):
     org = request.tenant
     risks = Risk.objects.filter(organization=org)
@@ -1518,6 +1734,364 @@ def get_engagement_by_name(org, engagement_name):
         return engagement
     return None
 
+def _engagement_details_docx(context, org):
+    """Generate a properly formatted, fully editable Word document for audit engagement details."""
+    import io
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    def shade_cell(cell, hex_fill):
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_fill)
+        tcPr.append(shd)
+
+    def header_cell(cell, text, fill='2E4057'):
+        cell.text = ''
+        p = cell.paragraphs[0]
+        p.clear()
+        run = p.add_run(text)
+        run.bold = True
+        run.font.size = Pt(10)
+        run.font.color.rgb = RGBColor(255, 255, 255)
+        shade_cell(cell, fill)
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(3)
+
+    def body_cell(cell, text, bold=False, italic=False, color=None, fill=None):
+        cell.text = ''
+        p = cell.paragraphs[0]
+        p.clear()
+        run = p.add_run(str(text) if text else '')
+        run.bold = bold
+        run.italic = italic
+        run.font.size = Pt(10)
+        if color:
+            run.font.color.rgb = RGBColor(*color)
+        if fill:
+            shade_cell(cell, fill)
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(3)
+
+    def kv_table(doc, rows, col_w=(2.0, 4.5)):
+        tbl = doc.add_table(rows=len(rows), cols=2)
+        tbl.style = 'Table Grid'
+        for i, (k, v) in enumerate(rows):
+            body_cell(tbl.rows[i].cells[0], k, bold=True, fill='EFF3F7')
+            body_cell(tbl.rows[i].cells[1], v if v else 'Not specified')
+        return tbl
+
+    def section_head(doc, text, level=1, color=(0x1A, 0x56, 0xDB)):
+        p = doc.add_heading(text, level=level)
+        if p.runs:
+            p.runs[0].font.color.rgb = RGBColor(*color)
+        p.paragraph_format.space_before = Pt(14)
+        p.paragraph_format.space_after = Pt(6)
+        return p
+
+    def field_block(doc, label, value, placeholder=None, shaded=False):
+        lp = doc.add_paragraph()
+        lr = lp.add_run(label)
+        lr.bold = True
+        lr.font.size = Pt(10)
+        lp.paragraph_format.space_after = Pt(2)
+        if shaded:
+            t = doc.add_table(rows=1, cols=1)
+            t.style = 'Table Grid'
+            c = t.cell(0, 0)
+            shade_cell(c, 'EFF6FF')
+            p = c.paragraphs[0]
+            p.clear()
+            content = _html_to_text(value) if value else ''
+            if content:
+                p.add_run(content).font.size = Pt(10)
+            else:
+                r = p.add_run(placeholder or '[Enter here]')
+                r.italic = True
+                r.font.size = Pt(10)
+                r.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
+            p.paragraph_format.space_before = Pt(4)
+            p.paragraph_format.space_after = Pt(4)
+            for _ in range(2):
+                c.add_paragraph()
+        else:
+            if value:
+                _render_html_to_doc(doc, value, font_size=10)
+            else:
+                vp = doc.add_paragraph('Not specified')
+                vp.paragraph_format.space_after = Pt(6)
+
+    engagement = context.get('engagement')
+    priority_definitions = context.get('priority_definitions', [])
+    conclusion_definitions = context.get('conclusion_definitions', [])
+    annex_issue_risk_levels = context.get('annex_issue_risk_levels', [])
+    ts = context.get('generation_timestamp', '')
+
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width = Inches(8.27)
+    sec.page_height = Inches(11.69)
+    sec.left_margin = Cm(2)
+    sec.right_margin = Cm(2)
+    sec.top_margin = Cm(2.5)
+    sec.bottom_margin = Cm(2)
+
+    # ── Cover page ──────────────────────────────────────────────────────────
+    for _ in range(4):
+        doc.add_paragraph()
+
+    for text, size, bold, color in [
+        (getattr(org, 'name', '').upper(), 14, True, (0x1A, 0x56, 0xDB)),
+        (engagement.title if engagement else 'Report', 24, True, (0x11, 0x18, 0x27)),
+        ('AUDIT ENGAGEMENT REPORT', 13, False, (0x6B, 0x72, 0x80)),
+    ]:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(text)
+        r.font.size = Pt(size)
+        r.bold = bold
+        r.font.color.rgb = RGBColor(*color)
+        p.paragraph_format.space_after = Pt(12 if size < 20 else 18)
+
+    doc.add_paragraph()
+    dp = doc.add_paragraph()
+    dp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    dr = dp.add_run(f'Generated: {ts}')
+    dr.font.size = Pt(9)
+    dr.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
+
+    doc.add_page_break()
+
+    if not engagement:
+        doc.add_paragraph('No engagement data available for the specified filters.')
+        output = io.BytesIO()
+        doc.save(output)
+        output.seek(0)
+        resp = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        resp['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_details.docx"'
+        return resp
+
+    # ── A. Engagement Details ──────────────────────────────────────────────
+    section_head(doc, 'A.  ENGAGEMENT DETAILS', level=1)
+    wp = getattr(engagement, 'annual_workplan', None) or getattr(engagement, 'audit_workplan', None)
+    wp_text = 'Not specified'
+    if wp:
+        wp_text = getattr(wp, 'name', '')
+        fy = getattr(wp, 'fiscal_year', None)
+        if fy:
+            wp_text += f' ({fy})'
+    try:
+        status_disp = engagement.get_project_status_display()
+    except Exception:
+        status_disp = str(getattr(engagement, 'project_status', ''))
+    start = engagement.project_start_date.strftime('%d %b %Y') if getattr(engagement, 'project_start_date', None) else 'Not specified'
+    issued = engagement.report_issued_date.strftime('%d %b %Y') if getattr(engagement, 'report_issued_date', None) else 'Not specified'
+    hrs = str(engagement.estimated_hours) if getattr(engagement, 'estimated_hours', None) else 'Not specified'
+    kv_table(doc, [
+        ('Engagement Title', engagement.title),
+        ('Status', status_disp),
+        ('Annual Workplan', wp_text),
+        ('Start Date', start),
+        ('Report Issued Date', issued),
+        ('Estimated Hours', hrs),
+    ])
+    doc.add_paragraph()
+    if getattr(engagement, 'executive_summary', None):
+        field_block(doc, 'Executive Summary', engagement.executive_summary)
+
+    # ── 1. Purpose and Background ─────────────────────────────────────────
+    section_head(doc, '1.  PURPOSE AND BACKGROUND', level=2)
+    if getattr(engagement, 'purpose', None):
+        field_block(doc, 'Purpose', engagement.purpose)
+    if getattr(engagement, 'background', None):
+        field_block(doc, 'Background', engagement.background)
+
+    # ── 2. Audit Objectives ───────────────────────────────────────────────
+    section_head(doc, '2.  AUDIT OBJECTIVES', level=2)
+    try:
+        objectives = list(engagement.objectives.all())
+    except Exception:
+        objectives = []
+    if objectives:
+        ot = doc.add_table(rows=1, cols=2)
+        ot.style = 'Table Grid'
+        header_cell(ot.cell(0, 0), '#')
+        header_cell(ot.cell(0, 1), 'Objective Title')
+        for i, obj in enumerate(objectives, 1):
+            row = ot.add_row()
+            body_cell(row.cells[0], str(i), bold=True)
+            body_cell(row.cells[1], getattr(obj, 'title', ''))
+    else:
+        doc.add_paragraph('No objectives recorded.')
+    doc.add_paragraph()
+
+    # ── 3. Conclusion ─────────────────────────────────────────────────────
+    section_head(doc, '3.  CONCLUSION', level=2)
+    try:
+        conc_disp = engagement.get_conclusion_display()
+    except Exception:
+        conc_disp = str(getattr(engagement, 'conclusion', 'Not rated'))
+    ct_rows = [('Overall Rating', conc_disp)]
+    if getattr(engagement, 'conclusion_description', None):
+        ct_rows.append(('Description', _html_to_text(engagement.conclusion_description)))
+    kv_table(doc, ct_rows)
+    doc.add_paragraph()
+
+    # ── 4. Issues and Findings ────────────────────────────────────────────
+    try:
+        all_issues = list(engagement.all_issues)
+    except Exception:
+        all_issues = []
+    if all_issues:
+        section_head(doc, '4.  ISSUES AND FINDINGS', level=1)
+        risk_fills = {'low': 'D1FAE5', 'medium': 'FEF3C7', 'high': 'FEE2E2', 'critical': 'EDE9FE'}
+        for idx, issue in enumerate(all_issues, 1):
+            section_head(doc, f'Issue {idx}:  {getattr(issue, "issue_title", "")}', level=3, color=(0x11, 0x18, 0x27))
+            # Severity badge row
+            st = doc.add_table(rows=1, cols=2)
+            st.style = 'Table Grid'
+            header_cell(st.cell(0, 0), 'Severity / Risk Level', fill='374C6E')
+            rl = str(getattr(issue, 'risk_level', '') or '')
+            try:
+                rl_disp = issue.get_risk_level_display()
+            except Exception:
+                rl_disp = rl
+            body_cell(st.cell(0, 1), rl_disp.upper(), bold=True, fill=risk_fills.get(rl.lower(), 'F3F4F6'))
+            doc.add_paragraph()
+
+            if getattr(issue, 'issue_description', None):
+                field_block(doc, 'Issue Description', issue.issue_description)
+            if getattr(issue, 'root_cause', None):
+                field_block(doc, 'Root Cause', issue.root_cause)
+
+            # Recommendations
+            try:
+                recs = list(issue.recommendations.all())
+            except Exception:
+                recs = []
+            if recs:
+                rp = doc.add_paragraph()
+                rr = rp.add_run('Recommendations')
+                rr.bold = True
+                rr.font.size = Pt(10)
+                rp.paragraph_format.space_after = Pt(2)
+                for j, rec in enumerate(recs, 1):
+                    lp = doc.add_paragraph(style='List Number')
+                    lr = lp.add_run(getattr(rec, 'title', ''))
+                    lr.bold = True
+                    if getattr(rec, 'description', None):
+                        desc_text = _html_to_text(rec.description)
+                        if desc_text:
+                            dp = doc.add_paragraph(desc_text)
+                            dp.paragraph_format.left_indent = Inches(0.3)
+                            dp.paragraph_format.space_after = Pt(2)
+
+            if getattr(issue, 'management_action_plan', None):
+                field_block(doc, 'Management Action Plan (Existing)', issue.management_action_plan)
+
+            doc.add_paragraph()
+
+            # ── Editable management response sections ───────────────
+            mp = doc.add_paragraph()
+            mr = mp.add_run('▶  Management Remarks  (to be completed by management)')
+            mr.bold = True
+            mr.font.size = Pt(10)
+            mr.font.color.rgb = RGBColor(0x1A, 0x56, 0xDB)
+            mp.paragraph_format.space_after = Pt(2)
+            mt = doc.add_table(rows=1, cols=1)
+            mt.style = 'Table Grid'
+            mc = mt.cell(0, 0)
+            shade_cell(mc, 'EFF6FF')
+            mcp = mc.paragraphs[0]
+            mcp.clear()
+            ph = mcp.add_run('[Enter management remarks / response to this finding here]')
+            ph.italic = True
+            ph.font.size = Pt(10)
+            ph.font.color.rgb = RGBColor(0x9C, 0xA3, 0xAF)
+            mcp.paragraph_format.space_before = Pt(4)
+            mcp.paragraph_format.space_after = Pt(4)
+            for _ in range(3):
+                mc.add_paragraph()
+
+            doc.add_paragraph()
+
+            ap = doc.add_paragraph()
+            ar = ap.add_run('▶  Management Response & Action Plan  (to be completed by management)')
+            ar.bold = True
+            ar.font.size = Pt(10)
+            ar.font.color.rgb = RGBColor(0x1A, 0x56, 0xDB)
+            ap.paragraph_format.space_after = Pt(2)
+            at = doc.add_table(rows=3, cols=2)
+            at.style = 'Table Grid'
+            header_cell(at.cell(0, 0), 'Corrective Actions', fill='374C6E')
+            body_cell(at.cell(0, 1), '[Describe the corrective actions to be taken]', italic=True, color=(0x9C, 0xA3, 0xAF), fill='EFF6FF')
+            header_cell(at.cell(1, 0), 'Responsible Party', fill='374C6E')
+            body_cell(at.cell(1, 1), '[Name / Department]', italic=True, color=(0x9C, 0xA3, 0xAF), fill='EFF6FF')
+            header_cell(at.cell(2, 0), 'Target Completion Date', fill='374C6E')
+            body_cell(at.cell(2, 1), '[DD / MM / YYYY]', italic=True, color=(0x9C, 0xA3, 0xAF), fill='EFF6FF')
+
+            if idx < len(all_issues):
+                doc.add_paragraph()
+
+    # ── Annexes ───────────────────────────────────────────────────────────
+    doc.add_page_break()
+    section_head(doc, 'ANNEXES', level=1)
+
+    section_head(doc, 'Annex 1.  Priorities of Audit Recommendations', level=2)
+    if priority_definitions:
+        a1 = doc.add_table(rows=1, cols=2)
+        a1.style = 'Table Grid'
+        header_cell(a1.cell(0, 0), 'Priority')
+        header_cell(a1.cell(0, 1), 'Description')
+        for pd in priority_definitions:
+            row = a1.add_row()
+            body_cell(row.cells[0], pd.get('label', ''), bold=True)
+            body_cell(row.cells[1], pd.get('definition', ''))
+    doc.add_paragraph()
+
+    section_head(doc, 'Annex 2.  Definition of Audit Results (Overall Rating)', level=2)
+    if conclusion_definitions:
+        a2 = doc.add_table(rows=1, cols=2)
+        a2.style = 'Table Grid'
+        header_cell(a2.cell(0, 0), 'Overall Rating')
+        header_cell(a2.cell(0, 1), 'Meaning')
+        for cd in conclusion_definitions:
+            row = a2.add_row()
+            body_cell(row.cells[0], cd.get('label', ''), bold=True)
+            body_cell(row.cells[1], cd.get('definition', ''))
+    doc.add_paragraph()
+
+    section_head(doc, 'Annex 3.  Issue Risk Levels', level=2)
+    risk_level_defs = {
+        'low': 'Minimal impact and likelihood; routine monitoring is sufficient.',
+        'medium': 'Moderate impact or likelihood; management attention required.',
+        'high': 'Significant impact or likelihood; prompt action required.',
+        'critical': 'Severe impact and/or likelihood; immediate action imperative.',
+    }
+    if annex_issue_risk_levels:
+        a3 = doc.add_table(rows=1, cols=2)
+        a3.style = 'Table Grid'
+        header_cell(a3.cell(0, 0), 'Risk Level')
+        header_cell(a3.cell(0, 1), 'General Meaning')
+        for val, label in annex_issue_risk_levels:
+            row = a3.add_row()
+            body_cell(row.cells[0], label, bold=True)
+            body_cell(row.cells[1], risk_level_defs.get(str(val), 'As defined by the engagement context.'))
+
+    output = io.BytesIO()
+    doc.save(output)
+    output.seek(0)
+    resp = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    resp['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_details.docx"'
+    return resp
+
+
 def engagement_details_pdf(request):
     org = request.tenant
     engagement_name = request.GET.get('engagement_name') or request.GET.get('q')
@@ -1597,7 +2171,7 @@ def engagement_details_pdf(request):
         stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')]
     )
     if request.GET.get('format') == 'docx':
-        return _pdf_to_word_response(pdf_file, org, 'audit_engagement_details')
+        return _engagement_details_docx(context, org)
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{org.code}_audit_engagement_details.pdf"'
     return response

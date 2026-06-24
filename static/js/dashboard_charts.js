@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Guard: only one execution per page load even if this script is loaded multiple times
+    if (window._dashboardChartsLoaded) return;
+    window._dashboardChartsLoaded = true;
+
     function plotOrShowEmpty(containerId, data, layout) {
         const container = document.getElementById(containerId);
         // Debug output (if present)
@@ -20,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (isEmpty) {
             container.innerHTML = '<div class="text-muted text-center py-5">No data available</div>';
+        } else if (typeof Plotly === 'undefined') {
+            container.innerHTML = '<div class="text-muted text-center py-5">Chart library not loaded</div>';
         } else {
             Plotly.newPlot(containerId, layout.data, layout.options);
         }

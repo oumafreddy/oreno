@@ -234,13 +234,19 @@
         gtag('config', 'G-XXXXXX');
     </script>
     
-    <!-- AI Assistant Button (fixed at bottom right) -->
+    <!-- AI Assistant Button (right-edge floating tab, visible on all pages) -->
     {% if request.user.is_authenticated %}
-    <button type="button" class="btn btn-primary rounded-circle shadow"
-            style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1050;"
+    <button type="button"
+            style="position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:1050;
+                   background:#1a56db;border:none;border-radius:8px 0 0 8px;
+                   padding:0.8rem 0.55rem;cursor:pointer;color:#fff;
+                   box-shadow:-3px 0 14px rgba(26,86,219,0.35);
+                   display:flex;flex-direction:column;align-items:center;gap:5px;"
             data-bs-toggle="modal" data-bs-target="#aiAssistantModal"
-            title="Ask Oreno AI Assistant about GRC best practices or platform features!">
-        <i class="bi bi-robot"></i>
+            title="Ask Oreno AI Assistant">
+        <i class="bi bi-robot" style="font-size:1.25rem;"></i>
+        <span style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;
+                      letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">AI</span>
     </button>
     {% endif %}
 
