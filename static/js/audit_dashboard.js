@@ -198,8 +198,9 @@ function createToastElement(title, message, type) {
 }
 
 // Export functions for global access
+// Note: openParentSelectModal is set on window directly inside initializeParentSelection()
 window.AuditDashboard = {
-    openParentSelectModal,
+    openParentSelectModal: function(...args) { return window.openParentSelectModal && window.openParentSelectModal(...args); },
     refreshDashboardData,
     showDashboardNotification
 }; 

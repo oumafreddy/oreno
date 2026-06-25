@@ -53,13 +53,20 @@
             const now = Date.now();
             const errorMsg = `${message} @ ${source}:${lineno}`;
             
-            // Suppress known, non-critical errors
+            // Suppress known, non-critical errors from third-party libraries
             const suppressedErrors = [
                 'Content Security Policy',
                 'Script redeclaration',
-                'ResizeObserver loop limit exceeded'
+                'ResizeObserver loop limit exceeded',
+                'insertRule',         // Plotly v1.x CSS injection blocked by CSP
+                'jqfake',             // jQuery :has() feature detection (harmless)
+                'No en',              // Select2 missing locale (harmless)
             ];
+            const suppressedSources = ['plotly', 'select2', 'jquery'];
             if (suppressedErrors.some(err => message.includes(err))) {
+                return;
+            }
+            if (suppressedSources.some(s => (source || '').toLowerCase().includes(s))) {
                 return;
             }
 

@@ -229,7 +229,7 @@ AUTHENTICATION_BACKENDS = [
 # To allow additional fetch/XHR origins set CSP_CONNECT_SRC_EXTRA env var (comma-separated).
 # ------------------------------------------------------------------------------
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC   = ("'self'",)   # nonce injected per-request by CSPNonceMiddleware
+CSP_STYLE_SRC   = ("'self'", "'unsafe-inline'")  # unsafe-inline required for Plotly/Select2/htmx inline style injection
 CSP_SCRIPT_SRC  = (
     "'self'",
     # Plotly is loaded from CDN in dashboard_charts.js until hosted locally (see Step 2b)
@@ -246,7 +246,7 @@ CSP_BASE_URI        = ("'self'",)
 CSP_FORM_ACTION     = ("'self'",)
 CSP_FRAME_ANCESTORS = ("'none'",)   # prevents clickjacking from any origin
 CSP_BLOCK_ALL_MIXED_CONTENT = True
-CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
+CSP_INCLUDE_NONCE_IN = ['script-src']   # style-src uses unsafe-inline; only scripts need nonce protection
 
 # Enable debug toolbar in debug mode - temporarily disabled due to missing templates
 # if DEBUG and 'debug_toolbar' in INSTALLED_APPS:

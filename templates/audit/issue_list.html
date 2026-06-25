@@ -68,6 +68,7 @@
                     <a href="{% url 'audit:issue-detail' issue.pk %}" class="btn btn-sm btn-outline-primary">View</a>
                     <a href="{% url 'audit:issue-update' issue.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                     <a href="{% url 'audit:issue-close' issue.pk %}" class="btn btn-sm btn-warning">Close</a>
+                    <a href="{% url 'audit:issue-delete' issue.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                   </td>
                 </tr>
                 {% empty %}

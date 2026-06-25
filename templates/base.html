@@ -140,9 +140,9 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <!-- Logout POST form -->
-                            <form method="post" action="{% url 'users:logout' %}" style="margin: 0; padding: 0;">
+                            <form method="post" action="{% url 'users:logout' %}" class="m-0 p-0">
                                 {% csrf_token %}
-                                <button type="submit" class="dropdown-item text-danger" style="width: 100%; text-align: left;">
+                                <button type="submit" class="dropdown-item text-danger w-100 text-start">
                                     <i class="bi bi-box-arrow-right me-2"></i>Logout
                                 </button>
                             </form>
@@ -234,22 +234,6 @@
         gtag('config', 'G-XXXXXX');
     </script>
     
-    <!-- AI Assistant Button (right-edge floating tab, visible on all pages) -->
-    {% if request.user.is_authenticated %}
-    <button type="button"
-            style="position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:1050;
-                   background:#1a56db;border:none;border-radius:8px 0 0 8px;
-                   padding:0.8rem 0.55rem;cursor:pointer;color:#fff;
-                   box-shadow:-3px 0 14px rgba(26,86,219,0.35);
-                   display:flex;flex-direction:column;align-items:center;gap:5px;"
-            data-bs-toggle="modal" data-bs-target="#aiAssistantModal"
-            title="Ask Oreno AI Assistant">
-        <i class="bi bi-robot" style="font-size:1.25rem;"></i>
-        <span style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;
-                      letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">AI</span>
-    </button>
-    {% endif %}
-
     <!-- AI Assistant Modal -->
     <div class="modal fade" id="aiAssistantModal" tabindex="-1" aria-labelledby="aiAssistantModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">

@@ -126,30 +126,201 @@ def _pdf_to_word_response(pdf_bytes, org, filename_prefix):
     return response
 
 def _html_to_text(html_string: str) -> str:
-    """Convert rich HTML from editors into readable plain text for DOCX."""
+    """Convert rich HTML to plain text (used for table cells and simple fields)."""
     if not html_string:
         return ''
     try:
-        from bs4 import BeautifulSoup
+        from bs4 import BeautifulSoup, NavigableString
         soup = BeautifulSoup(str(html_string), 'html.parser')
-        # Ensure line breaks for <br> and paragraphs
         for br in soup.find_all('br'):
             br.replace_with('\n')
-        # Separate block elements with newlines
-        for block in soup.find_all(['p', 'div', 'li']):
-            if block.string is None:
-                # Add newline after block content if not already
-                block.append('\n')
+        for block in soup.find_all(['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            block.append('\n')
         text = soup.get_text()
-        # Normalize excessive blank lines
         lines = [l.rstrip() for l in text.splitlines()]
-        # Remove trailing empty lines
         while lines and not lines[-1]:
             lines.pop()
         return '\n'.join(lines)
     except Exception:
-        # Fallback: plain string coercion
         return str(html_string)
+
+
+def _html_to_docx(container, html_string, font_size=10):
+    """
+    Render CKEditor HTML into a python-docx Document or Cell container.
+
+    Uses ONLY high-level python-docx API — no OxmlElement manipulation.
+    HTML <table> elements become real Word tables; text paragraphs are justified.
+
+    CKEditor5 wraps content in a single-cell outer <figure class="table"> table
+    (width:100%).  We detect that pattern and treat it as a transparent wrapper,
+    recursing into its content rather than creating a 1×1 Word table.  This also
+    prevents the nested-cell count explosion (60+ columns) that caused Word to
+    reject the file.
+    """
+    if not html_string:
+        return
+    try:
+        from bs4 import BeautifulSoup, NavigableString, Tag
+        from docx.shared import Pt, Inches
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+    except ImportError:
+        return
+
+    JUST = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    def direct_rows(tbl_node):
+        """Direct <tr> children of a table, handling the optional tbody/thead/tfoot."""
+        rows = tbl_node.find_all('tr', recursive=False)
+        if not rows:
+            for section in tbl_node.find_all(['thead', 'tbody', 'tfoot'], recursive=False):
+                rows.extend(section.find_all('tr', recursive=False))
+        return rows
+
+    def direct_cells(tr):
+        """Direct <td>/<th> children of a row (never nested cells)."""
+        return tr.find_all(['td', 'th'], recursive=False)
+
+    def fill_para(p, node):
+        """Recursively add inline runs to an existing paragraph."""
+        if isinstance(node, NavigableString):
+            t = str(node)
+            if t:
+                r = p.add_run(t)
+                r.font.size = Pt(font_size)
+        elif isinstance(node, Tag):
+            name = node.name
+            if name in ('strong', 'b'):
+                r = p.add_run(node.get_text())
+                r.bold = True
+                r.font.size = Pt(font_size)
+            elif name in ('em', 'i'):
+                r = p.add_run(node.get_text())
+                r.italic = True
+                r.font.size = Pt(font_size)
+            elif name == 'u':
+                r = p.add_run(node.get_text())
+                r.underline = True
+                r.font.size = Pt(font_size)
+            elif name == 'br':
+                p.add_run('\n')
+            else:
+                for child in node.children:
+                    fill_para(p, child)
+
+    def render_table(tbl_node):
+        rows = direct_rows(tbl_node)
+        if not rows:
+            return
+        col_counts = [len(direct_cells(tr)) for tr in rows]
+        num_cols = max(col_counts, default=0)
+        if num_cols == 0:
+            return
+
+        # CKEditor wraps all cell content (text + nested tables) in a single-cell
+        # outer table.  Detect 1×1 wrapper tables and recurse into the cell instead.
+        if len(rows) == 1 and num_cols == 1:
+            single_cell = direct_cells(rows[0])[0]
+            if single_cell.find('table'):
+                for child in single_cell.children:
+                    render_block(child)
+                return
+
+        word_tbl = container.add_table(rows=len(rows), cols=num_cols)
+        word_tbl.style = 'Table Grid'
+        for r_i, tr in enumerate(rows):
+            cells = direct_cells(tr)
+            for c_i, cell in enumerate(cells):
+                if c_i >= num_cols:
+                    break
+                wc = word_tbl.cell(r_i, c_i)
+                cp = wc.paragraphs[0]
+                cp.clear()
+                run = cp.add_run(cell.get_text(' ', strip=True))
+                run.font.size = Pt(9)
+                if cell.name == 'th':
+                    run.bold = True
+                cp.paragraph_format.space_before = Pt(2)
+                cp.paragraph_format.space_after = Pt(2)
+        sp = container.add_paragraph()
+        sp.paragraph_format.space_after = Pt(4)
+
+    def render_block(node):
+        if isinstance(node, NavigableString):
+            text = str(node).strip()
+            if text:
+                p = container.add_paragraph()
+                p.alignment = JUST
+                p.paragraph_format.space_after = Pt(3)
+                r = p.add_run(text)
+                r.font.size = Pt(font_size)
+            return
+
+        if not isinstance(node, Tag) or node.name is None:
+            return
+
+        name = node.name
+
+        if name == 'table':
+            render_table(node)
+
+        elif name in ('p', 'div'):
+            if node.find('table'):
+                for child in node.children:
+                    render_block(child)
+                return
+            inner = node.get_text(strip=True)
+            if not inner and not node.find('br'):
+                return
+            p = container.add_paragraph()
+            p.alignment = JUST
+            p.paragraph_format.space_after = Pt(3)
+            for child in node.children:
+                fill_para(p, child)
+            for r in p.runs:
+                if r.font.size is None:
+                    r.font.size = Pt(font_size)
+
+        elif name in ('ul', 'ol'):
+            is_ordered = (name == 'ol')
+            for i, li in enumerate(node.find_all('li', recursive=False), 1):
+                prefix = f'{i}.' if is_ordered else '•'
+                p = container.add_paragraph()
+                p.alignment = JUST
+                p.paragraph_format.left_indent = Inches(0.2)
+                p.paragraph_format.space_after = Pt(2)
+                r = p.add_run(f'{prefix}  {li.get_text(" ", strip=True)}')
+                r.font.size = Pt(font_size)
+
+        elif name in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+            text = node.get_text(strip=True)
+            if text:
+                p = container.add_paragraph()
+                r = p.add_run(text)
+                r.bold = True
+                r.font.size = Pt(max(font_size, 14 - int(name[1]) + 1))
+                p.paragraph_format.space_after = Pt(4)
+
+        elif name == 'br':
+            sp = container.add_paragraph()
+            sp.paragraph_format.space_after = Pt(0)
+
+        elif name in ('strong', 'b', 'em', 'i', 'u', 'span', 'a'):
+            text = node.get_text(' ', strip=True)
+            if text:
+                p = container.add_paragraph()
+                p.alignment = JUST
+                p.paragraph_format.space_after = Pt(3)
+                fill_para(p, node)
+
+        else:
+            # figure, section, article, etc. — recurse into children
+            for child in node.children:
+                render_block(child)
+
+    soup = BeautifulSoup(str(html_string), 'html.parser')
+    for child in soup.children:
+        render_block(child)
 
 def _docx_add_heading(doc, text: str):
     p = doc.add_paragraph()
@@ -218,7 +389,10 @@ def _render_html_to_doc(container, html_string, font_size=10):
                 for c in node.children:
                     inline(para, c, bold=bold, italic=italic, ul=True, fs=_fs)
             elif tag == 'br':
-                para.add_run('\n').font.size = Pt(_fs)
+                run = para.add_run()
+                run.font.size = Pt(_fs)
+                br_elem = OxmlElement('w:br')
+                run._r.append(br_elem)
             elif tag in ('span', 'a', 'code', 'mark', 'sub', 'sup', 'small'):
                 for c in node.children:
                     inline(para, c, bold=bold, italic=italic, ul=ul, fs=_fs)
@@ -301,39 +475,37 @@ def _render_html_to_doc(container, html_string, font_size=10):
 
         elif tag == 'ul':
             for li in node.find_all('li', recursive=False):
-                try:
-                    p = container.add_paragraph(style='List Bullet')
-                except Exception:
-                    p = container.add_paragraph()
+                p = container.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.3)
                 p.paragraph_format.space_after = Pt(2)
+                bullet_run = p.add_run('•  ')
+                bullet_run.font.size = Pt(font_size)
                 for c in li.children:
                     if isinstance(c, Tag) and c.name in ('ul', 'ol'):
                         for nested in c.find_all('li'):
-                            try:
-                                np = container.add_paragraph(style='List Bullet 2')
-                            except Exception:
-                                np = container.add_paragraph()
-                            np.add_run(nested.get_text().strip()).font.size = Pt(font_size)
+                            np = container.add_paragraph()
+                            np.paragraph_format.left_indent = Inches(0.55)
                             np.paragraph_format.space_after = Pt(2)
+                            np.add_run('◦  ' + nested.get_text().strip()).font.size = Pt(font_size)
                     else:
                         inline(p, c)
 
         elif tag == 'ol':
+            ol_idx = 0
             for li in node.find_all('li', recursive=False):
-                try:
-                    p = container.add_paragraph(style='List Number')
-                except Exception:
-                    p = container.add_paragraph()
+                ol_idx += 1
+                p = container.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.3)
                 p.paragraph_format.space_after = Pt(2)
+                num_run = p.add_run(f'{ol_idx}.  ')
+                num_run.font.size = Pt(font_size)
                 for c in li.children:
                     if isinstance(c, Tag) and c.name in ('ul', 'ol'):
                         for nested in c.find_all('li'):
-                            try:
-                                np = container.add_paragraph(style='List Number 2')
-                            except Exception:
-                                np = container.add_paragraph()
-                            np.add_run(nested.get_text().strip()).font.size = Pt(font_size)
+                            np = container.add_paragraph()
+                            np.paragraph_format.left_indent = Inches(0.55)
                             np.paragraph_format.space_after = Pt(2)
+                            np.add_run(nested.get_text().strip()).font.size = Pt(font_size)
                     else:
                         inline(p, c)
 
@@ -1796,11 +1968,12 @@ def _engagement_details_docx(context, org):
         return p
 
     def field_block(doc, label, value, placeholder=None, shaded=False):
-        lp = doc.add_paragraph()
-        lr = lp.add_run(label)
-        lr.bold = True
-        lr.font.size = Pt(10)
-        lp.paragraph_format.space_after = Pt(2)
+        if label:
+            lp = doc.add_paragraph()
+            lr = lp.add_run(label)
+            lr.bold = True
+            lr.font.size = Pt(10)
+            lp.paragraph_format.space_after = Pt(2)
         if shaded:
             t = doc.add_table(rows=1, cols=1)
             t.style = 'Table Grid'
@@ -1822,9 +1995,10 @@ def _engagement_details_docx(context, org):
                 c.add_paragraph()
         else:
             if value:
-                _render_html_to_doc(doc, value, font_size=10)
+                _html_to_docx(doc, value)
             else:
                 vp = doc.add_paragraph('Not specified')
+                vp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 vp.paragraph_format.space_after = Pt(6)
 
     engagement = context.get('engagement')
@@ -1970,6 +2144,29 @@ def _engagement_details_docx(context, org):
             if getattr(issue, 'root_cause', None):
                 field_block(doc, 'Root Cause', issue.root_cause)
 
+            # Risks section (mirrors the PDF)
+            has_risks_text = getattr(issue, 'risks', None)
+            try:
+                linked_risks = list(issue.linked_risks.all())
+            except Exception:
+                linked_risks = []
+            if has_risks_text or linked_risks:
+                rp = doc.add_paragraph()
+                rp.add_run('Risks').bold = True
+                rp.paragraph_format.space_after = Pt(2)
+                if has_risks_text:
+                    field_block(doc, '', has_risks_text)
+                for lrisk in linked_risks:
+                    lp = doc.add_paragraph()
+                    lp.paragraph_format.left_indent = Inches(0.2)
+                    lp.paragraph_format.space_after = Pt(2)
+                    rn = lp.add_run(getattr(lrisk, 'risk_name', '') or '')
+                    rn.bold = True
+                    rn.font.size = Pt(10)
+                    rd = getattr(lrisk, 'risk_description', None)
+                    if rd:
+                        _html_to_docx(doc, rd)
+
             # Recommendations
             try:
                 recs = list(issue.recommendations.all())
@@ -1982,15 +2179,13 @@ def _engagement_details_docx(context, org):
                 rr.font.size = Pt(10)
                 rp.paragraph_format.space_after = Pt(2)
                 for j, rec in enumerate(recs, 1):
-                    lp = doc.add_paragraph(style='List Number')
-                    lr = lp.add_run(getattr(rec, 'title', ''))
+                    lp = doc.add_paragraph()
+                    lp.paragraph_format.left_indent = Inches(0.3)
+                    lp.paragraph_format.space_after = Pt(2)
+                    lr = lp.add_run(f'{j}.  ' + getattr(rec, 'title', ''))
                     lr.bold = True
                     if getattr(rec, 'description', None):
-                        desc_text = _html_to_text(rec.description)
-                        if desc_text:
-                            dp = doc.add_paragraph(desc_text)
-                            dp.paragraph_format.left_indent = Inches(0.3)
-                            dp.paragraph_format.space_after = Pt(2)
+                        _html_to_docx(doc, rec.description)
 
             if getattr(issue, 'management_action_plan', None):
                 field_block(doc, 'Management Action Plan (Existing)', issue.management_action_plan)

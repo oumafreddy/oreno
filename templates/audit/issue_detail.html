@@ -44,6 +44,7 @@
           <a href="{% url 'audit:followupaction-add' issue_pk=issue.pk %}" class="btn btn-outline-primary btn-sm">Add Follow-up</a>
           <a href="{% url 'audit:issueretest-add' issue_pk=issue.pk %}" class="btn btn-outline-primary btn-sm">Add Retest</a>
           <a href="{% url 'audit:issueworkingpaper-add' issue_pk=issue.pk %}" class="btn btn-outline-secondary btn-sm">Add Working Paper</a>
+          <a href="{% url 'audit:issue-delete' issue.pk %}" class="btn btn-outline-danger btn-sm">Delete Issue</a>
         </div>
       </div>
 

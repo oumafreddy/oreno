@@ -1080,6 +1080,44 @@ class IssueUpdateView(AuditPermissionMixin, SuccessMessageMixin, UpdateView):
             pass
         return kwargs
 
+
+class IssueDeleteView(AuditPermissionMixin, LoginRequiredMixin, DeleteView):
+    model = Issue
+    template_name = 'audit/issue_confirm_delete.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.pop('organization', None)
+        return kwargs
+
+    def get_queryset(self):
+        return super().get_queryset().filter(organization=self.request.organization)
+
+    def get_success_url(self):
+        # Redirect to the engagement detail if resolvable, otherwise fall back to issue list
+        try:
+            engagement = (
+                self.object.procedure.risk.objective.engagement
+                if self.object.procedure
+                and self.object.procedure.risk
+                and self.object.procedure.risk.objective
+                and self.object.procedure.risk.objective.engagement
+                else None
+            )
+            if engagement:
+                return reverse_lazy('audit:engagement-detail', kwargs={'pk': engagement.pk})
+        except Exception:
+            pass
+        return reverse_lazy('audit:issue-list')
+
+    def form_valid(self, form):
+        issue_title = self.object.issue_title
+        success_url = self.get_success_url()
+        self.object.force_delete()
+        messages.success(self.request, f'Issue "{issue_title}" has been deleted.')
+        return HttpResponseRedirect(success_url)
+
+
 # ─── APPROVAL VIEWS ──────────────────────────────────────────────────────────
 class ApprovalCreateView(AuditPermissionMixin, SuccessMessageMixin, CreateView):
     model = Approval

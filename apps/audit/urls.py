@@ -11,7 +11,7 @@ from . import views
 from .views import (
     WorkplanListView, WorkplanDetailView, WorkplanCreateView, WorkplanUpdateView, WorkplanDeleteView,
     EngagementListView, EngagementDetailView, EngagementCreateView, EngagementUpdateView, EngagementDeleteView,
-    IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView,
+    IssueListView, IssueDetailView, IssueCreateView, IssueUpdateView, IssueDeleteView,
     ApprovalCreateView, ApprovalDetailView, AuditDashboardView, AuditReportsView,
     ObjectiveListView, ObjectiveDetailView, ObjectiveCreateView, ObjectiveUpdateView,
     ObjectiveModalCreateView, ObjectiveDeleteView,
@@ -102,6 +102,7 @@ urlpatterns = [
     path('issues/create/', IssueCreateView.as_view(), name='issue-create'),
     path('issues/<int:pk>/', IssueDetailView.as_view(), name='issue-detail'),
     path('issues/<int:pk>/update/', IssueUpdateView.as_view(), name='issue-update'),
+    path('issues/<int:pk>/delete/', IssueDeleteView.as_view(), name='issue-delete'),
     path('issues/<int:pk>/close/', views.close_issue, name='issue-close'),
     path('issues/<int:pk>/reopen/', views.reopen_issue, name='issue-reopen'),
     path('issues/<int:pk>/risks/', views.IssueRiskManageView.as_view(), name='issue-risks'),
