@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Upload Engagement Document{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row mb-3">
+    <div class="col">
+      <a href="{% url 'audit:engagement-detail' engagement.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Engagement
+      </a>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Upload Engagement Document</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-4 d-flex gap-2 justify-content-end">
+              <a href="{% url 'audit:engagement-detail' engagement.pk %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle me-1"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-upload me-1"></i> Upload Document
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

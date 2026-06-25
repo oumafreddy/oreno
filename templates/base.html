@@ -43,6 +43,16 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/htmx.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
     <script src="{% static 'js/select2.min.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    <script nonce="{{ request.csp_nonce }}">
+    /* Pre-register Select2's 'en' AMD module so the first locale lookup succeeds
+       without throwing Error: No en (which Select2 4.1.0-rc.0 catches internally
+       but still causes noise in browser debuggers). */
+    (function() {
+        if (window.jQuery && jQuery.fn.select2 && jQuery.fn.select2.amd) {
+            jQuery.fn.select2.amd.define('en', ['select2/i18n/en'], function(en) { return en; });
+        }
+    })();
+    </script>
 
     <!-- Core Custom JavaScript - Load first -->
     <script src="{% static 'js/main.js' %}" nonce="{{ request.csp_nonce }}"></script>

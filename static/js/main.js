@@ -61,8 +61,9 @@
                 'insertRule',         // Plotly v1.x CSS injection blocked by CSP
                 'jqfake',             // jQuery :has() feature detection (harmless)
                 'No en',              // Select2 missing locale (harmless)
+                'Plotly is not defined',  // Plotly unavailable — handled gracefully by dashboard_charts.js
             ];
-            const suppressedSources = ['plotly', 'select2', 'jquery'];
+            const suppressedSources = ['plotly', 'select2', 'jquery', 'dashboard_charts'];
             if (suppressedErrors.some(err => message.includes(err))) {
                 return;
             }

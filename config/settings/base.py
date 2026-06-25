@@ -229,11 +229,10 @@ AUTHENTICATION_BACKENDS = [
 # To allow additional fetch/XHR origins set CSP_CONNECT_SRC_EXTRA env var (comma-separated).
 # ------------------------------------------------------------------------------
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC   = ("'self'", "'unsafe-inline'")  # unsafe-inline required for Plotly/Select2/htmx inline style injection
+CSP_STYLE_SRC      = ("'self'", "'unsafe-inline'")  # unsafe-inline required for Plotly/Select2/htmx
+CSP_STYLE_SRC_ELEM = ("'self'", "'unsafe-inline'")  # CSP3 style-src-elem for htmx dynamic <style> elements
 CSP_SCRIPT_SRC  = (
     "'self'",
-    # Plotly is loaded from CDN in dashboard_charts.js until hosted locally (see Step 2b)
-    "https://cdn.plot.ly",
 )
 CSP_IMG_SRC     = ("'self'", "data:", "https:")
 CSP_FONT_SRC    = ("'self'",)
@@ -419,7 +418,13 @@ USE_TZ = True
 # Static & Media files
 # ------------------------------------------------------------------------------
 STATIC_URL = '/static/'
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+# Django 5.x uses STORAGES dict; STATICFILES_STORAGE is ignored
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'config.storage.ForgivingManifestStaticFilesStorage',
+    },
+}
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
