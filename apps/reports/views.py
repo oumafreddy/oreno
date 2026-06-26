@@ -2126,7 +2126,26 @@ def _engagement_details_docx(context, org):
         section_head(doc, '4.  ISSUES AND FINDINGS', level=1)
         risk_fills = {'low': 'D1FAE5', 'medium': 'FEF3C7', 'high': 'FEE2E2', 'critical': 'EDE9FE'}
         for idx, issue in enumerate(all_issues, 1):
-            section_head(doc, f'Issue {idx}:  {getattr(issue, "issue_title", "")}', level=3, color=(0x11, 0x18, 0x27))
+            ih = section_head(doc, f'Issue {idx}:  {getattr(issue, "issue_title", "")}', level=3, color=(0x11, 0x18, 0x27))
+            for run in ih.runs:
+                run.font.size = Pt(13)
+            # Issue owner and date identified
+            owner_obj = getattr(issue, 'issue_owner', None)
+            if owner_obj and hasattr(owner_obj, 'get_full_name'):
+                owner_name = owner_obj.get_full_name().strip() or getattr(owner_obj, 'email', '')
+            else:
+                owner_name = getattr(issue, 'issue_owner_title', '') or getattr(issue, 'issue_owner_email', '') or ''
+            date_identified = getattr(issue, 'date_identified', None)
+            meta_parts = []
+            if owner_name:
+                meta_parts.append(f'Issue Owner: {owner_name}')
+            if date_identified:
+                meta_parts.append(f'Date Identified: {date_identified.strftime("%d %B %Y") if hasattr(date_identified, "strftime") else str(date_identified)}')
+            if meta_parts:
+                mp = doc.add_paragraph('     '.join(meta_parts))
+                for run in mp.runs:
+                    run.font.size = Pt(10)
+                mp.paragraph_format.space_after = Pt(4)
             # Severity badge row
             st = doc.add_table(rows=1, cols=2)
             st.style = 'Table Grid'
@@ -2179,11 +2198,13 @@ def _engagement_details_docx(context, org):
                 rr.font.size = Pt(10)
                 rp.paragraph_format.space_after = Pt(2)
                 for j, rec in enumerate(recs, 1):
-                    lp = doc.add_paragraph()
-                    lp.paragraph_format.left_indent = Inches(0.3)
-                    lp.paragraph_format.space_after = Pt(2)
-                    lr = lp.add_run(f'{j}.  ' + getattr(rec, 'title', ''))
-                    lr.bold = True
+                    if len(recs) > 1:
+                        lp = doc.add_paragraph()
+                        lp.paragraph_format.left_indent = Inches(0.3)
+                        lp.paragraph_format.space_after = Pt(2)
+                        lr = lp.add_run(f'{j}.')
+                        lr.bold = True
+                        lr.font.size = Pt(10)
                     if getattr(rec, 'description', None):
                         _html_to_docx(doc, rec.description)
 

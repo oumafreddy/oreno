@@ -240,14 +240,6 @@ class Engagement(ApprovalStateMixin, OrganizationOwnedModel, AuditableModel, Sof
                 if hasattr(self, 'last_modified_by') and self.last_modified_by:
                     self.approved_by = self.last_modified_by
                     
-            # Update project status based on dates
-            if self.field_work_start_date and not self.field_work_end_date and self.project_status == 'planning':
-                self.project_status = 'fieldwork'
-            elif self.field_work_end_date and not self.report_issued_date and self.project_status == 'fieldwork':
-                self.project_status = 'reporting'
-            elif self.report_issued_date and self.project_status == 'reporting':
-                self.project_status = 'review'
-                
             super().save(*args, **kwargs)
 
     def get_absolute_url(self):
